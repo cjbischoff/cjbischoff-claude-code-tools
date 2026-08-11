@@ -10,6 +10,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 |--------|---------|
 | `plugins/` | One directory per distributed plugin |
 | `scripts/` | Repo-level tooling (git hook scripts) |
+| `docs/` | Design specs and planning documents |
 
 ## Artifact inventory
 
@@ -19,6 +20,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `plugins/sec-overlay/.claude-plugin/plugin.json` | sec-overlay plugin manifest (v0.1.0) |
 | `plugins/sec-overlay/skills/sec-overlay/SKILL.md` | Skill instructions; logic lives in scripts/ |
 | `plugins/sec-overlay/skills/sec-overlay/scripts/run.py` | Skill entry script (placeholder, no checks yet) |
+| `docs/superpowers/specs/2026-08-11-port-sec-overlay-design.md` | Design for porting the sec-harness skill into the sec-overlay plugin |
 | `.pre-commit-config.yaml` | prek hook config: doc-update guard + commit message check |
 | `scripts/hooks/` | Hook scripts that enforce commit governance |
 | `CHANGELOG.md` | Common Changelog; one entry per functionality commit |
