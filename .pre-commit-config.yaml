@@ -1,0 +1,16 @@
+default_install_hook_types: [pre-commit, commit-msg]
+repos:
+  - repo: local
+    hooks:
+      - id: doc-update-guard
+        name: Require README.md and CHANGELOG.md updates
+        entry: scripts/hooks/pre-commit-check.sh
+        language: system
+        stages: [pre-commit]
+        always_run: true
+        pass_filenames: false
+      - id: conventional-commit-msg
+        name: Conventional Commits message check
+        entry: scripts/hooks/commit-msg-check.sh
+        language: system
+        stages: [commit-msg]
