@@ -23,6 +23,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Update sec-overlay manifest descriptions to the agentic security-audit harness.
 - Add the DIAGRAM_STYLE, FIELD_OWNERSHIP, and QUALIFIER_PROOF prompt-constants blocks.
 - Add the `open_questions` field to `Finding` and the finding schema.
+- Flag comment-only `file:line` citations in the phase gate as a scrutiny note.
 
 ### Fixed
 
