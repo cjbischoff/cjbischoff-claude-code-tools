@@ -9,6 +9,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ## 0.1.0 - 2026-08-11
 
+### Changed
+
+- Rewrite the root README to the marketplace template (Installation, Plugins, Development, Governance, License) and collapse the per-task Status log.
+
 ### Added
 
 - Scaffold the plugin marketplace manifest and the sec-overlay plugin (v0.1.0) with a placeholder skill script.
