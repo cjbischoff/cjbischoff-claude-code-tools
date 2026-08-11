@@ -30,6 +30,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Add the `deployment_config` context kind, `deployed_in` tag, and `Context.diagram` slot rendered into `CONTEXT.md`.
 - Render a Questions-to-ask section in the red-team plan and wire the diagram/field-ownership/qualifier guidance and deployment-config lens into the agent prompts.
 
+### Removed
+
+- Remove stale Go-rewrite prose from the four live sec-overlay docs.
+
 ### Fixed
 
 - Prevent the report renderer from crashing when a red-team agent writes `runtime_test.expected_signal` as a bare string; the report and red-team renderers now share one tolerant helper and the finding schema validates the `runtime_test` inner shape.

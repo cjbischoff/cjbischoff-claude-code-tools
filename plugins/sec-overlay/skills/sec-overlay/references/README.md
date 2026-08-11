@@ -211,8 +211,7 @@ The agent does **not** get to argue md5 is fine "in this context" — the YAML s
   once. Change it only deliberately, and re-run the doc-invariant tests.
 - **Schemas are a contract with the code.** `finding.schema.json` and friends are validated
   in tests and gates. A field you add here must be added to `models.py` too, or the gate
-  rejects real findings. (`models.py` is additionally a *frozen contract* with the Go port —
-  see the skill [`CLAUDE.md`](../CLAUDE.md).)
+  rejects real findings, and `test_contracts.py` / `test_finding_schema.py` must stay green.
 - **The crypto YAMLs are policy, not suggestions.** Loosening a floor or approving an algo
   silently weakens every crypto finding. Get sign-off.
 - **Adding an attack class** is a multi-file change: add the row in `attack-classes.md`, its

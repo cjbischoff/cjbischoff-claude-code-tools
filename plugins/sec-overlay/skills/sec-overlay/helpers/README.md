@@ -89,16 +89,17 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 
 ~70 modules. Grouped so you can find the one you need. Each line is *module → what it does.*
 
-### Data model & serialization — the frozen contract
+### Data model & serialization — the finding contract
 | Module | Purpose |
 |--------|---------|
 | `models.py` | The `Finding` and `CampaignState` dataclasses, the `Severity` / `FindingStatus` enums, and `to_dict`/`from_dict`. **This is the schema every phase reads and writes.** Recent: `open_questions` field added (list of dicts with `question`, `why_it_matters`, `who_to_ask_or_check` keys; defaults to []) — unrelated to `coverage_ledger.py`'s same-named, differently-shaped `open_questions` list. |
 | `evidence.py` | The tool-receipt gate. `_MECHANICAL` = {semgrep, codeql, ast-grep, tree-sitter, ripgrep, structural-index, secrets, sca}; `is_tool_receipt()` returns False for anything `llm`-prefixed; `confidence_for()` grades HIGH/MEDIUM/LOW from the strongest evidence link. |
 | `schema.py` | A tiny stdlib-only JSON-Schema validator (type/enum/required/items/properties) — so schema validation needs no dependency. |
 
-> **These two (`models.py`, `evidence.py`) are frozen contracts with the Go port.** The Go
-> binary asserts byte-for-byte parity against goldens generated from them. Changing a field
-> or the `_MECHANICAL` set breaks the Go build. See skill [`CLAUDE.md`](../CLAUDE.md) §1.
+> **These two (`models.py`, `evidence.py`) define the finding serialization/schema contract.**
+> Change a `Finding`/`CampaignState` field or the `_MECHANICAL` set and you must update
+> `../references/finding.schema.json` and keep `tests/test_contracts.py` and
+> `tests/test_finding_schema.py` green.
 
 ### SAST backends & prefilter
 | Module | Purpose |

@@ -15,7 +15,7 @@ the three folder READMEs and the operational playbook for detail.
 | To understand… | Read |
 |----------------|------|
 | The full phase-by-phase operating playbook | [`SKILL.md`](SKILL.md) |
-| Git protocol, the Go-port contract, environment setup | [`CLAUDE.md`](CLAUDE.md) |
+| Git protocol, environment setup, developing the skill | [`CLAUDE.md`](CLAUDE.md) |
 | The LLM prompts that investigate/validate/patch | [`agents/README.md`](agents/README.md) |
 | The Python core that runs tools & enforces gates | [`helpers/README.md`](helpers/README.md) |
 | The rule book (severity, scope, schemas, crypto policy) | [`references/README.md`](references/README.md) |
@@ -237,11 +237,11 @@ uv run ruff check sec_overlay/ bench/ tests/
 uv run ty check
 ```
 
-Two coupling points to respect before editing:
+One coupling point to respect before editing:
 
-- **The Go port.** `helpers/sec_overlay/models.py` and `evidence.py` are a byte-for-byte
-  frozen contract with a parallel Go rewrite under `go/`. Changing a field or the mechanical
-  whitelist breaks the Go build — coordinate first. Never touch `go/`. See [`CLAUDE.md`](CLAUDE.md) §1.
+- **The finding contract.** `helpers/sec_overlay/models.py` and `evidence.py` define the finding
+  serialization/schema. Change a field and you must update `references/finding.schema.json` and keep
+  `helpers/tests/test_contracts.py` and `helpers/tests/test_finding_schema.py` green.
 - **Docs track code.** When you change anything in `agents/`, `helpers/`, or `references/`,
   update that folder's README in the **same commit**. A pre-commit hook enforces this — see
   [`CLAUDE.md`](CLAUDE.md) §8.

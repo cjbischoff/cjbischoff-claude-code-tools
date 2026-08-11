@@ -54,6 +54,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 - Tracked the KB doc/diagram redesign implementation plan under `docs/superpowers/plans/`, matching the sibling port plan's convention.
 - Wrote the design spec for the sec-overlay documentation overhaul (branch `docs/sec-overlay-doc-overhaul`).
 - Wrote the six-commit implementation plan for the sec-overlay documentation overhaul.
+- Removed stale Go-rewrite prose from the four live sec-overlay docs.
 
 ## Next steps
 

@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working **inside
 `skills/sec-overlay/`**. It is the driver for two jobs: (1) running this security-audit skill
-against real codebases, and (2) maintaining the skill **without breaking the parallel Go conversion**.
+against real codebases, and (2) maintaining the skill and its documentation.
 
 Repo-wide context lives in the root `CLAUDE.md`. This file governs the skill.
 
@@ -29,43 +29,6 @@ Recall matters too: coverage is pursued until a phase can defend it to its adver
 judge — they are not deleted on a hunch.
 
 ---
-
-## 1. Git — protecting the parallel Go conversion (READ FIRST)
-
-A second terminal is porting the skill's Python/helper logic into the Go binary under `go/`. The two
-workstreams share this repo. **Boundary is absolute:**
-
-- **You touch only `skills/`.** The Go terminal touches only `go/`. Never edit, stage, or commit
-  anything under `go/`. Assume `go/` may have uncommitted work in the working tree at any moment.
-- **Never `git add -A`, `git add .`, or `git commit -a`.** Those sweep the other terminal's
-  in-progress `go/` edits into your commit. **Always stage explicit skill paths:**
-  ```bash
-  git add skills/sec-overlay/<specific-paths>
-  git status          # confirm ONLY skills/ paths are staged; if go/ appears, unstage it
-  ```
-- **Work on a skill branch, never commit to `main`.** Current branch for this work:
-  `skill-audit-driver-YYYYMMDD`. Merge to `main` via PR only after the user approves.
-- **Fetch before push:** `git fetch origin && git log origin/<branch>..HEAD` to catch divergence.
-
-### The one coupling point — the JSON contract
-
-The Go port mirrors the Python data contract **byte-for-byte**. `go/bench/gen_golden.py`
-instantiates fixed `Finding`/`CampaignState` values against `sec_overlay.models` and writes
-`json.dumps(obj.to_dict(), indent=2)` (no trailing newline) into `go/internal/model/testdata/`;
-Go's `TestParity` asserts byte-equality. **Python is the source of truth; Go conforms to it.**
-
-Two files are the frozen contract — changing them breaks the Go build in the other terminal:
-
-- `helpers/sec_overlay/models.py` — `Finding`/`CampaignState` fields, enum `.value` strings
-  (note `needs-deployment-testing` is hyphenated), and `to_dict`/`from_dict` behavior.
-- `helpers/sec_overlay/evidence.py` — the `_MECHANICAL` tool-receipt whitelist that gates
-  `confirmed`/`fixed` (see §4). Drift here is a **silent gate weakening**, not just a serialization
-  bug.
-
-If you must change either: (a) tell the user so the Go terminal is warned, (b) regenerate goldens
-with `python3 go/bench/gen_golden.py` — **but that writes under `go/`, which you do not own**, so
-hand that step to the Go terminal or get explicit sign-off. Prefer to avoid touching these two files
-at all while the conversion is in flight.
 
 ---
 
@@ -298,8 +261,7 @@ uv run python -m sec_overlay.preflight             # tool availability
   silent-backend regressions; keep them green.
 - **`helpers/bench/` is dev-only** — a labelled-corpus precision/recall + regression harness, **not**
   part of an audit run. A `locked` positive that stops being detected is a hard failure. Run:
-  `python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --workspaces <dir>`. Its
-  `BinaryAdapter` is the seam that will regression-test the Go binary against this Python contract.
+  `python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --workspaces <dir>`.
 - **Semgrep rules are a git submodule** (`helpers/rules/semgrep/`). Clone with `--recurse-submodules`.
 - When editing an `agents/*.md` prompt, preserve its hard rules verbatim (model-family diversity,
   tool-receipt safety contract, count-invariant verdict tables) — these are load-bearing, not prose.
@@ -319,7 +281,7 @@ for a person (not just an LLM) trying to understand this codebase — keep them 
 |--------|--------|
 | [`README.md`](README.md) | the map: invariants, architecture, the pipeline, and a full end-to-end **worked example** (one SQLi finding from candidate → confirmed → fixed → redteam-plan). Points at the three folder READMEs and `SKILL.md`. |
 | [`agents/README.md`](agents/README.md) | every LLM prompt: role, model tier (sonnet producer / opus adversary), inputs/outputs, the producer→adversary rule, the investigate gate ladder, and the `classes/` extensions. |
-| [`helpers/README.md`](helpers/README.md) | the ~70 Python modules grouped by job, the CLI-callable list, the deterministic pipeline diagram, the two frozen contracts, and the two in-code invariants. |
+| [`helpers/README.md`](helpers/README.md) | the ~70 Python modules grouped by job, the CLI-callable list, the deterministic pipeline diagram, the finding serialization/schema contract, and the two in-code invariants. |
 | [`references/README.md`](references/README.md) | the rule book: the 12 `prompt-constants.md` blocks, `attack-classes.md`, the schemas, the crypto-policy YAMLs, and which module/agent consumes each file. |
 
 **Hard rule — docs track code in the same commit.** When you change anything under `agents/`,
