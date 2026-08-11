@@ -24,6 +24,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `docs/superpowers/specs/2026-08-11-port-sec-overlay-design.md` | Design for porting the sec-harness skill into the sec-overlay plugin |
 | `docs/superpowers/plans/2026-08-11-port-sec-overlay.md` | Task-by-task implementation plan for the sec-overlay port |
 | `docs/superpowers/specs/2026-08-11-sec-overlay-kb-redesign-design.md` | Design for porting upstream's KB doc/diagram redesign into sec-overlay |
+| `docs/superpowers/specs/2026-08-11-sec-overlay-doc-overhaul-design.md` | Design for the sec-overlay documentation overhaul |
 | `.pre-commit-config.yaml` | prek hook config: doc-update guard + commit message check |
 | `scripts/hooks/` | Hook scripts that enforce commit governance |
 | `CHANGELOG.md` | Common Changelog; one entry per functionality commit |
@@ -50,6 +51,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 - Task 6 (final): added `_question_block()` and a "Questions to ask" section to the red-team plan; wired `FIELD_OWNERSHIP`/`DIAGRAM_STYLE`/`QUALIFIER_PROOF` imports and the diagram/deployment-config prompt guidance into the agent prompts and docs (TDD; 573 pass, 2 env-only failures unchanged). KB doc/diagram redesign port complete on `feat/kb-doc-diagram-redesign`.
 - Doc fix: synced `references/README.md`'s `finding.schema.json` row with the `open_questions` field, and corrected the skill `CLAUDE.md` §6 and §8 block counts (six and nine) to the actual twelve `prompt-constants.md` blocks.
 - Tracked the KB doc/diagram redesign implementation plan under `docs/superpowers/plans/`, matching the sibling port plan's convention.
+- Wrote the design spec for the sec-overlay documentation overhaul (branch `docs/sec-overlay-doc-overhaul`).
 
 ## Next steps
 
