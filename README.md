@@ -23,6 +23,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `plugins/sec-overlay/skills/sec-overlay/agents/` | LLM subagent prompts for the investigate/validate/patch phases |
 | `docs/superpowers/specs/2026-08-11-port-sec-overlay-design.md` | Design for porting the sec-harness skill into the sec-overlay plugin |
 | `docs/superpowers/plans/2026-08-11-port-sec-overlay.md` | Task-by-task implementation plan for the sec-overlay port |
+| `docs/superpowers/specs/2026-08-11-sec-overlay-kb-redesign-design.md` | Design for porting upstream's KB doc/diagram redesign into sec-overlay |
 | `.pre-commit-config.yaml` | prek hook config: doc-update guard + commit message check |
 | `scripts/hooks/` | Hook scripts that enforce commit governance |
 | `CHANGELOG.md` | Common Changelog; one entry per functionality commit |
