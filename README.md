@@ -25,6 +25,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `docs/superpowers/plans/2026-08-11-port-sec-overlay.md` | Task-by-task implementation plan for the sec-overlay port |
 | `docs/superpowers/specs/2026-08-11-sec-overlay-kb-redesign-design.md` | Design for porting upstream's KB doc/diagram redesign into sec-overlay |
 | `docs/superpowers/specs/2026-08-11-sec-overlay-doc-overhaul-design.md` | Design for the sec-overlay documentation overhaul |
+| `docs/superpowers/plans/2026-08-11-sec-overlay-doc-overhaul.md` | Six-commit implementation plan for the sec-overlay documentation overhaul |
 | `.pre-commit-config.yaml` | prek hook config: doc-update guard + commit message check |
 | `scripts/hooks/` | Hook scripts that enforce commit governance |
 | `CHANGELOG.md` | Common Changelog; one entry per functionality commit |
@@ -52,6 +53,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 - Doc fix: synced `references/README.md`'s `finding.schema.json` row with the `open_questions` field, and corrected the skill `CLAUDE.md` §6 and §8 block counts (six and nine) to the actual twelve `prompt-constants.md` blocks.
 - Tracked the KB doc/diagram redesign implementation plan under `docs/superpowers/plans/`, matching the sibling port plan's convention.
 - Wrote the design spec for the sec-overlay documentation overhaul (branch `docs/sec-overlay-doc-overhaul`).
+- Wrote the six-commit implementation plan for the sec-overlay documentation overhaul.
 
 ## Next steps
 
