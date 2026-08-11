@@ -377,6 +377,25 @@ def test_render_ndt_degrades_without_runtime_test():
     assert "redteam-plan.md" in out                       # pointer present unconditionally
 
 
+def test_render_ndt_tolerates_string_expected_signal():
+    """A red-team agent may write ``expected_signal`` as a bare string instead of a
+    ``{secure, insecure}`` object (the prompt does not pin the shape and the gate does
+    not validate it). The renderer must treat the string as the insecure signal rather
+    than crash on ``str.get``."""
+    import dataclasses
+
+    from sec_overlay.report import render_ndt
+    f = dataclasses.replace(
+        _ndt(),
+        runtime_test={"objective": "verify CE-ID isolation on operatorFeedbackWrite",
+                      "expected_signal": "201 + CE-B record"},
+    )
+    out = render_ndt(f)                                   # must not raise
+    assert "needs runtime" in out.lower()
+    assert "verify CE-ID isolation" in out
+    assert "201 + CE-B record" in out                    # string surfaced as insecure signal
+
+
 # ── Task-4 new tests: bottom-line counts + triage ordering ────────────────────
 
 def _confirmed_dep():

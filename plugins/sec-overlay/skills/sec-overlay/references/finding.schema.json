@@ -36,7 +36,12 @@
     "codeguard_ids": {"type": "array", "items": {"type": "string"}},
     "completeness_tier": {"type": ["string", "null"]},
     "runtime_disposition": {"type": ["string", "null"]},
-    "runtime_test": {"type": ["object", "null"]},
+    "runtime_test": {
+      "type": ["object", "null"],
+      "properties": {
+        "expected_signal": {"type": ["object", "string", "null"]}
+      }
+    },
     "preconditions": {"type": "array", "items": {"type": "string"}},
     "reachability": {"type": ["object", "null"]},
     "judge_verdict": {"type": ["string", "null"]},

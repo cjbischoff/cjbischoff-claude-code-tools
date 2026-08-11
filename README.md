@@ -39,6 +39,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 - Ported the sec-harness skill into the sec-overlay plugin (branch `feat/port-sec-overlay`).
 - Renamed all identifiers to sec-overlay; run instructions resolve from `${CLAUDE_PLUGIN_ROOT}`; test suite green (552 pass, 2 env-only skips); plugin and marketplace manifests validate.
+- Hardened the finding renderers against an agent-authored `expected_signal` that arrives as a bare string; the report and red-team renderers now share one tolerant helper (`render_util.signal_lines`). Branch `fix/redteam-signal-and-docs`.
 - Pending user approval to merge `feat/port-sec-overlay` into `main`.
 
 ## Next steps

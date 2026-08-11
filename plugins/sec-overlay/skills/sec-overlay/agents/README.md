@@ -130,7 +130,7 @@ the agent doesn't re-raise known false positives.
 | Prompt | Model | Job |
 |--------|-------|-----|
 | `trace.md` | opus | backward-trace each confirmed sink to an entry point; verdict `reachable?` + blocker taxonomy. |
-| `redteam.md` | sonnet | split confirmed findings into `static-settled` vs `needs-runtime`; write a `runtime_test` block (objective, preconditions, `$SHELL_VAR` payloads — **never literal secrets**, expected signal, telemetry). |
+| `redteam.md` | sonnet | split confirmed findings into `static-settled` vs `needs-runtime`; write a `runtime_test` block (objective, preconditions, `$SHELL_VAR` payloads — **never literal secrets**, expected signal, telemetry). `expected_signal` must be an object `{secure, insecure}` — not a bare string — because the deterministic renderer reads both keys. |
 | `redteam-adversary.md` | opus | strip items that are actually settleable from source, payloads not tied to a real sink, or claims resting on `llm-claimed` confidence alone. |
 
 The deterministic `helpers/…/redteam.py` then renders `redteam-plan.md` (only findings at/above

@@ -21,6 +21,7 @@ from sec_overlay.evidence import is_tool_receipt
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.patch_status import PatchStatus, check_patch_applied, not_applied_caution
 from sec_overlay.phase_gate import GateDecision, build_gate_record, write_gate_record
+from sec_overlay.render_util import signal_lines
 from sec_overlay.workspace import Workspace, load_paths, read_findings
 
 DEFAULT_MIN_RISK = 7
@@ -111,21 +112,20 @@ def _bullets(items: object) -> str:
 
 
 def _signal(d: object) -> str:
-    """Render an expected-signal dict as labeled secure/insecure sub-fields.
+    """Render an expected-signal value as the inline suffix after the label.
+
+    Delegates the shape tolerance (dict / bare string / empty) to
+    :func:`sec_overlay.render_util.signal_lines`; a bare string is the insecure
+    signal, the same as in the report renderer.
 
     Args:
-        d: A dict with ``secure``/``insecure`` keys, or any other value.
+        d: A dict with ``secure``/``insecure`` keys, a bare string, or any other value.
 
     Returns:
-        Two indented ``**secure:** …`` / ``**insecure:** …`` lines for a dict,
-        an inline `` <s>`` for a non-empty string, or `` _not specified_``.
+        A newline-prefixed labeled block for a signal, or `` _not specified_``.
     """
-    if isinstance(d, dict) and d:
-        return (f"\n  - **secure:** {d.get('secure', '_unspecified_')}"
-                f"\n  - **insecure:** {d.get('insecure', '_unspecified_')}")
-    if isinstance(d, str) and d.strip():
-        return f" {d}"
-    return " _not specified_"
+    lines = signal_lines(d)
+    return "\n" + "\n".join(lines) if lines else " _not specified_"
 
 
 def _directive_block(f: Finding, patch_status: PatchStatus | None = None) -> str:

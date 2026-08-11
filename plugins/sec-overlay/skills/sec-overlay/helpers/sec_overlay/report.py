@@ -12,6 +12,7 @@ from sec_overlay.coverage_ledger import render_markdown as render_coverage_ledge
 from sec_overlay.evidence import is_tool_receipt
 from sec_overlay.models import Finding, FindingStatus
 from sec_overlay.patch_status import PatchStatus, check_patch_applied, not_applied_caution
+from sec_overlay.render_util import signal_lines
 from sec_overlay.sarif import to_sarif
 from sec_overlay.state import load_state
 from sec_overlay.workspace import Workspace, load_paths, read_findings
@@ -158,7 +159,7 @@ def render_ndt(f: Finding) -> str:
         A Markdown section string for the finding.
     """
     rt = f.runtime_test or {}
-    sig = rt.get("expected_signal") or {}
+    sig_lines = signal_lines(rt.get("expected_signal"))
     flow = "\n".join(f"  - `{hop}`" for hop in (f.dataflow or [])) or "  - (no source chain recorded)"
     pre = "\n".join(f"  - {p}" for p in (f.preconditions or [])) or "  - (none recorded)"
     out = [f"### {f.id} — {f.cls} — {f.severity.value.title()} · needs runtime proof", "",
@@ -167,9 +168,7 @@ def render_ndt(f: Finding) -> str:
            "**Preconditions (out-of-repo barrier).**", pre, ""]
     if rt.get("objective"):
         out += [f"**Runtime test.** {rt['objective']}"]
-        if sig:
-            out += [f"  - **secure:** {sig.get('secure', '_unspecified_')}",
-                    f"  - **insecure:** {sig.get('insecure', '_unspecified_')}"]
+        out += sig_lines
     out += ["_Runnable payloads + telemetry: see `redteam-plan.md`._", ""]
     return "\n".join(out)
 

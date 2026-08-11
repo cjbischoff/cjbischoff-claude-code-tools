@@ -35,7 +35,9 @@ Include ANTI_MANIPULATION, SEVERITY_GUIDANCE, TOOL_TRUST, and OUTPUT_WRITE_FALLB
    (`file:line` + a mechanical receipt) to enter the plan; otherwise it's a runtime-validation
    gap, not an action item.
 3. **Write the runtime_test block** on each `needs-runtime` finding (and any new path, as a
-   finding): `{objective, preconditions, payloads[], expected_signal, telemetry}`. Payloads use
+   finding): `{objective, preconditions, payloads[], expected_signal, telemetry}`. `expected_signal`
+   MUST be an object `{"secure": "<observed when the control holds>", "insecure": "<observed when
+   it fails>"}` — not a bare string; the deterministic renderer reads both keys. Payloads use
    shell variables only (`$HOST`, `$TOKEN`, `$TARGET_ID`, …) — never literal secrets/hosts, and
    aligned to the real code path from the finding's dataflow.
 
