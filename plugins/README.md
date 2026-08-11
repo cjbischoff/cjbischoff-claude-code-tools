@@ -10,4 +10,4 @@ Holds one directory per Claude Code plugin distributed by this marketplace.
 
 | Directory | Purpose |
 |-----------|---------|
-| `sec-overlay/` | Security overlay skill; scripted security checks on code changes. Logic lives in `skills/sec-overlay/scripts/`. |
+| `sec-overlay/` | Agentic security-audit harness; SAST + multi-agent investigation. Python core under `skills/sec-overlay/helpers/`. |

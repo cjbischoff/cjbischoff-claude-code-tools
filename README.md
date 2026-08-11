@@ -18,8 +18,9 @@ Each folder below has its own README.md describing what it holds, its naming con
 |------|---------|
 | `.claude-plugin/marketplace.json` | Marketplace manifest; lists all plugins |
 | `plugins/sec-overlay/.claude-plugin/plugin.json` | sec-overlay plugin manifest (v0.1.0) |
-| `plugins/sec-overlay/skills/sec-overlay/SKILL.md` | Skill instructions; logic lives in scripts/ |
-| `plugins/sec-overlay/skills/sec-overlay/scripts/run.py` | Skill entry script (placeholder, no checks yet) |
+| `plugins/sec-overlay/skills/sec-overlay/SKILL.md` | Skill playbook: agentic security-audit harness |
+| `plugins/sec-overlay/skills/sec-overlay/helpers/` | Python core (`sec_overlay` package) that runs tools and enforces gates |
+| `plugins/sec-overlay/skills/sec-overlay/agents/` | LLM subagent prompts for the investigate/validate/patch phases |
 | `docs/superpowers/specs/2026-08-11-port-sec-overlay-design.md` | Design for porting the sec-harness skill into the sec-overlay plugin |
 | `docs/superpowers/plans/2026-08-11-port-sec-overlay.md` | Task-by-task implementation plan for the sec-overlay port |
 | `.pre-commit-config.yaml` | prek hook config: doc-update guard + commit message check |
@@ -36,12 +37,12 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 ## Status
 
-- Scaffold complete; `claude plugin validate .` passed on 2026-08-11.
-- `run.py` is a placeholder. Actual check logic is not implemented yet.
+- Porting the sec-harness skill into the sec-overlay plugin (branch `feat/port-sec-overlay`).
+- Source tree imported; rename, verification, and validation follow.
 
 ## Next steps
 
-- Fill in real check logic in `plugins/sec-overlay/skills/sec-overlay/scripts/run.py`.
+- Complete the port per `docs/superpowers/plans/2026-08-11-port-sec-overlay.md`.
 - Test local install: `/plugin marketplace add <this repo>` then `/plugin install sec-overlay@cjbischoff-claude-code-tools`.
 
 ## Decisions
