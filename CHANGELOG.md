@@ -22,6 +22,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Verify the rename preserved behavior: 552 tests pass; the two failures are environment-only (gitignored bench corpus, excluded semgrep submodule), not rename regressions.
 - Update sec-overlay manifest descriptions to the agentic security-audit harness.
 - Add the DIAGRAM_STYLE, FIELD_OWNERSHIP, and QUALIFIER_PROOF prompt-constants blocks.
+- Add the `open_questions` field to `Finding` and the finding schema.
 
 ### Fixed
 
