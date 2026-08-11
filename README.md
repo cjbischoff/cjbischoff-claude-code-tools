@@ -49,6 +49,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 - Task 5: added the `deployment_config` context kind, `deployed_in` tag, and `Context.diagram` slot rendered into `CONTEXT.md` (TDD; 571 pass, 2 env-only failures unchanged).
 - Task 6 (final): added `_question_block()` and a "Questions to ask" section to the red-team plan; wired `FIELD_OWNERSHIP`/`DIAGRAM_STYLE`/`QUALIFIER_PROOF` imports and the diagram/deployment-config prompt guidance into the agent prompts and docs (TDD; 573 pass, 2 env-only failures unchanged). KB doc/diagram redesign port complete on `feat/kb-doc-diagram-redesign`.
 - Doc fix: synced `references/README.md`'s `finding.schema.json` row with the `open_questions` field, and corrected the skill `CLAUDE.md` §6 and §8 block counts (six and nine) to the actual twelve `prompt-constants.md` blocks.
+- Tracked the KB doc/diagram redesign implementation plan under `docs/superpowers/plans/`, matching the sibling port plan's convention.
 
 ## Next steps
 
