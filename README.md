@@ -56,6 +56,8 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 sec-overlay is ported and green (573 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
 
+Refocused the sec-overlay skill CLAUDE.md on repo mechanics (git/governance, testing, hook).
+
 ## Decisions
 
 - plugin.json declares no components; the default `skills/` directory scan handles discovery, strict mode stays at its default (true).

@@ -30,6 +30,27 @@ judge — they are not deleted on a hunch.
 
 ---
 
+## 1. Git & governance (READ FIRST)
+
+This skill lives inside the `cjbischoff-claude-code-tools` marketplace, which enforces commit
+governance with prek hooks. The rules that bind every change here:
+
+- **Branch, never `main`.** Work on `<type>/<short-kebab-description>` (e.g.
+  `docs/sec-overlay-doc-overhaul`). A pre-commit hook blocks direct commits to `main`.
+- **Conventional Commits.** `<type>(<scope>): <summary>`, summary under 50 chars, body wrapped
+  at 72. Types: `feat` · `fix` · `chore` · `docs` · `style` · `refactor` · `perf` · `test`.
+- **Docs move with code, in the same commit.** Every commit that changes a tracked file updates
+  the root `README.md` and adds a `CHANGELOG.md` entry, and updates the `README.md` of any folder
+  whose files changed (see §8). The hook rejects a commit that skips these.
+- **Stage explicit paths.** Never `git add -A` / `git add .` / `git commit -a`. Never
+  `--no-verify`.
+- **Tests are required for scripts.** New or changed executable logic ships with a test in the
+  same change (Python under `helpers/tests/`; shell scripts get a colocated invocation test).
+- **Do not bump the plugin `version`.** The user bumps it manually on release so update
+  detection works.
+
+Merge a branch to `main` only after the user approves.
+
 ---
 
 ## 2. Environment prerequisites for a full run
@@ -52,8 +73,11 @@ Before a *full* audit, satisfy these environment prerequisites (a clean checkout
   `test_citations.py::test_all_mapped_ids_exist_in_seed`; both are **dev/bench** tests, not part of an
   audit. Seed locally to run the bench (§7).
 
-These three failing tests are **environmental** (missing submodule / gitignored seed data), not code
-defects — do not "fix" them by committing the submodule contents or fabricating seed data.
+The two env-only failures on a clean checkout are **environmental**, not code defects — do not
+"fix" them by committing the submodule contents or fabricating seed data:
+`tests/test_bench.py::test_seed_corpus_is_valid` (gitignored bench corpus) and
+`tests/test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd` (excluded semgrep
+submodule).
 
 ---
 
@@ -244,7 +268,7 @@ Under `references/`. Agents load these by target type; know when each applies:
 From `skills/sec-overlay/helpers/`:
 
 ```bash
-uv run pytest -q                                   # full suite (3 env-only failures — see §2)
+uv run pytest -q                                   # full suite (2 env-only failures — see §2)
 uv run pytest tests/test_fingerprint.py -q         # single file
 uv run pytest tests/test_x.py::test_name           # single test
 uv run ruff check sec_overlay/ bench/ tests/       # lint (line-length 100)
@@ -285,19 +309,13 @@ for a person (not just an LLM) trying to understand this codebase — keep them 
 | [`references/README.md`](references/README.md) | the rule book: the 12 `prompt-constants.md` blocks, `attack-classes.md`, the schemas, the crypto-policy YAMLs, and which module/agent consumes each file. |
 
 **Hard rule — docs track code in the same commit.** When you change anything under `agents/`,
-`helpers/`, or `references/`, update that folder's `README.md` in the **same commit**. This is
-enforced by a scoped pre-commit hook at `.githooks/pre-commit`:
+`helpers/`, or `references/` (or any folder that has a `README.md`), update that folder's
+`README.md` in the **same commit**.
 
-```bash
-# one-time, repo-local install (safe for the Go workstream — the hook no-ops
-# on commits that touch nothing under skills/sec-overlay/):
-git config core.hooksPath skills/sec-overlay/.githooks
-```
+This is enforced repo-wide by the marketplace's prek pre-commit hook
+(`scripts/hooks/pre-commit-check.sh`, wired in `.pre-commit-config.yaml`): for every staged file
+whose folder contains a tracked `README.md`, that `README.md` must also be staged, or the commit
+is rejected with the folder named. Activate the hooks once per clone with `prek install`.
 
-The hook only inspects staged files under `skills/sec-overlay/{agents,helpers,references}`; it
-never reads, stages, or blocks `go/`. Bypass a genuinely doc-neutral change (e.g. a pure
-formatting pass) with `git commit --no-verify`.
-
-> **Caution when self-testing git flows here:** never run `git stash -u` while these READMEs (or
-> other new untracked files) are unstaged — `-u` sweeps untracked files into the stash and they
-> vanish from the tree until you `stash pop`. Stage or commit first.
+Do **not** bypass with `--no-verify`. A genuinely doc-neutral change still updates the folder
+README (a one-line note is enough) — the rule has no exception.
