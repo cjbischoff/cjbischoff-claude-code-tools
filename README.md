@@ -42,6 +42,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 - Renamed all identifiers to sec-overlay; run instructions resolve from `${CLAUDE_PLUGIN_ROOT}`; test suite green (552 pass, 2 env-only skips); plugin and marketplace manifests validate.
 - Hardened the finding renderers against an agent-authored `expected_signal` that arrives as a bare string; the report and red-team renderers now share one tolerant helper (`render_util.signal_lines`). Branch `fix/redteam-signal-and-docs`.
 - Pending user approval to merge `feat/port-sec-overlay` into `main`.
+- Started the KB doc/diagram redesign port (Task 1: prompt-constants added on branch `feat/kb-doc-diagram-redesign`).
 
 ## Next steps
 
