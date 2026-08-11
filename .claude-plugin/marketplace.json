@@ -1,0 +1,16 @@
+{
+  "name": "cjbischoff-claude-code-tools",
+  "owner": {
+    "name": "Christopher Bischoff"
+  },
+  "metadata": {
+    "description": "Personal Claude Code plugin marketplace for cjbischoff's tools."
+  },
+  "plugins": [
+    {
+      "name": "sec-overlay",
+      "source": "./plugins/sec-overlay",
+      "description": "Security overlay skill that runs scripted security checks on code changes."
+    }
+  ]
+}
