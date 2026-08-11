@@ -72,12 +72,16 @@ Replace exactly two tokens wherever they occur:
 - `sec_harness` -> `sec_overlay` (includes the directory
   `helpers/sec_harness/` -> `helpers/sec_overlay/`)
 
+Also rename the uppercase tokens that carry the identifier:
+
+- `HARNESS_ROOT` -> `OVERLAY_ROOT` (token `{{HARNESS_ROOT}}` -> `{{OVERLAY_ROOT}}`)
+- `SEC_HARNESS_HOME` -> `SEC_OVERLAY_HOME` (environment variable)
+
 Do **not** change:
 
 - the bare English word "harness" in prose (the skill refers to "the harness"
-  throughout);
-- internal token names such as `{{HARNESS_ROOT}}` and `{{HELPERS_DIR}}` (they are
-  not the `sec-harness` identifier).
+  throughout, 213 files);
+- `{{HELPERS_DIR}}` (it does not carry the `sec-harness` identifier).
 
 ## Plugin-path adaptation
 
@@ -116,5 +120,5 @@ instructions accordingly. This is the only functional change beyond renaming.
 ## Out of scope
 
 - Bumping the plugin version.
-- Cosmetic renames of `{{HARNESS_ROOT}}`-style token names or the word "harness".
+- Renaming the bare English word "harness" in prose.
 - Fetching or vendoring the semgrep-rules content.

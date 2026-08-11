@@ -13,3 +13,4 @@ before merge.
 | Path | Purpose |
 |------|---------|
 | `superpowers/specs/2026-08-11-port-sec-overlay-design.md` | Design for porting the sec-harness skill into the sec-overlay plugin |
+| `superpowers/plans/2026-08-11-port-sec-overlay.md` | Task-by-task implementation plan for the sec-overlay port |

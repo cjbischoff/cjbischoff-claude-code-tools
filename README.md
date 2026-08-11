@@ -21,6 +21,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `plugins/sec-overlay/skills/sec-overlay/SKILL.md` | Skill instructions; logic lives in scripts/ |
 | `plugins/sec-overlay/skills/sec-overlay/scripts/run.py` | Skill entry script (placeholder, no checks yet) |
 | `docs/superpowers/specs/2026-08-11-port-sec-overlay-design.md` | Design for porting the sec-harness skill into the sec-overlay plugin |
+| `docs/superpowers/plans/2026-08-11-port-sec-overlay.md` | Task-by-task implementation plan for the sec-overlay port |
 | `.pre-commit-config.yaml` | prek hook config: doc-update guard + commit message check |
 | `scripts/hooks/` | Hook scripts that enforce commit governance |
 | `CHANGELOG.md` | Common Changelog; one entry per functionality commit |
