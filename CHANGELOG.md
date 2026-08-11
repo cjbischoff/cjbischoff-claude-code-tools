@@ -25,6 +25,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Add the `open_questions` field to `Finding` and the finding schema.
 - Flag comment-only `file:line` citations in the phase gate as a scrutiny note.
 - Add the `deployment_config` context kind, `deployed_in` tag, and `Context.diagram` slot rendered into `CONTEXT.md`.
+- Render a Questions-to-ask section in the red-team plan and wire the diagram/field-ownership/qualifier guidance and deployment-config lens into the agent prompts.
 
 ### Fixed
 

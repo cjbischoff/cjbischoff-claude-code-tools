@@ -47,10 +47,12 @@ Each folder below has its own README.md describing what it holds, its naming con
 - Task 2: added the `open_questions` field to `Finding` and the finding schema (TDD; 559 pass, 2 env-only failures).
 - Task 4: `verify.py` rejects placeholder-version deps bumps and `verify_findings` no longer overrides a `validate-fix` not-fixed verdict (TDD; 565 pass, 2 env-only failures unchanged).
 - Task 5: added the `deployment_config` context kind, `deployed_in` tag, and `Context.diagram` slot rendered into `CONTEXT.md` (TDD; 571 pass, 2 env-only failures unchanged).
+- Task 6 (final): added `_question_block()` and a "Questions to ask" section to the red-team plan; wired `FIELD_OWNERSHIP`/`DIAGRAM_STYLE`/`QUALIFIER_PROOF` imports and the diagram/deployment-config prompt guidance into the agent prompts and docs (TDD; 573 pass, 2 env-only failures unchanged). KB doc/diagram redesign port complete on `feat/kb-doc-diagram-redesign`.
 
 ## Next steps
 
 - Merge `feat/port-sec-overlay` into `main` after user approval.
+- Merge `feat/kb-doc-diagram-redesign` into `main` after user approval.
 - Test local install: `/plugin marketplace add <this repo>` then `/plugin install sec-overlay@cjbischoff-claude-code-tools`.
 
 ## Decisions
