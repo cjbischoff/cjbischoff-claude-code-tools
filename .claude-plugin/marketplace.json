@@ -10,7 +10,7 @@
     {
       "name": "sec-overlay",
       "source": "./plugins/sec-overlay",
-      "description": "Security overlay skill that runs scripted security checks on code changes."
+      "description": "Agentic security-audit harness: runs SAST, investigates candidates with multi-agent gates, and emits SARIF + Markdown reports."
     }
   ]
 }

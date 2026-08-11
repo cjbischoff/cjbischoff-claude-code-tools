@@ -37,12 +37,13 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 ## Status
 
-- Porting the sec-harness skill into the sec-overlay plugin (branch `feat/port-sec-overlay`).
-- Source tree imported and renamed to sec-overlay; run instructions adapted to `${CLAUDE_PLUGIN_ROOT}`; test suite green (552 pass, 2 env-only skips); manifest validation follows.
+- Ported the sec-harness skill into the sec-overlay plugin (branch `feat/port-sec-overlay`).
+- Renamed all identifiers to sec-overlay; run instructions resolve from `${CLAUDE_PLUGIN_ROOT}`; test suite green (552 pass, 2 env-only skips); plugin and marketplace manifests validate.
+- Pending user approval to merge `feat/port-sec-overlay` into `main`.
 
 ## Next steps
 
-- Complete the port per `docs/superpowers/plans/2026-08-11-port-sec-overlay.md`.
+- Merge `feat/port-sec-overlay` into `main` after user approval.
 - Test local install: `/plugin marketplace add <this repo>` then `/plugin install sec-overlay@cjbischoff-claude-code-tools`.
 
 ## Decisions
