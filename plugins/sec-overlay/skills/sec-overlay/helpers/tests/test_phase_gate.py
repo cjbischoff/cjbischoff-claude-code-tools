@@ -5,6 +5,7 @@ from typing import ClassVar
 from sec_overlay.phase_gate import (
     GateDecision,
     build_gate_record,
+    is_comment_line,
     ref_resolves,
     run_phase_checks,
     write_gate_record,
@@ -178,6 +179,34 @@ def test_gate_decision_and_record_carry_claim_content(tmp_path):
     # the sent-to-adversary claim's text+refs are recoverable from the record (O-004)
     assert rec["claims"]["ep-0"] == {"text": "entrypoint handler foo", "refs": ["a.py"]}
     assert rec["decisions"][0]["text"] == "entrypoint handler foo"
+
+
+def test_is_comment_line_detects_common_comment_markers(tmp_path):
+    root = tmp_path
+    (root / "a.go").write_text("package x\n// this is a comment\nfunc F() {}\n")
+    (root / "a.py").write_text("x = 1\n# a comment\ny = 2\n")
+    (root / "a.md").write_text("<!-- a comment -->\ntext\n")
+    assert is_comment_line(root, "a.go:2") is True
+    assert is_comment_line(root, "a.go:3") is False
+    assert is_comment_line(root, "a.py:2") is True
+    assert is_comment_line(root, "a.py:1") is False
+    assert is_comment_line(root, "a.md:1") is True
+
+
+def test_is_comment_line_none_when_ref_does_not_resolve(tmp_path):
+    assert is_comment_line(tmp_path, "missing.go:1") is None
+    assert is_comment_line(tmp_path, "missing.go") is None  # no line number at all
+
+
+def test_run_phase_checks_notes_comment_only_citation(tmp_path):
+    (tmp_path / "internal").mkdir()
+    (tmp_path / "internal" / "auth.go").write_text(
+        "package auth\n// this control is enforced elsewhere\nfunc Check() bool { return true }\n"
+    )
+    claims = [{"id": "c1", "text": "control is PRESENT", "refs": ["internal/auth.go:2"]}]
+    decisions = run_phase_checks(claims, tmp_path)
+    assert decisions[0].status == "to-adversary"  # still forwarded, not silently rejected
+    assert any("comment" in n.lower() for n in decisions[0].notes)
 
 
 def test_extracts_terraform_range_citation():

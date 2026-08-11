@@ -230,7 +230,7 @@ read-only invariant is about the reviewed **source**, not this folder.
 ```
 kb/scan-profile.json     recon output: languages, frameworks, attack_surface, sast_plan, subsystems
 kb/architecture.md       component/data-flow/trust-boundary map + kb/entities/*.md
-kb/THREAT_MODEL.md       trust boundaries, attacker profiles, PRIORITIZED HUNT LIST
+kb/THREAT_MODEL.md       attacker profiles, prioritized hunt list (references architecture.md)
 kb/context.json          repo's own docs distilled (trust-tagged untrusted-doc / prior-scan)
 kb/gates/<phase>.json    adversary verdict audit trail per gated phase
 kb/discovery-ledger.json investigate saturation state (waves, consecutive_no_new, terminal_reason)
@@ -252,10 +252,11 @@ Resume an interrupted campaign: `python -m sec_overlay.cli memory --target <T>` 
 
 Under `references/`. Agents load these by target type; know when each applies:
 
-- **`prompt-constants.md`** — six verbatim blocks (`ANTI_MANIPULATION`, `EXCLUSION_RULES`,
-  `SEVERITY_GUIDANCE`, `SEVERITY_PRECONDITION`, `SHAPE_HUNTING`, `TOOL_TRUST`) injected into **every**
-  agent so scope/severity/anti-manipulation rules never drift. All agents wrap untrusted repo text in
-  the trust envelope and import these.
+- **`prompt-constants.md`** — twelve verbatim blocks (`ANTI_MANIPULATION`, `EXCLUSION_RULES`,
+  `SEVERITY_GUIDANCE`, `SEVERITY_PRECONDITION`, `SHAPE_HUNTING`, `EXHAUSTIVENESS`, `TOOL_TRUST`,
+  `PATH_BASE`, `OUTPUT_WRITE_FALLBACK`, `DIAGRAM_STYLE`, `FIELD_OWNERSHIP`, `QUALIFIER_PROOF`)
+  injected into **every** agent so scope/severity/anti-manipulation rules never drift. All agents
+  wrap untrusted repo text in the trust envelope and import these.
 - **`attack-classes.md`** — canonical attack-class keys + ripgrep indicators; recon uses it to fill
   `attack_surface`/`agents_to_spawn` (evidence-based only; empty beats guessed).
 - **`hunting/`** — deep exploit-reasoning companions, loaded conditionally: `methodology.md` +
@@ -319,7 +320,7 @@ for a person (not just an LLM) trying to understand this codebase — keep them 
 | [`README.md`](README.md) | the map: invariants, architecture, the pipeline, and a full end-to-end **worked example** (one SQLi finding from candidate → confirmed → fixed → redteam-plan). Points at the three folder READMEs and `SKILL.md`. |
 | [`agents/README.md`](agents/README.md) | every LLM prompt: role, model tier (sonnet producer / opus adversary), inputs/outputs, the producer→adversary rule, the investigate gate ladder, and the `classes/` extensions. |
 | [`helpers/README.md`](helpers/README.md) | the ~70 Python modules grouped by job, the CLI-callable list, the deterministic pipeline diagram, the two frozen contracts, and the two in-code invariants. |
-| [`references/README.md`](references/README.md) | the rule book: the 9 `prompt-constants.md` blocks, `attack-classes.md`, the schemas, the crypto-policy YAMLs, and which module/agent consumes each file. |
+| [`references/README.md`](references/README.md) | the rule book: the 12 `prompt-constants.md` blocks, `attack-classes.md`, the schemas, the crypto-policy YAMLs, and which module/agent consumes each file. |
 
 **Hard rule — docs track code in the same commit.** When you change anything under `agents/`,
 `helpers/`, or `references/`, update that folder's `README.md` in the **same commit**. This is

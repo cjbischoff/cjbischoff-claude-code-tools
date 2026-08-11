@@ -233,6 +233,36 @@ def test_directive_renders_markdown_not_repr():
     assert "\n  - service access logs" in out                  # telemetry bullet
 
 
+def test_render_plan_includes_questions_to_ask_section():
+    f_with_question = Finding(
+        id="AUTHZ-0001", rule_id="r", cls="authz", status=FindingStatus.CONFIRMED,
+        severity=Severity.HIGH, file="a.go", line=1, message="m",
+        risk_score=8,
+        open_questions=[{
+            "question": "Is there an Azure AD group-membership check enforced "
+                         "anywhere outside this repo?",
+            "why_it_matters": "This finding assumes no such check exists anywhere.",
+            "who_to_ask_or_check": "identity/security-platform team",
+        }],
+    )
+    disc = discriminate([f_with_question])
+    md = render_plan(disc)
+    assert "## Questions to ask" in md
+    assert "Is there an Azure AD group-membership check" in md
+    assert "identity/security-platform team" in md
+
+
+def test_render_plan_questions_section_says_none_when_empty():
+    f_no_question = Finding(
+        id="F-0001", rule_id="r", cls="sqli", status=FindingStatus.CONFIRMED,
+        severity=Severity.HIGH, file="a.py", line=1, message="m", risk_score=8,
+    )
+    disc = discriminate([f_no_question])
+    md = render_plan(disc)
+    assert "## Questions to ask" in md
+    assert "_none_" in md
+
+
 def test_directive_renders_string_typed_fields_verbatim():
     # runtime_test fields aren't schema-forced to lists/dicts; a plain string must render,
     # not collapse to "_not specified_" (regression guard for the str branch).

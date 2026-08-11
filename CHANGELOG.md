@@ -15,12 +15,21 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Add commit governance: Conventional Commits check, main-branch block, and forced README/CHANGELOG updates via prek hooks.
 - Add the design spec for porting the sec-harness skill into the sec-overlay plugin.
 - Add the implementation plan for the sec-overlay port and extend the rename scope to the HARNESS_ROOT and SEC_HARNESS_HOME tokens.
+- Add the design spec for incorporating upstream's KB doc/diagram redesign into the sec-overlay plugin.
+- Add the implementation plan for the KB doc/diagram redesign port.
 - Import the sec-harness skill source tree into the sec-overlay plugin (semgrep submodule excluded).
 - Rename the ported identifiers to sec-overlay: the `sec_overlay` Python package, the `sec-overlay` distribution name, and the `SEC_OVERLAY_HOME` and `OVERLAY_ROOT` tokens.
 - Point the SKILL.md run instructions at `${CLAUDE_PLUGIN_ROOT}` and document the semgrep ruleset as a prerequisite (the semgrep-rules submodule is not shipped).
 - Verify the rename preserved behavior: 552 tests pass; the two failures are environment-only (gitignored bench corpus, excluded semgrep submodule), not rename regressions.
 - Update sec-overlay manifest descriptions to the agentic security-audit harness.
+- Add the DIAGRAM_STYLE, FIELD_OWNERSHIP, and QUALIFIER_PROOF prompt-constants blocks.
+- Add the `open_questions` field to `Finding` and the finding schema.
+- Flag comment-only `file:line` citations in the phase gate as a scrutiny note.
+- Add the `deployment_config` context kind, `deployed_in` tag, and `Context.diagram` slot rendered into `CONTEXT.md`.
+- Render a Questions-to-ask section in the red-team plan and wire the diagram/field-ownership/qualifier guidance and deployment-config lens into the agent prompts.
 
 ### Fixed
 
 - Prevent the report renderer from crashing when a red-team agent writes `runtime_test.expected_signal` as a bare string; the report and red-team renderers now share one tolerant helper and the finding schema validates the `runtime_test` inner shape.
+- Reject placeholder-version deps bumps and stop `verify_findings` from overriding a `validate-fix` not-fixed verdict.
+- Document the `open_questions` field in the `finding.schema.json` reference table and correct the sec-overlay `CLAUDE.md` prompt-constants block counts (§6 and §8) from six and nine to twelve.
