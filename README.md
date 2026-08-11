@@ -38,7 +38,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 ## Status
 
 - Porting the sec-harness skill into the sec-overlay plugin (branch `feat/port-sec-overlay`).
-- Source tree imported and renamed to sec-overlay; run instructions adapted to `${CLAUDE_PLUGIN_ROOT}`; test suite and validation follow.
+- Source tree imported and renamed to sec-overlay; run instructions adapted to `${CLAUDE_PLUGIN_ROOT}`; test suite green (552 pass, 2 env-only skips); manifest validation follows.
 
 ## Next steps
 
