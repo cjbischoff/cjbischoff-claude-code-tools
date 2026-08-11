@@ -4,40 +4,40 @@
 
 **Goal:** Give the harness a single canonical `repo_root` + `scan_scope` (persisted as `kb/scan-scope.json`) that every phase, gate, and discovery step resolves against, fixing all monorepo-subdir path failures and the docs-discovery coverage gap.
 
-**Architecture:** A new stdlib-only `sec_harness/scanscope.py` resolves the git top-level as `repo_root` and the scan target as `scan_scope`, and persists a `ScanScope` to `kb/scan-scope.json` (NOT on the frozen `CampaignState`). `repo_slug`, `discover_context_files`, and `claims_from_markdown` become scope-aware. Downstream gate/dedupe/verify already take a `root` arg — Plan 1 makes the orchestrator pass `scope.repo_root` and documents the token contract; it does not change their signatures.
+**Architecture:** A new stdlib-only `sec_overlay/scanscope.py` resolves the git top-level as `repo_root` and the scan target as `scan_scope`, and persists a `ScanScope` to `kb/scan-scope.json` (NOT on the frozen `CampaignState`). `repo_slug`, `discover_context_files`, and `claims_from_markdown` become scope-aware. Downstream gate/dedupe/verify already take a `root` arg — Plan 1 makes the orchestrator pass `scope.repo_root` and documents the token contract; it does not change their signatures.
 
 **Tech Stack:** Python 3 stdlib only (no runtime deps — hard rule); `pytest` via `uv run`; `ruff` (line-length 100) + `ty`. Git via `subprocess` with an injectable `runner` (existing pattern in `repo_memory.repo_slug`).
 
 ## Global Constraints
 
 - Core is **stdlib-only**. Do NOT add a runtime dependency to `pyproject.toml`. (verbatim: CLAUDE.md §7)
-- **Do NOT modify** `helpers/sec_harness/models.py` or `helpers/sec_harness/evidence.py` — frozen JSON contract mirrored by the Go port (`go/internal/model/testdata`, `TestParity`). Plan 1 touches neither.
-- **You touch only `skills/` paths.** Never `git add -A` / `git add .`; stage explicit `skills/sec-harness/...` paths; `git status` must show only skill paths before every commit. Never touch `go/`.
+- **Do NOT modify** `helpers/sec_overlay/models.py` or `helpers/sec_overlay/evidence.py` — frozen JSON contract mirrored by the Go port (`go/internal/model/testdata`, `TestParity`). Plan 1 touches neither.
+- **You touch only `skills/` paths.** Never `git add -A` / `git add .`; stage explicit `skills/sec-overlay/...` paths; `git status` must show only skill paths before every commit. Never touch `go/`.
 - Work on branch `spec/process-review-hardening-20260807` (already created off `main`). Personal remote → no GPG signing, no AI attribution in commits. Do NOT push (user publishes).
-- All work runs from `skills/sec-harness/helpers/`. Tests live in `helpers/tests/`. Run tests with `uv run pytest`.
+- All work runs from `skills/sec-overlay/helpers/`. Tests live in `helpers/tests/`. Run tests with `uv run pytest`.
 - Every new module starts with `from __future__ import annotations` and full Google-style docstrings on public functions/classes (CLAUDE.md hard rule).
 
 ---
 
 ## File Structure
 
-- **Create** `helpers/sec_harness/scanscope.py` — `ScanScope` dataclass + `resolve()` / `write_scope()` / `load_scope()` / `rel_to_root()`. One responsibility: canonical scope resolution + persistence.
+- **Create** `helpers/sec_overlay/scanscope.py` — `ScanScope` dataclass + `resolve()` / `write_scope()` / `load_scope()` / `rel_to_root()`. One responsibility: canonical scope resolution + persistence.
 - **Create** `helpers/tests/test_scanscope.py` — unit tests for the above.
-- **Modify** `helpers/sec_harness/repo_memory.py` — `repo_slug` becomes scope-aware (identity includes scan-scope subpath).
+- **Modify** `helpers/sec_overlay/repo_memory.py` — `repo_slug` becomes scope-aware (identity includes scan-scope subpath).
 - **Modify** `helpers/tests/test_repo_memory.py` (create if absent) — slug collision tests.
-- **Modify** `helpers/sec_harness/context.py` — `discover_context_files` becomes `(repo_root, scan_scope=".")`, globs from repo_root, adds monorepo service-doc roots + `.puml`/`.dot` text diagrams, records image diagrams.
+- **Modify** `helpers/sec_overlay/context.py` — `discover_context_files` becomes `(repo_root, scan_scope=".")`, globs from repo_root, adds monorepo service-doc roots + `.puml`/`.dot` text diagrams, records image diagrams.
 - **Modify** `helpers/tests/test_context.py` (create if absent) — discovery-scope tests.
-- **Modify** `helpers/sec_harness/phase_gate.py` — `_MD_CITATION` extension coverage + range support in `claims_from_markdown`.
+- **Modify** `helpers/sec_overlay/phase_gate.py` — `_MD_CITATION` extension coverage + range support in `claims_from_markdown`.
 - **Modify** `helpers/tests/test_phase_gate.py` (create if absent) — citation-extraction tests.
-- **Modify** `helpers/sec_harness/cli.py` — write `kb/scan-scope.json` at pass start (scan/begin path).
-- **Modify** `skills/sec-harness/SKILL.md` + `skills/sec-harness/references/prompt-constants.md` — document `{{REPO_ROOT}}`/`{{SCAN_SCOPE}}` tokens + the "resolve against repo_root" invariant.
+- **Modify** `helpers/sec_overlay/cli.py` — write `kb/scan-scope.json` at pass start (scan/begin path).
+- **Modify** `skills/sec-overlay/SKILL.md` + `skills/sec-overlay/references/prompt-constants.md` — document `{{REPO_ROOT}}`/`{{SCAN_SCOPE}}` tokens + the "resolve against repo_root" invariant.
 
 ---
 
 ### Task 1: `scanscope.py` — resolve + persist canonical scope
 
 **Files:**
-- Create: `helpers/sec_harness/scanscope.py`
+- Create: `helpers/sec_overlay/scanscope.py`
 - Test: `helpers/tests/test_scanscope.py`
 
 **Interfaces:**
@@ -57,8 +57,8 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from sec_harness.scanscope import ScanScope, resolve, write_scope, load_scope, rel_to_root
-from sec_harness.workspace import Workspace
+from sec_overlay.scanscope import ScanScope, resolve, write_scope, load_scope, rel_to_root
+from sec_overlay.workspace import Workspace
 
 
 def _fake_git(toplevel: str):
@@ -135,13 +135,13 @@ def test_rel_to_root_absolute_and_subdir(tmp_path: Path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_scanscope.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'sec_harness.scanscope'`.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_scanscope.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named 'sec_overlay.scanscope'`.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# helpers/sec_harness/scanscope.py
+# helpers/sec_overlay/scanscope.py
 """Canonical scan scope: the one repo_root + scan_scope every phase resolves against.
 
 A single scan targets either a whole repo or a sub-path of a monorepo. Historically each
@@ -169,7 +169,7 @@ class ScanScope:
         repo_root: Absolute path to the git top-level (or the target if not a git repo).
         scan_scope: Target path relative to ``repo_root`` ("." for a whole-repo scan).
         path_base: Always ``"repo-root"`` — the declared base all refs resolve against.
-        slug: Stable per-scan identity slug (see :func:`sec_harness.repo_memory.repo_slug`).
+        slug: Stable per-scan identity slug (see :func:`sec_overlay.repo_memory.repo_slug`).
         sha: Pinned git SHA for the pass (informational).
         doc_roots: Repo-root-relative dirs to search for context docs (scan scope + any
             canonical monorepo service-doc locations for this service).
@@ -296,14 +296,14 @@ def rel_to_root(path: str | Path, scope: ScanScope) -> str:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_scanscope.py -v`
-Expected: PASS (6 tests). Then `uv run ruff check sec_harness/scanscope.py tests/test_scanscope.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_scanscope.py -v`
+Expected: PASS (6 tests). Then `uv run ruff check sec_overlay/scanscope.py tests/test_scanscope.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/scanscope.py skills/sec-harness/helpers/tests/test_scanscope.py
+git add skills/sec-overlay/helpers/sec_overlay/scanscope.py skills/sec-overlay/helpers/tests/test_scanscope.py
 git status   # confirm ONLY these two skill paths
 git commit -m "feat(scanscope): canonical repo_root + scan_scope resolution and persistence"
 ```
@@ -313,7 +313,7 @@ git commit -m "feat(scanscope): canonical repo_root + scan_scope resolution and 
 ### Task 2: `repo_slug` scope-aware identity (fix monorepo collision)
 
 **Files:**
-- Modify: `helpers/sec_harness/repo_memory.py:67-96` (`repo_slug`)
+- Modify: `helpers/sec_overlay/repo_memory.py:67-96` (`repo_slug`)
 - Test: `helpers/tests/test_repo_memory.py` (create if absent)
 
 **Interfaces:**
@@ -328,7 +328,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.repo_memory import repo_slug
+from sec_overlay.repo_memory import repo_slug
 
 
 def _origin(url: str):
@@ -363,7 +363,7 @@ def test_whole_repo_slug_stable(tmp_path: Path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_repo_memory.py -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_repo_memory.py -v`
 Expected: FAIL on `test_monorepo_subdirs_get_distinct_slugs` (both slugs currently equal — identity is the shared origin URL only).
 
 - [ ] **Step 3: Write minimal implementation**
@@ -416,14 +416,14 @@ def repo_slug(target: str | Path, *, runner=subprocess.run) -> str:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_repo_memory.py -v`
-Expected: PASS. Also run the full suite to catch slug-dependent tests: `uv run pytest -q` (the 3 known env-only failures from CLAUDE.md §2 are acceptable; no NEW failures). `uv run ruff check sec_harness/repo_memory.py tests/test_repo_memory.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_repo_memory.py -v`
+Expected: PASS. Also run the full suite to catch slug-dependent tests: `uv run pytest -q` (the 3 known env-only failures from CLAUDE.md §2 are acceptable; no NEW failures). `uv run ruff check sec_overlay/repo_memory.py tests/test_repo_memory.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/repo_memory.py skills/sec-harness/helpers/tests/test_repo_memory.py
+git add skills/sec-overlay/helpers/sec_overlay/repo_memory.py skills/sec-overlay/helpers/tests/test_repo_memory.py
 git status
 git commit -m "fix(repo_slug): include monorepo subpath in identity so sub-services don't collide"
 ```
@@ -433,7 +433,7 @@ git commit -m "fix(repo_slug): include monorepo subpath in identity so sub-servi
 ### Task 3: Persist scan-scope at pass start (CLI wiring)
 
 **Files:**
-- Modify: `helpers/sec_harness/cli.py` (the `scan` subcommand + any `begin`/memory-resolve path that pins a SHA)
+- Modify: `helpers/sec_overlay/cli.py` (the `scan` subcommand + any `begin`/memory-resolve path that pins a SHA)
 - Test: `helpers/tests/test_scanscope_cli.py`
 
 **Interfaces:**
@@ -442,7 +442,7 @@ git commit -m "fix(repo_slug): include monorepo subpath in identity so sub-servi
 
 - [ ] **Step 1: Read the CLI to find the pass-start seam**
 
-Run: `cd skills/sec-harness/helpers && uv run python -c "import inspect,sec_harness.cli as c; print(inspect.getsource(c))" | sed -n '1,80p'`
+Run: `cd skills/sec-overlay/helpers && uv run python -c "import inspect,sec_overlay.cli as c; print(inspect.getsource(c))" | sed -n '1,80p'`
 Identify where `--target`/`--workspace`/`--sha` are known and `begin_pass`/`run_scan` is called. The scope write goes immediately after the workspace is resolved and the SHA known.
 
 - [ ] **Step 2: Write the failing test**
@@ -453,9 +453,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.scanscope import load_scope
-from sec_harness.workspace import Workspace
-from sec_harness.cli import write_scan_scope  # new thin helper added in Step 4
+from sec_overlay.scanscope import load_scope
+from sec_overlay.workspace import Workspace
+from sec_overlay.cli import write_scan_scope  # new thin helper added in Step 4
 
 
 def _fake_git(top: str, origin: str):
@@ -484,7 +484,7 @@ def test_write_scan_scope_persists(tmp_path: Path):
 
 - [ ] **Step 3: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_scanscope_cli.py -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_scanscope_cli.py -v`
 Expected: FAIL with `ImportError: cannot import name 'write_scan_scope'`.
 
 - [ ] **Step 4: Write minimal implementation**
@@ -493,8 +493,8 @@ Add a thin helper to `cli.py` and call it at pass start:
 
 ```python
 # in cli.py — imports
-from sec_harness.scanscope import resolve as _resolve_scope, write_scope
-from sec_harness.repo_memory import repo_slug
+from sec_overlay.scanscope import resolve as _resolve_scope, write_scope
+from sec_overlay.repo_memory import repo_slug
 
 
 def write_scan_scope(ws, target, *, sha: str = "", runner=None):
@@ -507,7 +507,7 @@ def write_scan_scope(ws, target, *, sha: str = "", runner=None):
         runner: Injectable subprocess runner (tests); defaults to subprocess.run.
 
     Returns:
-        The persisted :class:`sec_harness.scanscope.ScanScope`.
+        The persisted :class:`sec_overlay.scanscope.ScanScope`.
     """
     import subprocess
     r = runner or subprocess.run
@@ -525,14 +525,14 @@ Then, in the `scan` subcommand handler, immediately after the workspace is resol
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_scanscope_cli.py -v`
-Expected: PASS. `uv run ruff check sec_harness/cli.py tests/test_scanscope_cli.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_scanscope_cli.py -v`
+Expected: PASS. `uv run ruff check sec_overlay/cli.py tests/test_scanscope_cli.py && uv run ty check` — clean.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/cli.py skills/sec-harness/helpers/tests/test_scanscope_cli.py
+git add skills/sec-overlay/helpers/sec_overlay/cli.py skills/sec-overlay/helpers/tests/test_scanscope_cli.py
 git status
 git commit -m "feat(cli): persist kb/scan-scope.json at pass start"
 ```
@@ -542,7 +542,7 @@ git commit -m "feat(cli): persist kb/scan-scope.json at pass start"
 ### Task 4: Scope-aware `discover_context_files` (fix docs coverage gap)
 
 **Files:**
-- Modify: `helpers/sec_harness/context.py:30-38,93-109`
+- Modify: `helpers/sec_overlay/context.py:30-38,93-109`
 - Test: `helpers/tests/test_context.py` (create if absent)
 
 **Interfaces:**
@@ -557,7 +557,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.context import discover_context_files
+from sec_overlay.context import discover_context_files
 
 
 def test_finds_monorepo_root_service_docs_from_subdir(tmp_path: Path):
@@ -592,7 +592,7 @@ def test_backcompat_single_arg_whole_repo(tmp_path: Path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_context.py -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_context.py -v`
 Expected: FAIL — `test_finds_monorepo_root_service_docs_from_subdir` (root docs missed) and `test_ingests_puml_text_diagrams` (`.puml` not globbed).
 
 - [ ] **Step 3: Write minimal implementation**
@@ -640,16 +640,16 @@ def discover_context_files(repo_root: str | Path, scan_scope: str = ".") -> list
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_context.py -v`
-Expected: PASS (3 tests). Update `agents/context-ingest.md` (Step 4b below). `uv run ruff check sec_harness/context.py tests/test_context.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_context.py -v`
+Expected: PASS (3 tests). Update `agents/context-ingest.md` (Step 4b below). `uv run ruff check sec_overlay/context.py tests/test_context.py && uv run ty check` — clean.
 
 - [ ] **Step 4b: Update the context-ingest agent prompt**
 
-In `skills/sec-harness/agents/context-ingest.md`, the `discover_context_files` invocation line must pass repo_root + scan_scope. Replace the discovery command so it reads scope from `kb/scan-scope.json`:
+In `skills/sec-overlay/agents/context-ingest.md`, the `discover_context_files` invocation line must pass repo_root + scan_scope. Replace the discovery command so it reads scope from `kb/scan-scope.json`:
 
 ```
 Candidate context files: run (from {{HELPERS_DIR}}):
-  uv run python -c "from sec_harness.scanscope import load_scope; from sec_harness.workspace import Workspace; from sec_harness.context import discover_context_files as d; import json; s=load_scope(Workspace('{{WORKSPACE}}')); print(chr(10).join(d(s.repo_root, s.scan_scope)))"
+  uv run python -c "from sec_overlay.scanscope import load_scope; from sec_overlay.workspace import Workspace; from sec_overlay.context import discover_context_files as d; import json; s=load_scope(Workspace('{{WORKSPACE}}')); print(chr(10).join(d(s.repo_root, s.scan_scope)))"
 ```
 Add a line: "Plain-text diagrams (`.puml`/`.dot`) ARE context — read them. Image diagrams (`.puml.png`/`.svg`) cannot be read as text; record each as a `source_pointer` coverage item noting it was not machine-read."
 
@@ -657,7 +657,7 @@ Add a line: "Plain-text diagrams (`.puml`/`.dot`) ARE context — read them. Ima
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/context.py skills/sec-harness/helpers/tests/test_context.py skills/sec-harness/agents/context-ingest.md
+git add skills/sec-overlay/helpers/sec_overlay/context.py skills/sec-overlay/helpers/tests/test_context.py skills/sec-overlay/agents/context-ingest.md
 git status
 git commit -m "fix(context): scope-aware discovery — monorepo root docs + puml/dot diagrams"
 ```
@@ -667,7 +667,7 @@ git commit -m "fix(context): scope-aware discovery — monorepo root docs + puml
 ### Task 5: `claims_from_markdown` extension + range coverage
 
 **Files:**
-- Modify: `helpers/sec_harness/phase_gate.py:256-258` (`_MD_CITATION`)
+- Modify: `helpers/sec_overlay/phase_gate.py:256-258` (`_MD_CITATION`)
 - Test: `helpers/tests/test_phase_gate.py` (create if absent)
 
 **Interfaces:**
@@ -680,7 +680,7 @@ git commit -m "fix(context): scope-aware discovery — monorepo root docs + puml
 # helpers/tests/test_phase_gate.py
 from __future__ import annotations
 
-from sec_harness.phase_gate import claims_from_markdown
+from sec_overlay.phase_gate import claims_from_markdown
 
 
 def test_extracts_terraform_range_citation():
@@ -703,7 +703,7 @@ def test_still_extracts_go_citation():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_phase_gate.py -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_phase_gate.py -v`
 Expected: FAIL on the terraform + yaml tests (extensions not in the pattern; range not captured).
 
 - [ ] **Step 3: Write minimal implementation**
@@ -745,14 +745,14 @@ def claims_from_markdown(text: str) -> list[dict]:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_phase_gate.py -v`
-Expected: PASS (3 tests). Run any existing phase-gate tests too: `uv run pytest -k phase_gate -q`. `uv run ruff check sec_harness/phase_gate.py tests/test_phase_gate.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_phase_gate.py -v`
+Expected: PASS (3 tests). Run any existing phase-gate tests too: `uv run pytest -k phase_gate -q`. `uv run ruff check sec_overlay/phase_gate.py tests/test_phase_gate.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/phase_gate.py skills/sec-harness/helpers/tests/test_phase_gate.py
+git add skills/sec-overlay/helpers/sec_overlay/phase_gate.py skills/sec-overlay/helpers/tests/test_phase_gate.py
 git status
 git commit -m "fix(phase_gate): extract IaC/config/diagram + range citations from markdown"
 ```
@@ -762,8 +762,8 @@ git commit -m "fix(phase_gate): extract IaC/config/diagram + range citations fro
 ### Task 6: Document the `{{REPO_ROOT}}` / `{{SCAN_SCOPE}}` token contract + resolve-against-repo_root invariant
 
 **Files:**
-- Modify: `skills/sec-harness/SKILL.md` (token list in "Running a full audit"; per-phase resolution note)
-- Modify: `skills/sec-harness/references/prompt-constants.md` (add the path-base rule to a shared block)
+- Modify: `skills/sec-overlay/SKILL.md` (token list in "Running a full audit"; per-phase resolution note)
+- Modify: `skills/sec-overlay/references/prompt-constants.md` (add the path-base rule to a shared block)
 - Test: `helpers/tests/test_docs_invariants.py` (a lightweight doc-contract test)
 
 **Interfaces:**
@@ -796,7 +796,7 @@ def test_prompt_constants_states_repo_root_invariant():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_docs_invariants.py -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_docs_invariants.py -v`
 Expected: FAIL (tokens/invariant not yet documented).
 
 - [ ] **Step 3: Write minimal implementation**
@@ -808,14 +808,14 @@ In `references/prompt-constants.md`, add to the shared envelope block a `PATH_BA
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_docs_invariants.py -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_docs_invariants.py -v`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/SKILL.md skills/sec-harness/references/prompt-constants.md skills/sec-harness/helpers/tests/test_docs_invariants.py
+git add skills/sec-overlay/SKILL.md skills/sec-overlay/references/prompt-constants.md skills/sec-overlay/helpers/tests/test_docs_invariants.py
 git status
 git commit -m "docs(scanscope): document REPO_ROOT/SCAN_SCOPE tokens + repo-root path invariant"
 ```
@@ -829,19 +829,19 @@ git commit -m "docs(scanscope): document REPO_ROOT/SCAN_SCOPE tokens + repo-root
 
 - [ ] **Step 1: Run the full suite**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest -q`
+Run: `cd skills/sec-overlay/helpers && uv run pytest -q`
 Expected: only the 3 known env-only failures (missing semgrep submodule / gitignored bench corpus, per CLAUDE.md §2). Zero NEW failures. If a slug-dependent or path-dependent test broke, fix it to consume `ScanScope`/the new `repo_slug` (do not weaken the invariant).
 
 - [ ] **Step 2: Lint + types clean**
 
-Run: `cd skills/sec-harness/helpers && uv run ruff check sec_harness/ tests/ && uv run ty check`
+Run: `cd skills/sec-overlay/helpers && uv run ruff check sec_overlay/ tests/ && uv run ty check`
 Expected: clean.
 
 - [ ] **Step 3: Commit any test fixups**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/tests/<any-fixed-test>.py
+git add skills/sec-overlay/helpers/tests/<any-fixed-test>.py
 git status
 git commit -m "test: adapt path/slug-dependent tests to ScanScope"
 ```

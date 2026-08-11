@@ -6,7 +6,7 @@
 
 **Architecture:** New `coverage.py` computes per-language `{files, tier}` from the profile + which backends ran. `run_prefilter` adds a `coverage` block to its result and persists `kb/coverage.json`. `report.py` renders a "Coverage & limitations" section from it. `partition.must_investigate(profile)` is the tested invariant that investigate runs even at 0 candidates.
 
-**Tech Stack:** Python 3.13 stdlib-only, pytest/ruff/ty. Run from `skills/sec-harness/helpers/`.
+**Tech Stack:** Python 3.13 stdlib-only, pytest/ruff/ty. Run from `skills/sec-overlay/helpers/`.
 
 ## Global Constraints
 - stdlib-only; line 100; ruff+ty clean on changed files.
@@ -18,16 +18,16 @@
 
 ### Task 1: coverage.compute_coverage
 
-**Files:** Create `helpers/sec_harness/coverage.py`. Test: `helpers/tests/test_coverage.py`.
+**Files:** Create `helpers/sec_overlay/coverage.py`. Test: `helpers/tests/test_coverage.py`.
 
 **Interfaces:** `compute_coverage(profile, backends_run: list[str], target: str) -> dict` returning
 `{"languages": [{"language": str, "files": int, "tier": "dataflow"|"pattern-only"|"none"}, ...], "dataflow_pct": int, "uncovered": [str, ...]}`.
 
-- [ ] **Step 0: verify** how `profile.sast_plan` is accessed (attribute vs dict) — read a ScanProfile: `uv run python -c "from sec_harness.profile import load_profile; p=load_profile('<any kb/scan-profile.json>'); print(type(p.sast_plan), p.languages)"`. Adapt Step 3's access to the real shape (it may be a dict on the object).
+- [ ] **Step 0: verify** how `profile.sast_plan` is accessed (attribute vs dict) — read a ScanProfile: `uv run python -c "from sec_overlay.profile import load_profile; p=load_profile('<any kb/scan-profile.json>'); print(type(p.sast_plan), p.languages)"`. Adapt Step 3's access to the real shape (it may be a dict on the object).
 - [ ] **Step 1: failing test**:
 ```python
 def test_compute_coverage_tiers(tmp_path):
-    from sec_harness.coverage import compute_coverage
+    from sec_overlay.coverage import compute_coverage
     (tmp_path / "a.js").write_text("1")
     (tmp_path / "b.liquid").write_text("1")
     class P:
@@ -58,7 +58,7 @@ _LANG_EXT: dict[str, tuple[str, ...]] = {
     "html": ("html", "htm"), "graphql": ("graphql", "gql"),
 }
 _SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "dist", "build", "vendor",
-              ".sec-harness", "__pycache__", "coverage"}
+              ".sec-overlay", "__pycache__", "coverage"}
 
 
 def _count_files(target: str, lang: str) -> int:
@@ -115,7 +115,7 @@ def compute_coverage(profile, backends_run: list[str], target: str) -> dict:
 
 ### Task 2: prefilter emits + persists coverage
 
-**Files:** Modify `helpers/sec_harness/prefilter.py` (`run_prefilter` return + persist). Test: `helpers/tests/test_prefilter.py` (a light unit — or extend existing).
+**Files:** Modify `helpers/sec_overlay/prefilter.py` (`run_prefilter` return + persist). Test: `helpers/tests/test_prefilter.py` (a light unit — or extend existing).
 
 **Interfaces:** `run_prefilter` result gains `"coverage": <compute_coverage output>`; also writes `ws.kb / "coverage.json"`.
 
@@ -129,7 +129,7 @@ def test_run_prefilter_result_has_coverage(monkeypatch, tmp_path):
 - [ ] **Step 2: run FAIL**.
 - [ ] **Step 3: implement** — in `run_prefilter`, before the return, compute + persist coverage:
 ```python
-    from sec_harness.coverage import compute_coverage
+    from sec_overlay.coverage import compute_coverage
     coverage = compute_coverage(profile, ran, str(target))
     (ws.kb / "coverage.json").write_text(json.dumps(coverage, indent=2))
 ```
@@ -140,14 +140,14 @@ def test_run_prefilter_result_has_coverage(monkeypatch, tmp_path):
 
 ### Task 3: report renders "Coverage & limitations"
 
-**Files:** Modify `helpers/sec_harness/report.py` (`to_markdown`). Test: `helpers/tests/test_report.py`.
+**Files:** Modify `helpers/sec_overlay/report.py` (`to_markdown`). Test: `helpers/tests/test_report.py`.
 
 - [ ] **Step 1: failing test** — a report rendered for a workspace whose `kb/coverage.json` marks `liquid` tier `none` contains a "Coverage" section naming liquid as uncovered.
 ```python
 def test_report_renders_coverage_section(tmp_path):
     import json
-    from sec_harness.workspace import Workspace
-    from sec_harness.report import write_report
+    from sec_overlay.workspace import Workspace
+    from sec_overlay.report import write_report
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     (ws.kb).mkdir(parents=True, exist_ok=True)
     (ws.kb / "coverage.json").write_text(json.dumps({
@@ -179,12 +179,12 @@ Render nothing (or "coverage: not recorded") if the file is absent, so existing 
 
 ### Task 4: must_investigate invariant
 
-**Files:** Modify `helpers/sec_harness/partition.py` (add `must_investigate`). Test: `helpers/tests/test_partition.py`. Doc: `SKILL.md`.
+**Files:** Modify `helpers/sec_overlay/partition.py` (add `must_investigate`). Test: `helpers/tests/test_partition.py`. Doc: `SKILL.md`.
 
 - [ ] **Step 1: failing test**:
 ```python
 def test_must_investigate_true_when_classes_exist_even_at_zero_candidates():
-    from sec_harness.partition import must_investigate
+    from sec_overlay.partition import must_investigate
     class P: agents_to_spawn = ["business-logic"]
     class Q: agents_to_spawn = []
     assert must_investigate(P()) is True     # 0 candidates but a hunt-list class exists -> must run

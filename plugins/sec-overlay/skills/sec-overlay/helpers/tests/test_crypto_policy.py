@@ -1,6 +1,6 @@
 """Tests for machine-checked crypto policy CBC/AEAD and KDF checks."""
 
-from sec_harness.crypto_policy import check
+from sec_overlay.crypto_policy import check
 
 
 def test_cbc_without_aead_is_denied():

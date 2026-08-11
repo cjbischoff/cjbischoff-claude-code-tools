@@ -8,7 +8,7 @@ Authenticated encryption (AES-GCM / libsodium) or a slow KDF for passwords; keys
 managed source (KMS/Vault/env), never literal.
 
 ## Mechanical policy gate
-Run `sec_harness.crypto_policy.check(algo, params, key_source)` against
+Run `sec_overlay.crypto_policy.check(algo, params, key_source)` against
 `references/approved-crypto-algorithms.yaml` + `approved-key-sources.yaml`. A denied algo
 (md5/sha1/des/ecb/mcrypt), a param below floor (rsa<3072, pbkdf2<600000, ecc<256), or a
 denied key source (literal/hardcoded/filesystem) is a violation — cite it in the finding.

@@ -1,6 +1,6 @@
 """Tests for CodeQL config trust gating."""
 
-from sec_harness.codeql import codeql_config_trusted
+from sec_overlay.codeql import codeql_config_trusted
 
 
 def test_trusted_when_no_config(tmp_path):

@@ -14,8 +14,8 @@ from __future__ import annotations
 import subprocess
 from typing import Protocol
 
-from sec_harness.models import Finding, FindingStatus
-from sec_harness.workspace import Workspace, read_findings
+from sec_overlay.models import Finding, FindingStatus
+from sec_overlay.workspace import Workspace, read_findings
 
 
 class ScanAdapter(Protocol):

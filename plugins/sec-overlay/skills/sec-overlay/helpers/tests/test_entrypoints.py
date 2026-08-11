@@ -1,4 +1,4 @@
-from sec_harness.entrypoints import classify_entry_point
+from sec_overlay.entrypoints import classify_entry_point
 
 
 def test_python_route_decorator_detected():

@@ -2,9 +2,9 @@
 import json
 from pathlib import Path
 
-from sec_harness.crypto_policy import check
-from sec_harness.fix_disposition import compute_tier, validate
-from sec_harness.gates import GATE_ROUTING, run_gates
+from sec_overlay.crypto_policy import check
+from sec_overlay.fix_disposition import compute_tier, validate
+from sec_overlay.gates import GATE_ROUTING, run_gates
 
 
 # F11

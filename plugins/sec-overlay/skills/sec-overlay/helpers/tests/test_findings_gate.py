@@ -2,9 +2,9 @@
 
 import json
 
-from sec_harness.findings_gate import validate_findings
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace, write_findings
+from sec_overlay.findings_gate import validate_findings
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace, write_findings
 
 
 def _good():
@@ -112,7 +112,7 @@ def test_schema_valid_finding_produces_no_schema_errors(tmp_path):
 
 
 def test_validate_findings_records_stage(tmp_path):
-    from sec_harness.state import load_state
+    from sec_overlay.state import load_state
 
     ws = Workspace(tmp_path / "workspace"); ws.ensure()
     write_findings(ws, [_good()])

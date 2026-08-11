@@ -4,7 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from sec_harness.correlate.cli import main
+from sec_overlay.correlate.cli import main
 from tests.correlate_fixtures import build_member
 
 
@@ -94,7 +94,7 @@ def test_cli_writes_combined_artifacts_and_sarif(tmp_path: Path, capsys):
     out = tmp_path / "corr"
 
     # Capture member sidecar before main() for immutability check
-    findings_files = list(tmp_path.glob("**/.sec-harness/**/findings/*.json"))
+    findings_files = list(tmp_path.glob("**/.sec-overlay/**/findings/*.json"))
     assert len(findings_files) > 0, "No findings files found in member sidecars"
     sidecar_file = findings_files[0]
     sha_before = hashlib.sha256(sidecar_file.read_bytes()).hexdigest()
@@ -112,7 +112,7 @@ def test_cli_writes_combined_artifacts_and_sarif(tmp_path: Path, capsys):
 
     # Verify SARIF structure
     sarif = json.loads((art / "report.sarif").read_text())
-    assert sarif["runs"][-1]["tool"]["driver"]["name"] == "sec-harness-correlation"
+    assert sarif["runs"][-1]["tool"]["driver"]["name"] == "sec-overlay-correlation"
 
     # Verify immutability of member sidecars
     sha_after = hashlib.sha256(sidecar_file.read_bytes()).hexdigest()

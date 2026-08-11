@@ -1,6 +1,6 @@
 """Tests for git diff scoping helpers."""
 
-from sec_harness.diffscope import changed_files, head_sha
+from sec_overlay.diffscope import changed_files, head_sha
 
 
 def test_changed_files_parses_name_only(monkeypatch):

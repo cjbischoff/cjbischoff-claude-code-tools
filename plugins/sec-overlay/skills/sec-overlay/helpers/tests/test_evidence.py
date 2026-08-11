@@ -1,6 +1,6 @@
 """Tests for evidence grading + tool-vs-LLM receipt distinction."""
 
-from sec_harness.evidence import Confidence, as_llm_claim, confidence_for, is_tool_receipt
+from sec_overlay.evidence import Confidence, as_llm_claim, confidence_for, is_tool_receipt
 
 
 def test_is_tool_receipt():

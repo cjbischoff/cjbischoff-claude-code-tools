@@ -1,6 +1,6 @@
 # Detection coverage
 
-_Generated from the live `clsmap` inventory (`sec_harness.detection_coverage`). An honest, falsifiable statement of what this harness catches and does not — not a claim to detect everything._
+_Generated from the live `clsmap` inventory (`sec_overlay.detection_coverage`). An honest, falsifiable statement of what this harness catches and does not — not a claim to detect everything._
 
 ## Rule sources
 

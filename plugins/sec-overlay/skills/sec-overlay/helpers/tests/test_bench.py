@@ -6,8 +6,8 @@ from bench.corpus import Corpus, CorpusEntry, load_corpus
 from bench.judge import deterministic_match, judge_all, judge_entry
 from bench.run import run_benchmark
 from bench.tally import tally
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace, write_findings
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace, write_findings
 
 
 def _entry(fid, **kw):

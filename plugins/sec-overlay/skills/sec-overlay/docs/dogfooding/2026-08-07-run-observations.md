@@ -1,4 +1,4 @@
-# sec-harness run observations — AEM 4-repo campaign (2026-08-07)
+# sec-overlay run observations — AEM 4-repo campaign (2026-08-07)
 
 Live log of inefficiencies + inaccuracies observed while running full agentic campaigns
 against: aem-analytics (product module), aem-event-service + tanium-aem-analytics-service
@@ -12,9 +12,9 @@ against: aem-analytics (product module), aem-event-service + tanium-aem-analytic
   raises `AttributeError: 'str' object has no attribute 'state_path'` otherwise. Same for
   every helper that takes `ws` — all need `Workspace(Path(...))`, not a str.
 - 🟠 **`demote_noise` / `reconcile_plan` import path.** SKILL.md Phase 5 implies
-  `from sec_harness.prefilter import ...`; they live in `sec_harness.partition`
-  (`merge_custom_check_classes` in `sec_harness.custom_checks`). ImportError if followed literally.
-- 🟠 **`memory` CLI ignores `--workspace`.** `python -m sec_harness.cli memory --target T --workspace W`
+  `from sec_overlay.prefilter import ...`; they live in `sec_overlay.partition`
+  (`merge_custom_check_classes` in `sec_overlay.custom_checks`). ImportError if followed literally.
+- 🟠 **`memory` CLI ignores `--workspace`.** `python -m sec_overlay.cli memory --target T --workspace W`
   errors `unrecognized arguments: --workspace`. `memory` only reads the default sidecar, so a
   custom-workspace run can't use the `--learn` / status path. (Learnings had to be written to the
   workspace `learnings/` dir by hand.)
@@ -38,7 +38,7 @@ against: aem-analytics (product module), aem-event-service + tanium-aem-analytic
 - 🟠 **`repo_slug` collides across monorepo sub-services.** Slug hashes the git *origin* URL, so
   `internal/aemeventservice` and `internal/aemanalytics` produce the identical slug
   `go-9530ad70`. Only saved from collision because `memory_root(target)` roots the sidecar under
-  the (distinct) subdir. Under `$SEC_HARNESS_HOME` (shared external base) both services would
+  the (distinct) subdir. Under `$SEC_OVERLAY_HOME` (shared external base) both services would
   write to the same folder and clobber each other. Slug identity should include the target subpath
   when it differs from the repo root.
 

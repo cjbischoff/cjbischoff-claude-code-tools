@@ -10,11 +10,11 @@ from pathlib import Path
 
 import pytest
 
-from sec_harness.findings_gate import validate_findings
-from sec_harness.models import Finding
-from sec_harness.workspace import Workspace, write_findings
+from sec_overlay.findings_gate import validate_findings
+from sec_overlay.models import Finding
+from sec_overlay.workspace import Workspace, write_findings
 
-SKILL = Path(__file__).resolve().parents[2]          # skills/sec-harness
+SKILL = Path(__file__).resolve().parents[2]          # skills/sec-overlay
 AGENTS = SKILL / "agents"
 _JSON_BLOCK = re.compile(r"```json\s*\n(.*?)```", re.DOTALL)
 

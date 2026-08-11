@@ -1,10 +1,10 @@
 """Tests for Bucket C: reachability gate, fail-open parse, salvage/terminal, stage-validate."""
 
-from sec_harness import parse, reachability, stage_validate
-from sec_harness.campaign import TERMINAL_STATUSES, salvage_partial
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.profile import ScanProfile, validate_profile
-from sec_harness.workspace import Workspace, read_findings, write_findings
+from sec_overlay import parse, reachability, stage_validate
+from sec_overlay.campaign import TERMINAL_STATUSES, salvage_partial
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.profile import ScanProfile, validate_profile
+from sec_overlay.workspace import Workspace, read_findings, write_findings
 
 
 def _f(fid, status=FindingStatus.CONFIRMED, reach=None):

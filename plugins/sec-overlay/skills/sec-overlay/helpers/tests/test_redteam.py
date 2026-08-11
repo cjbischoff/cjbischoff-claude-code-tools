@@ -1,9 +1,9 @@
 """Tests for the red-team static->runtime bridge phase."""
 
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.patch_status import PatchStatus
-from sec_harness.phase_gate import write_gate_record
-from sec_harness.redteam import (
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.patch_status import PatchStatus
+from sec_overlay.phase_gate import write_gate_record
+from sec_overlay.redteam import (
     _above_bar,
     _fixed_patch_statuses,
     build_redteam_gate_record,
@@ -11,7 +11,7 @@ from sec_harness.redteam import (
     render_plan,
     write_plan,
 )
-from sec_harness.workspace import Workspace, write_findings
+from sec_overlay.workspace import Workspace, write_findings
 
 
 def _f(fid, status=FindingStatus.CONFIRMED, risk=8, disposition=None, runtime_test=None,
@@ -96,7 +96,7 @@ def test_write_plan(tmp_path):
 
 
 def test_write_plan_records_stage(tmp_path):
-    from sec_harness.state import load_state
+    from sec_overlay.state import load_state
 
     ws = Workspace(tmp_path); ws.ensure()
     write_findings(ws, [_f("A", disposition="needs-runtime", risk=9)])
@@ -111,7 +111,7 @@ def _fixed(fid, patch_diff="--- a/x\n+++ b/x\n"):
 
 
 def test_fixed_patch_statuses_only_checks_fixed_with_patch(monkeypatch):
-    import sec_harness.redteam as R
+    import sec_overlay.redteam as R
 
     monkeypatch.setattr(R, "check_patch_applied", lambda target, diff: PatchStatus.APPLIED)
     confirmed = _f("B", disposition="static-settled")  # not FIXED -> skipped
@@ -143,7 +143,7 @@ def test_render_plan_omits_caution_for_applied_fixed_finding():
 
 
 def test_write_plan_with_target_annotates_caution(monkeypatch, tmp_path):
-    import sec_harness.redteam as R
+    import sec_overlay.redteam as R
 
     monkeypatch.setattr(R, "check_patch_applied", lambda target, diff: PatchStatus.NOT_APPLIED)
     ws = Workspace(tmp_path); ws.ensure()
@@ -216,7 +216,7 @@ def test_needs_runtime_sorts_critical_before_low_when_risk_score_is_none():
 
 
 def test_directive_renders_markdown_not_repr():
-    from sec_harness.redteam import _directive_block
+    from sec_overlay.redteam import _directive_block
 
     f = _f("investigation:authz", status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
            runtime_test={
@@ -236,7 +236,7 @@ def test_directive_renders_markdown_not_repr():
 def test_directive_renders_string_typed_fields_verbatim():
     # runtime_test fields aren't schema-forced to lists/dicts; a plain string must render,
     # not collapse to "_not specified_" (regression guard for the str branch).
-    from sec_harness.redteam import _directive_block
+    from sec_overlay.redteam import _directive_block
 
     f = _f("investigation:authz", status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
            runtime_test={

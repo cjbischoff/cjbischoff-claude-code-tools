@@ -170,8 +170,8 @@ Each is **appended** to `investigate.md` / `patch.md` for that class and supplie
 |-------|---------|
 | `{{TARGET}}` | absolute path to the code being scanned |
 | `{{WORKSPACE}}` | the harness workspace (`kb/`, `findings/`, `state.json`) |
-| `{{HARNESS_ROOT}}` | absolute path to `skills/sec-harness/` (so agents find `references/`) |
-| `{{HELPERS_DIR}}` | absolute path to `helpers/` (for `python -m sec_harness.*` calls) |
+| `{{OVERLAY_ROOT}}` | absolute path to `skills/sec-overlay/` (so agents find `references/`) |
+| `{{HELPERS_DIR}}` | absolute path to `helpers/` (for `python -m sec_overlay.*` calls) |
 | `{{REPO_ROOT}}` / `{{SCAN_SCOPE}}` | git top-level of the target + scan sub-path (from `kb/scan-scope.json`) |
 | `{{ATTACK_CLASS}}` | one class key (investigate agents) |
 | `{{PHASE}}` | `recon` / `architecture` / `threat-model` / `context` (phase-adversary) |

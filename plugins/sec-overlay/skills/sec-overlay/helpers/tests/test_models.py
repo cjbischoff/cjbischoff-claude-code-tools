@@ -1,6 +1,6 @@
 """Tests for the Finding / CampaignState models."""
 
-from sec_harness.models import CampaignState, Finding, FindingStatus, Severity
+from sec_overlay.models import CampaignState, Finding, FindingStatus, Severity
 
 
 def test_finding_roundtrip_preserves_all_fields():
@@ -71,7 +71,7 @@ def test_finding_new_fields_roundtrip_and_backcompat():
 
 
 def test_new_optional_fields_roundtrip():
-    from sec_harness.models import Finding, FindingStatus, Severity
+    from sec_overlay.models import Finding, FindingStatus, Severity
     f = Finding(id="F1", rule_id="r", cls="sqli", status=FindingStatus.CONFIRMED,
                 severity=Severity.HIGH, file="a.py", line=1, message="m",
                 asvs_ids=["v5.0.0-1.2.4"], codeguard_ids=["codeguard-0-input-validation-injection"],
@@ -81,7 +81,7 @@ def test_new_optional_fields_roundtrip():
 
 
 def test_from_dict_tolerates_unknown_keys():
-    from sec_harness.models import Finding, FindingStatus, Severity
+    from sec_overlay.models import Finding, FindingStatus, Severity
     base = Finding(id="F1", rule_id="r", cls="sqli", status=FindingStatus.RAW,
                    severity=Severity.LOW, file="a", line=1, message="m").to_dict()
     base["future_field"] = "x"
@@ -89,12 +89,12 @@ def test_from_dict_tolerates_unknown_keys():
 
 
 def test_needs_deployment_status():
-    from sec_harness.models import FindingStatus
+    from sec_overlay.models import FindingStatus
     assert FindingStatus("needs-deployment-testing") is FindingStatus.NEEDS_DEPLOYMENT_TESTING
 
 
 def test_runtime_dependent_field_roundtrips_and_defaults_false():
-    from sec_harness.models import Finding, FindingStatus, Severity
+    from sec_overlay.models import Finding, FindingStatus, Severity
     f = Finding(id="F-1", rule_id="r", cls="business-logic", status=FindingStatus.RAW,
                 severity=Severity.LOW, file="a.py", line=1, message="m")
     assert f.runtime_dependent is False
@@ -103,10 +103,10 @@ def test_runtime_dependent_field_roundtrips_and_defaults_false():
 
 
 def test_informational_status_roundtrips_and_is_terminal():
-    from sec_harness.campaign import TERMINAL_STATUSES
-    from sec_harness.models import Finding, FindingStatus
+    from sec_overlay.campaign import TERMINAL_STATUSES
+    from sec_overlay.models import Finding, FindingStatus
     f = Finding(id="C-1", rule_id="r", cls="log-injection", status=FindingStatus.INFORMATIONAL,
-                severity=__import__("sec_harness.models", fromlist=["Severity"]).Severity.INFO,
+                severity=__import__("sec_overlay.models", fromlist=["Severity"]).Severity.INFO,
                 file="a.py", line=1, message="noise")
     d = f.to_dict()
     assert d["status"] == "informational"

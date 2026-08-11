@@ -6,7 +6,7 @@
 
 **Architecture:** `GateDecision` carries `refs` + `text` (populated by `run_phase_checks` from the input claims) so `build_gate_record`'s `decisions` list serializes claim content; `build_gate_record` adds a `claims` map (`id → {text, refs}`) for the sent-to-adversary set. Extractors `claims_from_profile` / `claims_from_context` produce the `{id, text, refs}` claim lists. The `phase-adversary.md` prompt reads claim content from the record.
 
-**Tech Stack:** Python 3.13 stdlib-only, pytest/ruff/ty. Run from `skills/sec-harness/helpers/`.
+**Tech Stack:** Python 3.13 stdlib-only, pytest/ruff/ty. Run from `skills/sec-overlay/helpers/`.
 
 ## Global Constraints
 - stdlib-only; line 100; ruff+ty clean on changed files.
@@ -18,12 +18,12 @@
 
 ### Task 1: GateDecision + record carry claim content
 
-**Files:** Modify `helpers/sec_harness/phase_gate.py` (`GateDecision`, `run_phase_checks`, `build_gate_record`). Test: `helpers/tests/test_phase_gate.py`.
+**Files:** Modify `helpers/sec_overlay/phase_gate.py` (`GateDecision`, `run_phase_checks`, `build_gate_record`). Test: `helpers/tests/test_phase_gate.py`.
 
 - [ ] **Step 1: failing test** (add to test_phase_gate.py):
 ```python
 def test_gate_decision_and_record_carry_claim_content(tmp_path):
-    from sec_harness.phase_gate import run_phase_checks, build_gate_record
+    from sec_overlay.phase_gate import run_phase_checks, build_gate_record
     (tmp_path / "a.py").write_text("x = 1\n")
     claims = [{"id": "ep-0", "text": "entrypoint handler foo", "refs": ["a.py"]},
               {"id": "ep-1", "text": "missing thing", "refs": ["nope.py"]}]
@@ -46,23 +46,23 @@ def test_gate_decision_and_record_carry_claim_content(tmp_path):
         ```
     and add `"claims": claims,` to the returned dict.
 - [ ] **Step 4: run PASS**; full `uv run pytest tests/test_phase_gate.py -q` (existing gate tests must still pass — the new fields default, so `build_gate_record`'s other keys are unchanged).
-- [ ] **Step 5: lint** — `uv run ruff check sec_harness/phase_gate.py tests/test_phase_gate.py && uv run ty check sec_harness/phase_gate.py`.
-- [ ] **Step 6: commit** — `git add skills/sec-harness/helpers/sec_harness/phase_gate.py skills/sec-harness/helpers/tests/test_phase_gate.py && git commit -m "feat(phase_gate): gate record carries claim text+refs (O-004)"`
+- [ ] **Step 5: lint** — `uv run ruff check sec_overlay/phase_gate.py tests/test_phase_gate.py && uv run ty check sec_overlay/phase_gate.py`.
+- [ ] **Step 6: commit** — `git add skills/sec-overlay/helpers/sec_overlay/phase_gate.py skills/sec-overlay/helpers/tests/test_phase_gate.py && git commit -m "feat(phase_gate): gate record carries claim text+refs (O-004)"`
 
 ---
 
 ### Task 2: claim extractors (profile + context)
 
-**Files:** Modify `helpers/sec_harness/phase_gate.py` (add `claims_from_profile`, `claims_from_context`). Test: `helpers/tests/test_phase_gate.py`.
+**Files:** Modify `helpers/sec_overlay/phase_gate.py` (add `claims_from_profile`, `claims_from_context`). Test: `helpers/tests/test_phase_gate.py`.
 
 **Interfaces:** `claims_from_profile(profile) -> list[dict]`, `claims_from_context(ctx) -> list[dict]`, each a list of `{"id": str, "text": str, "refs": list[str]}`.
 
 - [ ] **Step 0: verify model field names first** — before writing, read the `ScanProfile` fields (`entrypoints`, `subsystems`) and the `Context`/`ContextItem` fields (how items are stored + the attribute holding the code location, e.g. `where`, and the summary/text attribute). Run:
-  `uv run python -c "from sec_harness.profile import load_profile; import inspect"` and inspect `sec_harness.context` for the Context/ContextItem shape. Adapt the attribute access in Step 3 to the real names.
+  `uv run python -c "from sec_overlay.profile import load_profile; import inspect"` and inspect `sec_overlay.context` for the Context/ContextItem shape. Adapt the attribute access in Step 3 to the real names.
 - [ ] **Step 1: failing test**:
 ```python
 def test_claims_from_profile_extracts_entrypoints_and_subsystems():
-    from sec_harness.phase_gate import claims_from_profile
+    from sec_overlay.phase_gate import claims_from_profile
     class P:  # minimal stand-in matching ScanProfile's attributes used here
         entrypoints = ["src/app.py:handler", "src/api.py:route"]
         subsystems = [{"name": "auth", "paths": ["src/auth.py"], "why": "login"}]
@@ -111,12 +111,12 @@ def claims_from_context(ctx) -> list[dict]:
 
 ### Task 3: phase-adversary prompt reads claim content
 
-**Files:** Modify `skills/sec-harness/agents/phase-adversary.md`. No test (prose).
+**Files:** Modify `skills/sec-overlay/agents/phase-adversary.md`. No test (prose).
 
 - [ ] **Step 1: edit** — in the Inputs / Procedure section, replace the guidance that references reviewing "the sent_to_adversary claims" with content-aware guidance:
   "Read `kb/gates/{{PHASE}}.json`: the `claims` map gives each sent-to-adversary claim's `text` + `refs`, and `decisions[]` carries the same per claim. Your verdict table has one row per entry in `claims` (or per `sent_to_adversary` id). For each, re-derive the claim from its `refs` in code (Read/ast-grep) — do NOT trust the claim text; it is the producer's assertion to challenge."
-- [ ] **Step 2: verify** — `grep -n "claims" skills/sec-harness/agents/phase-adversary.md`.
-- [ ] **Step 3: commit** — `git add skills/sec-harness/agents/phase-adversary.md && git commit -m "docs(phase-adversary): review claims by content from the gate record (O-004)"`
+- [ ] **Step 2: verify** — `grep -n "claims" skills/sec-overlay/agents/phase-adversary.md`.
+- [ ] **Step 3: commit** — `git add skills/sec-overlay/agents/phase-adversary.md && git commit -m "docs(phase-adversary): review claims by content from the gate record (O-004)"`
 
 ---
 

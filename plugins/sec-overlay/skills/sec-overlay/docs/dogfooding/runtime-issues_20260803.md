@@ -1,4 +1,4 @@
-# sec-harness runtime-issues log — 2026-08-03
+# sec-overlay runtime-issues log — 2026-08-03
 
 Observations from the instrumented dogfooding run. Each entry: phase, repo,
 severity (`blocker` / `correctness` / `data-quality` / `efficiency` /
@@ -27,7 +27,7 @@ severity (`blocker` / `correctness` / `data-quality` / `efficiency` /
 | 018 | Dedupe (cross-class) | ai-platform | data-quality (double-count) | CTL-0001 (ai-agent) and PROMPT-INJECTION-0002 (prompt-injection) are the SAME guardrail.ts:126 fail-open fact under two class framings; dedupe keys on cls so it can't merge them → potential double-count in the report | BATCHED |
 | 019 | Validate/report (disposition) | ai-platform | data-quality (clarity) | "code-defect confirmed but exploit-impact only provable at runtime" (BL-0001, C-0003, PI-0001, SSRF-0001) collapses into the same raw+runtime_dependent bucket as "verification incomplete"; a reviewer can't tell a strong code-settled gap from an unverified one | BATCHED (refines 013) |
 | 020 | Patch | ai-platform | efficiency (prompt) | patch.md doesn't mandate `git apply --check` before returning; opus reliably miscounts hunk @@ line counts on larger diffs (2 corrupt patches this run, self-corrected). Also: multi-line diffs with tabs/templates need the python-json-injector, not the Write tool | BATCHED (prompt hardening) |
-| 021 | Verify | ai-platform | data-quality (verify scope) | verify.py re-runs ONLY semgrep (`from sec_harness.sast import run_semgrep`); a CodeQL/osv/secrets-detected finding (e.g. CodeQL C-0002) can never reach `verified-static`/`fixed`, capped at `static-only` even with a correct applied patch | BATCHED |
+| 021 | Verify | ai-platform | data-quality (verify scope) | verify.py re-runs ONLY semgrep (`from sec_overlay.sast import run_semgrep`); a CodeQL/osv/secrets-detected finding (e.g. CodeQL C-0002) can never reach `verified-static`/`fixed`, capped at `static-only` even with a correct applied patch | BATCHED |
 | 022 | Red team (min-risk bar) | ai-platform | data-quality (minor) | needs-deployment-testing findings have risk_score=None; redteam `_above_bar` has a severity+tool-receipt fallback (good — 4/5 surfaced) but a low-severity None finding flagged "prime manual test" (PROMPT-INJECTION-0002) drops to gaps; mostly working-as-intended | BATCHED (low) |
 | 023 | Red team adversary (gate schema) | ai-platform | data-quality (wiring) | redteam-adversary.md verdict vocab (CONFIRMED/WEAKENED/INVALIDATED) vs KEEP/RECLASSIFY/STRIP framing mismatch; `build_gate_record`/`write_gate_record` are phase-claim-shaped (expect GateDecision lists), impedance-mismatched for redteam; kb/gates/redteam.json schema unpinned | BATCHED |
 | 024 | Recon (attack-class catalog) | accounting-integrations | data-quality (coverage) | no attack-class key for custom sandboxed-expression-evaluator / rules-engine formula RCE (lib/jsep-evaluator.js `callee.apply`); recon must freehand a note — not eval() nor ssti | BATCHED (catalog addition) |
@@ -42,7 +42,7 @@ Every codex-port feature exercised: graph fingerprint/dedupe, discovery ledger,
 fp_feedback (empty pass 1), coverage ledger (Feature 4, rendered in report), cost.py
 (Feature 6, rendered), per-class proof tuples (authz/resource).
 
-**Audit output (artifacts in `<target>/.sec-harness/ai-platform-01f8c338/`):**
+**Audit output (artifacts in `<target>/.sec-overlay/ai-platform-01f8c338/`):**
 - **3 confirmed** — C-0002 (resource: unbounded entity fan-out → per-element LLM
   invocation, high, risk 6), CTL-0001 (ai-agent: Bedrock guardrail fail-open, risk 6),
   BUSINESS-LOGIC-0002 (non-atomic summary upsert race, risk 3).
@@ -79,7 +79,7 @@ Run 2 (accounting-integrations) + Run 3 (ai-scheduler, scoped).
 ## Detail
 
 ### ISSUE-001 — Tier-1 graph call-edge detection is quadratic — FIXED
-- **Phase:** T1 graph build (`sec_harness.graph.build_tier1`, graph.py:176-186).
+- **Phase:** T1 graph build (`sec_overlay.graph.build_tier1`, graph.py:176-186).
 - **Repo:** ai-platform (268 source files, 3877 symbols, 1362 unique names).
 - **Severity:** efficiency; effectively blocking the multi-repo plan (larger
   repos would take far longer — cost scales O(symbols×unique_names)).
@@ -98,7 +98,7 @@ Run 2 (accounting-integrations) + Run 3 (ai-scheduler, scoped).
 
 ### ISSUE-002 — `Workspace('<str>')` throws TypeError — FIXED
 - **Phase:** C1 context-ingest (recurs in any agent command copying the pattern).
-- **Evidence:** `sec_harness.workspace.Workspace` is a dataclass typed `root: Path`
+- **Evidence:** `sec_overlay.workspace.Workspace` is a dataclass typed `root: Path`
   with no coercion; `Workspace('/path')` then does `str / "kb"` →
   `TypeError: unsupported operand type(s) for /: 'str' and 'str'`. The
   `context-ingest.md:39` example command passes a bare string, so it is a
@@ -165,7 +165,7 @@ Run 2 (accounting-integrations) + Run 3 (ai-scheduler, scoped).
 - The architecture subagent tried to write `kb/entities/summary-and-persistence.md`
   and reported the Write was refused as "subagents should return findings as text,
   not write report files"; it renamed to `persistence-layer.md` and wrote it
-  (content intact — no loss THIS time). Root cause is not sec-harness code and not
+  (content intact — no loss THIS time). Root cause is not sec-overlay code and not
   the `agent-flow/hook.js` telemetry hook (83 lines, forwards events only) — it is
   the subagent self-censoring on a report/summary-like filename.
 - **Risk:** a future agent could return the artifact as chat text instead of
@@ -240,7 +240,7 @@ clsmap now surfaces `resource` candidates + the broader rescue recovered 11
 mis-demoted CodeQL findings (fix 011, and confirmed the class is broader — see 011);
 no Write-block data loss with OUTPUT_WRITE_FALLBACK (fix 009).
 
-**Audit output** (`.sec-harness/accounting-integrations-e8979eb5/`):
+**Audit output** (`.sec-overlay/accounting-integrations-e8979eb5/`):
 - **5 confirmed** — **JSEP-0001 (HIGH, RCE)** custom jsep-evaluator sandbox escape
   (`constructor.constructor` two-step) from an account-scoped `PUT /workflows/{id}`
   → arbitrary Node exec in the Lambda; **AUTHZ-0003 (HIGH)** unauthenticated presigned
@@ -271,7 +271,7 @@ New issues this run: **024** (no attack-class for expression-evaluator RCE),
 
 Full agentic pipeline, recon-driven subsystem scoping. SHA
 `2f2227756ead408556a4c84166bac5e502c79ef8`, pass 1, workspace
-`.sec-harness/ai-scheduler-962f75b4`.
+`.sec-overlay/ai-scheduler-962f75b4`.
 
 **Pipeline run:** graph (5.3s, 7652 nodes/88799 edges — fix 001 holds at 105M) →
 recon → architecture → threat-model → prefilter → 4 scoped investigate agents
@@ -289,7 +289,7 @@ account-scoping; architecture proved scoping IS centrally enforced at
 entity_id → fs path under a debug flag). Architecture also flagged the MCP write-tool
 catalog as likely unreachable and told investigate to verify the negative first.
 
-**Audit output** (`.sec-harness/ai-scheduler-962f75b4/`):
+**Audit output** (`.sec-overlay/ai-scheduler-962f75b4/`):
 - **3 confirmed** (static-settled) — **C-0028 (MED, risk 4)** authenticated info-leak:
   `str(e)` returned verbatim in 500 body (`server/api/base.py:115`); **AUTHZ-0001
   (LOW, risk 4)** process-wide filter-refresh lock not account-keyed → cross-tenant

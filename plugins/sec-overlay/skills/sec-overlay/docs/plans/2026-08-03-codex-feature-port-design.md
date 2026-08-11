@@ -1,9 +1,9 @@
-# Design spec: port codex-security signal/recall mechanisms into sec-harness
+# Design spec: port codex-security signal/recall mechanisms into sec-overlay
 
 **Date:** 2026-08-03
 **Status:** Approved for planning
 **Scope:** Six additive mechanisms adapted from OpenAI `@openai/codex-security`
-(`skills/codex-security/`) into the sec-harness skill. All are additive — no
+(`skills/codex-security/`) into the sec-overlay skill. All are additive — no
 existing behavior is removed.
 
 ---
@@ -13,12 +13,12 @@ existing behavior is removed.
 `@openai/codex-security` is an LLM-SAST shipped as a Codex plugin: a TypeScript
 CLI/SDK, a ~17.7k-LOC Python "workbench" (SQLite durable scan state), and 13
 agent skills over schema-validated contracts. It is the same species as
-sec-harness (phase pipeline → discovery → validation → attack-path → report) but
+sec-overlay (phase pipeline → discovery → validation → attack-path → report) but
 made different engineering bets. A three-layer analysis (skills, workbench, TS
 orchestration) identified six mechanisms with signal-quality or recall value
-that sec-harness verifiably lacks and that fit its philosophy.
+that sec-overlay verifiably lacks and that fit its philosophy.
 
-**Verified against sec-harness source** (not inferred):
+**Verified against sec-overlay source** (not inferred):
 
 - `fingerprint.py:25` keys identity on `rule_id|cls|file|line` — line shifts
   break cross-pass matching.
@@ -170,7 +170,7 @@ source + control/sanitizer bypass + reachable impact, specialized per class) to
 each `agents/classes/*.md` and to `agents/validate.md`, adapted from codex's
 `validation-guidance.md`. Add an explicit **instance-preservation** rule: do not
 merge sibling instances that share a CWE family but have distinct concrete sinks
-(sec-harness's `dedupe.py` already collapses only exact `file+line+cls`, so this
+(sec-overlay's `dedupe.py` already collapses only exact `file+line+cls`, so this
 is a discovery/validation-prompt discipline, not a dedupe change).
 
 **Files.** `agents/classes/{injection,authz,crypto,config,resource}.md`;
@@ -190,7 +190,7 @@ is a discovery/validation-prompt discipline, not a dedupe change).
 `{phase, agent, model, tokens}` entries into the existing free-form
 `CampaignState.budget` dict. `cost.py` aggregates by phase and prices via a
 small `model → rate` table; `report.py` renders a cost summary. Architecture
-note (honest): sec-harness is driven by the main Claude agent spawning subagents
+note (honest): sec-overlay is driven by the main Claude agent spawning subagents
 via the Agent tool, not a separate process tailing session JSONL, so this is a
 recorded-usage model — lower fidelity than codex's automatic `parentThreadId`
 BFS attribution, but it fits the harness's control flow.
@@ -216,9 +216,9 @@ The implementation plan will phase them accordingly.
   design. Concepts (logical-finding vs occurrence, decision ledger) partially
   adopted via kb/ files where valuable; the engine is not.
 - **Remediation optimistic-concurrency + lease state machine** — solves
-  multi-host-thread contention sec-harness does not have (single orchestrator,
+  multi-host-thread contention sec-overlay does not have (single orchestrator,
   throwaway-copy patches). YAGNI.
-- **report.md as deterministic projection** — sec-harness already does this
+- **report.md as deterministic projection** — sec-overlay already does this
   (`report.py`).
 - **Trusted-executable / PATH-hijack / schema-complexity governor / bulk
   multi-repo** — smaller attack surface (never executes target) and different

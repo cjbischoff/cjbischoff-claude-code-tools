@@ -1,6 +1,6 @@
-from sec_harness.fp_feedback import render_fp_feedback
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace, write_findings
+from sec_overlay.fp_feedback import render_fp_feedback
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace, write_findings
 
 
 def _rej(fid, msg, reason, line=3):

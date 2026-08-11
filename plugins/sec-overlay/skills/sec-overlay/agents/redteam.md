@@ -8,7 +8,7 @@ human runs, not a script the harness runs.
 
 ## Imports
 Include ANTI_MANIPULATION, SEVERITY_GUIDANCE, TOOL_TRUST, and OUTPUT_WRITE_FALLBACK from
-`{{HARNESS_ROOT}}/references/prompt-constants.md`. Envelope any quoted repo text.
+`{{OVERLAY_ROOT}}/references/prompt-constants.md`. Envelope any quoted repo text.
 
 ## Inputs
 - Target: `{{TARGET}}`  Workspace: `{{WORKSPACE}}`
@@ -42,7 +42,7 @@ Include ANTI_MANIPULATION, SEVERITY_GUIDANCE, TOOL_TRUST, and OUTPUT_WRITE_FALLB
 ## Output
 Update each finding file in place with `runtime_disposition` and (for `needs-runtime`) a
 `runtime_test` block. Return a summary table: id, disposition, risk, one-line objective. The
-deterministic renderer (`python -m sec_harness.redteam --workspace {{WORKSPACE}}`) produces
+deterministic renderer (`python -m sec_overlay.redteam --workspace {{WORKSPACE}}`) produces
 `redteam-plan.md` from these fields — you do not write the markdown yourself.
 
 ## Rules

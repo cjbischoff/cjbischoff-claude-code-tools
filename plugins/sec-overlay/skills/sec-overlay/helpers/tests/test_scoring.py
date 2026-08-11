@@ -1,6 +1,6 @@
 """Tests for deterministic fix-validation scoring."""
 
-from sec_harness.scoring import score_fix
+from sec_overlay.scoring import score_fix
 
 
 def _g(root="pass", cov="pass", nonew="pass", best="pass"):

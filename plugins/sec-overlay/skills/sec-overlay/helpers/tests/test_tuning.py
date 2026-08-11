@@ -1,8 +1,8 @@
 """Tests for adaptive-tuning scoreboard + ratchet + log."""
 
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.tuning import TuningLog, gap_report, is_improvement, signal_snapshot
-from sec_harness.workspace import Workspace
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.tuning import TuningLog, gap_report, is_improvement, signal_snapshot
+from sec_overlay.workspace import Workspace
 
 
 def _f(id_, cls, file, status, sources):

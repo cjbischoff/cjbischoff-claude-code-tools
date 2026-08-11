@@ -6,7 +6,7 @@
 
 **Architecture:** `cvss31_base` raises `ValueError` (not `KeyError`) on any invalid/missing metric, so the existing `except ValueError` in `calibrate._derived_score` falls back to the heuristic. Add per-finding isolation in `calibrate_findings` (defense-in-depth). List legal CVSS metric values in the severity prompt so the LLM stops emitting them.
 
-**Tech Stack:** Python 3.13, stdlib-only, pytest/ruff/ty. Run from `skills/sec-harness/helpers/`.
+**Tech Stack:** Python 3.13, stdlib-only, pytest/ruff/ty. Run from `skills/sec-overlay/helpers/`.
 
 ## Global Constraints
 - stdlib-only; line length 100; ruff+ty clean on changed files.
@@ -18,12 +18,12 @@
 
 ### Task 1: cvss31_base raises ValueError on invalid/missing metric
 
-**Files:** Modify `helpers/sec_harness/cvss.py` (`cvss31_base`). Test: `helpers/tests/test_cvss.py` (create if absent).
+**Files:** Modify `helpers/sec_overlay/cvss.py` (`cvss31_base`). Test: `helpers/tests/test_cvss.py` (create if absent).
 
 - [ ] **Step 1: failing test**
 ```python
 import pytest
-from sec_harness.cvss import cvss31_base
+from sec_overlay.cvss import cvss31_base
 
 def test_invalid_metric_value_raises_valueerror():
     # 'M' is not a legal Confidentiality value (N/L/H) — must be ValueError, not KeyError (O-029).
@@ -47,14 +47,14 @@ def test_valid_vector_still_scores():
 ```
 (Keep the rest of the function — `impact`/`raw`/`score` — unchanged, after this block.)
 - [ ] **Step 4: run, expect PASS** — `uv run pytest tests/test_cvss.py -v`.
-- [ ] **Step 5: lint** — `uv run ruff check sec_harness/cvss.py tests/test_cvss.py && uv run ty check sec_harness/cvss.py`.
-- [ ] **Step 6: commit** — `git add skills/sec-harness/helpers/sec_harness/cvss.py skills/sec-harness/helpers/tests/test_cvss.py && git commit -m "fix(cvss): raise ValueError not KeyError on invalid metric (O-029)"`
+- [ ] **Step 5: lint** — `uv run ruff check sec_overlay/cvss.py tests/test_cvss.py && uv run ty check sec_overlay/cvss.py`.
+- [ ] **Step 6: commit** — `git add skills/sec-overlay/helpers/sec_overlay/cvss.py skills/sec-overlay/helpers/tests/test_cvss.py && git commit -m "fix(cvss): raise ValueError not KeyError on invalid metric (O-029)"`
 
 ---
 
 ### Task 2: calibrate falls back + isolates per-finding failures
 
-**Files:** Modify `helpers/sec_harness/calibrate.py` (`calibrate_findings`). Test: `helpers/tests/test_calibrate.py`.
+**Files:** Modify `helpers/sec_overlay/calibrate.py` (`calibrate_findings`). Test: `helpers/tests/test_calibrate.py`.
 
 **Interfaces:** Consumes Task 1's `cvss31_base` ValueError behavior. `calibrate_score` already catches ValueError → heuristic.
 
@@ -62,7 +62,7 @@ def test_valid_vector_still_scores():
 ```python
 def test_malformed_cvss_does_not_crash_batch(tmp_path):
     # O-029: one finding with an invalid metric must NOT zero the others; it falls back to heuristic.
-    from sec_harness.models import Finding, FindingStatus, Severity
+    from sec_overlay.models import Finding, FindingStatus, Severity
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     good = Finding(id="G", rule_id="r", cls="sqli", status=FindingStatus.CONFIRMED,
                    severity=Severity.HIGH, file="a.py", line=1, message="m",
@@ -105,22 +105,22 @@ def test_malformed_cvss_does_not_crash_batch(tmp_path):
 ```
 (This inlines `calibrate_score`'s body so the isolation covers the whole per-finding computation. `calibrate_score` stays as the public single-finding entry point — do not delete it.)
 - [ ] **Step 4: run** — `uv run pytest tests/test_calibrate.py -v` all green (existing cluster-A tests included).
-- [ ] **Step 5: lint** — `uv run ruff check sec_harness/calibrate.py tests/test_calibrate.py && uv run ty check sec_harness/calibrate.py`.
-- [ ] **Step 6: commit** — `git add skills/sec-harness/helpers/sec_harness/calibrate.py skills/sec-harness/helpers/tests/test_calibrate.py && git commit -m "fix(calibrate): isolate per-finding scoring failures (O-029)"`
+- [ ] **Step 5: lint** — `uv run ruff check sec_overlay/calibrate.py tests/test_calibrate.py && uv run ty check sec_overlay/calibrate.py`.
+- [ ] **Step 6: commit** — `git add skills/sec-overlay/helpers/sec_overlay/calibrate.py skills/sec-overlay/helpers/tests/test_calibrate.py && git commit -m "fix(calibrate): isolate per-finding scoring failures (O-029)"`
 
 ---
 
 ### Task 3: Prompt lists legal CVSS metric values
 
-**Files:** Modify `skills/sec-harness/references/prompt-constants.md` (SEVERITY_GUIDANCE block). No test (prose).
+**Files:** Modify `skills/sec-overlay/references/prompt-constants.md` (SEVERITY_GUIDANCE block). No test (prose).
 
 - [ ] **Step 1: edit** — in the `## SEVERITY_GUIDANCE` block, after the CVSS sentence, add:
 ```
 Legal CVSS 3.1 base-metric values (use ONLY these): AV:[N,A,L,P] AC:[L,H] PR:[N,L,H] UI:[N,R]
 S:[U,C] C:[N,L,H] I:[N,L,H] A:[N,L,H]. Never emit a value outside these sets (e.g. `C:M` is invalid).
 ```
-- [ ] **Step 2: verify** — `grep -n "Legal CVSS" skills/sec-harness/references/prompt-constants.md`.
-- [ ] **Step 3: commit** — `git add skills/sec-harness/references/prompt-constants.md && git commit -m "docs(prompts): enumerate legal CVSS metric values so agents can't emit C:M (O-029)"`
+- [ ] **Step 2: verify** — `grep -n "Legal CVSS" skills/sec-overlay/references/prompt-constants.md`.
+- [ ] **Step 3: commit** — `git add skills/sec-overlay/references/prompt-constants.md && git commit -m "docs(prompts): enumerate legal CVSS metric values so agents can't emit C:M (O-029)"`
 
 ---
 

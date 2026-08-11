@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.cli import write_scan_scope  # new thin helper added in Step 4
-from sec_harness.scanscope import load_scope
-from sec_harness.workspace import Workspace
+from sec_overlay.cli import write_scan_scope  # new thin helper added in Step 4
+from sec_overlay.scanscope import load_scope
+from sec_overlay.workspace import Workspace
 
 
 def _fake_git(top: str, origin: str):

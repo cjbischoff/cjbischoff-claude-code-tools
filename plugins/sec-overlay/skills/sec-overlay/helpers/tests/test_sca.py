@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from sec_harness.sca import ScaError, parse_osv_json, run_sca
+from sec_overlay.sca import ScaError, parse_osv_json, run_sca
 
 _OSV = {
     "results": [{
@@ -50,7 +50,7 @@ def test_run_sca_empty_output_errors():
 
 
 def test_sca_source_is_tool_receipt():
-    from sec_harness.evidence import is_tool_receipt
+    from sec_overlay.evidence import is_tool_receipt
     assert is_tool_receipt("sca:osv:GHSA-xxxx") is True
 
 

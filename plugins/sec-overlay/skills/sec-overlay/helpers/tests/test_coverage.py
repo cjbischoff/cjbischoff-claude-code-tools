@@ -4,7 +4,7 @@ from typing import ClassVar
 
 
 def test_compute_coverage_tiers(tmp_path):
-    from sec_harness.coverage import compute_coverage
+    from sec_overlay.coverage import compute_coverage
 
     (tmp_path / "a.js").write_text("1")
     (tmp_path / "b.liquid").write_text("1")
@@ -23,7 +23,7 @@ def test_compute_coverage_tiers(tmp_path):
 
 
 def test_compute_coverage_pattern_only_when_only_semgrep_covers(tmp_path):
-    from sec_harness.coverage import compute_coverage
+    from sec_overlay.coverage import compute_coverage
 
     (tmp_path / "a.py").write_text("1")
 
@@ -38,7 +38,7 @@ def test_compute_coverage_pattern_only_when_only_semgrep_covers(tmp_path):
 
 
 def test_compute_coverage_backend_not_run_means_no_credit(tmp_path):
-    from sec_harness.coverage import compute_coverage
+    from sec_overlay.coverage import compute_coverage
 
     (tmp_path / "a.js").write_text("1")
 

@@ -6,7 +6,7 @@
 
 **Architecture:** Small, independent edits. Task 1 (code): report links redteam-plan.md + condensed-tier receipts row. Task 2 (code): a `manual_review_findings` LEAD carrier mirroring the existing `control_findings`. Task 3 (prose): critic pass-event, SKILL wiring of the extractors + `demote_noise`/`reconcile_plan`/`promote_runtime_dependent`, and the C1/recon doc-ordering reconcile.
 
-**Tech Stack:** Python 3.13 stdlib-only, pytest/ruff/ty. Run from `skills/sec-harness/helpers/`.
+**Tech Stack:** Python 3.13 stdlib-only, pytest/ruff/ty. Run from `skills/sec-overlay/helpers/`.
 
 ## Global Constraints
 - stdlib-only; line 100; ruff+ty clean on changed files.
@@ -17,14 +17,14 @@
 
 ### Task 1: report links redteam-plan.md + condensed-tier receipts
 
-**Files:** Modify `helpers/sec_harness/report.py`. Test: `helpers/tests/test_report.py`.
+**Files:** Modify `helpers/sec_overlay/report.py`. Test: `helpers/tests/test_report.py`.
 
 - [ ] **Step 1: failing test** — a report for a workspace containing a `redteam-plan.md` and a confirmed medium finding (with an evidence receipt) mentions the plan and shows the receipt in the finding's condensed section:
 ```python
 def test_report_links_redteam_plan_and_shows_receipts(tmp_path):
-    from sec_harness.models import Finding, FindingStatus, Severity
-    from sec_harness.workspace import Workspace, write_findings
-    from sec_harness.report import write_report
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.workspace import Workspace, write_findings
+    from sec_overlay.report import write_report
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     (ws.reports).mkdir(parents=True, exist_ok=True)
     (ws.reports / "redteam-plan.md").write_text("# plan\n")
@@ -46,7 +46,7 @@ def test_report_links_redteam_plan_and_shows_receipts(tmp_path):
 
 ### Task 2: LEAD carrier for non-Finding leads
 
-**Files:** Modify `helpers/sec_harness/context.py` (add `manual_review_findings`). Test: `helpers/tests/test_context.py`.
+**Files:** Modify `helpers/sec_overlay/context.py` (add `manual_review_findings`). Test: `helpers/tests/test_context.py`.
 
 **Interfaces:** `manual_review_findings(ctx, sha: str) -> list[Finding]` — one `LEAD-####` finding (status `NEEDS_DEPLOYMENT_TESTING`, `cls="manual-review"`, evidence `["llm-claimed:doc-lead"]`) per context `attack_lead` item, so out-of-band leads (CI deploy-token) reach the red-team plan's manual section instead of vanishing.
 
@@ -61,12 +61,12 @@ def test_report_links_redteam_plan_and_shows_receipts(tmp_path):
 
 ### Task 3: prose — audit event, wiring, doc reconcile
 
-**Files:** `skills/sec-harness/agents/critic.md`, `skills/sec-harness/SKILL.md`, `skills/sec-harness/CLAUDE.md`. No test.
+**Files:** `skills/sec-overlay/agents/critic.md`, `skills/sec-overlay/SKILL.md`, `skills/sec-overlay/CLAUDE.md`. No test.
 
 - [ ] **Step 1: critic.md (T14)** — in the Decide/Output rules, add: "On a finding you keep viable, append a history event `{\"event\": \"critic:viable\"}` (a positive audit trail) — so 'reviewed & passed' is distinguishable from 'never reviewed'."
 - [ ] **Step 2: SKILL.md wiring** — in Phase 0-1/C1, note that the orchestrator builds gate claims via `phase_gate.claims_from_profile(profile)` / `claims_from_context(ctx)` (Cluster C) rather than hand-rolling them. In C1, note `manual_review_findings(ctx, sha)` emits `LEAD-####` records. Confirm the Phase 2-3 `demote_noise`/`reconcile_plan` note (Cluster B) and the Phase 5.5 `promote_runtime_dependent` note (Cluster D) are present (add if a prior cluster's wiring didn't land).
 - [ ] **Step 3: doc reconcile (T16/O-000)** — make SKILL.md and CLAUDE.md agree on C1 ordering. Canonical order: **C1 context-ingest runs after preflight, BEFORE recon** (its leads feed recon; a recon attack_surface class may be added from a lead only if a code indicator exists). Fix whichever doc states otherwise so both read the same.
-- [ ] **Step 4: commit** — `git add skills/sec-harness/agents/critic.md skills/sec-harness/SKILL.md skills/sec-harness/CLAUDE.md && git commit -m "docs(sec-harness): critic pass-event, extractor/LEAD wiring, C1 ordering reconcile (O-012/O-000)"`
+- [ ] **Step 4: commit** — `git add skills/sec-overlay/agents/critic.md skills/sec-overlay/SKILL.md skills/sec-overlay/CLAUDE.md && git commit -m "docs(sec-overlay): critic pass-event, extractor/LEAD wiring, C1 ordering reconcile (O-012/O-000)"`
 
 ---
 

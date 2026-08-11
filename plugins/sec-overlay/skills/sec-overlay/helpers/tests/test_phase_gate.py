@@ -2,14 +2,14 @@
 
 from typing import ClassVar
 
-from sec_harness.phase_gate import (
+from sec_overlay.phase_gate import (
     GateDecision,
     build_gate_record,
     ref_resolves,
     run_phase_checks,
     write_gate_record,
 )
-from sec_harness.workspace import Workspace
+from sec_overlay.workspace import Workspace
 
 
 def _repo(tmp_path):
@@ -41,7 +41,7 @@ def test_resolve_ref_basename_fallback(tmp_path):
     # Regression: an agent citing a package-relative or bare-basename path (harness defect 5)
     # should still resolve via a unique basename match under root, with a note recording the
     # fallback so the correction stays visible rather than silent.
-    from sec_harness.phase_gate import resolve_ref
+    from sec_overlay.phase_gate import resolve_ref
     root = _repo(tmp_path)
     resolved, note = resolve_ref(root, "gate.go:2")  # bare basename, missing internal/auth/ prefix
     assert resolved is True
@@ -50,7 +50,7 @@ def test_resolve_ref_basename_fallback(tmp_path):
 
 
 def test_resolve_ref_ambiguous_basename_unresolved(tmp_path):
-    from sec_harness.phase_gate import resolve_ref
+    from sec_overlay.phase_gate import resolve_ref
     root = _repo(tmp_path)
     (root / "other").mkdir()
     (root / "other" / "gate.go").write_text("package other\n")
@@ -111,7 +111,7 @@ def test_write_gate_record(tmp_path):
 
 
 def test_claims_from_profile_extracts_entrypoints_and_subsystems():
-    from sec_harness.phase_gate import claims_from_profile
+    from sec_overlay.phase_gate import claims_from_profile
 
     class P:  # minimal stand-in matching ScanProfile's attributes used here
         entrypoints: ClassVar = ["src/app.py:handler", "src/api.py:route"]
@@ -129,7 +129,7 @@ def test_claims_from_profile_extracts_entrypoints_and_subsystems():
 def test_claims_from_profile_extracts_attack_surface_claims():
     from types import SimpleNamespace
 
-    from sec_harness.phase_gate import claims_from_profile
+    from sec_overlay.phase_gate import claims_from_profile
     p = SimpleNamespace(entrypoints=[], subsystems=[], attack_surface=["sqli"],
                         agents_to_spawn=["sqli"],
                         attack_surface_evidence={"sqli": ["src/db.py:10"]})
@@ -139,8 +139,8 @@ def test_claims_from_profile_extracts_attack_surface_claims():
 
 
 def test_claims_from_context_extracts_items_with_locations():
-    from sec_harness.context import Context, ContextItem
-    from sec_harness.phase_gate import claims_from_context
+    from sec_overlay.context import Context, ContextItem
+    from sec_overlay.phase_gate import claims_from_context
 
     ctx = Context(items=[
         ContextItem(kind="trust_boundary", text="API gateway terminates TLS",
@@ -157,7 +157,7 @@ def test_claims_from_context_extracts_items_with_locations():
 
 
 def test_claims_from_markdown_extracts_only_file_line_citations():
-    from sec_harness.phase_gate import claims_from_markdown
+    from sec_overlay.phase_gate import claims_from_markdown
     md = ("The gateway validates tokens in server/api/x.py:12 before dispatch.\n"
           "Also see server/api/y.py:40 for the session check.\n"
           "See the README for background; ARCHITECTURE mentions this too.\n")
@@ -181,21 +181,21 @@ def test_gate_decision_and_record_carry_claim_content(tmp_path):
 
 
 def test_extracts_terraform_range_citation():
-    from sec_harness.phase_gate import claims_from_markdown
+    from sec_overlay.phase_gate import claims_from_markdown
     claims = claims_from_markdown("The role at `infra/azure/main.tf:150-159` is over-scoped.")
     refs = [r for c in claims for r in c["refs"]]
     assert "infra/azure/main.tf:150" in refs  # range anchors on start line
 
 
 def test_extracts_yaml_citation():
-    from sec_harness.phase_gate import claims_from_markdown
+    from sec_overlay.phase_gate import claims_from_markdown
     claims = claims_from_markdown("DB_SSLMODE=disable at charts/x/responder.yaml:132")
     refs = [r for c in claims for r in c["refs"]]
     assert "charts/x/responder.yaml:132" in refs
 
 
 def test_still_extracts_go_citation():
-    from sec_harness.phase_gate import claims_from_markdown
+    from sec_overlay.phase_gate import claims_from_markdown
     claims = claims_from_markdown("`internal/svc/events.go:39` reads Envelope.Source")
     refs = [r for c in claims for r in c["refs"]]
     assert "internal/svc/events.go:39" in refs

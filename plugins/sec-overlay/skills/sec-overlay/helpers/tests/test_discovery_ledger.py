@@ -1,5 +1,5 @@
-from sec_harness import discovery_ledger as dl
-from sec_harness.workspace import Workspace
+from sec_overlay import discovery_ledger as dl
+from sec_overlay.workspace import Workspace
 
 
 def test_new_finding_resets_streak_no_new_increments():

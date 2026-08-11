@@ -3,13 +3,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sec_harness.coverage_ledger import (
+from sec_overlay.coverage_ledger import (
     build_coverage_ledger,
     render_markdown,
     validate_coverage_ledger,
 )
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace, write_findings
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace, write_findings
 
 
 def _f(cls: str, status: FindingStatus, fid: str) -> Finding:

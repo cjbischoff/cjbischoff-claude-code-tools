@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.campaign import pass_report, promote_deps, record_stage
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.state import begin_pass, load_state
-from sec_harness.workspace import Workspace, read_findings, write_findings
+from sec_overlay.campaign import pass_report, promote_deps, record_stage
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.state import begin_pass, load_state
+from sec_overlay.workspace import Workspace, read_findings, write_findings
 
 
 def _f(id_, status):
@@ -40,7 +40,7 @@ def test_pass_report_summarizes(tmp_path):
 
 
 def test_carry_forward_stales_settled_on_changed_file(tmp_path):
-    from sec_harness.campaign import carry_forward
+    from sec_overlay.campaign import carry_forward
 
     ws = Workspace(tmp_path / "workspace"); ws.ensure()
     write_findings(ws, [
@@ -51,14 +51,14 @@ def test_carry_forward_stales_settled_on_changed_file(tmp_path):
     ])
     result = carry_forward(ws, ["app.py"])
     assert result == {"staled": 1, "kept": 1}
-    from sec_harness.workspace import read_findings as rf
+    from sec_overlay.workspace import read_findings as rf
     by_id = {f.id: f for f in rf(ws)}
     assert by_id["F-0001"].status is FindingStatus.STALE      # file changed -> re-examine
     assert by_id["F-0002"].status is FindingStatus.FIXED      # unchanged file -> kept
 
 
 def test_carry_forward_ignores_non_settled(tmp_path):
-    from sec_harness.campaign import carry_forward
+    from sec_overlay.campaign import carry_forward
 
     ws = Workspace(tmp_path / "workspace"); ws.ensure()
     write_findings(ws, [
@@ -114,9 +114,9 @@ def test_promote_deps_non_lockfile_marks_unverified(tmp_path: Path):
 
 
 def test_promote_runtime_dependent(tmp_path):
-    from sec_harness.campaign import promote_runtime_dependent
-    from sec_harness.models import Finding, FindingStatus, Severity
-    from sec_harness.workspace import Workspace, read_findings, write_findings
+    from sec_overlay.campaign import promote_runtime_dependent
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.workspace import Workspace, read_findings, write_findings
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     def f(id_, rd, status=FindingStatus.RAW):
         return Finding(id=id_, rule_id="r", cls="business-logic", status=status,

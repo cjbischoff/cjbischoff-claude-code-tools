@@ -5,7 +5,7 @@ Vendored (not fetched at scan time) so scans need no network. Layout:
 `rules/semgrep/<language>/**.yaml`. Vendor or refresh with:
 
     git clone --depth 1 https://github.com/semgrep/semgrep-rules \
-      skills/sec-harness/helpers/rules/semgrep
+      skills/sec-overlay/helpers/rules/semgrep
 
 Recon selects the `<language>` subdirs that match the target. `rules/smoke.yaml`
 is the offline smoke-test ruleset used by the deterministic test fixture only.

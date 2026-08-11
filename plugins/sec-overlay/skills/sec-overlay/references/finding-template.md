@@ -1,6 +1,6 @@
 # Verified Finding Template
 
-The canonical shape for a human-facing sec-harness finding. Every confirmed
+The canonical shape for a human-facing sec-overlay finding. Every confirmed
 finding renders these sections. The harness is **static-only** (it never executes
 the target), so *by default* every finding is "static analysis only — not
 dynamically confirmed": mark the **Confirmation** and **Confirmed Attack Scenario**

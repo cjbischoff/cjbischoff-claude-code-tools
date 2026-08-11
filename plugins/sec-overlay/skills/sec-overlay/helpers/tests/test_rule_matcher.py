@@ -1,7 +1,7 @@
 """Tests for F1: ASVS + CodeGuard loaders + rule-matcher."""
-from sec_harness.asvs import AsvsCatalog, default_catalog_path
-from sec_harness.codeguard import default_codeguard_dir, load_rules
-from sec_harness.rule_matcher import build_guided_context, match_function
+from sec_overlay.asvs import AsvsCatalog, default_catalog_path
+from sec_overlay.codeguard import default_codeguard_dir, load_rules
+from sec_overlay.rule_matcher import build_guided_context, match_function
 
 
 def test_asvs_seed_loads_and_indexes():
@@ -46,8 +46,8 @@ def test_build_guided_context_injects_both():
 
 
 def test_compliance_renders_in_report():
-    from sec_harness.models import Finding, FindingStatus, Severity
-    from sec_harness.report import render_finding
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.report import render_finding
     f = Finding(id="C1", rule_id="r", cls="cmdi", status=FindingStatus.CONFIRMED,
                 severity=Severity.HIGH, file="a.py", line=1, message="m",
                 evidence_sources=["semgrep:x"], asvs_ids=["v5.0.0-1.2.5"],

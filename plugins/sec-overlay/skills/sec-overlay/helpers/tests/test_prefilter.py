@@ -1,9 +1,9 @@
 """Tests for the profile-driven prefilter dispatch."""
 
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.prefilter import run_prefilter
-from sec_harness.profile import ScanProfile
-from sec_harness.workspace import Workspace, read_findings
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.prefilter import run_prefilter
+from sec_overlay.profile import ScanProfile
+from sec_overlay.workspace import Workspace, read_findings
 
 
 def _cand(cls, file, line):
@@ -47,7 +47,7 @@ def test_prefilter_skips_absent_backend(tmp_path):
 
 
 def test_prefilter_records_codeql_failure_without_crashing(tmp_path):
-    from sec_harness.codeql import CodeQLError
+    from sec_overlay.codeql import CodeQLError
 
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     sem = lambda target, config, **k: [_cand("sqli", "a.go", 1)]
@@ -76,7 +76,7 @@ def test_prefilter_skips_codeql_on_untrusted_config(tmp_path):
 
 
 def test_prefilter_applies_exclusions(tmp_path):
-    from sec_harness.exclusions import Exclusions
+    from sec_overlay.exclusions import Exclusions
 
     ws = Workspace(tmp_path / "ws")
     ws.ensure()
@@ -104,21 +104,21 @@ def _cand_with_evidence(i, cls, src="semgrep:r"):
 
 
 def test_security_only_drops_unknown_semgrep(tmp_path):
-    from sec_harness.workspace import Workspace
+    from sec_overlay.workspace import Workspace
     ws = Workspace(tmp_path); ws.ensure()
     fake = [_cand_with_evidence(1, "xss"), _cand_with_evidence(2, "unknown"), _cand_with_evidence(3, "unknown")]
     prof = ScanProfile(["javascript"], [], [], True, ["xss"],
         {"semgrep": {"run": True, "rulesets": ["x"], "security_only": True}}, ["xss"], {})
     res = run_prefilter(ws, "t", prof, semgrep=lambda *a, **k: fake,
                         has_tool=lambda n: True, exclusions_fn=lambda w: __import__(
-                            "sec_harness.exclusions", fromlist=["Exclusions"]).Exclusions([], [], []))
+                            "sec_overlay.exclusions", fromlist=["Exclusions"]).Exclusions([], [], []))
     assert res["candidates"] == 1
     assert res["dropped_nonsecurity"] == 2
 
 
 def test_security_only_false_keeps_unknown(tmp_path):
-    from sec_harness.exclusions import Exclusions
-    from sec_harness.workspace import Workspace
+    from sec_overlay.exclusions import Exclusions
+    from sec_overlay.workspace import Workspace
     ws = Workspace(tmp_path); ws.ensure()
     fake = [_cand_with_evidence(1, "xss"), _cand_with_evidence(2, "unknown")]
     prof = ScanProfile(["javascript"], [], [], True, ["xss"],
@@ -130,8 +130,8 @@ def test_security_only_false_keeps_unknown(tmp_path):
 
 
 def test_semgrep_runs_without_explicit_run_key(tmp_path):
-    from sec_harness.exclusions import Exclusions
-    from sec_harness.workspace import Workspace
+    from sec_overlay.exclusions import Exclusions
+    from sec_overlay.workspace import Workspace
     ws = Workspace(tmp_path); ws.ensure()
     called = []
     prof = ScanProfile(["javascript"], [], [], True, ["xss"],
@@ -144,8 +144,8 @@ def test_semgrep_runs_without_explicit_run_key(tmp_path):
 
 
 def test_disabled_and_absent_backends_recorded(tmp_path):
-    from sec_harness.exclusions import Exclusions
-    from sec_harness.workspace import Workspace
+    from sec_overlay.exclusions import Exclusions
+    from sec_overlay.workspace import Workspace
     ws = Workspace(tmp_path); ws.ensure()
     prof = ScanProfile(["javascript"], [], [], True, ["xss"],
         {"semgrep": {"run": False, "rulesets": ["x"]},
@@ -160,8 +160,8 @@ def test_disabled_and_absent_backends_recorded(tmp_path):
 
 
 def test_serial_and_concurrent_identical(tmp_path):
-    from sec_harness.exclusions import Exclusions
-    from sec_harness.workspace import Workspace, read_findings
+    from sec_overlay.exclusions import Exclusions
+    from sec_overlay.workspace import Workspace, read_findings
 
     # two rulesets, each returns findings out of sorted order; distinct files
     # per ruleset so the merged sort order is well-defined.
@@ -188,8 +188,8 @@ def test_serial_and_concurrent_identical(tmp_path):
 
 
 def test_codeql_disabled_recorded(tmp_path):
-    from sec_harness.exclusions import Exclusions
-    from sec_harness.workspace import Workspace
+    from sec_overlay.exclusions import Exclusions
+    from sec_overlay.workspace import Workspace
     ws = Workspace(tmp_path); ws.ensure()
     prof = ScanProfile(["javascript"], [], [], True, ["xss"],
         {"semgrep": {"run": True, "rulesets": ["x"]},
@@ -216,7 +216,7 @@ def test_prefilter_records_codeql_pack_missing(tmp_path):
 
 
 def test_prefilter_runs_secrets_and_sca_never_silent(tmp_path):
-    from sec_harness.exclusions import Exclusions
+    from sec_overlay.exclusions import Exclusions
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     prof = ScanProfile(["python"], [], [], True, ["secrets"],
         {"semgrep": {"run": True, "rulesets": ["x"]},
@@ -228,7 +228,7 @@ def test_prefilter_runs_secrets_and_sca_never_silent(tmp_path):
         semgrep=lambda *a, **k: [],
         has_tool=lambda n: True,
         secrets_fn=lambda target: fake_sec,
-        sca_fn=lambda target, **k: (_ for _ in ()).throw(__import__("sec_harness.sca", fromlist=["ScaError"]).ScaError("osv-scanner not installed")),
+        sca_fn=lambda target, **k: (_ for _ in ()).throw(__import__("sec_overlay.sca", fromlist=["ScaError"]).ScaError("osv-scanner not installed")),
         exclusions_fn=lambda w: Exclusions([], [], []))
     assert "secrets" in res["backends_run"]
     assert res["skipped_reasons"].get("sca") == "absent"   # NOT silent
@@ -237,7 +237,7 @@ def test_prefilter_runs_secrets_and_sca_never_silent(tmp_path):
 
 
 def test_prefilter_never_silent_unimplemented_backend(tmp_path):
-    from sec_harness.exclusions import Exclusions
+    from sec_overlay.exclusions import Exclusions
     ws = Workspace(tmp_path / "ws2"); ws.ensure()
     # secrets declared run:true but we inject a no-op that still 'runs'; sca declared
     # but disabled -> must be recorded, never absent from the report.

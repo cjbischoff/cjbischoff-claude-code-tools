@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.verify import apply_patch, verify_findings, verify_patch
-from sec_harness.workspace import Workspace, read_findings, write_findings
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.verify import apply_patch, verify_findings, verify_patch
+from sec_overlay.workspace import Workspace, read_findings, write_findings
 
 HELPERS = Path(__file__).parent.parent
 FIXTURE = HELPERS / "fixtures" / "vulnerable_repo"
@@ -84,7 +84,7 @@ def test_verify_findings_skips_findings_without_patch(tmp_path):
 
 
 def test_verify_findings_records_stage(tmp_path):
-    from sec_harness.state import load_state
+    from sec_overlay.state import load_state
 
     ws = Workspace(tmp_path / "workspace"); ws.ensure()
     write_findings(ws, [_confirmed("F-0002", "sqli")])
@@ -93,7 +93,7 @@ def test_verify_findings_records_stage(tmp_path):
 
 
 def test_codeql_finding_routes_to_codeql_rerun(monkeypatch):
-    import sec_harness.verify as V
+    import sec_overlay.verify as V
     calls = []
     monkeypatch.setattr(V, "run_semgrep",
                         lambda *a, **k: (_ for _ in ()).throw(AssertionError("no semgrep")))
@@ -106,7 +106,7 @@ def test_codeql_finding_routes_to_codeql_rerun(monkeypatch):
 def test_copy_ignore_skips_git_and_sockets(tmp_path):
     import os
 
-    from sec_harness.verify import _copy_ignore
+    from sec_overlay.verify import _copy_ignore
     (tmp_path / ".git").mkdir()
     (tmp_path / "app.php").write_text("<?php")
     os.mkfifo(tmp_path / "a.sock")  # named pipe stands in for an uncopyable socket
@@ -118,7 +118,7 @@ def test_copy_ignore_skips_git_and_sockets(tmp_path):
 
 def test_verify_patch_does_not_choke_on_git_dir(tmp_path, monkeypatch):
     # a target containing a .git dir must not crash copytree; .git is skipped.
-    import sec_harness.verify as V
+    import sec_overlay.verify as V
     target = tmp_path / "tgt"; (target / ".git").mkdir(parents=True)
     (target / "app.php").write_text("<?php echo 1;")
     calls = {"n": 0}
@@ -138,8 +138,8 @@ def test_verify_matches_specific_rule_not_whole_class(monkeypatch):
     # rule (mcrypt-use) clears after the patch, but a sibling class rule
     # (weak-crypto) still fires. Class-level matching would wrongly say not-fixed;
     # rule-specific matching credits the fix.
-    import sec_harness.verify as V
-    from sec_harness.models import Finding, FindingStatus, Severity
+    import sec_overlay.verify as V
+    from sec_overlay.models import Finding, FindingStatus, Severity
 
     def scan_states(state):
         def _run(target_dir, config, **k):

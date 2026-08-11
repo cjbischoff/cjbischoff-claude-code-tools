@@ -1,7 +1,7 @@
 """Tests for SARIF emission."""
 
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.sarif import to_sarif
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.sarif import to_sarif
 
 
 def _f(sev):
@@ -13,7 +13,7 @@ def test_sarif_shape_and_level_mapping():
     doc = to_sarif([_f(Severity.HIGH)])
     assert doc["version"] == "2.1.0"
     run = doc["runs"][0]
-    assert run["tool"]["driver"]["name"] == "sec-harness"
+    assert run["tool"]["driver"]["name"] == "sec-overlay"
     res = run["results"][0]
     assert res["ruleId"] == "r"
     assert res["level"] == "error"

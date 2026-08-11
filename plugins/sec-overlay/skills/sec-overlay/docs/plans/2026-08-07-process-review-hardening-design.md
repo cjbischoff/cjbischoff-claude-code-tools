@@ -1,4 +1,4 @@
-# sec-harness — Process Review & Pipeline Hardening (Spec A)
+# sec-overlay — Process Review & Pipeline Hardening (Spec A)
 
 **Date:** 2026-08-07
 **Status:** design (approved for spec write; awaiting user review before writing-plans)
@@ -63,7 +63,7 @@ From the 2026-08-07 dogfooding audit of four AEM repos (`aem-analytics`, `aem-ev
   as near-empty; real risk hid in `redteam-plan.md`.
 - `repo_slug` hashes the git *origin* URL only → two monorepo sub-services produce the identical slug
   (`go-9530ad70`); saved from collision only because `memory_root` roots each under its distinct
-  subdir. Latent under `$SEC_HARNESS_HOME`.
+  subdir. Latent under `$SEC_OVERLAY_HOME`.
 
 **Coverage gap — reviewed-codebase docs were only partially read (found during this brainstorm):**
 `discover_context_files(target)` globs relative to the *scan target*. Consequences:
@@ -88,7 +88,7 @@ calls/campaign) eliminated by a canonical base.
 
 ### 3.1 Spine — the `ScanScope` abstraction (Theme 1 foundation)
 
-**New module `sec_harness/scanscope.py`** and **new artifact `kb/scan-scope.json`** (NOT a
+**New module `sec_overlay/scanscope.py`** and **new artifact `kb/scan-scope.json`** (NOT a
 `CampaignState` field — that record is frozen; see §4):
 
 ```json
@@ -186,7 +186,7 @@ calls/campaign) eliminated by a canonical base.
 
 ## 4. Frozen-contract coordination
 
-`helpers/sec_harness/models.py` (`Finding`, `CampaignState`, enums) and `evidence.py` (`_MECHANICAL`
+`helpers/sec_overlay/models.py` (`Finding`, `CampaignState`, enums) and `evidence.py` (`_MECHANICAL`
 whitelist) are mirrored byte-for-byte by the Go port (`go/internal/model/testdata`, `TestParity`).
 **Rule for Spec A:**
 - Prefer `kb/` artifacts over model fields (scan-scope, coverage) to avoid contract churn.
@@ -253,10 +253,10 @@ Then minimal fix → green → `ruff check` + `ty check` clean → bench regress
 ## 7. Rollout / git
 
 - Branch `spec/process-review-hardening-20260807` off `main` in `/Users/christopher/Tools/security-harness`.
-- Stage **only** explicit `skills/sec-harness/**` paths; never `git add -A` (the repo has a parallel
+- Stage **only** explicit `skills/sec-overlay/**` paths; never `git add -A` (the repo has a parallel
   `go/` workstream I do not touch). `git status` must show only skill paths before commit.
 - Contract-change work-package = separate commit + Go-terminal handoff (§4).
-- Spec + plan under `skills/sec-harness/docs/plans/`. Personal remote (`cjbischoff/security-harness`)
+- Spec + plan under `skills/sec-overlay/docs/plans/`. Personal remote (`cjbischoff/security-harness`)
   → no GPG signing, no AI attribution.
 
 ---

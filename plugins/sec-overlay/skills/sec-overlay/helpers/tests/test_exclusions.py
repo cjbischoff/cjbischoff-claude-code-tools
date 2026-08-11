@@ -1,8 +1,8 @@
 """Tests for noise-floor exclusions."""
 
-from sec_harness.exclusions import Exclusions, apply_exclusions, load_exclusions
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace
+from sec_overlay.exclusions import Exclusions, apply_exclusions, load_exclusions
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace
 
 
 def _f(id_, cls, file, rule="r"):

@@ -1,5 +1,5 @@
-from sec_harness import cost
-from sec_harness.models import CampaignState
+from sec_overlay import cost
+from sec_overlay.models import CampaignState
 
 
 def _state():

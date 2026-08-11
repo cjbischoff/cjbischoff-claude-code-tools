@@ -3,9 +3,9 @@
 import json
 from pathlib import Path
 
-from sec_harness.codeql import cls_from_tags, parse_codeql_sarif
-from sec_harness.evidence import is_tool_receipt
-from sec_harness.models import FindingStatus, Severity
+from sec_overlay.codeql import cls_from_tags, parse_codeql_sarif
+from sec_overlay.evidence import is_tool_receipt
+from sec_overlay.models import FindingStatus, Severity
 
 SARIF = json.loads((Path(__file__).parent / "fixtures" / "sample_codeql.sarif").read_text())
 
@@ -28,7 +28,7 @@ def test_parse_codeql_sarif_maps_results():
 
 
 def test_run_codeql_invokes_cli_and_parses(tmp_path):
-    from sec_harness.codeql import run_codeql
+    from sec_overlay.codeql import run_codeql
 
     db_dir = tmp_path / "db"
     sarif_out = tmp_path / "codeql.sarif"
@@ -54,7 +54,7 @@ def test_run_codeql_invokes_cli_and_parses(tmp_path):
 def test_run_codeql_raises_on_create_failure(tmp_path):
     import pytest
 
-    from sec_harness.codeql import CodeQLError, run_codeql
+    from sec_overlay.codeql import CodeQLError, run_codeql
 
     class R:
         returncode = 32
@@ -68,7 +68,7 @@ def test_run_codeql_raises_on_create_failure(tmp_path):
 def test_run_codeql_raises_when_no_sarif(tmp_path):
     import pytest
 
-    from sec_harness.codeql import CodeQLError, run_codeql
+    from sec_overlay.codeql import CodeQLError, run_codeql
 
     class R:  # both create + analyze "succeed" but no SARIF is written
         returncode = 0
@@ -113,7 +113,7 @@ def test_parse_codeql_stamps_tool_receipt():
 
 
 def test_cls_from_tags_falls_back_to_rule_id():
-    from sec_harness.codeql import cls_from_tags
+    from sec_overlay.codeql import cls_from_tags
     # no CWE tag -> rule-id router rescues it instead of "unknown"
     assert cls_from_tags("js/user-controlled-bypass", []) == "authn"
     assert cls_from_tags("js/insecure-randomness", ["some/other/tag"]) == "crypto"

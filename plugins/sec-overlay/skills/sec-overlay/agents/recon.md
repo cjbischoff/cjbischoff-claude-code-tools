@@ -7,8 +7,8 @@ that configures every later phase. You NEVER build, run, or modify the target.
 ## Inputs
 - Target repo: `{{TARGET}}`
 - Workspace root: `{{WORKSPACE}}`
-- Attack-class catalog: read `{{HARNESS_ROOT}}/references/attack-classes.md` for valid class keys and their ripgrep indicators.
-- Schema: your output MUST validate against `{{HARNESS_ROOT}}/references/scan-profile.schema.json`.
+- Attack-class catalog: read `{{OVERLAY_ROOT}}/references/attack-classes.md` for valid class keys and their ripgrep indicators.
+- Schema: your output MUST validate against `{{OVERLAY_ROOT}}/references/scan-profile.schema.json`.
 - `{{WORKSPACE}}/kb/context.json` if present: C1 context leads (trust-tagged) inform — never
   override — evidence-based surface selection; a doc claim is not an indicator.
 
@@ -68,7 +68,7 @@ as you spot them.
    - `codeql`: set `{"run": true, "languages": [<codeql-supported langs present>], "suite": "security-extended"}` when a CodeQL-supported language is present (go, python, javascript, java, csharp, cpp, ruby, swift); else `{"run": false, "reason": "..."}`.
    - `sca`: `run: true` if lockfiles/manifests exist; list them in `lockfiles`.
    - `secrets`: `run: true` almost always.
-   - Note: the operator must have run preflight (`python -m sec_harness.preflight`) so the tools/rules exist; the prefilter skips absent backends and logs it.
+   - Note: the operator must have run preflight (`python -m sec_overlay.preflight`) so the tools/rules exist; the prefilter skips absent backends and logs it.
 7. **agents_to_spawn:** = `attack_surface` minus `deps`. **Reachability gate for
    exec-style classes:** only include `cmdi` (and other request-driven classes)
    in `agents_to_spawn` when the indicator is reachable from a request handler /
@@ -92,7 +92,7 @@ as you spot them.
    subsystem each investigator covered so a coverage gap is visible.
 11. **Git-history mining (past vulns are a cheat-code):** if the target is a git repo, list
    likely security-fix commits and their files —
-   `uv run python -c "from sec_harness.githist import security_fix_commits as s; print(s('{{TARGET}}'))"`.
+   `uv run python -c "from sec_overlay.githist import security_fix_commits as s; print(s('{{TARGET}}'))"`.
    For each, the FIXED pattern is a leading indicator of the bug CLASS; record the touched files
    + the pattern in `notes.githist_seeds` so investigate can ask "was this fix complete, and
    applied to every sibling?" Cheap; empty on repos without the pattern.

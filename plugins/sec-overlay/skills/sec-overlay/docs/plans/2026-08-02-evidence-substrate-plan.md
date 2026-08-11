@@ -4,25 +4,25 @@
 
 **Goal:** Build a persisted, deterministic shared evidence substrate (`kb/graph.json`) that computes structural facts once and exposes a small query API (`reaches`, `attacker_controls`, `no_path`, `is_unresolvable`) reused by every phase — including as a receipt-backed disproof of findings.
 
-**Architecture:** A new stdlib-only module `sec_harness/graph.py` assembles nodes/edges/facts from existing modules (`structural_index`, `ast-grep` via `astgrep`, `osv`/`sca`, `secrets`, `crypto_policy`) into a JSON document with two tiers. Tier-1 (LLM-free, pre-recon) persists code nodes plus one-hop call/import edges and dependency/secret/crypto facts — used for **positive corroboration and navigation only**. Tier-2 (post-prefilter) merges CodeQL/semgrep taint dataflow edges. The `no_path` disproof receipt (`structural-index:no-path`) is mintable **only** when Tier-2 taint coverage exists for the sink's language — never from Tier-1 heuristic edges.
+**Architecture:** A new stdlib-only module `sec_overlay/graph.py` assembles nodes/edges/facts from existing modules (`structural_index`, `ast-grep` via `astgrep`, `osv`/`sca`, `secrets`, `crypto_policy`) into a JSON document with two tiers. Tier-1 (LLM-free, pre-recon) persists code nodes plus one-hop call/import edges and dependency/secret/crypto facts — used for **positive corroboration and navigation only**. Tier-2 (post-prefilter) merges CodeQL/semgrep taint dataflow edges. The `no_path` disproof receipt (`structural-index:no-path`) is mintable **only** when Tier-2 taint coverage exists for the sink's language — never from Tier-1 heuristic edges.
 
 **Tech Stack:** Python 3.13, stdlib only (`json`, `subprocess`, `pathlib`, `dataclasses`, `re`, `argparse`). Tests: `pytest`. Lint: `ruff` (line-length 100). Types: `ty`.
 
 ## Global Constraints
 
-- **Git boundary:** touch ONLY files under `skills/sec-harness/`. Never edit/stage/commit anything under `go/`. Never `git add -A` / `git add .` / `git commit -a` — stage explicit paths and run `git status` before every commit to confirm no `go/` path is staged.
+- **Git boundary:** touch ONLY files under `skills/sec-overlay/`. Never edit/stage/commit anything under `go/`. Never `git add -A` / `git add .` / `git commit -a` — stage explicit paths and run `git status` before every commit to confirm no `go/` path is staged.
 - **Branch:** work on `skill-artifact-substrate-20260802`. Never commit to `main`.
-- **Frozen JSON contract is untouchable:** do NOT modify `helpers/sec_harness/models.py` or `helpers/sec_harness/evidence.py`. The receipt string `structural-index:no-path` is already accepted by `evidence.is_tool_receipt` (`structural-index` ∈ `_MECHANICAL`, `evidence.py:14`) — reuse it, do not add a new receipt source.
+- **Frozen JSON contract is untouchable:** do NOT modify `helpers/sec_overlay/models.py` or `helpers/sec_overlay/evidence.py`. The receipt string `structural-index:no-path` is already accepted by `evidence.is_tool_receipt` (`structural-index` ∈ `_MECHANICAL`, `evidence.py:14`) — reuse it, do not add a new receipt source.
 - **Core is stdlib-only:** no new runtime dependencies in `pyproject.toml`. Dev deps stay pytest/ruff/ty.
 - **Honesty gate (Decision 1 = B):** `no_path` returns a mintable receipt ONLY when Tier-2 taint edges cover the sink's language. Tier-1 alone can never assert no-path — absence of a heuristic call-edge is not proof of no dataflow.
 - **Style:** every module/public function gets a Google-style docstring. `from __future__ import annotations` at the top of each new module. Line length ≤100. `uv run ruff check` and `uv run ty check` clean before every commit.
-- **All commands run from** `skills/sec-harness/helpers/`.
+- **All commands run from** `skills/sec-overlay/helpers/`.
 
 ---
 
 ## File Structure
 
-- Create: `sec_harness/graph.py` — substrate model, Tier-1 build, fact attachment, Tier-2 merge, query API, CLI. One responsibility: the evidence substrate.
+- Create: `sec_overlay/graph.py` — substrate model, Tier-1 build, fact attachment, Tier-2 merge, query API, CLI. One responsibility: the evidence substrate.
 - Create: `tests/test_graph.py` — unit tests for model round-trip, build, facts, queries, Tier-2 merge, CLI.
 - Create: `tests/fixtures/graph_target/` — a tiny fixture repo (a source→sink call chain in Python) the build/query tests run against.
 - Modify (doc only): `SKILL.md`, `CLAUDE.md` — add the Tier-1 pre-recon pass to the phase list.
@@ -67,7 +67,7 @@ Defined in Task 1; every later task depends on these exact shapes.
 ### Task 1: Substrate model + load/save round-trip
 
 **Files:**
-- Create: `sec_harness/graph.py`
+- Create: `sec_overlay/graph.py`
 - Test: `tests/test_graph.py`
 
 **Interfaces:**
@@ -87,8 +87,8 @@ Defined in Task 1; every later task depends on these exact shapes.
 # tests/test_graph.py
 from pathlib import Path
 
-from sec_harness import graph as g
-from sec_harness.workspace import Workspace
+from sec_overlay import graph as g
+from sec_overlay.workspace import Workspace
 
 
 def _ws(tmp_path: Path) -> Workspace:
@@ -121,12 +121,12 @@ def test_save_and_load_graph(tmp_path):
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/test_graph.py -v`
-Expected: FAIL with `ModuleNotFoundError: sec_harness.graph` / `AttributeError`.
+Expected: FAIL with `ModuleNotFoundError: sec_overlay.graph` / `AttributeError`.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# sec_harness/graph.py
+# sec_overlay/graph.py
 """Shared evidence substrate: a persisted, deterministic code graph.
 
 Structural facts an audit re-derives at multiple phases — can untrusted input reach a
@@ -229,7 +229,7 @@ def save_graph(ws, graph: Graph) -> Path:
     """Write the substrate to ``kb/graph.json`` and return the path.
 
     Args:
-        ws: Target :class:`sec_harness.workspace.Workspace`.
+        ws: Target :class:`sec_overlay.workspace.Workspace`.
         graph: The substrate to persist.
 
     Returns:
@@ -245,7 +245,7 @@ def load_graph(ws) -> Graph:
     """Load the substrate from ``kb/graph.json``.
 
     Args:
-        ws: Source :class:`sec_harness.workspace.Workspace`.
+        ws: Source :class:`sec_overlay.workspace.Workspace`.
 
     Returns:
         The parsed :class:`Graph`.
@@ -261,9 +261,9 @@ Expected: PASS (both tests).
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/graph.py tests/test_graph.py
+uv run ruff check sec_overlay/graph.py tests/test_graph.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/graph.py skills/sec-harness/helpers/tests/test_graph.py
+git add skills/sec-overlay/helpers/sec_overlay/graph.py skills/sec-overlay/helpers/tests/test_graph.py
 git status   # confirm ONLY skills/ paths staged
 git commit -m "feat(graph): substrate model + load/save"
 ```
@@ -273,7 +273,7 @@ git commit -m "feat(graph): substrate model + load/save"
 ### Task 2: Tier-1 build — nodes + one-hop call/import edges
 
 **Files:**
-- Modify: `sec_harness/graph.py`
+- Modify: `sec_overlay/graph.py`
 - Create: `tests/fixtures/graph_target/app/api.py`, `tests/fixtures/graph_target/app/db.py`
 - Test: `tests/test_graph.py`
 
@@ -329,14 +329,14 @@ def test_build_tier1_emits_nodes_and_call_edge():
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/test_graph.py::test_build_tier1_emits_nodes_and_call_edge -v`
-Expected: FAIL with `AttributeError: module 'sec_harness.graph' has no attribute 'build_tier1'`.
+Expected: FAIL with `AttributeError: module 'sec_overlay.graph' has no attribute 'build_tier1'`.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# add to sec_harness/graph.py
+# add to sec_overlay/graph.py
 import re
-from sec_harness import structural_index
+from sec_overlay import structural_index
 
 _SOURCE_EXTS = {".py", ".js", ".ts", ".jsx", ".tsx", ".go", ".java",
                 ".c", ".cc", ".cpp", ".rb", ".php"}
@@ -351,7 +351,7 @@ def _lang_of(path: str) -> str:
 def build_tier1(target_root: str | Path, sha: str) -> Graph:
     """Assemble the Tier-1 substrate: definition nodes + one-hop call/import edges.
 
-    LLM-free. Uses :mod:`sec_harness.structural_index` for definitions and a
+    LLM-free. Uses :mod:`sec_overlay.structural_index` for definitions and a
     name-reference heuristic for call edges. Edges are approximate (heuristic, not
     compiler-grade) and used for positive corroboration and navigation only.
 
@@ -405,11 +405,11 @@ Expected: PASS (all tests).
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/graph.py tests/test_graph.py
+uv run ruff check sec_overlay/graph.py tests/test_graph.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/graph.py \
-        skills/sec-harness/helpers/tests/test_graph.py \
-        skills/sec-harness/helpers/tests/fixtures/graph_target
+git add skills/sec-overlay/helpers/sec_overlay/graph.py \
+        skills/sec-overlay/helpers/tests/test_graph.py \
+        skills/sec-overlay/helpers/tests/fixtures/graph_target
 git status
 git commit -m "feat(graph): tier-1 build (nodes + call edges)"
 ```
@@ -419,7 +419,7 @@ git commit -m "feat(graph): tier-1 build (nodes + call edges)"
 ### Task 3: Fact attachment (osv / secrets / crypto)
 
 **Files:**
-- Modify: `sec_harness/graph.py`
+- Modify: `sec_overlay/graph.py`
 - Test: `tests/test_graph.py`
 
 **Interfaces:**
@@ -455,7 +455,7 @@ Expected: FAIL with `AttributeError: ... has no attribute 'attach_facts'`.
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# add to sec_harness/graph.py
+# add to sec_overlay/graph.py
 def attach_facts(
     graph: Graph,
     *,
@@ -490,9 +490,9 @@ Expected: PASS.
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/graph.py tests/test_graph.py
+uv run ruff check sec_overlay/graph.py tests/test_graph.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/graph.py skills/sec-harness/helpers/tests/test_graph.py
+git add skills/sec-overlay/helpers/sec_overlay/graph.py skills/sec-overlay/helpers/tests/test_graph.py
 git status
 git commit -m "feat(graph): attach dependency/secret/crypto facts"
 ```
@@ -502,7 +502,7 @@ git commit -m "feat(graph): attach dependency/secret/crypto facts"
 ### Task 4: Query API — reaches, attacker_controls, is_unresolvable
 
 **Files:**
-- Modify: `sec_harness/graph.py`
+- Modify: `sec_overlay/graph.py`
 - Test: `tests/test_graph.py`
 
 **Interfaces:**
@@ -556,7 +556,7 @@ Expected: FAIL with `AttributeError: ... has no attribute 'reaches'`.
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# add to sec_harness/graph.py
+# add to sec_overlay/graph.py
 from collections import deque
 
 _TRAVERSABLE = {"calls", "imports", "taint"}
@@ -637,9 +637,9 @@ Expected: PASS.
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/graph.py tests/test_graph.py
+uv run ruff check sec_overlay/graph.py tests/test_graph.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/graph.py skills/sec-harness/helpers/tests/test_graph.py
+git add skills/sec-overlay/helpers/sec_overlay/graph.py skills/sec-overlay/helpers/tests/test_graph.py
 git status
 git commit -m "feat(graph): reaches/attacker_controls/is_unresolvable queries"
 ```
@@ -649,7 +649,7 @@ git commit -m "feat(graph): reaches/attacker_controls/is_unresolvable queries"
 ### Task 5: `no_path` disproof with the Tier-2 honesty gate
 
 **Files:**
-- Modify: `sec_harness/graph.py`
+- Modify: `sec_overlay/graph.py`
 - Test: `tests/test_graph.py`
 
 **Interfaces:**
@@ -706,7 +706,7 @@ Expected: FAIL with `AttributeError: ... has no attribute 'no_path'`.
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# add to sec_harness/graph.py
+# add to sec_overlay/graph.py
 @dataclass
 class NoPathResult:
     """Result of a :func:`no_path` disproof query.
@@ -757,9 +757,9 @@ Expected: PASS.
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/graph.py tests/test_graph.py
+uv run ruff check sec_overlay/graph.py tests/test_graph.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/graph.py skills/sec-harness/helpers/tests/test_graph.py
+git add skills/sec-overlay/helpers/sec_overlay/graph.py skills/sec-overlay/helpers/tests/test_graph.py
 git status
 git commit -m "feat(graph): no_path disproof gated on tier-2 taint coverage"
 ```
@@ -769,7 +769,7 @@ git commit -m "feat(graph): no_path disproof gated on tier-2 taint coverage"
 ### Task 6: Tier-2 merge — ingest taint edges from a prefilter result
 
 **Files:**
-- Modify: `sec_harness/graph.py`
+- Modify: `sec_overlay/graph.py`
 - Test: `tests/test_graph.py`
 
 **Interfaces:**
@@ -784,7 +784,7 @@ The caller (Task 8 orchestration) passes `taint_langs` = the languages CodeQL/se
 
 ```python
 # add to tests/test_graph.py
-from sec_harness.models import Finding, Severity, FindingStatus
+from sec_overlay.models import Finding, Severity, FindingStatus
 
 
 def _candidate(**kw):
@@ -813,7 +813,7 @@ def test_merge_tier2_ignores_non_taint_candidates():
     assert not any(e.kind == "taint" for e in graph.edges)
 ```
 
-Note: this test assumes `Finding` accepts an `attrs`/source-location field. If the frozen `Finding` model has no place for a dataflow source location, `merge_tier2` must derive the source node from the candidate's own `file:line` only (sink) and connect from a synthetic `external:*` source node. **Before implementing, read `helpers/sec_harness/models.py` to confirm the available `Finding` fields — do NOT add a field to the frozen model.** Adjust the test's `_candidate` and the implementation to use only fields that already exist (candidate exposes at least `file`, `line`, `evidence_sources`).
+Note: this test assumes `Finding` accepts an `attrs`/source-location field. If the frozen `Finding` model has no place for a dataflow source location, `merge_tier2` must derive the source node from the candidate's own `file:line` only (sink) and connect from a synthetic `external:*` source node. **Before implementing, read `helpers/sec_overlay/models.py` to confirm the available `Finding` fields — do NOT add a field to the frozen model.** Adjust the test's `_candidate` and the implementation to use only fields that already exist (candidate exposes at least `file`, `line`, `evidence_sources`).
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -823,7 +823,7 @@ Expected: FAIL with `AttributeError: ... has no attribute 'merge_tier2'`.
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# add to sec_harness/graph.py
+# add to sec_overlay/graph.py
 def _taint_receipt(sources: list[str]) -> bool:
     """True if any evidence source is a taint-dataflow receipt (codeql/semgrep)."""
     for s in sources:
@@ -881,19 +881,19 @@ Expected: PASS.
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/graph.py tests/test_graph.py
+uv run ruff check sec_overlay/graph.py tests/test_graph.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/graph.py skills/sec-harness/helpers/tests/test_graph.py
+git add skills/sec-overlay/helpers/sec_overlay/graph.py skills/sec-overlay/helpers/tests/test_graph.py
 git status
 git commit -m "feat(graph): tier-2 taint-edge merge from prefilter candidates"
 ```
 
 ---
 
-### Task 7: CLI — `python -m sec_harness.graph build|query`
+### Task 7: CLI — `python -m sec_overlay.graph build|query`
 
 **Files:**
-- Modify: `sec_harness/graph.py`
+- Modify: `sec_overlay/graph.py`
 - Test: `tests/test_graph.py`
 
 **Interfaces:**
@@ -934,9 +934,9 @@ Expected: FAIL with `AttributeError: ... has no attribute 'main'`.
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# add to sec_harness/graph.py
+# add to sec_overlay/graph.py
 import argparse
-from sec_harness.workspace import Workspace
+from sec_overlay.workspace import Workspace
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -948,7 +948,7 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         Process exit code.
     """
-    parser = argparse.ArgumentParser(prog="sec-harness-graph")
+    parser = argparse.ArgumentParser(prog="sec-overlay-graph")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     b = sub.add_parser("build", help="Build the Tier-1 substrate.")
@@ -991,14 +991,14 @@ if __name__ == "__main__":
 
 Run: `uv run pytest tests/test_graph.py -v`
 Expected: PASS (all tests). Also verify the module runs as a CLI:
-`uv run python -m sec_harness.graph build --target tests/fixtures/graph_target --workspace /tmp/graph-ws --sha cafe`
+`uv run python -m sec_overlay.graph build --target tests/fixtures/graph_target --workspace /tmp/graph-ws --sha cafe`
 
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/graph.py tests/test_graph.py
+uv run ruff check sec_overlay/graph.py tests/test_graph.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/graph.py skills/sec-harness/helpers/tests/test_graph.py
+git add skills/sec-overlay/helpers/sec_overlay/graph.py skills/sec-overlay/helpers/tests/test_graph.py
 git status
 git commit -m "feat(graph): build/query CLI"
 ```
@@ -1008,7 +1008,7 @@ git commit -m "feat(graph): build/query CLI"
 ### Task 8: Orchestration convenience + phase-list documentation
 
 **Files:**
-- Modify: `sec_harness/graph.py` (add `build_and_write_tier1`)
+- Modify: `sec_overlay/graph.py` (add `build_and_write_tier1`)
 - Modify: `SKILL.md` (phase list), `CLAUDE.md` (§3 phase order)
 - Test: `tests/test_graph.py`
 
@@ -1045,7 +1045,7 @@ Expected: FAIL with `AttributeError: ... has no attribute 'build_and_write_tier1
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# add to sec_harness/graph.py
+# add to sec_overlay/graph.py
 def build_and_write_tier1(
     ws,
     target_root: str | Path,
@@ -1092,7 +1092,7 @@ Expected: PASS (full file green).
 In `SKILL.md` and `CLAUDE.md` §3 (the "Phase order (one pass)" block), add a line immediately before recon:
 
 ```
-T1 Tier-1 substrate  python -m sec_harness.graph build --target <T> --workspace <WS> --sha <sha>
+T1 Tier-1 substrate  python -m sec_overlay.graph build --target <T> --workspace <WS> --sha <sha>
                      # LLM-free: structural_index + ast-grep nodes/edges + osv/secrets/crypto facts
                      # → kb/graph.json v1 (consumed by recon, architecture, threat-model)
 ```
@@ -1103,11 +1103,11 @@ Add one sentence to the "Hard operating rules" noting: *the Tier-1 substrate is 
 
 ```bash
 uv run pytest -q          # expect the 3 known env-only failures only (see CLAUDE.md §2)
-uv run ruff check sec_harness/graph.py tests/test_graph.py
+uv run ruff check sec_overlay/graph.py tests/test_graph.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/graph.py \
-        skills/sec-harness/helpers/tests/test_graph.py \
-        skills/sec-harness/SKILL.md skills/sec-harness/CLAUDE.md
+git add skills/sec-overlay/helpers/sec_overlay/graph.py \
+        skills/sec-overlay/helpers/tests/test_graph.py \
+        skills/sec-overlay/SKILL.md skills/sec-overlay/CLAUDE.md
 git status
 git commit -m "feat(graph): tier-1 orchestration convenience + phase-list docs"
 ```

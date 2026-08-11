@@ -3,12 +3,12 @@
 Regression tests for the 'silent no-op' bug class (sca/secrets declared in the
 profile but never run and never recorded) and clsmap/routing drift.
 """
-from sec_harness.clsmap import _RULE_ID_CLS, CWE_CLS
-from sec_harness.evidence import _MECHANICAL, is_tool_receipt
-from sec_harness.exclusions import Exclusions
-from sec_harness.prefilter import run_prefilter
-from sec_harness.profile import ScanProfile
-from sec_harness.workspace import Workspace
+from sec_overlay.clsmap import _RULE_ID_CLS, CWE_CLS
+from sec_overlay.evidence import _MECHANICAL, is_tool_receipt
+from sec_overlay.exclusions import Exclusions
+from sec_overlay.prefilter import run_prefilter
+from sec_overlay.profile import ScanProfile
+from sec_overlay.workspace import Workspace
 
 
 def test_every_declared_backend_is_accounted_for(tmp_path):
@@ -72,7 +72,7 @@ def test_hunting_companion_docs_exist_and_referenced():
 
 
 def test_new_domain_classes_in_clsmap():
-    from sec_harness.clsmap import CWE_CLS
+    from sec_overlay.clsmap import CWE_CLS
     for cls in ("jwt", "request-smuggling", "prototype-pollution", "cswsh",
                 "excessive-agency", "business-logic"):
         assert cls in CWE_CLS.values(), f"{cls} not mapped in clsmap"
@@ -87,7 +87,7 @@ def test_context_and_postflight_prompts_exist():
 
 def test_fp_feedback_token_present_in_prompts():
     from pathlib import Path
-    root = Path(__file__).resolve().parents[2]  # skills/sec-harness
+    root = Path(__file__).resolve().parents[2]  # skills/sec-overlay
     for name in ("investigate", "critic"):
         text = (root / "agents" / f"{name}.md").read_text()
         assert "{{FP_FEEDBACK}}" in text, f"{name}.md missing FP_FEEDBACK token"
@@ -95,7 +95,7 @@ def test_fp_feedback_token_present_in_prompts():
 
 def test_class_prompts_carry_proof_tuple_and_anti_collapse():
     from pathlib import Path
-    root = Path(__file__).resolve().parents[2]  # skills/sec-harness
+    root = Path(__file__).resolve().parents[2]  # skills/sec-overlay
     for name in ("injection", "authz", "crypto", "config", "resource"):
         text = (root / "agents" / "classes" / f"{name}.md").read_text().lower()
         assert "proof tuple" in text, f"{name}.md missing proof tuple"

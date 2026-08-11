@@ -2,16 +2,16 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Port six additive signal/recall mechanisms from `@openai/codex-security` into the sec-harness skill without touching the frozen Go contract.
+**Goal:** Port six additive signal/recall mechanisms from `@openai/codex-security` into the sec-overlay skill without touching the frozen Go contract.
 
 **Architecture:** Each feature is a small stdlib-only Python module (or a change to one) plus prompt/doc wiring. New durable state lives in new `kb/*.json` files, never on the frozen `Finding`/`CampaignState` serialization. Fingerprint identity moves from `file|line` to `rule_id|cls|<enclosing-symbol>` resolved through the existing `graph.py` substrate, degrading to the old line-based key when no graph exists.
 
-**Tech Stack:** Python 3.13, stdlib only (`hashlib`, `json`, `re`, `pathlib`). Tests: `pytest`. Lint: `ruff`. Types: `ty`. All commands run from `skills/sec-harness/helpers/` with `uv run`.
+**Tech Stack:** Python 3.13, stdlib only (`hashlib`, `json`, `re`, `pathlib`). Tests: `pytest`. Lint: `ruff`. Types: `ty`. All commands run from `skills/sec-overlay/helpers/` with `uv run`.
 
 ## Global Constraints
 
 - **stdlib-only core** — no new runtime dependencies in `pyproject.toml`.
-- **Never modify `helpers/sec_harness/models.py` or `helpers/sec_harness/evidence.py`** — frozen Go contract (byte-equal `to_dict()` goldens). No new/renamed/reordered fields on `Finding` or `CampaignState`.
+- **Never modify `helpers/sec_overlay/models.py` or `helpers/sec_overlay/evidence.py`** — frozen Go contract (byte-equal `to_dict()` goldens). No new/renamed/reordered fields on `Finding` or `CampaignState`.
 - **New state lives in new `kb/*.json` files**, validated by hand-written `validate_*(d) -> list[str]` functions in the `profile.validate_profile` idiom, wired through `stage_validate._VALIDATORS`.
 - **Untrusted repo text** inlined into prompts is wrapped via `envelope.wrap_untrusted(text, kind)`.
 - **Git boundary:** touch only `skills/` paths; stage explicit paths; `git status` before each commit to confirm nothing under `go/` (or the `helpers/rules/semgrep` submodule pointer, or the untracked `skills/codex-security/` clone) is staged. Work on branch `skill-codex-port-20260803`; never commit to `main`.
@@ -26,7 +26,7 @@
 ### Task 1: `graph.symbol_at()` — resolve a location's enclosing symbol
 
 **Files:**
-- Modify: `helpers/sec_harness/graph.py` (add function near `is_unresolvable`, ~line 288)
+- Modify: `helpers/sec_overlay/graph.py` (add function near `is_unresolvable`, ~line 288)
 - Test: `helpers/tests/test_graph.py` (append)
 
 **Interfaces:**
@@ -49,9 +49,9 @@ def test_symbol_at_returns_enclosing_symbol():
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/test_graph.py::test_symbol_at_returns_enclosing_symbol -v`
-Expected: FAIL — `AttributeError: module 'sec_harness.graph' has no attribute 'symbol_at'`
+Expected: FAIL — `AttributeError: module 'sec_overlay.graph' has no attribute 'symbol_at'`
 
-- [ ] **Step 3: Write minimal implementation** (in `helpers/sec_harness/graph.py`, after `is_unresolvable`)
+- [ ] **Step 3: Write minimal implementation** (in `helpers/sec_overlay/graph.py`, after `is_unresolvable`)
 
 ```python
 def symbol_at(graph: Graph, file: str, line: int) -> str | None:
@@ -85,9 +85,9 @@ Expected: PASS
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/graph.py tests/test_graph.py
+uv run ruff check sec_overlay/graph.py tests/test_graph.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/graph.py skills/sec-harness/helpers/tests/test_graph.py
+git add skills/sec-overlay/helpers/sec_overlay/graph.py skills/sec-overlay/helpers/tests/test_graph.py
 git status   # confirm ONLY these two paths staged
 git commit -m "feat(graph): symbol_at resolves a location's enclosing symbol"
 ```
@@ -97,7 +97,7 @@ git commit -m "feat(graph): symbol_at resolves a location's enclosing symbol"
 ### Task 2: anchor-aware `fingerprint()` + `diff_findings` prefers stamped fp
 
 **Files:**
-- Modify: `helpers/sec_harness/fingerprint.py`
+- Modify: `helpers/sec_overlay/fingerprint.py`
 - Test: `helpers/tests/test_fingerprint.py` (append)
 
 **Interfaces:**
@@ -108,25 +108,25 @@ git commit -m "feat(graph): symbol_at resolves a location's enclosing symbol"
 
 ```python
 def _f(line, *, fp=None, rule="r", cls="sqli", file="a/b.py"):
-    from sec_harness.models import Finding, FindingStatus, Severity
+    from sec_overlay.models import Finding, FindingStatus, Severity
     return Finding(id="F-1", rule_id=rule, cls=cls, status=FindingStatus.RAW,
                    severity=Severity.HIGH, file=file, line=line, message="m", fingerprint=fp)
 
 
 def test_fingerprint_with_anchor_is_line_independent():
-    from sec_harness.fingerprint import fingerprint
+    from sec_overlay.fingerprint import fingerprint
     a = fingerprint(_f(10), anchor="handler")
     b = fingerprint(_f(42), anchor="handler")   # same symbol, moved lines
     assert a == b
 
 
 def test_fingerprint_without_anchor_falls_back_to_file_line():
-    from sec_harness.fingerprint import fingerprint
+    from sec_overlay.fingerprint import fingerprint
     assert fingerprint(_f(10)) != fingerprint(_f(11))   # distinct lines differ
 
 
 def test_diff_findings_uses_stamped_fingerprint():
-    from sec_harness.fingerprint import diff_findings
+    from sec_overlay.fingerprint import diff_findings
     prev = [_f(10, fp="deadbeef0000")]
     cur = [_f(88, fp="deadbeef0000")]   # moved, same stamped identity
     result = diff_findings(prev, cur)
@@ -139,14 +139,14 @@ def test_diff_findings_uses_stamped_fingerprint():
 Run: `uv run pytest tests/test_fingerprint.py -v -k "anchor or stamped"`
 Expected: FAIL — `fingerprint()` takes no `anchor` kwarg; `diff_findings` recomputes from `file|line` so the moved finding shows as `new`+`resolved`.
 
-- [ ] **Step 3: Write minimal implementation** (replace body of `helpers/sec_harness/fingerprint.py`)
+- [ ] **Step 3: Write minimal implementation** (replace body of `helpers/sec_overlay/fingerprint.py`)
 
 ```python
 """Stable content-hash fingerprints for findings.
 
 A fingerprint is a deterministic hash of a finding's identity. Identity is
 ``rule_id|cls|anchor`` where ``anchor`` is the enclosing symbol name (resolved by
-the caller via :func:`sec_harness.graph.symbol_at`) so identity survives line
+the caller via :func:`sec_overlay.graph.symbol_at`) so identity survives line
 shifts. When no anchor is available (no substrate) it degrades to ``file:line`` —
 the pre-substrate behavior. Enables cross-tool dedup and cross-pass diffing.
 """
@@ -155,7 +155,7 @@ from __future__ import annotations
 
 import hashlib
 
-from sec_harness.models import Finding
+from sec_overlay.models import Finding
 
 
 def fingerprint(finding: Finding, anchor: str | None = None) -> str:
@@ -208,9 +208,9 @@ Expected: PASS (all, including any pre-existing tests)
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/fingerprint.py tests/test_fingerprint.py
+uv run ruff check sec_overlay/fingerprint.py tests/test_fingerprint.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/fingerprint.py skills/sec-harness/helpers/tests/test_fingerprint.py
+git add skills/sec-overlay/helpers/sec_overlay/fingerprint.py skills/sec-overlay/helpers/tests/test_fingerprint.py
 git status
 git commit -m "feat(fingerprint): anchor-based identity; diff_findings prefers stamped fp"
 ```
@@ -220,7 +220,7 @@ git commit -m "feat(fingerprint): anchor-based identity; diff_findings prefers s
 ### Task 3: dedupe resolves anchors from the substrate
 
 **Files:**
-- Modify: `helpers/sec_harness/dedupe.py` (the fingerprint-stamping loop, ~lines 45-49)
+- Modify: `helpers/sec_overlay/dedupe.py` (the fingerprint-stamping loop, ~lines 45-49)
 - Test: `helpers/tests/test_dedupe.py` (append; create if absent)
 
 **Interfaces:**
@@ -234,10 +234,10 @@ git commit -m "feat(fingerprint): anchor-based identity; diff_findings prefers s
 ```python
 from pathlib import Path
 
-from sec_harness import graph as g
-from sec_harness.dedupe import dedupe_findings
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace, write_findings
+from sec_overlay import graph as g
+from sec_overlay.dedupe import dedupe_findings
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace, write_findings
 
 FIXTURE = Path(__file__).parent / "fixtures" / "graph_target"
 
@@ -254,7 +254,7 @@ def test_dedupe_stamps_symbol_anchored_fingerprint(tmp_path):
     f1, f2 = _raw("F-1", 1), _raw("F-2", 3)             # same run_query symbol, diff lines
     write_findings(ws, [f1, f2])
     dedupe_findings(ws)
-    from sec_harness.workspace import read_findings
+    from sec_overlay.workspace import read_findings
     got = {f.id: f.fingerprint for f in read_findings(ws)}
     assert got["F-1"] == got["F-2"]                     # anchored to run_query -> equal
 ```
@@ -264,11 +264,11 @@ def test_dedupe_stamps_symbol_anchored_fingerprint(tmp_path):
 Run: `uv run pytest tests/test_dedupe.py::test_dedupe_stamps_symbol_anchored_fingerprint -v`
 Expected: FAIL — current dedupe stamps `fingerprint(f)` with no anchor, so distinct lines produce distinct fingerprints.
 
-- [ ] **Step 3: Write minimal implementation** (in `helpers/sec_harness/dedupe.py`)
+- [ ] **Step 3: Write minimal implementation** (in `helpers/sec_overlay/dedupe.py`)
 
 Add imports at top:
 ```python
-from sec_harness.graph import load_graph, symbol_at
+from sec_overlay.graph import load_graph, symbol_at
 ```
 Replace the stamping loop (currently `for f in findings: if f.status in _ACTIVE: f.fingerprint = fingerprint(f)`) with:
 ```python
@@ -288,9 +288,9 @@ Expected: PASS
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/dedupe.py tests/test_dedupe.py
+uv run ruff check sec_overlay/dedupe.py tests/test_dedupe.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/dedupe.py skills/sec-harness/helpers/tests/test_dedupe.py
+git add skills/sec-overlay/helpers/sec_overlay/dedupe.py skills/sec-overlay/helpers/tests/test_dedupe.py
 git status
 git commit -m "feat(dedupe): stamp substrate-anchored fingerprints when graph present"
 ```
@@ -302,7 +302,7 @@ git commit -m "feat(dedupe): stamp substrate-anchored fingerprints when graph pr
 ### Task 4: `fp_feedback.render_fp_feedback()`
 
 **Files:**
-- Create: `helpers/sec_harness/fp_feedback.py`
+- Create: `helpers/sec_overlay/fp_feedback.py`
 - Test: `helpers/tests/test_fp_feedback.py`
 
 **Interfaces:**
@@ -312,9 +312,9 @@ git commit -m "feat(dedupe): stamp substrate-anchored fingerprints when graph pr
 - [ ] **Step 1: Write the failing test** (`helpers/tests/test_fp_feedback.py`)
 
 ```python
-from sec_harness.fp_feedback import render_fp_feedback
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace, write_findings
+from sec_overlay.fp_feedback import render_fp_feedback
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace, write_findings
 
 
 def _rej(fid, msg, reason, line=3):
@@ -351,7 +351,7 @@ def test_render_fp_feedback_honors_cap(tmp_path):
 Run: `uv run pytest tests/test_fp_feedback.py -v`
 Expected: FAIL — module does not exist.
 
-- [ ] **Step 3: Write minimal implementation** (`helpers/sec_harness/fp_feedback.py`)
+- [ ] **Step 3: Write minimal implementation** (`helpers/sec_overlay/fp_feedback.py`)
 
 ```python
 """Cross-session false-positive feedback: prior rejects as negative few-shot.
@@ -364,9 +364,9 @@ evidence about past rejections, never instructions.
 
 from __future__ import annotations
 
-from sec_harness.envelope import wrap_untrusted
-from sec_harness.models import FindingStatus
-from sec_harness.workspace import Workspace, read_findings
+from sec_overlay.envelope import wrap_untrusted
+from sec_overlay.models import FindingStatus
+from sec_overlay.workspace import Workspace, read_findings
 
 
 def _reason(finding) -> str:
@@ -413,9 +413,9 @@ Expected: PASS
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/fp_feedback.py tests/test_fp_feedback.py
+uv run ruff check sec_overlay/fp_feedback.py tests/test_fp_feedback.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/fp_feedback.py skills/sec-harness/helpers/tests/test_fp_feedback.py
+git add skills/sec-overlay/helpers/sec_overlay/fp_feedback.py skills/sec-overlay/helpers/tests/test_fp_feedback.py
 git status
 git commit -m "feat(fp_feedback): render prior rejects as envelope-wrapped negative few-shot"
 ```
@@ -427,7 +427,7 @@ git commit -m "feat(fp_feedback): render prior rejects as envelope-wrapped negat
 **Files:**
 - Modify: `agents/investigate.md` (add a `{{FP_FEEDBACK}}` token block)
 - Modify: `agents/critic.md` (add a `{{FP_FEEDBACK}}` token block)
-- Modify: `SKILL.md` (document that the orchestrator fills `{{FP_FEEDBACK}}` via `python -m sec_harness ...` / `fp_feedback.render_fp_feedback(ws)` before dispatching investigate and critic on pass N>1)
+- Modify: `SKILL.md` (document that the orchestrator fills `{{FP_FEEDBACK}}` via `python -m sec_overlay ...` / `fp_feedback.render_fp_feedback(ws)` before dispatching investigate and critic on pass N>1)
 - Test: `helpers/tests/test_wiring.py` (append a token-presence assertion)
 
 **Interfaces:**
@@ -439,7 +439,7 @@ git commit -m "feat(fp_feedback): render prior rejects as envelope-wrapped negat
 ```python
 def test_fp_feedback_token_present_in_prompts():
     from pathlib import Path
-    root = Path(__file__).resolve().parents[1].parent  # skills/sec-harness
+    root = Path(__file__).resolve().parents[1].parent  # skills/sec-overlay
     for name in ("investigate", "critic"):
         text = (root / "agents" / f"{name}.md").read_text()
         assert "{{FP_FEEDBACK}}" in text, f"{name}.md missing FP_FEEDBACK token"
@@ -479,7 +479,7 @@ Expected: PASS (contracts stay green — no schema drift).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add skills/sec-harness/agents/investigate.md skills/sec-harness/agents/critic.md skills/sec-harness/SKILL.md skills/sec-harness/helpers/tests/test_wiring.py
+git add skills/sec-overlay/agents/investigate.md skills/sec-overlay/agents/critic.md skills/sec-overlay/SKILL.md skills/sec-overlay/helpers/tests/test_wiring.py
 git status
 git commit -m "feat(prompts): wire {{FP_FEEDBACK}} into investigate/critic with SKILL.md fill"
 ```
@@ -491,7 +491,7 @@ git commit -m "feat(prompts): wire {{FP_FEEDBACK}} into investigate/critic with 
 ### Task 6: `discovery_ledger.py` — saturation state machine
 
 **Files:**
-- Create: `helpers/sec_harness/discovery_ledger.py`
+- Create: `helpers/sec_overlay/discovery_ledger.py`
 - Test: `helpers/tests/test_discovery_ledger.py`
 
 **Interfaces:**
@@ -506,8 +506,8 @@ git commit -m "feat(prompts): wire {{FP_FEEDBACK}} into investigate/critic with 
 - [ ] **Step 1: Write the failing test** (`helpers/tests/test_discovery_ledger.py`)
 
 ```python
-from sec_harness import discovery_ledger as dl
-from sec_harness.workspace import Workspace
+from sec_overlay import discovery_ledger as dl
+from sec_overlay.workspace import Workspace
 
 
 def test_new_finding_resets_streak_no_new_increments():
@@ -549,7 +549,7 @@ def test_validate_rejects_bad_terminal_reason():
 Run: `uv run pytest tests/test_discovery_ledger.py -v`
 Expected: FAIL — module does not exist.
 
-- [ ] **Step 3: Write minimal implementation** (`helpers/sec_harness/discovery_ledger.py`)
+- [ ] **Step 3: Write minimal implementation** (`helpers/sec_overlay/discovery_ledger.py`)
 
 ```python
 """Loop-until-dry discovery saturation ledger (kb/discovery-ledger.json).
@@ -659,9 +659,9 @@ Expected: PASS
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/discovery_ledger.py tests/test_discovery_ledger.py
+uv run ruff check sec_overlay/discovery_ledger.py tests/test_discovery_ledger.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/discovery_ledger.py skills/sec-harness/helpers/tests/test_discovery_ledger.py
+git add skills/sec-overlay/helpers/sec_overlay/discovery_ledger.py skills/sec-overlay/helpers/tests/test_discovery_ledger.py
 git status
 git commit -m "feat(discovery_ledger): loop-until-dry saturation state machine"
 ```
@@ -671,7 +671,7 @@ git commit -m "feat(discovery_ledger): loop-until-dry saturation state machine"
 ### Task 7: wire discovery-ledger validator + document the loop
 
 **Files:**
-- Modify: `helpers/sec_harness/stage_validate.py` (register the validator)
+- Modify: `helpers/sec_overlay/stage_validate.py` (register the validator)
 - Modify: `SKILL.md` (document the investigate saturation loop)
 - Modify: `references/hunting/methodology.md` (document the convergence contract)
 - Test: `helpers/tests/test_stage_validate.py` (append; create if absent)
@@ -684,8 +684,8 @@ git commit -m "feat(discovery_ledger): loop-until-dry saturation state machine"
 
 ```python
 def test_discovery_ledger_stage_is_validated():
-    from sec_harness.stage_validate import validate_stage
-    from sec_harness.discovery_ledger import new_ledger
+    from sec_overlay.stage_validate import validate_stage
+    from sec_overlay.discovery_ledger import new_ledger
     assert validate_stage("discovery-ledger", new_ledger()) == []
     bad = new_ledger(); bad["terminal_reason"] = "nope"
     assert validate_stage("discovery-ledger", bad)
@@ -696,11 +696,11 @@ def test_discovery_ledger_stage_is_validated():
 Run: `uv run pytest tests/test_stage_validate.py::test_discovery_ledger_stage_is_validated -v`
 Expected: FAIL — unknown stage returns `[]`, so the `bad` assertion fails.
 
-- [ ] **Step 3: Register the validator** in `helpers/sec_harness/stage_validate.py`
+- [ ] **Step 3: Register the validator** in `helpers/sec_overlay/stage_validate.py`
 
 Add import:
 ```python
-from sec_harness.discovery_ledger import validate_discovery_ledger
+from sec_overlay.discovery_ledger import validate_discovery_ledger
 ```
 Add to `_VALIDATORS`:
 ```python
@@ -727,7 +727,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add skills/sec-harness/helpers/sec_harness/stage_validate.py skills/sec-harness/SKILL.md skills/sec-harness/references/hunting/methodology.md skills/sec-harness/helpers/tests/test_stage_validate.py
+git add skills/sec-overlay/helpers/sec_overlay/stage_validate.py skills/sec-overlay/SKILL.md skills/sec-overlay/references/hunting/methodology.md skills/sec-overlay/helpers/tests/test_stage_validate.py
 git status
 git commit -m "feat(stage_validate): validate discovery-ledger; document saturation loop"
 ```
@@ -739,7 +739,7 @@ git commit -m "feat(stage_validate): validate discovery-ledger; document saturat
 ### Task 8: `coverage_ledger.py` — model + completeness invariant
 
 **Files:**
-- Create: `helpers/sec_harness/coverage_ledger.py`
+- Create: `helpers/sec_overlay/coverage_ledger.py`
 - Create: `references/coverage-ledger.schema.json` (documentation only)
 - Test: `helpers/tests/test_coverage_ledger.py`
 
@@ -751,7 +751,7 @@ git commit -m "feat(stage_validate): validate discovery-ledger; document saturat
 - [ ] **Step 1: Write the failing test** (`helpers/tests/test_coverage_ledger.py`)
 
 ```python
-from sec_harness.coverage_ledger import render_markdown, validate_coverage_ledger
+from sec_overlay.coverage_ledger import render_markdown, validate_coverage_ledger
 
 
 def _ledger(completeness, surfaces, deferred=None):
@@ -790,7 +790,7 @@ def test_render_markdown_lists_deferred():
 Run: `uv run pytest tests/test_coverage_ledger.py -v`
 Expected: FAIL — module does not exist.
 
-- [ ] **Step 3: Write minimal implementation** (`helpers/sec_harness/coverage_ledger.py`)
+- [ ] **Step 3: Write minimal implementation** (`helpers/sec_overlay/coverage_ledger.py`)
 
 ```python
 """Machine-checked coverage-completeness ledger (kb/coverage-ledger.json).
@@ -872,7 +872,7 @@ Create `references/coverage-ledger.schema.json` documenting the same shape (docu
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "sec-harness coverage ledger",
+  "title": "sec-overlay coverage ledger",
   "type": "object",
   "properties": {
     "completeness": {"enum": ["complete", "partial", "unknown"]},
@@ -895,9 +895,9 @@ Expected: PASS
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/coverage_ledger.py tests/test_coverage_ledger.py
+uv run ruff check sec_overlay/coverage_ledger.py tests/test_coverage_ledger.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/coverage_ledger.py skills/sec-harness/references/coverage-ledger.schema.json skills/sec-harness/helpers/tests/test_coverage_ledger.py
+git add skills/sec-overlay/helpers/sec_overlay/coverage_ledger.py skills/sec-overlay/references/coverage-ledger.schema.json skills/sec-overlay/helpers/tests/test_coverage_ledger.py
 git status
 git commit -m "feat(coverage_ledger): surface-completeness ledger with enforced invariant"
 ```
@@ -907,8 +907,8 @@ git commit -m "feat(coverage_ledger): surface-completeness ledger with enforced 
 ### Task 9: wire coverage-ledger validator + render in report
 
 **Files:**
-- Modify: `helpers/sec_harness/stage_validate.py` (register validator)
-- Modify: `helpers/sec_harness/report.py` (`to_markdown` new param + `write_report` load)
+- Modify: `helpers/sec_overlay/stage_validate.py` (register validator)
+- Modify: `helpers/sec_overlay/report.py` (`to_markdown` new param + `write_report` load)
 - Test: `helpers/tests/test_report.py` (append; create if absent) + `helpers/tests/test_stage_validate.py` (append)
 
 **Interfaces:**
@@ -920,7 +920,7 @@ git commit -m "feat(coverage_ledger): surface-completeness ledger with enforced 
 Append to `helpers/tests/test_stage_validate.py`:
 ```python
 def test_coverage_ledger_stage_is_validated():
-    from sec_harness.stage_validate import validate_stage
+    from sec_overlay.stage_validate import validate_stage
     good = {"completeness": "partial", "surfaces": [{"id": "a", "disposition": "reported"}]}
     assert validate_stage("coverage-ledger", good) == []
     bad = {"completeness": "complete", "surfaces": [], "deferred": ["x"]}
@@ -930,7 +930,7 @@ def test_coverage_ledger_stage_is_validated():
 Append to `helpers/tests/test_report.py`:
 ```python
 def test_to_markdown_renders_coverage_ledger():
-    from sec_harness.report import to_markdown
+    from sec_overlay.report import to_markdown
     led = {"completeness": "partial", "surfaces": [{"id": "auth", "disposition": "reported"}],
            "deferred": ["liquid templates"]}
     md = to_markdown([], coverage_ledger=led)
@@ -944,17 +944,17 @@ Expected: FAIL — stage unknown; `to_markdown` has no `coverage_ledger` param.
 
 - [ ] **Step 3: Implement**
 
-In `helpers/sec_harness/stage_validate.py` add:
+In `helpers/sec_overlay/stage_validate.py` add:
 ```python
-from sec_harness.coverage_ledger import validate_coverage_ledger
+from sec_overlay.coverage_ledger import validate_coverage_ledger
 ```
 and to `_VALIDATORS`:
 ```python
     "coverage-ledger": validate_coverage_ledger,
 ```
 
-In `helpers/sec_harness/report.py`:
-- add import: `from sec_harness.coverage_ledger import render_markdown as render_coverage_ledger`
+In `helpers/sec_overlay/report.py`:
+- add import: `from sec_overlay.coverage_ledger import render_markdown as render_coverage_ledger`
 - add `coverage_ledger: dict | None = None` to the `to_markdown` signature.
 - before the `if token_spend:` block, insert:
 ```python
@@ -976,9 +976,9 @@ Expected: PASS
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/stage_validate.py sec_harness/report.py tests/test_report.py tests/test_stage_validate.py
+uv run ruff check sec_overlay/stage_validate.py sec_overlay/report.py tests/test_report.py tests/test_stage_validate.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/stage_validate.py skills/sec-harness/helpers/sec_harness/report.py skills/sec-harness/helpers/tests/test_report.py skills/sec-harness/helpers/tests/test_stage_validate.py
+git add skills/sec-overlay/helpers/sec_overlay/stage_validate.py skills/sec-overlay/helpers/sec_overlay/report.py skills/sec-overlay/helpers/tests/test_report.py skills/sec-overlay/helpers/tests/test_stage_validate.py
 git status
 git commit -m "feat(report): validate + render coverage-completeness ledger"
 ```
@@ -1002,7 +1002,7 @@ git commit -m "feat(report): validate + render coverage-completeness ledger"
 ```python
 def test_class_prompts_carry_proof_tuple_and_anti_collapse():
     from pathlib import Path
-    root = Path(__file__).resolve().parents[1].parent  # skills/sec-harness
+    root = Path(__file__).resolve().parents[1].parent  # skills/sec-overlay
     for name in ("injection", "authz", "crypto", "config", "resource"):
         text = (root / "agents" / "classes" / f"{name}.md").read_text().lower()
         assert "proof tuple" in text, f"{name}.md missing proof tuple"
@@ -1044,7 +1044,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add skills/sec-harness/agents/classes/injection.md skills/sec-harness/agents/classes/authz.md skills/sec-harness/agents/classes/crypto.md skills/sec-harness/agents/classes/config.md skills/sec-harness/agents/classes/resource.md skills/sec-harness/agents/validate.md skills/sec-harness/references/hunting/anti-patterns.md skills/sec-harness/helpers/tests/test_wiring.py
+git add skills/sec-overlay/agents/classes/injection.md skills/sec-overlay/agents/classes/authz.md skills/sec-overlay/agents/classes/crypto.md skills/sec-overlay/agents/classes/config.md skills/sec-overlay/agents/classes/resource.md skills/sec-overlay/agents/validate.md skills/sec-overlay/references/hunting/anti-patterns.md skills/sec-overlay/helpers/tests/test_wiring.py
 git status
 git commit -m "feat(prompts): per-class proof tuples + instance-preservation discipline"
 ```
@@ -1056,7 +1056,7 @@ git commit -m "feat(prompts): per-class proof tuples + instance-preservation dis
 ### Task 11: `cost.py` — record + aggregate per-phase token spend
 
 **Files:**
-- Create: `helpers/sec_harness/cost.py`
+- Create: `helpers/sec_overlay/cost.py`
 - Test: `helpers/tests/test_cost.py`
 
 **Interfaces:**
@@ -1069,8 +1069,8 @@ git commit -m "feat(prompts): per-class proof tuples + instance-preservation dis
 - [ ] **Step 1: Write the failing test** (`helpers/tests/test_cost.py`)
 
 ```python
-from sec_harness import cost
-from sec_harness.models import CampaignState
+from sec_overlay import cost
+from sec_overlay.models import CampaignState
 
 
 def _state():
@@ -1101,7 +1101,7 @@ def test_aggregate_empty_budget_is_empty():
 Run: `uv run pytest tests/test_cost.py -v`
 Expected: FAIL — module does not exist.
 
-- [ ] **Step 3: Write minimal implementation** (`helpers/sec_harness/cost.py`)
+- [ ] **Step 3: Write minimal implementation** (`helpers/sec_overlay/cost.py`)
 
 ```python
 """Per-run token/cost accounting over CampaignState.budget.
@@ -1114,7 +1114,7 @@ never auto-rendered as a measured metric.
 
 from __future__ import annotations
 
-from sec_harness.models import CampaignState
+from sec_overlay.models import CampaignState
 
 # Rough USD per 1M tokens, blended. Estimates only — labelled as such wherever shown.
 _RATES_USD_PER_MTOK = {"opus": 15.0, "sonnet": 3.0, "haiku": 0.8, "default": 3.0}
@@ -1176,9 +1176,9 @@ Expected: PASS
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/cost.py tests/test_cost.py
+uv run ruff check sec_overlay/cost.py tests/test_cost.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/cost.py skills/sec-harness/helpers/tests/test_cost.py
+git add skills/sec-overlay/helpers/sec_overlay/cost.py skills/sec-overlay/helpers/tests/test_cost.py
 git status
 git commit -m "feat(cost): per-phase token accounting over CampaignState.budget"
 ```
@@ -1188,7 +1188,7 @@ git commit -m "feat(cost): per-phase token accounting over CampaignState.budget"
 ### Task 12: surface token spend in the report + document the recording convention
 
 **Files:**
-- Modify: `helpers/sec_harness/report.py` (`write_report` populates `token_spend`)
+- Modify: `helpers/sec_overlay/report.py` (`write_report` populates `token_spend`)
 - Modify: `SKILL.md` (recording convention)
 - Test: `helpers/tests/test_report.py` (append)
 
@@ -1200,10 +1200,10 @@ git commit -m "feat(cost): per-phase token accounting over CampaignState.budget"
 
 ```python
 def test_write_report_renders_token_spend(tmp_path):
-    from sec_harness.workspace import Workspace, write_findings
-    from sec_harness.state import load_state, save_state
-    from sec_harness import cost
-    from sec_harness.report import write_report
+    from sec_overlay.workspace import Workspace, write_findings
+    from sec_overlay.state import load_state, save_state
+    from sec_overlay import cost
+    from sec_overlay.report import write_report
     ws = Workspace(root=tmp_path / "ws"); ws.ensure()
     write_findings(ws, [])
     st = load_state(ws)
@@ -1219,12 +1219,12 @@ def test_write_report_renders_token_spend(tmp_path):
 Run: `uv run pytest tests/test_report.py::test_write_report_renders_token_spend -v`
 Expected: FAIL — `write_report` never passes `token_spend`, so the section is absent.
 
-- [ ] **Step 3: Implement** in `helpers/sec_harness/report.py`
+- [ ] **Step 3: Implement** in `helpers/sec_overlay/report.py`
 
 Add imports:
 ```python
-from sec_harness import cost
-from sec_harness.state import load_state
+from sec_overlay import cost
+from sec_overlay.state import load_state
 ```
 In `write_report`, before the `to_markdown(...)` call, add:
 ```python
@@ -1242,9 +1242,9 @@ Expected: PASS
 - [ ] **Step 5: Lint, type-check, commit**
 
 ```bash
-uv run ruff check sec_harness/report.py tests/test_report.py
+uv run ruff check sec_overlay/report.py tests/test_report.py
 uv run ty check
-git add skills/sec-harness/helpers/sec_harness/report.py skills/sec-harness/SKILL.md skills/sec-harness/helpers/tests/test_report.py
+git add skills/sec-overlay/helpers/sec_overlay/report.py skills/sec-overlay/SKILL.md skills/sec-overlay/helpers/tests/test_report.py
 git status
 git commit -m "feat(report): render measured per-phase token spend; document recording"
 ```
@@ -1254,10 +1254,10 @@ git commit -m "feat(report): render measured per-phase token spend; document rec
 ## Final verification (after all tasks)
 
 - [ ] Run the full suite: `uv run pytest -q` — expect only the documented env-only failure(s) (`test_bench.py::test_seed_corpus_is_valid`, and the two submodule/seed failures on a clean checkout).
-- [ ] `uv run ruff check sec_harness/ tests/` — clean.
+- [ ] `uv run ruff check sec_overlay/ tests/` — clean.
 - [ ] `uv run ty check` — zero NEW diagnostics vs the pre-existing baseline.
 - [ ] `git status` — no staged paths outside `skills/`; `go/`, `helpers/rules/semgrep`, and `skills/codex-security/` untouched.
-- [ ] Confirm `models.py` and `evidence.py` are unchanged: `git diff --stat main -- skills/sec-harness/helpers/sec_harness/models.py skills/sec-harness/helpers/sec_harness/evidence.py` prints nothing.
+- [ ] Confirm `models.py` and `evidence.py` are unchanged: `git diff --stat main -- skills/sec-overlay/helpers/sec_overlay/models.py skills/sec-overlay/helpers/sec_overlay/evidence.py` prints nothing.
 - [ ] Notify the Go terminal that `Finding.fingerprint` computation changed (Task 2) — Go must mirror `rule_id|cls|anchor` (anchor = enclosing symbol, else `file:line`) for value parity. Goldens remain byte-equal.
 
 ## Spec coverage check

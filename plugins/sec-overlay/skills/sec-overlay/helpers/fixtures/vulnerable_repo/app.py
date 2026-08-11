@@ -1,4 +1,4 @@
-"""Intentionally vulnerable fixture app for sec-harness tests. Do not deploy."""
+"""Intentionally vulnerable fixture app for sec-overlay tests. Do not deploy."""
 
 import sqlite3
 

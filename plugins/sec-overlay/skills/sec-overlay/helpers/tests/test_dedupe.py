@@ -2,10 +2,10 @@
 
 from pathlib import Path
 
-from sec_harness import graph as g
-from sec_harness.dedupe import dedupe_findings
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace, read_findings, write_findings
+from sec_overlay import graph as g
+from sec_overlay.dedupe import dedupe_findings
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace, read_findings, write_findings
 
 FIXTURE = Path(__file__).parent / "fixtures" / "graph_target"
 
@@ -127,7 +127,7 @@ def test_dedupe_stamps_symbol_anchored_fingerprint(tmp_path):
 
 
 def test_dedupe_findings_records_stage(tmp_path):
-    from sec_harness.state import load_state
+    from sec_overlay.state import load_state
 
     ws = Workspace(tmp_path / "workspace"); ws.ensure()
     write_findings(ws, [_f("F-0001", "sqli", "app.py", 18, Severity.HIGH)])

@@ -1,6 +1,6 @@
 """Tests for the unified CWE->attack-class mapping."""
 
-from sec_harness.clsmap import (
+from sec_overlay.clsmap import (
     cls_from_cwe,
     cls_from_rule_id,
     cls_from_semgrep_meta,
@@ -51,7 +51,7 @@ def test_lint_rule_stays_unknown():
 
 
 def test_cls_from_rule_id_routes_vendored_lang_rules():
-    from sec_harness.clsmap import cls_from_rule_id
+    from sec_overlay.clsmap import cls_from_rule_id
     assert cls_from_rule_id("rules.semgrep.php.lang.security.exec-use") == "cmdi"
     assert cls_from_rule_id("rules.semgrep.php.lang.security.backticks-use") == "cmdi"
     assert cls_from_rule_id("rules.semgrep.php.lang.security.mcrypt-use") == "crypto"
@@ -76,7 +76,7 @@ def test_rule_id_rescues_security_other_and_unknown():
 
 
 def test_cls_from_rule_id_codeql_ids():
-    from sec_harness.clsmap import cls_from_rule_id
+    from sec_overlay.clsmap import cls_from_rule_id
     assert cls_from_rule_id("js/user-controlled-bypass") == "authn"
     assert cls_from_rule_id("js/incomplete-url-substring-sanitization") == "ssrf"
     assert cls_from_rule_id("js/incomplete-sanitization") == "xss"
@@ -88,7 +88,7 @@ def test_cls_from_rule_id_codeql_ids():
 
 
 def test_noise_classes():
-    from sec_harness.clsmap import NOISE_CLASSES, is_noise_class
+    from sec_overlay.clsmap import NOISE_CLASSES, is_noise_class
     assert is_noise_class("log-injection") and is_noise_class("clear-text-logging")
     assert is_noise_class("unknown")
     assert not is_noise_class("sqli") and not is_noise_class("ssrf")

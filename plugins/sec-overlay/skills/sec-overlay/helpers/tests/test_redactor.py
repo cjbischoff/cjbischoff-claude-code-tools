@@ -1,7 +1,7 @@
 """Tests for the pre-send secrets redactor."""
 import pytest
 
-from sec_harness.redactor import (
+from sec_overlay.redactor import (
     SecretsPresent,
     find_residual_secrets,
     redact,
@@ -38,7 +38,7 @@ def test_placeholder_not_flagged():
 
 def test_findings_guided_masking(tmp_path):
     # a secrets finding on line 2 whose value shape our patterns miss -> RHS masked
-    from sec_harness.models import Finding, FindingStatus, Severity
+    from sec_overlay.models import Finding, FindingStatus, Severity
     f = Finding(id="S1", rule_id="secrets:x", cls="secrets", status=FindingStatus.CANDIDATE,
                 severity=Severity.HIGH, file="c.py", line=2, message="m")
     red = redact("a = 1\nweird_secret = supersecretvalue\n", findings=[f])

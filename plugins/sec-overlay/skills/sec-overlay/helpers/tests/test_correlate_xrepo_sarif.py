@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from sec_harness.correlate.ingest import IngestedFinding
-from sec_harness.correlate.rethreshold import CorrelationVerdict
-from sec_harness.correlate.xrepo_sarif import to_correlation_sarif
-from sec_harness.models import Finding, FindingStatus, Severity
+from sec_overlay.correlate.ingest import IngestedFinding
+from sec_overlay.correlate.rethreshold import CorrelationVerdict
+from sec_overlay.correlate.xrepo_sarif import to_correlation_sarif
+from sec_overlay.models import Finding, FindingStatus, Severity
 
 
 def _f(status: FindingStatus) -> Finding:
@@ -56,7 +56,7 @@ def test_sarif_one_run_per_member_plus_correlation_run() -> None:
     )
     doc = to_correlation_sarif(ings, [v])
     names = [r["tool"]["driver"]["name"] for r in doc["runs"]]
-    assert names == ["a#.", "b#x", "sec-harness-correlation"]
+    assert names == ["a#.", "b#x", "sec-overlay-correlation"]
     assert len(doc["runs"][0]["results"]) == 1  # confirmed finding of member a
     assert doc["runs"][1]["results"] == []  # NDT is not reportable
     corr = doc["runs"][-1]["results"]

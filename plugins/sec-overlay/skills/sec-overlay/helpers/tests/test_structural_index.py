@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from sec_harness.structural_index import (
+from sec_overlay.structural_index import (
     find_callers,
     get_function_boundary,
     list_definitions,
@@ -91,7 +91,7 @@ def test_find_callers_excludes_js_const_definition():
 
 
 def test_cli_defs_lists_symbols(capsys):
-    from sec_harness.structural_index import main
+    from sec_overlay.structural_index import main
 
     rc = main(["defs", "--path", str(STRUCT / "sample.py")])
     out = capsys.readouterr().out
@@ -101,7 +101,7 @@ def test_cli_defs_lists_symbols(capsys):
 
 
 def test_cli_boundary(capsys):
-    from sec_harness.structural_index import main
+    from sec_overlay.structural_index import main
 
     rc = main(["boundary", "--path", str(STRUCT / "sample.py"), "--line", "1"])
     out = capsys.readouterr().out
@@ -134,7 +134,7 @@ def test_boundary_returns_source(tmp_path):
 
 
 def test_find_callers_tags_test_paths_prod_first():
-    from sec_harness.structural_index import find_callers
+    from sec_overlay.structural_index import find_callers
 
     class R:
         stdout = (
@@ -155,7 +155,7 @@ def test_find_callers_tags_test_paths_prod_first():
 
 
 def test_is_test_path():
-    from sec_harness.structural_index import _is_test_path
+    from sec_overlay.structural_index import _is_test_path
     assert _is_test_path("src/foo/bar.py") is False
     assert _is_test_path("app/tests/x.py") is True
     assert _is_test_path("a/b.test.ts") is True

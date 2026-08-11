@@ -1,6 +1,6 @@
 # Shared prompt constants
 
-Every sec-harness agent prompt includes these blocks verbatim so scope, severity,
+Every sec-overlay agent prompt includes these blocks verbatim so scope, severity,
 and anti-manipulation rules never drift between stages. Adapted from VVAH
 `util/prompts.py` + `adversarial-review.md`.
 

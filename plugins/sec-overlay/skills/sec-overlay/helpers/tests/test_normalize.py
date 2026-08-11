@@ -1,7 +1,7 @@
 """Tests for finding normalization / dedup."""
 
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.normalize import normalize
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.normalize import normalize
 
 
 def _f(rule, cls, file, line, sev):

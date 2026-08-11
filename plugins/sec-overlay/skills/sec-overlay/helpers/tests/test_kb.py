@@ -1,14 +1,14 @@
 """Tests for KB file plumbing."""
 
-from sec_harness.kb import (
+from sec_overlay.kb import (
     kb_status,
     profile_path,
     read_profile,
     threat_model_path,
     write_profile,
 )
-from sec_harness.profile import ScanProfile
-from sec_harness.workspace import Workspace
+from sec_overlay.profile import ScanProfile
+from sec_overlay.workspace import Workspace
 
 
 def _profile():

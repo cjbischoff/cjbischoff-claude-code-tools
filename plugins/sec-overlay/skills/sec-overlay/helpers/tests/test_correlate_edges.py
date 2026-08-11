@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.correlate.edges import shared_dependency_edges
-from sec_harness.correlate.ingest import ingest
-from sec_harness.correlate.manifest import Manifest, Member
+from sec_overlay.correlate.edges import shared_dependency_edges
+from sec_overlay.correlate.ingest import ingest
+from sec_overlay.correlate.manifest import Manifest, Member
 from tests.correlate_fixtures import build_member
 
 
@@ -30,7 +30,7 @@ def test_shared_dependency_rolls_up_across_members(tmp_path: Path):
 
 
 def test_same_class_recurrence_flags_systemic(tmp_path: Path):
-    from sec_harness.correlate.edges import same_class_recurrence_edges
+    from sec_overlay.correlate.edges import same_class_recurrence_edges
 
     def _authz(fid, fp):
         return {"id": fid, "cls": "authz", "status": "needs-deployment-testing", "severity": "medium",
@@ -48,9 +48,9 @@ def test_same_class_recurrence_flags_systemic(tmp_path: Path):
 
 
 def test_control_enforces_joins_privilege_across_roles(tmp_path):
-    from sec_harness.correlate.edges import control_enforces_edges
-    from sec_harness.correlate.ingest import ingest
-    from sec_harness.correlate.manifest import Manifest, Member
+    from sec_overlay.correlate.edges import control_enforces_edges
+    from sec_overlay.correlate.ingest import ingest
+    from sec_overlay.correlate.manifest import Manifest, Member
     from tests.correlate_fixtures import build_member
 
     # rbac-source finding names a privilege; service-enforcer finding names the same privilege

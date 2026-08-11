@@ -1,4 +1,4 @@
-# bench — sec-harness evaluation harness (dev-only)
+# bench — sec-overlay evaluation harness (dev-only)
 
 Measures and locks in detection quality. Not part of the shipped harness. Three layers:
 
@@ -31,7 +31,7 @@ Measures and locks in detection quality. Not part of the shipped harness. Three 
 # grade workspaces the operator scanned by driving the CC skill:
 python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --workspaces <dir>
 # or drive a scanner binary (future Go build):
-python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --binary "sec-harness-go scan"
+python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --binary "sec-overlay-go scan"
 ```
 
 ## Corpus

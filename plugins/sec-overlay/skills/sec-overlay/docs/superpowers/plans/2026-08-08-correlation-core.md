@@ -4,18 +4,18 @@
 
 **Goal:** Stand up the read-only multi-repo correlation core — a product manifest, a `CorrelationWorkspace`, read-only ingest of N per-repo sidecars, and the two purely-deterministic cross-repo joins (shared-dependency roll-up, same-class recurrence) — written to `edges.json` via a `correlate` CLI.
 
-**Architecture:** A new stdlib-only `sec_harness.correlate` package. It locates each member's sidecar via Plan 1's `RepoMemory.for_target(repo_root/scan_scope)`, reads its findings **read-only** (never opens a member file for write), tags each finding with a member key `<slug>#<scan_scope>` and cross-repo id, then runs two deterministic joins over the ingested findings. No LLM, no member-source reads, no re-thresholding — those are B-Plan 2/3.
+**Architecture:** A new stdlib-only `sec_overlay.correlate` package. It locates each member's sidecar via Plan 1's `RepoMemory.for_target(repo_root/scan_scope)`, reads its findings **read-only** (never opens a member file for write), tags each finding with a member key `<slug>#<scan_scope>` and cross-repo id, then runs two deterministic joins over the ingested findings. No LLM, no member-source reads, no re-thresholding — those are B-Plan 2/3.
 
-**Tech Stack:** Python 3 stdlib only; `pytest` via `uv run`; `ruff` (line-length 100) + `ty`. Reuses `sec_harness.models.Finding`, `sec_harness.workspace.read_findings`, `sec_harness.repo_memory.RepoMemory`.
+**Tech Stack:** Python 3 stdlib only; `pytest` via `uv run`; `ruff` (line-length 100) + `ty`. Reuses `sec_overlay.models.Finding`, `sec_overlay.workspace.read_findings`, `sec_overlay.repo_memory.RepoMemory`.
 
 ## Global Constraints
 
 - Core is **stdlib-only**. Add NO runtime dependency to `pyproject.toml`.
 - **Do NOT modify** `models.py` or `evidence.py` (frozen contract). B-Plan 1 adds a NEW `correlate` package + a NEW `CorrelationVerdict`/edge dataclass; it touches neither frozen file. **No Go-golden regen.**
-- **Immutability invariant:** the correlation layer opens NO member-repo file for write. A member's `.sec-harness/<slug>/` is byte-identical before and after a correlation run. Tests must assert this.
-- **You touch only `skills/` paths.** Never `git add -A`; stage explicit `skills/sec-harness/...` paths; `git status` shows only skill paths before every commit. Never touch `go/`.
+- **Immutability invariant:** the correlation layer opens NO member-repo file for write. A member's `.sec-overlay/<slug>/` is byte-identical before and after a correlation run. Tests must assert this.
+- **You touch only `skills/` paths.** Never `git add -A`; stage explicit `skills/sec-overlay/...` paths; `git status` shows only skill paths before every commit. Never touch `go/`.
 - Work on branch `spec/cross-repo-correlation-20260808` (already created off `main`). Personal remote → no GPG, no AI attribution. Do NOT push.
-- Run from `skills/sec-harness/helpers/`. Tests in `helpers/tests/`. `uv run pytest`.
+- Run from `skills/sec-overlay/helpers/`. Tests in `helpers/tests/`. `uv run pytest`.
 - New modules start with `from __future__ import annotations` + Google-style docstrings on public functions/classes.
 - **Deterministic only:** every join in B-Plan 1 is a pure function of ingested findings — no LLM, no network, no member-source access. (Contract-consistency + fuzzy edges + re-thresholding are B-Plan 2, resequenced here because they need member-source reads.)
 
@@ -23,12 +23,12 @@
 
 ## File Structure
 
-- **Create** `helpers/sec_harness/correlate/__init__.py` — package marker + public exports.
-- **Create** `helpers/sec_harness/correlate/manifest.py` — `Member`, `Manifest`, `load_manifest`, `validate_manifest`.
-- **Create** `helpers/sec_harness/correlate/workspace.py` — `CorrelationWorkspace` (dir layout) + `member_key`/`cross_repo_id` helpers.
-- **Create** `helpers/sec_harness/correlate/ingest.py` — `ingest(manifest) -> list[IngestedFinding]` (read-only).
-- **Create** `helpers/sec_harness/correlate/edges.py` — `Edge` dataclass + `shared_dependency_edges`, `same_class_recurrence_edges`, `write_edges`.
-- **Create** `helpers/sec_harness/correlate/cli.py` — `python -m sec_harness.correlate` entrypoint.
+- **Create** `helpers/sec_overlay/correlate/__init__.py` — package marker + public exports.
+- **Create** `helpers/sec_overlay/correlate/manifest.py` — `Member`, `Manifest`, `load_manifest`, `validate_manifest`.
+- **Create** `helpers/sec_overlay/correlate/workspace.py` — `CorrelationWorkspace` (dir layout) + `member_key`/`cross_repo_id` helpers.
+- **Create** `helpers/sec_overlay/correlate/ingest.py` — `ingest(manifest) -> list[IngestedFinding]` (read-only).
+- **Create** `helpers/sec_overlay/correlate/edges.py` — `Edge` dataclass + `shared_dependency_edges`, `same_class_recurrence_edges`, `write_edges`.
+- **Create** `helpers/sec_overlay/correlate/cli.py` — `python -m sec_overlay.correlate` entrypoint.
 - **Create** `helpers/tests/test_correlate_manifest.py`, `test_correlate_ingest.py`, `test_correlate_edges.py`, `test_correlate_cli.py`.
 - **Create** `helpers/tests/correlate_fixtures.py` — builds synthetic member sidecars in a tmp dir (shared test helper).
 
@@ -37,7 +37,7 @@
 ### Task 1: Manifest schema + loader
 
 **Files:**
-- Create: `helpers/sec_harness/correlate/__init__.py`, `helpers/sec_harness/correlate/manifest.py`
+- Create: `helpers/sec_overlay/correlate/__init__.py`, `helpers/sec_overlay/correlate/manifest.py`
 - Test: `helpers/tests/test_correlate_manifest.py`
 
 **Interfaces:**
@@ -59,7 +59,7 @@ from pathlib import Path
 
 import pytest
 
-from sec_harness.correlate.manifest import Member, Manifest, load_manifest, validate_manifest
+from sec_overlay.correlate.manifest import Member, Manifest, load_manifest, validate_manifest
 
 
 def _doc(**kw) -> dict:
@@ -103,16 +103,16 @@ def test_load_invalid_raises(tmp_path: Path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_manifest.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'sec_harness.correlate'`.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_manifest.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named 'sec_overlay.correlate'`.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# helpers/sec_harness/correlate/__init__.py
+# helpers/sec_overlay/correlate/__init__.py
 """Read-only multi-repo correlation layer (Spec B).
 
-Joins N per-repo sec-harness scans of one product into a cross-repo view. B-Plan 1 provides
+Joins N per-repo sec-overlay scans of one product into a cross-repo view. B-Plan 1 provides
 the manifest, workspace, read-only ingest, and the two deterministic findings-joins
 (shared-dependency, same-class recurrence). Re-thresholding, source-reading edges, and the
 combined artifacts are B-Plan 2/3.
@@ -122,7 +122,7 @@ from __future__ import annotations
 ```
 
 ```python
-# helpers/sec_harness/correlate/manifest.py
+# helpers/sec_overlay/correlate/manifest.py
 """Product manifest: the explicit set of member repos (with roles) to correlate."""
 
 from __future__ import annotations
@@ -216,14 +216,14 @@ def load_manifest(path: str | Path) -> Manifest:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_manifest.py -v`
-Expected: PASS (5). `uv run ruff check sec_harness/correlate/ tests/test_correlate_manifest.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_manifest.py -v`
+Expected: PASS (5). `uv run ruff check sec_overlay/correlate/ tests/test_correlate_manifest.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/correlate/__init__.py skills/sec-harness/helpers/sec_harness/correlate/manifest.py skills/sec-harness/helpers/tests/test_correlate_manifest.py
+git add skills/sec-overlay/helpers/sec_overlay/correlate/__init__.py skills/sec-overlay/helpers/sec_overlay/correlate/manifest.py skills/sec-overlay/helpers/tests/test_correlate_manifest.py
 git status
 git commit -m "feat(correlate): product manifest schema + loader with role validation"
 ```
@@ -233,7 +233,7 @@ git commit -m "feat(correlate): product manifest schema + loader with role valid
 ### Task 2: CorrelationWorkspace + fixture helper
 
 **Files:**
-- Create: `helpers/sec_harness/correlate/workspace.py`
+- Create: `helpers/sec_overlay/correlate/workspace.py`
 - Create: `helpers/tests/correlate_fixtures.py`
 - Test: `helpers/tests/test_correlate_ingest.py` (fixture smoke test only in this task)
 
@@ -250,10 +250,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.correlate.workspace import CorrelationWorkspace
+from sec_overlay.correlate.workspace import CorrelationWorkspace
 from tests.correlate_fixtures import build_member
-from sec_harness.repo_memory import RepoMemory
-from sec_harness.workspace import read_findings
+from sec_overlay.repo_memory import RepoMemory
+from sec_overlay.workspace import read_findings
 
 
 def test_correlation_workspace_layout(tmp_path: Path):
@@ -278,13 +278,13 @@ def test_fixture_builds_readable_member(tmp_path: Path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_ingest.py -v`
-Expected: FAIL with `ModuleNotFoundError` for `sec_harness.correlate.workspace` / `tests.correlate_fixtures`.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_ingest.py -v`
+Expected: FAIL with `ModuleNotFoundError` for `sec_overlay.correlate.workspace` / `tests.correlate_fixtures`.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# helpers/sec_harness/correlate/workspace.py
+# helpers/sec_overlay/correlate/workspace.py
 """The correlation workspace: a dir holding the manifest, edge graph, verdicts, and artifacts."""
 
 from __future__ import annotations
@@ -343,9 +343,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.models import Finding
-from sec_harness.repo_memory import RepoMemory
-from sec_harness.workspace import write_findings
+from sec_overlay.models import Finding
+from sec_overlay.repo_memory import RepoMemory
+from sec_overlay.workspace import write_findings
 
 
 def build_member(base: Path, *, slug: str, scan_scope: str, findings: list[dict]) -> dict:
@@ -367,7 +367,7 @@ def build_member(base: Path, *, slug: str, scan_scope: str, findings: list[dict]
     repo_root = base / slug
     target = repo_root if scan_scope == "." else repo_root / scan_scope
     target.mkdir(parents=True, exist_ok=True)
-    rm = RepoMemory(root=repo_root / ".sec-harness" / slug)
+    rm = RepoMemory(root=repo_root / ".sec-overlay" / slug)
     rm.workspace.ensure()
     write_findings(rm.workspace, [Finding.from_dict(f) for f in findings])
     return {"slug": slug, "repo_root": str(repo_root), "scan_scope": scan_scope,
@@ -378,14 +378,14 @@ Note: the fixture pins the sidecar path directly (`RepoMemory(root=...)`) so a t
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_ingest.py -v`
-Expected: PASS (2). `uv run ruff check sec_harness/correlate/workspace.py tests/correlate_fixtures.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_ingest.py -v`
+Expected: PASS (2). `uv run ruff check sec_overlay/correlate/workspace.py tests/correlate_fixtures.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/correlate/workspace.py skills/sec-harness/helpers/tests/correlate_fixtures.py skills/sec-harness/helpers/tests/test_correlate_ingest.py
+git add skills/sec-overlay/helpers/sec_overlay/correlate/workspace.py skills/sec-overlay/helpers/tests/correlate_fixtures.py skills/sec-overlay/helpers/tests/test_correlate_ingest.py
 git status
 git commit -m "feat(correlate): CorrelationWorkspace layout + synthetic-member test fixture"
 ```
@@ -395,14 +395,14 @@ git commit -m "feat(correlate): CorrelationWorkspace layout + synthetic-member t
 ### Task 3: Read-only ingest
 
 **Files:**
-- Create: `helpers/sec_harness/correlate/ingest.py`
+- Create: `helpers/sec_overlay/correlate/ingest.py`
 - Test: `helpers/tests/test_correlate_ingest.py` (extend)
 
 **Interfaces:**
 - Consumes: `Manifest`/`Member` (Task 1); `RepoMemory` + `read_findings`.
 - Produces:
   - `@dataclass IngestedFinding(member_key: str, role: str, cross_repo_id: str, finding: Finding)`.
-  - `member_workspace(member: Member) -> Workspace` — resolves the member's sidecar (`RepoMemory(root=Path(repo_root)/".sec-harness"/slug).workspace`; matches the fixture + production sidecar path).
+  - `member_workspace(member: Member) -> Workspace` — resolves the member's sidecar (`RepoMemory(root=Path(repo_root)/".sec-overlay"/slug).workspace`; matches the fixture + production sidecar path).
   - `ingest(manifest: Manifest) -> list[IngestedFinding]` — read-only; each finding tagged `cross_repo_id = f"{member.member_key}:{f.file}:{f.line}:{f.rule_id}"`.
 
 - [ ] **Step 1: Write the failing test (append to test_correlate_ingest.py)**
@@ -410,8 +410,8 @@ git commit -m "feat(correlate): CorrelationWorkspace layout + synthetic-member t
 ```python
 def test_ingest_tags_cross_repo_ids_readonly(tmp_path: Path):
     import json, hashlib
-    from sec_harness.correlate.manifest import Manifest, Member
-    from sec_harness.correlate.ingest import ingest
+    from sec_overlay.correlate.manifest import Manifest, Member
+    from sec_overlay.correlate.ingest import ingest
 
     ma = build_member(tmp_path, slug="a-1", scan_scope=".",
                       findings=[{"id": "C-1", "cls": "deps", "status": "confirmed", "severity": "low",
@@ -441,13 +441,13 @@ def test_ingest_tags_cross_repo_ids_readonly(tmp_path: Path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_ingest.py::test_ingest_tags_cross_repo_ids_readonly -v`
-Expected: FAIL — `sec_harness.correlate.ingest` missing.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_ingest.py::test_ingest_tags_cross_repo_ids_readonly -v`
+Expected: FAIL — `sec_overlay.correlate.ingest` missing.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# helpers/sec_harness/correlate/ingest.py
+# helpers/sec_overlay/correlate/ingest.py
 """Read-only ingest of member sidecars into cross-repo-tagged findings."""
 
 from __future__ import annotations
@@ -455,10 +455,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from sec_harness.correlate.manifest import Manifest, Member
-from sec_harness.models import Finding
-from sec_harness.repo_memory import RepoMemory
-from sec_harness.workspace import Workspace, read_findings
+from sec_overlay.correlate.manifest import Manifest, Member
+from sec_overlay.models import Finding
+from sec_overlay.repo_memory import RepoMemory
+from sec_overlay.workspace import Workspace, read_findings
 
 
 @dataclass
@@ -474,7 +474,7 @@ class IngestedFinding:
 def member_workspace(member: Member) -> Workspace:
     """Resolve a member's sidecar Workspace (read-only use).
 
-    The sidecar lives at ``<repo_root>/.sec-harness/<slug>/`` — the same location a scan wrote it.
+    The sidecar lives at ``<repo_root>/.sec-overlay/<slug>/`` — the same location a scan wrote it.
 
     Args:
         member: The manifest member.
@@ -482,7 +482,7 @@ def member_workspace(member: Member) -> Workspace:
     Returns:
         The member's campaign :class:`Workspace`.
     """
-    return RepoMemory(root=Path(member.repo_root) / ".sec-harness" / member.slug).workspace
+    return RepoMemory(root=Path(member.repo_root) / ".sec-overlay" / member.slug).workspace
 
 
 def ingest(manifest: Manifest) -> list[IngestedFinding]:
@@ -507,14 +507,14 @@ def ingest(manifest: Manifest) -> list[IngestedFinding]:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_ingest.py -v`
-Expected: PASS. `uv run ruff check sec_harness/correlate/ingest.py tests/test_correlate_ingest.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_ingest.py -v`
+Expected: PASS. `uv run ruff check sec_overlay/correlate/ingest.py tests/test_correlate_ingest.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/correlate/ingest.py skills/sec-harness/helpers/tests/test_correlate_ingest.py
+git add skills/sec-overlay/helpers/sec_overlay/correlate/ingest.py skills/sec-overlay/helpers/tests/test_correlate_ingest.py
 git status
 git commit -m "feat(correlate): read-only ingest tagging findings with cross-repo ids"
 ```
@@ -524,7 +524,7 @@ git commit -m "feat(correlate): read-only ingest tagging findings with cross-rep
 ### Task 4: shared-dependency roll-up
 
 **Files:**
-- Create: `helpers/sec_harness/correlate/edges.py`
+- Create: `helpers/sec_overlay/correlate/edges.py`
 - Test: `helpers/tests/test_correlate_edges.py`
 
 **Interfaces:**
@@ -541,9 +541,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.correlate.manifest import Manifest, Member
-from sec_harness.correlate.ingest import ingest
-from sec_harness.correlate.edges import shared_dependency_edges
+from sec_overlay.correlate.manifest import Manifest, Member
+from sec_overlay.correlate.ingest import ingest
+from sec_overlay.correlate.edges import shared_dependency_edges
 from tests.correlate_fixtures import build_member
 
 
@@ -568,13 +568,13 @@ def test_shared_dependency_rolls_up_across_members(tmp_path: Path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_edges.py -v`
-Expected: FAIL — `sec_harness.correlate.edges` missing.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_edges.py -v`
+Expected: FAIL — `sec_overlay.correlate.edges` missing.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# helpers/sec_harness/correlate/edges.py
+# helpers/sec_overlay/correlate/edges.py
 """Deterministic cross-repo edges over ingested findings (B-Plan 1: no LLM, no source reads)."""
 
 from __future__ import annotations
@@ -584,7 +584,7 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from sec_harness.correlate.ingest import IngestedFinding
+from sec_overlay.correlate.ingest import IngestedFinding
 
 
 @dataclass
@@ -645,14 +645,14 @@ def write_edges(path: str | Path, edges: list[Edge]) -> None:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_edges.py -v`
-Expected: PASS. `uv run ruff check sec_harness/correlate/edges.py tests/test_correlate_edges.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_edges.py -v`
+Expected: PASS. `uv run ruff check sec_overlay/correlate/edges.py tests/test_correlate_edges.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/correlate/edges.py skills/sec-harness/helpers/tests/test_correlate_edges.py
+git add skills/sec-overlay/helpers/sec_overlay/correlate/edges.py skills/sec-overlay/helpers/tests/test_correlate_edges.py
 git status
 git commit -m "feat(correlate): shared-dependency OSV roll-up edge"
 ```
@@ -662,7 +662,7 @@ git commit -m "feat(correlate): shared-dependency OSV roll-up edge"
 ### Task 5: same-class recurrence edge
 
 **Files:**
-- Modify: `helpers/sec_harness/correlate/edges.py`
+- Modify: `helpers/sec_overlay/correlate/edges.py`
 - Test: `helpers/tests/test_correlate_edges.py` (extend)
 
 **Interfaces:**
@@ -673,7 +673,7 @@ git commit -m "feat(correlate): shared-dependency OSV roll-up edge"
 
 ```python
 def test_same_class_recurrence_flags_systemic(tmp_path: Path):
-    from sec_harness.correlate.edges import same_class_recurrence_edges
+    from sec_overlay.correlate.edges import same_class_recurrence_edges
 
     def _authz(fid, fp):
         return {"id": fid, "cls": "authz", "status": "needs-deployment-testing", "severity": "medium",
@@ -692,7 +692,7 @@ def test_same_class_recurrence_flags_systemic(tmp_path: Path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_edges.py::test_same_class_recurrence_flags_systemic -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_edges.py::test_same_class_recurrence_flags_systemic -v`
 Expected: FAIL — `same_class_recurrence_edges` missing.
 
 - [ ] **Step 3: Write minimal implementation (append to edges.py)**
@@ -725,14 +725,14 @@ def same_class_recurrence_edges(ings: list[IngestedFinding]) -> list[Edge]:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_edges.py -v`
-Expected: PASS (2). `uv run ruff check sec_harness/correlate/edges.py tests/test_correlate_edges.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_edges.py -v`
+Expected: PASS (2). `uv run ruff check sec_overlay/correlate/edges.py tests/test_correlate_edges.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/correlate/edges.py skills/sec-harness/helpers/tests/test_correlate_edges.py
+git add skills/sec-overlay/helpers/sec_overlay/correlate/edges.py skills/sec-overlay/helpers/tests/test_correlate_edges.py
 git status
 git commit -m "feat(correlate): same-class recurrence (systemic) edge"
 ```
@@ -742,12 +742,12 @@ git commit -m "feat(correlate): same-class recurrence (systemic) edge"
 ### Task 6: `correlate` CLI + regression
 
 **Files:**
-- Create: `helpers/sec_harness/correlate/cli.py`
+- Create: `helpers/sec_overlay/correlate/cli.py`
 - Test: `helpers/tests/test_correlate_cli.py`
 
 **Interfaces:**
 - Consumes: `load_manifest`, `CorrelationWorkspace`, `ingest`, `shared_dependency_edges`, `same_class_recurrence_edges`, `write_edges`.
-- Produces: `python -m sec_harness.correlate --manifest <product.json> --out <dir>` — loads the manifest, copies it into the workspace, ingests, runs both deterministic joins, writes `edges.json`; prints `{"edges": <n>, "members": <m>}`. `main(argv) -> int`.
+- Produces: `python -m sec_overlay.correlate --manifest <product.json> --out <dir>` — loads the manifest, copies it into the workspace, ingests, runs both deterministic joins, writes `edges.json`; prints `{"edges": <n>, "members": <m>}`. `main(argv) -> int`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -758,7 +758,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sec_harness.correlate.cli import main
+from sec_overlay.correlate.cli import main
 from tests.correlate_fixtures import build_member
 
 
@@ -783,13 +783,13 @@ def test_cli_writes_edges(tmp_path: Path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_cli.py -v`
-Expected: FAIL — `sec_harness.correlate.cli` missing.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_cli.py -v`
+Expected: FAIL — `sec_overlay.correlate.cli` missing.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# helpers/sec_harness/correlate/cli.py
+# helpers/sec_overlay/correlate/cli.py
 """CLI: correlate N per-repo scans of one product into a cross-repo edge graph."""
 
 from __future__ import annotations
@@ -798,12 +798,12 @@ import argparse
 import json
 from pathlib import Path
 
-from sec_harness.correlate.edges import (
+from sec_overlay.correlate.edges import (
     same_class_recurrence_edges, shared_dependency_edges, write_edges,
 )
-from sec_harness.correlate.ingest import ingest
-from sec_harness.correlate.manifest import load_manifest
-from sec_harness.correlate.workspace import CorrelationWorkspace
+from sec_overlay.correlate.ingest import ingest
+from sec_overlay.correlate.manifest import load_manifest
+from sec_overlay.correlate.workspace import CorrelationWorkspace
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -815,7 +815,7 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         0 on success.
     """
-    parser = argparse.ArgumentParser(prog="sec-harness-correlate")
+    parser = argparse.ArgumentParser(prog="sec-overlay-correlate")
     parser.add_argument("--manifest", required=True)
     parser.add_argument("--out", required=True)
     args = parser.parse_args(argv)
@@ -837,14 +837,14 @@ if __name__ == "__main__":
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_cli.py -v`
-Expected: PASS. Then full suite `uv run pytest -q` (only the known env-only failures; zero NEW). `uv run ruff check sec_harness/correlate/ tests/test_correlate_*.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_cli.py -v`
+Expected: PASS. Then full suite `uv run pytest -q` (only the known env-only failures; zero NEW). `uv run ruff check sec_overlay/correlate/ tests/test_correlate_*.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/correlate/cli.py skills/sec-harness/helpers/tests/test_correlate_cli.py
+git add skills/sec-overlay/helpers/sec_overlay/correlate/cli.py skills/sec-overlay/helpers/tests/test_correlate_cli.py
 git status
 git commit -m "feat(correlate): CLI runs ingest + deterministic joins -> edges.json"
 ```
@@ -864,6 +864,6 @@ git commit -m "feat(correlate): CLI runs ingest + deterministic joins -> edges.j
 
 **2. Placeholder scan:** No TBD/TODO; every code step is runnable; every test asserts concrete values (incl. the immutability byte-compare).
 
-**3. Type consistency:** `Member.member_key` (`slug#scan_scope`) used identically in Tasks 1/3/4/5; `IngestedFinding` fields (`member_key`/`role`/`cross_repo_id`/`finding`) consistent across ingest + edges; `Edge` (`type`/`members`/`key`/`detail` + `to_dict`) consistent across Tasks 4/5/6; `member_workspace` sidecar path (`<repo_root>/.sec-harness/<slug>`) matches the fixture's `RepoMemory(root=...)` exactly so tests resolve the same sidecar the code does.
+**3. Type consistency:** `Member.member_key` (`slug#scan_scope`) used identically in Tasks 1/3/4/5; `IngestedFinding` fields (`member_key`/`role`/`cross_repo_id`/`finding`) consistent across ingest + edges; `Edge` (`type`/`members`/`key`/`detail` + `to_dict`) consistent across Tasks 4/5/6; `member_workspace` sidecar path (`<repo_root>/.sec-overlay/<slug>`) matches the fixture's `RepoMemory(root=...)` exactly so tests resolve the same sidecar the code does.
 
 **Contract note:** new `correlate` package only; `models.py`/`evidence.py` untouched → no Go-golden regen.

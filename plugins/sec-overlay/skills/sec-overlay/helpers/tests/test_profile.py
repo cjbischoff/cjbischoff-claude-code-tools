@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from sec_harness.profile import ScanProfile, load_profile, save_profile, validate_profile
+from sec_overlay.profile import ScanProfile, load_profile, save_profile, validate_profile
 
 
 def _valid_dict():
@@ -57,7 +57,7 @@ def test_load_profile_roundtrip(tmp_path):
 
 
 def load_profile_from_dict_helper(p):
-    save_profile(p, __import__("sec_harness.profile", fromlist=["ScanProfile"]).ScanProfile.from_dict(_valid_dict()))
+    save_profile(p, __import__("sec_overlay.profile", fromlist=["ScanProfile"]).ScanProfile.from_dict(_valid_dict()))
     return load_profile(p)
 
 
@@ -105,7 +105,7 @@ def test_non_dict_scan_options_rejected():
 def test_profile_notes_roundtrip_and_optional(tmp_path):
     import json as _json
 
-    from sec_harness.profile import ScanProfile, load_profile
+    from sec_overlay.profile import ScanProfile, load_profile
     # notes optional: a profile without it still loads
     base = {"languages": ["php"], "frameworks": ["Zend Framework 1"], "entrypoints": [],
             "runnable": True, "attack_surface": ["crypto"], "sast_plan": {"semgrep": {"run": True}},

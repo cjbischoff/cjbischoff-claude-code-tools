@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "sec-harness fix disposition (F11)",
+  "title": "sec-overlay fix disposition (F11)",
   "type": "object",
   "additionalProperties": false,
   "required": ["completeness_tier", "status"],

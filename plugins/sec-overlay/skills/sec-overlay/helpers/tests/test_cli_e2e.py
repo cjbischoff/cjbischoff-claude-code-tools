@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from sec_harness.cli import run_scan
-from sec_harness.workspace import Workspace
+from sec_overlay.cli import run_scan
+from sec_overlay.workspace import Workspace
 
 pytestmark = pytest.mark.skipif(shutil.which("semgrep") is None, reason="semgrep not installed")
 
@@ -38,9 +38,9 @@ def test_run_scan_records_prefilter_stage(tmp_path, fixture_repo):
     if shutil.which("semgrep") is None:
         pytest.skip("semgrep not installed")
 
-    from sec_harness.cli import run_scan
-    from sec_harness.state import load_state
-    from sec_harness.workspace import Workspace
+    from sec_overlay.cli import run_scan
+    from sec_overlay.state import load_state
+    from sec_overlay.workspace import Workspace
 
     ws_root = tmp_path / "workspace"
     rules = fixture_repo.parent.parent / "rules" / "smoke.yaml"
@@ -56,9 +56,9 @@ def test_run_scan_does_not_advance_pass(tmp_path, fixture_repo):
     if shutil.which("semgrep") is None:
         pytest.skip("semgrep not installed")
 
-    from sec_harness.cli import run_scan
-    from sec_harness.state import begin_pass, load_state
-    from sec_harness.workspace import Workspace
+    from sec_overlay.cli import run_scan
+    from sec_overlay.state import begin_pass, load_state
+    from sec_overlay.workspace import Workspace
 
     ws_root = tmp_path / "workspace"
     ws = Workspace(ws_root)

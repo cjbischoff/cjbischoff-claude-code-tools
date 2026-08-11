@@ -1,4 +1,4 @@
-# GSD — sec-harness signal-over-noise correctness fixes
+# GSD — sec-overlay signal-over-noise correctness fixes
 
 **Date:** 2026-08-02 · **Author:** audit-driver session · **Status:** design (approved direction)
 
@@ -55,8 +55,8 @@ the red-team action bar reflect *actionability*, not a raw number.
    critical/high. Static-settled and below-bar items render as before.
 
 ### Files
-`sec_harness/calibrate.py` (`_precondition_cap`, `calibrate_score`, new `_severity_floor`, keyword consts);
-`sec_harness/redteam.py` (`discriminate`/bar logic + the plan renderer's directive-vs-gap split).
+`sec_overlay/calibrate.py` (`_precondition_cap`, `calibrate_score`, new `_severity_floor`, keyword consts);
+`sec_overlay/redteam.py` (`discriminate`/bar logic + the plan renderer's directive-vs-gap split).
 
 ### Tests (TDD, red first)
 - `test_calibrate.py`: critical never scores below medium (the exact O-031 fixtures: NoSQL-ATO critical
@@ -102,8 +102,8 @@ time (candidates don't exist yet) — reconcile *after* the prefilter.
    `reconcile_plan` reports unrouted classes.
 
 ### Files
-`sec_harness/partition.py` (`reconcile_plan`), `sec_harness/clsmap.py` (rule→class map + `_NOISE_CLASSES`),
-`sec_harness/prefilter.py` (surface routed vs noise counts in the result), `SKILL.md`/`CLAUDE.md` phase step,
+`sec_overlay/partition.py` (`reconcile_plan`), `sec_overlay/clsmap.py` (rule→class map + `_NOISE_CLASSES`),
+`sec_overlay/prefilter.py` (surface routed vs noise counts in the result), `SKILL.md`/`CLAUDE.md` phase step,
 `agents/investigate.md` (informational disposition rule).
 
 ### Tests
@@ -138,7 +138,7 @@ from artifact → deterministic check → adversary → applied verdict.
    from the gate record and emit a verdict row per claim id.
 
 ### Files
-`sec_harness/phase_gate.py`, `agents/phase-adversary.md`, SKILL phase-gate section.
+`sec_overlay/phase_gate.py`, `agents/phase-adversary.md`, SKILL phase-gate section.
 
 ### Tests
 `test_phase_gate.py`: gate record round-trips claim text+refs; extractors produce resolvable refs from a
@@ -171,7 +171,7 @@ blocker.
    add a test locking it.
 
 ### Files
-`sec_harness/models.py` (marker field if chosen), `sec_harness/campaign.py` (promote step),
+`sec_overlay/models.py` (marker field if chosen), `sec_overlay/campaign.py` (promote step),
 `agents/investigate.md`, `agents/validate.md`, `agents/redteam.md`, SKILL.
 
 ### Tests
@@ -202,7 +202,7 @@ Every "clean" or "N findings" statement must carry *what fraction of the code wa
    `partition.must_investigate(profile) -> bool`.
 
 ### Files
-`sec_harness/prefilter.py`, `sec_harness/report.py`, `sec_harness/partition.py`, SKILL.
+`sec_overlay/prefilter.py`, `sec_overlay/report.py`, `sec_overlay/partition.py`, SKILL.
 
 ### Tests
 `test_prefilter.py`: coverage block present + tiers correct for a mixed js/liquid tree. `test_report.py`:
@@ -229,11 +229,11 @@ coverage section renders. `test_partition.py`: must_investigate true at 0 candid
   serialization (critic→judge→validate never concurrent on the same finding).
 - **T13:** persist each agent's final return to `runs/<agent>.txt` (or standardize on always reading disk
   state) so the orchestrator never depends on the summary message.
-- **T15:** add `{{HARNESS_ROOT}}` + `{{HELPERS_DIR}}` substitution tokens; orchestrator injects absolute
+- **T15:** add `{{OVERLAY_ROOT}}` + `{{HELPERS_DIR}}` substitution tokens; orchestrator injects absolute
   paths.
 
 ### Files
-`sec_harness/findings_gate.py`, `sec_harness/calibrate.py`, `sec_harness/workspace.py` (atomic write),
+`sec_overlay/findings_gate.py`, `sec_overlay/calibrate.py`, `sec_overlay/workspace.py` (atomic write),
 agent prompts, SKILL.
 
 ### Tests
@@ -259,8 +259,8 @@ agent prompts, SKILL.
 - **T16 (O-000/005):** reconcile the C1/recon ordering between SKILL.md and CLAUDE.md; note gate cost.
 
 ### Files
-`sec_harness/report.py`, `sec_harness/redteam.py`, `agents/patch.md`, `agents/critic.md`,
-`sec_harness/context.py` (LEAD carrier), SKILL.md, CLAUDE.md.
+`sec_overlay/report.py`, `sec_overlay/redteam.py`, `agents/patch.md`, `agents/critic.md`,
+`sec_overlay/context.py` (LEAD carrier), SKILL.md, CLAUDE.md.
 
 ---
 
@@ -286,7 +286,7 @@ golden regeneration but do not block on it.
 All clusters landed. Cluster F completed: **T7** (calibrate crash isolation), **T8** (atomic
 `write_findings` via temp + `os.replace` in `workspace.py`), **T13** (agent-return persistence —
 `workspace.record_agent_return`/`read_agent_return` → `runs/<agent>.txt`; documented in SKILL as the
-disk-state-is-truth convention), **T15** (`{{HARNESS_ROOT}}`/`{{HELPERS_DIR}}` path tokens across all
+disk-state-is-truth convention), **T15** (`{{OVERLAY_ROOT}}`/`{{HELPERS_DIR}}` path tokens across all
 agent prompts + SKILL substitution list). Cluster G **T11c** (patch `fix_disposition` schema
 migration) stays deferred per `clusterG-polish.md` (current free-form `patch_diff` + verify's graceful
 git-apply-failure degrade acceptably). Pre-existing, out-of-scope: the `secrets → codeguard-0-cryptography`

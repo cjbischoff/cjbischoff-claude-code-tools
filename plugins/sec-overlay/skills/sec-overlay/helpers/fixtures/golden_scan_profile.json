@@ -5,7 +5,7 @@
   "runnable": false,
   "attack_surface": ["sqli", "secrets"],
   "sast_plan": {
-    "semgrep": {"run": true, "rulesets": ["skills/sec-harness/helpers/rules/smoke.yaml"]},
+    "semgrep": {"run": true, "rulesets": ["skills/sec-overlay/helpers/rules/smoke.yaml"]},
     "codeql": {"run": false, "reason": "single-file fixture; deep taint not justified"},
     "sca": {"run": true, "lockfiles": ["requirements.txt"]},
     "secrets": {"run": true}

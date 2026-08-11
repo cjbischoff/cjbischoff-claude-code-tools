@@ -2,9 +2,9 @@
 
 from types import SimpleNamespace
 
-from sec_harness import bugchain, githist, novelty, variant
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.rule_gaps import emit_semgrep_rule
+from sec_overlay import bugchain, githist, novelty, variant
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.rule_gaps import emit_semgrep_rule
 
 
 def _f(fid, cls="sqli", file="app/db.py", line=10, dataflow=None, evidence="",

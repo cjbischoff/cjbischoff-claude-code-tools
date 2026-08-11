@@ -11,10 +11,10 @@
 ## Global Constraints
 
 - Core is **stdlib-only**. Add NO runtime dependency to `pyproject.toml`.
-- **Do NOT modify** `helpers/sec_harness/models.py` or `helpers/sec_harness/evidence.py` — frozen contract mirrored by the Go port. Plan 2 touches NEITHER (verified: `Severity.INFO`, `runtime_dependent`, `runtime_test`/`reachability`/`judge_verdict` fields, and the `_MECHANICAL` whitelist all already exist and suffice). **No Go-golden regen is required by this plan.**
-- **You touch only `skills/` paths.** Never `git add -A`; stage explicit `skills/sec-harness/...` paths; `git status` must show only skill paths before every commit. Never touch `go/`.
+- **Do NOT modify** `helpers/sec_overlay/models.py` or `helpers/sec_overlay/evidence.py` — frozen contract mirrored by the Go port. Plan 2 touches NEITHER (verified: `Severity.INFO`, `runtime_dependent`, `runtime_test`/`reachability`/`judge_verdict` fields, and the `_MECHANICAL` whitelist all already exist and suffice). **No Go-golden regen is required by this plan.**
+- **You touch only `skills/` paths.** Never `git add -A`; stage explicit `skills/sec-overlay/...` paths; `git status` must show only skill paths before every commit. Never touch `go/`.
 - Work on branch `spec/scoring-gate-strictness-20260807` (create off `main`). Personal remote → no GPG signing, no AI attribution. Do NOT push.
-- Run everything from `skills/sec-harness/helpers/`. Tests in `helpers/tests/`. `uv run pytest`.
+- Run everything from `skills/sec-overlay/helpers/`. Tests in `helpers/tests/`. `uv run pytest`.
 - Preserve deterministic-scoring invariant: **risk_score is computed by code, never asserted by an LLM.** `judge_verdict` may only LOWER a score, never raise it (an LLM signal can add caution, never inflate risk).
 
 ## Already-verified-present (DO NOT re-implement — cite in reviews if a task drifts toward these)
@@ -29,20 +29,20 @@
 
 ## File Structure
 
-- **Modify** `helpers/sec_harness/calibrate.py` — score `NEEDS_DEPLOYMENT_TESTING`; apply `judge_verdict` downgrade (lower-only); call `promote_deps`.
-- **Modify** `helpers/sec_harness/campaign.py` — add `promote_deps(ws) -> int`.
-- **Modify** `helpers/sec_harness/partition.py` — `reconcile_plan` returns a de-duplicated list.
+- **Modify** `helpers/sec_overlay/calibrate.py` — score `NEEDS_DEPLOYMENT_TESTING`; apply `judge_verdict` downgrade (lower-only); call `promote_deps`.
+- **Modify** `helpers/sec_overlay/campaign.py` — add `promote_deps(ws) -> int`.
+- **Modify** `helpers/sec_overlay/partition.py` — `reconcile_plan` returns a de-duplicated list.
 - **Modify** `helpers/tests/test_calibrate.py` (create if absent), `helpers/tests/test_campaign.py` (create if absent), `helpers/tests/test_partition.py` (create if absent).
-- **Modify** `skills/sec-harness/agents/investigate.md` + `references/prompt-constants.md` — guard: `severity` is one of info/low/medium/high/critical, never a status value.
-- **Modify** `skills/sec-harness/SKILL.md` — one-candidate-one-agent dispatch rule.
-- **Modify** `skills/sec-harness/docs/dogfooding/2026-08-07-run-observations.md` — correct the over-reported / mis-observed entries.
+- **Modify** `skills/sec-overlay/agents/investigate.md` + `references/prompt-constants.md` — guard: `severity` is one of info/low/medium/high/critical, never a status value.
+- **Modify** `skills/sec-overlay/SKILL.md` — one-candidate-one-agent dispatch rule.
+- **Modify** `skills/sec-overlay/docs/dogfooding/2026-08-07-run-observations.md` — correct the over-reported / mis-observed entries.
 
 ---
 
 ### Task 1: Score `needs-deployment-testing` findings in calibrate
 
 **Files:**
-- Modify: `helpers/sec_harness/calibrate.py:145-167` (`calibrate_findings` loop)
+- Modify: `helpers/sec_overlay/calibrate.py:145-167` (`calibrate_findings` loop)
 - Test: `helpers/tests/test_calibrate.py`
 
 **Interfaces:**
@@ -57,9 +57,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.calibrate import calibrate_findings
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace, write_findings, read_findings
+from sec_overlay.calibrate import calibrate_findings
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace, write_findings, read_findings
 
 
 def _f(**kw) -> Finding:
@@ -90,7 +90,7 @@ def test_still_scores_confirmed(tmp_path: Path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_calibrate.py::test_scores_needs_deployment_testing -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_calibrate.py::test_scores_needs_deployment_testing -v`
 Expected: FAIL — `NDT-1.risk_score` is `None` (calibrate scores only CONFIRMED).
 
 - [ ] **Step 3: Write minimal implementation**
@@ -107,14 +107,14 @@ In `calibrate.py` `calibrate_findings`, change the status guard so both `CONFIRM
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_calibrate.py -v`
-Expected: PASS (2). `uv run ruff check sec_harness/calibrate.py tests/test_calibrate.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_calibrate.py -v`
+Expected: PASS (2). `uv run ruff check sec_overlay/calibrate.py tests/test_calibrate.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/calibrate.py skills/sec-harness/helpers/tests/test_calibrate.py
+git add skills/sec-overlay/helpers/sec_overlay/calibrate.py skills/sec-overlay/helpers/tests/test_calibrate.py
 git status
 git commit -m "feat(calibrate): assign risk_score to needs-deployment-testing findings"
 ```
@@ -124,7 +124,7 @@ git commit -m "feat(calibrate): assign risk_score to needs-deployment-testing fi
 ### Task 2: Honor `judge_verdict` downgrade (lower-only) in calibrate
 
 **Files:**
-- Modify: `helpers/sec_harness/calibrate.py` (in the `calibrate_findings` per-finding body, after the floor is applied)
+- Modify: `helpers/sec_overlay/calibrate.py` (in the `calibrate_findings` per-finding body, after the floor is applied)
 - Test: `helpers/tests/test_calibrate.py`
 
 **Interfaces:**
@@ -158,7 +158,7 @@ def test_judge_uphold_does_not_lower(tmp_path: Path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_calibrate.py::test_judge_downgrade_lowers_below_severity_floor -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_calibrate.py::test_judge_downgrade_lowers_below_severity_floor -v`
 Expected: FAIL — score is floored to 6 regardless of `judge_verdict`.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -179,14 +179,14 @@ In `calibrate_findings`, immediately AFTER `f.risk_score = max(derived, _severit
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_calibrate.py -v`
-Expected: PASS (4 total). `uv run ruff check sec_harness/calibrate.py tests/test_calibrate.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_calibrate.py -v`
+Expected: PASS (4 total). `uv run ruff check sec_overlay/calibrate.py tests/test_calibrate.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/calibrate.py skills/sec-harness/helpers/tests/test_calibrate.py
+git add skills/sec-overlay/helpers/sec_overlay/calibrate.py skills/sec-overlay/helpers/tests/test_calibrate.py
 git status
 git commit -m "feat(calibrate): judge downgrade lowers risk below the severity floor (lower-only)"
 ```
@@ -196,8 +196,8 @@ git commit -m "feat(calibrate): judge downgrade lowers risk below the severity f
 ### Task 3: Deterministic `deps` → confirmed promotion with reachability heuristic
 
 **Files:**
-- Modify: `helpers/sec_harness/campaign.py` (add `promote_deps`, mirroring `promote_runtime_dependent`)
-- Modify: `helpers/sec_harness/calibrate.py` (call `promote_deps(ws)` alongside `promote_runtime_dependent(ws)`)
+- Modify: `helpers/sec_overlay/campaign.py` (add `promote_deps`, mirroring `promote_runtime_dependent`)
+- Modify: `helpers/sec_overlay/calibrate.py` (call `promote_deps(ws)` alongside `promote_runtime_dependent(ws)`)
 - Test: `helpers/tests/test_campaign.py`
 
 **Interfaces:**
@@ -206,7 +206,7 @@ git commit -m "feat(calibrate): judge downgrade lowers risk below the severity f
 
 - [ ] **Step 1: Read the sibling to match the pattern**
 
-Run: `cd skills/sec-harness/helpers && uv run python -c "import inspect, sec_harness.campaign as c; print(inspect.getsource(c.promote_runtime_dependent))"`
+Run: `cd skills/sec-overlay/helpers && uv run python -c "import inspect, sec_overlay.campaign as c; print(inspect.getsource(c.promote_runtime_dependent))"`
 Mirror its read → mutate → `write_findings` shape and its `TERMINAL_STATUSES`/history conventions.
 
 - [ ] **Step 2: Write the failing test**
@@ -217,9 +217,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.campaign import promote_deps
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace, write_findings, read_findings
+from sec_overlay.campaign import promote_deps
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace, write_findings, read_findings
 
 
 def _dep(**kw) -> Finding:
@@ -259,7 +259,7 @@ def test_promote_deps_non_lockfile_marks_unverified(tmp_path: Path):
 
 - [ ] **Step 3: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_campaign.py -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_campaign.py -v`
 Expected: FAIL with `ImportError: cannot import name 'promote_deps'`.
 
 - [ ] **Step 4: Write minimal implementation**
@@ -291,7 +291,7 @@ def promote_deps(ws: Workspace) -> int:
     Returns:
         The number of findings promoted.
     """
-    from sec_harness.evidence import is_tool_receipt  # local: keep import graph flat
+    from sec_overlay.evidence import is_tool_receipt  # local: keep import graph flat
     findings = read_findings(ws)
     n = 0
     dirty = False
@@ -318,21 +318,21 @@ def promote_deps(ws: Workspace) -> int:
 Ensure `from pathlib import Path`, `read_findings`, `write_findings`, `FindingStatus` are imported in `campaign.py` (add any missing). Then in `calibrate.py` `calibrate_findings`, add the call beside the existing promotion:
 
 ```python
-    from sec_harness.campaign import promote_deps  # local: avoid cycle
+    from sec_overlay.campaign import promote_deps  # local: avoid cycle
     promote_runtime_dependent(ws)
     promote_deps(ws)
 ```
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_campaign.py tests/test_calibrate.py -v`
-Expected: PASS. `uv run ruff check sec_harness/campaign.py sec_harness/calibrate.py tests/test_campaign.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_campaign.py tests/test_calibrate.py -v`
+Expected: PASS. `uv run ruff check sec_overlay/campaign.py sec_overlay/calibrate.py tests/test_campaign.py && uv run ty check` — clean.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/campaign.py skills/sec-harness/helpers/sec_harness/calibrate.py skills/sec-harness/helpers/tests/test_campaign.py
+git add skills/sec-overlay/helpers/sec_overlay/campaign.py skills/sec-overlay/helpers/sec_overlay/calibrate.py skills/sec-overlay/helpers/tests/test_campaign.py
 git status
 git commit -m "feat(campaign): deterministic deps->confirmed promotion with reachability heuristic"
 ```
@@ -342,10 +342,10 @@ git commit -m "feat(campaign): deterministic deps->confirmed promotion with reac
 ### Task 4: `reconcile_plan` dedup guard + prompt/doc guards
 
 **Files:**
-- Modify: `helpers/sec_harness/partition.py:93-112` (`reconcile_plan`)
+- Modify: `helpers/sec_overlay/partition.py:93-112` (`reconcile_plan`)
 - Test: `helpers/tests/test_partition.py`
-- Modify: `skills/sec-harness/references/prompt-constants.md` + `agents/investigate.md` (severity-value guard)
-- Modify: `skills/sec-harness/SKILL.md` (one-candidate-one-agent rule)
+- Modify: `skills/sec-overlay/references/prompt-constants.md` + `agents/investigate.md` (severity-value guard)
+- Modify: `skills/sec-overlay/SKILL.md` (one-candidate-one-agent rule)
 
 **Interfaces:**
 - Produces: `reconcile_plan` returns a list with NO duplicate class (a class present twice in the input `agents_to_spawn`, or added twice, appears once), preserving first-seen order then sorted extras.
@@ -358,8 +358,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.partition import reconcile_plan
-from sec_harness.workspace import Workspace
+from sec_overlay.partition import reconcile_plan
+from sec_overlay.workspace import Workspace
 
 
 def test_reconcile_plan_dedupes_input(tmp_path: Path):
@@ -370,7 +370,7 @@ def test_reconcile_plan_dedupes_input(tmp_path: Path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_partition.py -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_partition.py -v`
 Expected: FAIL — output is `["authz", "secrets", "authz"]` (input duplicates preserved).
 
 - [ ] **Step 3: Write minimal implementation**
@@ -395,8 +395,8 @@ In `partition.py` `reconcile_plan`, de-duplicate the base list preserving order 
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_partition.py -v`
-Expected: PASS. `uv run ruff check sec_harness/partition.py tests/test_partition.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_partition.py -v`
+Expected: PASS. `uv run ruff check sec_overlay/partition.py tests/test_partition.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Prompt + SKILL doc guards**
 
@@ -409,7 +409,7 @@ In `SKILL.md` (investigate dispatch section), add: "**One candidate, one agent.*
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/partition.py skills/sec-harness/helpers/tests/test_partition.py skills/sec-harness/references/prompt-constants.md skills/sec-harness/agents/investigate.md skills/sec-harness/SKILL.md
+git add skills/sec-overlay/helpers/sec_overlay/partition.py skills/sec-overlay/helpers/tests/test_partition.py skills/sec-overlay/references/prompt-constants.md skills/sec-overlay/agents/investigate.md skills/sec-overlay/SKILL.md
 git status
 git commit -m "fix(partition): dedupe reconcile_plan + severity-value and one-candidate-one-agent guards"
 ```
@@ -419,7 +419,7 @@ git commit -m "fix(partition): dedupe reconcile_plan + severity-value and one-ca
 ### Task 5: Correct the run-observations log + full-suite regression
 
 **Files:**
-- Modify: `skills/sec-harness/docs/dogfooding/2026-08-07-run-observations.md`
+- Modify: `skills/sec-overlay/docs/dogfooding/2026-08-07-run-observations.md`
 - Test: run the whole suite; no new source.
 
 - [ ] **Step 1: Correct the over-reported / mis-observed entries**
@@ -434,19 +434,19 @@ In `docs/dogfooding/2026-08-07-run-observations.md`, add a `## Corrections (2026
 
 - [ ] **Step 2: Run the full suite**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest -q`
+Run: `cd skills/sec-overlay/helpers && uv run pytest -q`
 Expected: only the known env-only failures (gitignored bench corpus; semgrep-rules submodule absent in this repo — CLAUDE.md §2). Zero NEW failures. If a calibrate/campaign-dependent test broke, fix it to the new behavior (do not weaken the invariants).
 
 - [ ] **Step 3: Lint + types clean**
 
-Run: `cd skills/sec-harness/helpers && uv run ruff check sec_harness/ tests/ && uv run ty check`
+Run: `cd skills/sec-overlay/helpers && uv run ruff check sec_overlay/ tests/ && uv run ty check`
 Expected: no NEW violations in Plan-2-touched files (pre-existing debt in untouched files, per Plan 1 Task 7, is out of scope).
 
 - [ ] **Step 4: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/docs/dogfooding/2026-08-07-run-observations.md
+git add skills/sec-overlay/docs/dogfooding/2026-08-07-run-observations.md
 git status
 git commit -m "docs: correct run-observations — withdraw mis-observed gate/enum items, mark real fixes"
 ```

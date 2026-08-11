@@ -1,10 +1,10 @@
-from sec_harness.correlate.artifacts import build_artifacts, write_artifacts
-from sec_harness.correlate.edges import Edge
-from sec_harness.correlate.ingest import IngestedFinding
-from sec_harness.correlate.manifest import Manifest, Member
-from sec_harness.correlate.rethreshold import CorrelationVerdict
-from sec_harness.correlate.workspace import CorrelationWorkspace
-from sec_harness.models import Finding, FindingStatus, Severity
+from sec_overlay.correlate.artifacts import build_artifacts, write_artifacts
+from sec_overlay.correlate.edges import Edge
+from sec_overlay.correlate.ingest import IngestedFinding
+from sec_overlay.correlate.manifest import Manifest, Member
+from sec_overlay.correlate.rethreshold import CorrelationVerdict
+from sec_overlay.correlate.workspace import CorrelationWorkspace
+from sec_overlay.models import Finding, FindingStatus, Severity
 
 
 def _ing():

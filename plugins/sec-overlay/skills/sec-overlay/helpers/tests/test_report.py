@@ -3,10 +3,10 @@
 import json
 from pathlib import Path
 
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.patch_status import PatchStatus
-from sec_harness.report import render_finding, select_reportable, to_markdown, write_report
-from sec_harness.workspace import Workspace, write_findings
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.patch_status import PatchStatus
+from sec_overlay.report import render_finding, select_reportable, to_markdown, write_report
+from sec_overlay.workspace import Workspace, write_findings
 
 
 def _f_new(fid, status, cls="authz", sev=Severity.MEDIUM):
@@ -97,7 +97,7 @@ def test_select_reportable_filters_and_sorts():
 def test_report_renders_coverage_section(tmp_path):
     import json
 
-    from sec_harness.workspace import Workspace
+    from sec_overlay.workspace import Workspace
 
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     (ws.kb / "coverage.json").write_text(json.dumps({
@@ -129,7 +129,7 @@ def test_write_report_writes_final_artifacts(tmp_path):
 
 
 def _tf(id_, sev, **kw):
-    from sec_harness.models import Finding, FindingStatus, Severity
+    from sec_overlay.models import Finding, FindingStatus, Severity
     d = {"id": id_, "rule_id": "r", "cls": "xss", "status": FindingStatus.CONFIRMED,
          "severity": Severity(sev), "file": "a.js", "line": 5, "message": "msg",
          "dataflow": ["src @ a.js:1", "-> sink @ a.js:5"], "evidence": "innerHTML=x",
@@ -140,7 +140,7 @@ def _tf(id_, sev, **kw):
 
 
 def test_render_finding_full_for_high():
-    from sec_harness.report import render_finding
+    from sec_overlay.report import render_finding
     md = render_finding(_tf("XSS-1", "high"))
     for sec in ("1. Summary", "2. Mechanism", "3. Confirmation", "4. Impact",
                 "5. Severity", "6. Confirmed Attack", "7. Fix", "8. Testing"):
@@ -151,7 +151,7 @@ def test_render_finding_full_for_high():
 
 
 def test_render_finding_condensed_for_medium():
-    from sec_harness.report import render_finding
+    from sec_overlay.report import render_finding
     md = render_finding(_tf("XSS-2", "medium"))
     for sec in ("1. Summary", "2. Mechanism", "3. Severity", "4. Fix"):
         assert sec in md
@@ -160,23 +160,23 @@ def test_render_finding_condensed_for_medium():
 
 
 def test_render_finding_flags_missing_receipt():
-    from sec_harness.report import render_finding
+    from sec_overlay.report import render_finding
     md = render_finding(_tf("X-3", "high", evidence_sources=["llm-claimed:only"]))
     assert "NONE" in md and "not confirmable" in md
 
 
 def test_to_markdown_includes_detailed_section():
     # Intent: confirmed finding detail block appears under the "Confirmed" heading.
-    from sec_harness.report import to_markdown
+    from sec_overlay.report import to_markdown
     md = to_markdown([_tf("XSS-1", "high")])
     assert "## Confirmed" in md and "### XSS-1" in md
 
 
 def test_report_sections_needs_deployment(tmp_path):
     # Intent: NDT findings appear in the report and are NOT counted as confirmed/reported.
-    from sec_harness.models import Finding, FindingStatus, Severity
-    from sec_harness.report import to_markdown, write_report
-    from sec_harness.workspace import Workspace, write_findings
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.report import to_markdown, write_report
+    from sec_overlay.workspace import Workspace, write_findings
     ndt = Finding(id="N1", rule_id="r", cls="ssrf", status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
                   severity=Severity.HIGH, file="a.py", line=3, message="needs proxy to confirm")
     md = to_markdown([], needs_deployment=[ndt])
@@ -193,8 +193,8 @@ def test_needs_deployment_split_by_dataflow_presence(tmp_path):
     # Intent: both NDT findings appear in the report; both appear in the triage table
     # and in the "Needs runtime proof" section. The old split-by-dataflow sub-headings
     # are gone; triage ordering (risk-desc then id) determines row order.
-    from sec_harness.models import Finding, FindingStatus, Severity
-    from sec_harness.report import to_markdown
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.report import to_markdown
     settled = Finding(id="A", rule_id="r", cls="sqli",
                       status=FindingStatus.NEEDS_DEPLOYMENT_TESTING, severity=Severity.HIGH,
                       file="a.py", line=1, message="m", dataflow=["src", "sink"],
@@ -225,7 +225,7 @@ def test_report_links_redteam_plan_and_shows_receipts(tmp_path):
 
 
 def test_to_markdown_renders_coverage_ledger():
-    from sec_harness.report import to_markdown
+    from sec_overlay.report import to_markdown
     led = {"completeness": "partial", "surfaces": [{"id": "auth", "disposition": "reported"}],
            "deferred": ["liquid templates"]}
     md = to_markdown([], coverage_ledger=led)
@@ -233,7 +233,7 @@ def test_to_markdown_renders_coverage_ledger():
 
 
 def test_write_report_records_stage(tmp_path):
-    from sec_harness.state import load_state
+    from sec_overlay.state import load_state
 
     ws = Workspace(tmp_path / "workspace"); ws.ensure()
     write_findings(ws, [_rf("F-0002", FindingStatus.FIXED, risk=9, verification="verified-static")])
@@ -263,7 +263,7 @@ def test_render_finding_omits_caution_when_patch_status_not_given():
 
 
 def test_write_report_with_target_annotates_caution(monkeypatch, tmp_path):
-    import sec_harness.report as Rp
+    import sec_overlay.report as Rp
 
     monkeypatch.setattr(Rp, "check_patch_applied", lambda target, diff: PatchStatus.NOT_APPLIED)
     ws = Workspace(tmp_path / "workspace"); ws.ensure()
@@ -282,10 +282,10 @@ def test_write_report_without_target_skips_patch_check(tmp_path):
 
 
 def test_write_report_renders_token_spend(tmp_path):
-    from sec_harness import cost
-    from sec_harness.report import write_report
-    from sec_harness.state import load_state, save_state
-    from sec_harness.workspace import Workspace, write_findings
+    from sec_overlay import cost
+    from sec_overlay.report import write_report
+    from sec_overlay.state import load_state, save_state
+    from sec_overlay.workspace import Workspace, write_findings
     ws = Workspace(root=tmp_path / "ws"); ws.ensure()
     write_findings(ws, [])
     st = load_state(ws)
@@ -313,7 +313,7 @@ def _code_low():
 
 
 def test_dep_view_has_no_hollow_slots():
-    from sec_harness.report import render_finding
+    from sec_overlay.report import render_finding
     out = render_finding(_dep())
     assert "(no dataflow recorded)" not in out
     assert "(no vector)" not in out
@@ -324,7 +324,7 @@ def test_dep_view_has_no_hollow_slots():
 
 
 def test_condensed_tier_renumbers_without_gaps():
-    from sec_harness.report import render_finding
+    from sec_overlay.report import render_finding
     out = render_finding(_code_low())
     assert "**1. Summary" in out and "**2. Mechanism" in out
     assert "**3. Severity" in out and "**4. Fix" in out
@@ -332,7 +332,7 @@ def test_condensed_tier_renumbers_without_gaps():
 
 
 def test_dep_view_shows_caution_when_patch_not_applied():
-    from sec_harness.report import render_finding
+    from sec_overlay.report import render_finding
     dep = Finding(id="DEP-2", rule_id="osv:GHSA-y", cls="deps",
                   status=FindingStatus.FIXED, severity=Severity.LOW,
                   file="package-lock.json", line=1, message="pkg@1.0: GHSA-y",
@@ -354,7 +354,7 @@ def _ndt():
 
 
 def test_render_ndt_labels_needs_runtime_and_shows_test():
-    from sec_harness.report import render_ndt
+    from sec_overlay.report import render_ndt
     out = render_ndt(_ndt())
     header = out.splitlines()[0]
     assert "needs runtime" in header.lower()              # view labels it needs-runtime
@@ -368,7 +368,7 @@ def test_render_ndt_labels_needs_runtime_and_shows_test():
 def test_render_ndt_degrades_without_runtime_test():
     import dataclasses
 
-    from sec_harness.report import render_ndt
+    from sec_overlay.report import render_ndt
     f = dataclasses.replace(_ndt(), runtime_test=None, dataflow=[], preconditions=[])
     out = render_ndt(f)
     assert "needs runtime" in out.lower()

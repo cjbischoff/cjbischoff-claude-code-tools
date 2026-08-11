@@ -1,12 +1,12 @@
-# Design: adopting select aghast/OpenAnt capabilities into sec-harness
+# Design: adopting select aghast/OpenAnt capabilities into sec-overlay
 
 **Date:** 2026-08-04
 **Status:** approved (design), pending implementation plan
-**Scope:** `skills/sec-harness/` only
+**Scope:** `skills/sec-overlay/` only
 
 ## Background
 
-Two external tools were reviewed for capabilities sec-harness lacks:
+Two external tools were reviewed for capabilities sec-overlay lacks:
 
 - **aghast** (`/Users/christopher/Tools/aghast`) — a TypeScript CLI that lets a security
   team encode organization-specific policy checks (JSON + Markdown + optional Semgrep
@@ -19,14 +19,14 @@ Two external tools were reviewed for capabilities sec-harness lacks:
   entry-point detection) is deterministic and LLM-free; its *enhanced dataset* and
   Stage-1/2 analysis are LLM-driven and out of scope here — reusing them would require
   an Anthropic-API dependency and would contaminate the independent-judgment principle
-  sec-harness's adversarial validation already relies on.
+  sec-overlay's adversarial validation already relies on.
 
-Neither tool is adopted as a dependency. sec-harness stays stdlib-only
-(`skills/sec-harness/CLAUDE.md` §7); no Anthropic SDK, no Go/Node toolchain. What
+Neither tool is adopted as a dependency. sec-overlay stays stdlib-only
+(`skills/sec-overlay/CLAUDE.md` §7); no Anthropic SDK, no Go/Node toolchain. What
 follows are four independently-scoped internal changes inspired by specific mechanisms
 in those tools, re-implemented natively.
 
-Comparison summary (full detail in conversation, not reproduced here): sec-harness
+Comparison summary (full detail in conversation, not reproduced here): sec-overlay
 already exceeds both tools on adversarial validation (critic→judge→validate→trace on a
 different model family), dedup (refactor-resistant fingerprint), computed severity
 (CVSS via `calibrate`), incremental/diff-scoped scanning, and SCA/secrets coverage.
@@ -36,14 +36,14 @@ The four gaps below are genuine.
 
 ## A. Custom check bundles
 
-**Problem:** sec-harness's `investigate` agents only know generic, cross-repo attack
+**Problem:** sec-overlay's `investigate` agents only know generic, cross-repo attack
 classes (`references/attack-classes.md`). There is no mechanism for a team to encode
 its own business-logic policy — e.g. "every payment endpoint re-derives price from the
 database, never trusts a client-supplied amount" — as a reusable, repo-scoped check.
 
 **Design:**
 
-- **Location:** `.sec-harness/checks/<check-id>/` inside the target repo (checked in
+- **Location:** `.sec-overlay/checks/<check-id>/` inside the target repo (checked in
   by the org that owns the repo, versioned alongside the code it describes). No
   external registry, no repo-name matching — a check bundle found in a repo always
   applies to that repo.
@@ -54,8 +54,8 @@ database, never trusts a client-supplied amount" — as a reusable, repo-scoped 
   - optional `<check-id>.yaml` — a Semgrep rule used only to *scope* which files/lines
     get sent to the check; not itself a finding source (mirrors how prefilter Semgrep
     hits become `candidate` findings, not confirmed ones)
-- **Discovery:** a new deterministic loader, `sec_harness.custom_checks`, scans
-  `.sec-harness/checks/` during recon/prefilter setup and registers each check as an
+- **Discovery:** a new deterministic loader, `sec_overlay.custom_checks`, scans
+  `.sec-overlay/checks/` during recon/prefilter setup and registers each check as an
   additional attack-class entry, the same shape `attack-classes.md`-derived classes
   take in `agents_to_spawn`.
 - **Execution:** each custom check is dispatched through the **existing**
@@ -65,7 +65,7 @@ database, never trusts a client-supplied amount" — as a reusable, repo-scoped 
   envelope as every built-in class. No new agent prompt type.
 - **Rigor:** custom-check candidates go through the full existing gate ladder —
   dedupe, critic → judge → validate → trace, calibrate. This was an explicit decision:
-  unlike aghast, sec-harness does not offer a lighter-weight path for org-authored
+  unlike aghast, sec-overlay does not offer a lighter-weight path for org-authored
   checks. A finding must survive the same adversary on a different model family
   regardless of who wrote the check that found it.
 - **Unrouted-candidate accounting:** custom-check classes must be included in
@@ -106,7 +106,7 @@ each have one under `references/*.schema.json`.
 - This does **not** change how agents are invoked (subagent dispatch via Task tool,
   markdown prompts) — only strengthens the after-the-fact validation gate. The
   Anthropic-SDK/structured-tool-output path (aghast's model) was explicitly rejected
-  to avoid adding a first runtime dependency to sec-harness's core.
+  to avoid adding a first runtime dependency to sec-overlay's core.
 
 ---
 
@@ -159,14 +159,14 @@ judgment (`kb/scan-profile.json`'s `attack_surface`), which is not tool-receipt 
 - Explicitly **not** ported: OpenAnt's *enhanced*-dataset security-classification
   (LLM-derived `exploitable`/`vulnerable_internal`/`security_control`/`neutral`
   labels) and its two-stage attacker-simulation analysis — these require an
-  Anthropic-API dependency and would duplicate/contaminate sec-harness's own
+  Anthropic-API dependency and would duplicate/contaminate sec-overlay's own
   independent-judgment adversarial pipeline.
 
 ---
 
 ## Testing
 
-- **A:** unit tests for `sec_harness.custom_checks` discovery (bundle parsing,
+- **A:** unit tests for `sec_overlay.custom_checks` discovery (bundle parsing,
   malformed bundle handling, missing files); integration test confirming a custom
   check's candidates flow through the same gate ladder as a built-in class (reuse
   existing investigate/gate/dedupe test fixtures where possible).

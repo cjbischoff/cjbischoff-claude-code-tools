@@ -11,10 +11,10 @@
 ## Global Constraints
 
 - Core is **stdlib-only**. Add NO runtime dependency to `pyproject.toml`.
-- **Do NOT modify** `helpers/sec_harness/models.py` or `helpers/sec_harness/evidence.py` (frozen contract). Plan 3 touches neither. `ScanProfile` (`profile.py`) is NOT frozen — extending it is allowed. **No Go-golden regen required.**
-- **You touch only `skills/` paths.** Never `git add -A`; stage explicit `skills/sec-harness/...` paths; `git status` must show only skill paths before every commit. Never touch `go/`.
+- **Do NOT modify** `helpers/sec_overlay/models.py` or `helpers/sec_overlay/evidence.py` (frozen contract). Plan 3 touches neither. `ScanProfile` (`profile.py`) is NOT frozen — extending it is allowed. **No Go-golden regen required.**
+- **You touch only `skills/` paths.** Never `git add -A`; stage explicit `skills/sec-overlay/...` paths; `git status` must show only skill paths before every commit. Never touch `go/`.
 - Work on branch `spec/reporting-methodology-20260807` (create off `main`). Personal remote → no GPG signing, no AI attribution. Do NOT push.
-- Run from `skills/sec-harness/helpers/`. Tests in `helpers/tests/`. `uv run pytest`.
+- Run from `skills/sec-overlay/helpers/`. Tests in `helpers/tests/`. `uv run pytest`.
 - Preserve the invariant: **"gaps logged, never silently dropped"** — a scan may not read as clean while an attack-surface class is uncovered.
 - **`adversary_depth` never bypasses the tool-receipt confirmation bar** — `gate-by-exception` filters *what enters* the FP ladder; it never lets a finding reach `confirmed` without a mechanical receipt. **Model-family diversity stays a hard invariant, not a knob.**
 
@@ -28,19 +28,19 @@
 
 ## File Structure
 
-- **Modify** `helpers/sec_harness/coverage_ledger.py` — add `build_coverage_ledger(ws) -> dict` (reads `kb/scan-profile.json` + findings; writes `kb/coverage-ledger.json`).
-- **Modify** `helpers/sec_harness/report.py` — `write_report` builds the ledger when absent; `findings.json` includes NDT findings.
-- **Modify** `helpers/sec_harness/profile.py` — add `scan_options: dict` field + validate it.
-- **Modify** `helpers/sec_harness/tests/` — `test_coverage_ledger.py`, `test_report.py`, `test_profile.py` (create/extend).
+- **Modify** `helpers/sec_overlay/coverage_ledger.py` — add `build_coverage_ledger(ws) -> dict` (reads `kb/scan-profile.json` + findings; writes `kb/coverage-ledger.json`).
+- **Modify** `helpers/sec_overlay/report.py` — `write_report` builds the ledger when absent; `findings.json` includes NDT findings.
+- **Modify** `helpers/sec_overlay/profile.py` — add `scan_options: dict` field + validate it.
+- **Modify** `helpers/sec_overlay/tests/` — `test_coverage_ledger.py`, `test_report.py`, `test_profile.py` (create/extend).
 - **Modify** `references/scan-profile.schema.json` — document `scan_options`.
-- **Modify** `skills/sec-harness/SKILL.md` — methodology playbook (depth / model-tier / wave / budget / family-diversity).
+- **Modify** `skills/sec-overlay/SKILL.md` — methodology playbook (depth / model-tier / wave / budget / family-diversity).
 
 ---
 
 ### Task 1: `build_coverage_ledger` — populate the ledger from attack_surface × findings
 
 **Files:**
-- Modify: `helpers/sec_harness/coverage_ledger.py`
+- Modify: `helpers/sec_overlay/coverage_ledger.py`
 - Test: `helpers/tests/test_coverage_ledger.py` (create if absent)
 
 **Interfaces:**
@@ -56,9 +56,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sec_harness.coverage_ledger import build_coverage_ledger, validate_coverage_ledger
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace, write_findings
+from sec_overlay.coverage_ledger import build_coverage_ledger, validate_coverage_ledger
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace, write_findings
 
 
 def _f(cls: str, status: FindingStatus, fid: str) -> Finding:
@@ -111,7 +111,7 @@ def test_deps_excluded_and_no_profile_is_unknown(tmp_path: Path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_coverage_ledger.py -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_coverage_ledger.py -v`
 Expected: FAIL with `ImportError: cannot import name 'build_coverage_ledger'`.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -122,8 +122,8 @@ Add to `coverage_ledger.py`:
 import json
 from pathlib import Path
 
-from sec_harness.models import FindingStatus
-from sec_harness.workspace import Workspace, read_findings
+from sec_overlay.models import FindingStatus
+from sec_overlay.workspace import Workspace, read_findings
 
 _REPORTED = {FindingStatus.CONFIRMED, FindingStatus.FIXED, FindingStatus.NEEDS_DEPLOYMENT_TESTING}
 _SETTLED_NO_ISSUE = {FindingStatus.REJECTED, FindingStatus.INFORMATIONAL}
@@ -178,14 +178,14 @@ def build_coverage_ledger(ws: Workspace) -> dict:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_coverage_ledger.py -v`
-Expected: PASS (3). `uv run ruff check sec_harness/coverage_ledger.py tests/test_coverage_ledger.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_coverage_ledger.py -v`
+Expected: PASS (3). `uv run ruff check sec_overlay/coverage_ledger.py tests/test_coverage_ledger.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/coverage_ledger.py skills/sec-harness/helpers/tests/test_coverage_ledger.py
+git add skills/sec-overlay/helpers/sec_overlay/coverage_ledger.py skills/sec-overlay/helpers/tests/test_coverage_ledger.py
 git status
 git commit -m "feat(coverage-ledger): build ledger from attack_surface x finding status"
 ```
@@ -195,7 +195,7 @@ git commit -m "feat(coverage-ledger): build ledger from attack_surface x finding
 ### Task 2: `write_report` builds the ledger when absent + includes NDT in findings.json
 
 **Files:**
-- Modify: `helpers/sec_harness/report.py:224-247` (`write_report`)
+- Modify: `helpers/sec_overlay/report.py:224-247` (`write_report`)
 - Test: `helpers/tests/test_report.py` (create if absent)
 
 **Interfaces:**
@@ -211,9 +211,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sec_harness.report import write_report
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace, write_findings
+from sec_overlay.report import write_report
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace, write_findings
 
 
 def _f(fid, status, cls="authz", sev=Severity.MEDIUM):
@@ -250,7 +250,7 @@ def test_report_auto_builds_coverage_ledger_and_shows_gap(tmp_path: Path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_report.py -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_report.py -v`
 Expected: FAIL — `N-1` absent from `findings.json` (reportable-only) and `coverage-ledger.json` not created.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -260,7 +260,7 @@ In `report.py` `write_report`, after the `cl_path`/`coverage_ledger` load lines,
 ```python
     cl_path = ws.kb / "coverage-ledger.json"
     if not cl_path.exists():
-        from sec_harness.coverage_ledger import build_coverage_ledger  # local: avoid cycle
+        from sec_overlay.coverage_ledger import build_coverage_ledger  # local: avoid cycle
         build_coverage_ledger(ws)
     coverage_ledger = json.loads(cl_path.read_text()) if cl_path.exists() else None
 ```
@@ -276,14 +276,14 @@ And change the `findings.json` write (currently `[f.to_dict() for f in reportabl
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_report.py -v`
-Expected: PASS (2). Run existing report tests: `uv run pytest -k report -q`. `uv run ruff check sec_harness/report.py tests/test_report.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_report.py -v`
+Expected: PASS (2). Run existing report tests: `uv run pytest -k report -q`. `uv run ruff check sec_overlay/report.py tests/test_report.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/report.py skills/sec-harness/helpers/tests/test_report.py
+git add skills/sec-overlay/helpers/sec_overlay/report.py skills/sec-overlay/helpers/tests/test_report.py
 git status
 git commit -m "feat(report): auto-build coverage ledger + include needs-deployment-testing in findings.json"
 ```
@@ -293,7 +293,7 @@ git commit -m "feat(report): auto-build coverage ledger + include needs-deployme
 ### Task 3: `scan_options` methodology knobs on `ScanProfile`
 
 **Files:**
-- Modify: `helpers/sec_harness/profile.py:42-91`
+- Modify: `helpers/sec_overlay/profile.py:42-91`
 - Test: `helpers/tests/test_profile.py` (create if absent)
 - Modify: `references/scan-profile.schema.json`
 
@@ -309,7 +309,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sec_harness.profile import ScanProfile, load_profile, save_profile, validate_profile
+from sec_overlay.profile import ScanProfile, load_profile, save_profile, validate_profile
 
 
 def _base(**kw) -> dict:
@@ -339,7 +339,7 @@ def test_non_dict_scan_options_rejected():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_profile.py -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_profile.py -v`
 Expected: FAIL — `ScanProfile` has no `scan_options` (roundtrip `AttributeError`/`TypeError`) and validate does not check it.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -376,14 +376,14 @@ In `references/scan-profile.schema.json`, add a `scan_options` property (object,
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_profile.py -v`
-Expected: PASS (3). Run the full profile-dependent set: `uv run pytest -k profile -q`. `uv run ruff check sec_harness/profile.py tests/test_profile.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_profile.py -v`
+Expected: PASS (3). Run the full profile-dependent set: `uv run pytest -k profile -q`. `uv run ruff check sec_overlay/profile.py tests/test_profile.py && uv run ty check` — clean.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/profile.py skills/sec-harness/helpers/tests/test_profile.py skills/sec-harness/references/scan-profile.schema.json
+git add skills/sec-overlay/helpers/sec_overlay/profile.py skills/sec-overlay/helpers/tests/test_profile.py skills/sec-overlay/references/scan-profile.schema.json
 git status
 git commit -m "feat(profile): scan_options knobs (adversary_depth, model_tier_map, wave, budget)"
 ```
@@ -393,7 +393,7 @@ git commit -m "feat(profile): scan_options knobs (adversary_depth, model_tier_ma
 ### Task 4: SKILL.md methodology playbook
 
 **Files:**
-- Modify: `skills/sec-harness/SKILL.md`
+- Modify: `skills/sec-overlay/SKILL.md`
 - Test: `helpers/tests/test_docs_invariants.py` (extend the existing file from Plan 1)
 
 **Interfaces:**
@@ -414,7 +414,7 @@ def test_skill_documents_methodology_playbook():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_docs_invariants.py::test_skill_documents_methodology_playbook -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_docs_invariants.py::test_skill_documents_methodology_playbook -v`
 Expected: FAIL — the section does not exist yet.
 
 - [ ] **Step 3: Write the playbook**
@@ -428,14 +428,14 @@ Add a "## Process methodology (knobs + playbook)" section to SKILL.md (read the 
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_docs_invariants.py -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_docs_invariants.py -v`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/SKILL.md skills/sec-harness/helpers/tests/test_docs_invariants.py
+git add skills/sec-overlay/SKILL.md skills/sec-overlay/helpers/tests/test_docs_invariants.py
 git status
 git commit -m "docs(skill): process-methodology playbook — depth/tier/wave/budget knobs + hard family-diversity"
 ```
@@ -445,7 +445,7 @@ git commit -m "docs(skill): process-methodology playbook — depth/tier/wave/bud
 ### Task 5: Full-suite regression + wiring note
 
 **Files:**
-- Modify: `skills/sec-harness/SKILL.md` (one line in the Report phase pointing at the auto-built ledger)
+- Modify: `skills/sec-overlay/SKILL.md` (one line in the Report phase pointing at the auto-built ledger)
 - Test: run the whole suite; no new source.
 
 - [ ] **Step 1: Add the wiring note**
@@ -454,19 +454,19 @@ In SKILL.md's Report phase (step 14), add: "Report auto-builds `kb/coverage-ledg
 
 - [ ] **Step 2: Run the full suite**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest -q`
+Run: `cd skills/sec-overlay/helpers && uv run pytest -q`
 Expected: only the known env-only failures (gitignored bench corpus; semgrep-rules submodule absent — CLAUDE.md §2). Zero NEW failures. If a report/profile-dependent test broke, fix it to the new behavior (do not weaken the coverage invariant).
 
 - [ ] **Step 3: Lint + types clean**
 
-Run: `cd skills/sec-harness/helpers && uv run ruff check sec_harness/ tests/ && uv run ty check`
+Run: `cd skills/sec-overlay/helpers && uv run ruff check sec_overlay/ tests/ && uv run ty check`
 Expected: no NEW violations in Plan-3-touched files (pre-existing debt in untouched files is out of scope).
 
 - [ ] **Step 4: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/SKILL.md
+git add skills/sec-overlay/SKILL.md
 git status
 git commit -m "docs(skill): note report auto-builds coverage ledger + NDT in findings.json"
 ```

@@ -1,8 +1,8 @@
 """Tests for semgrep parsing + running."""
 
-from sec_harness.evidence import is_tool_receipt
-from sec_harness.models import FindingStatus, Severity
-from sec_harness.sast import parse_semgrep_json, run_semgrep
+from sec_overlay.evidence import is_tool_receipt
+from sec_overlay.models import FindingStatus, Severity
+from sec_overlay.sast import parse_semgrep_json, run_semgrep
 
 SAMPLE = {
     "results": [

@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.schema import validate
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.schema import validate
 
 SCHEMA_PATH = Path(__file__).resolve().parents[2] / "references" / "finding.schema.json"
 GOLDEN_PATH = Path(__file__).parent.parent / "fixtures" / "golden_raw_finding.json"

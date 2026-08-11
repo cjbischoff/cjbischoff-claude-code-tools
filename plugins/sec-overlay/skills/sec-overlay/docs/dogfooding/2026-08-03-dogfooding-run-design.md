@@ -1,4 +1,4 @@
-# Design spec: instrumented dogfooding run of sec-harness
+# Design spec: instrumented dogfooding run of sec-overlay
 
 **Date:** 2026-08-03
 **Status:** Approved (via clarifying-question round)
@@ -26,7 +26,7 @@ Two deliverables from one instrumented pass:
 
 Drive the full agentic pipeline **one phase at a time, instrumented** (per
 `SKILL.md` phase order). Deterministic steps run via
-`uv run python -m sec_harness.*`; agent phases spawn subagents with the
+`uv run python -m sec_overlay.*`; agent phases spawn subagents with the
 `agents/*.md` prompts. After each phase, record: outputs present + valid, data
 looks right (not empty/garbage/hallucinated), timing/cost, and any wasted or
 duplicated work.
@@ -79,10 +79,10 @@ Each logged with phase, evidence (`file:line` or command output), and severity:
 - stdlib-only core; frozen contract byte-for-byte with the Go port.
 - Git boundary: stage only `skills/` paths; never commit to `main`.
 - Harness never executes or modifies target source; workspace sidecar is the
-  only write surface (`<target>/.sec-harness/<slug>/`).
+  only write surface (`<target>/.sec-overlay/<slug>/`).
 
 ## Artifacts
 
-- Per-repo: `<target>/.sec-harness/<slug>/` (kb/, findings/, report.*, redteam).
-- Observations: `skills/sec-harness/docs/dogfooding/runtime-issues_20260803.md`.
+- Per-repo: `<target>/.sec-overlay/<slug>/` (kb/, findings/, report.*, redteam).
+- Observations: `skills/sec-overlay/docs/dogfooding/runtime-issues_20260803.md`.
 - Raw per-phase logs: job tmp dir.

@@ -1,4 +1,4 @@
-"""Shared pytest fixtures for sec_harness tests."""
+"""Shared pytest fixtures for sec_overlay tests."""
 
 from pathlib import Path
 

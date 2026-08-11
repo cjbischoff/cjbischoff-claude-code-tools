@@ -4,7 +4,7 @@ import shutil
 
 import pytest
 
-from sec_harness.astgrep import astgrep_available, parse_astgrep_json, run_astgrep
+from sec_overlay.astgrep import astgrep_available, parse_astgrep_json, run_astgrep
 
 SAMPLE = [
     {"file": "app.py", "range": {"start": {"line": 17, "column": 4}}, "text": "cur.execute(q)"},

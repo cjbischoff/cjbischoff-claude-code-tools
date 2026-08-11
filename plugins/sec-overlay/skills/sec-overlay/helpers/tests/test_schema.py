@@ -1,4 +1,4 @@
-from sec_harness.schema import validate
+from sec_overlay.schema import validate
 
 
 def test_accepts_valid_flat_object():

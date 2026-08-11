@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from sec_harness.correlate.manifest import Member, load_manifest, validate_manifest
+from sec_overlay.correlate.manifest import Member, load_manifest, validate_manifest
 
 
 def _doc(**kw) -> dict:

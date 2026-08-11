@@ -1,6 +1,6 @@
 """Tests for the untrusted-content envelope (prompt-injection defense)."""
 
-from sec_harness.envelope import wrap_untrusted
+from sec_overlay.envelope import wrap_untrusted
 
 
 def test_wrap_uses_matching_open_close_nonce():

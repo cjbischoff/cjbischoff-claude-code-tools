@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.context import (
+from sec_overlay.context import (
     Context,
     ContextItem,
     control_findings,
@@ -15,8 +15,8 @@ from sec_harness.context import (
     render_markdown,
     save,
 )
-from sec_harness.models import FindingStatus
-from sec_harness.workspace import Workspace
+from sec_overlay.models import FindingStatus
+from sec_overlay.workspace import Workspace
 
 
 def test_finds_monorepo_root_service_docs_from_subdir(tmp_path: Path):

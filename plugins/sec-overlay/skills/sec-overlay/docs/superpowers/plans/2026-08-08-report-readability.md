@@ -4,9 +4,9 @@
 
 **Goal:** Make the single-repo human report lead with the real story — honest counts (confirmed and needs-runtime tallied separately), a risk-ordered triage table with real leads above dep CVEs, a purpose-built view for needs-runtime and dependency findings, and a redteam-plan that renders markdown instead of raw Python `repr`.
 
-**Architecture:** Presentation-layer only, in `helpers/sec_harness/report.py` and `helpers/sec_harness/redteam.py`, plus doc extension of `references/finding-template.md`. Every view is populated from existing `Finding` fields — no analysis, scoring, status, `models.py`, `evidence.py`, or `go/` change. Deterministic, golden-string tested.
+**Architecture:** Presentation-layer only, in `helpers/sec_overlay/report.py` and `helpers/sec_overlay/redteam.py`, plus doc extension of `references/finding-template.md`. Every view is populated from existing `Finding` fields — no analysis, scoring, status, `models.py`, `evidence.py`, or `go/` change. Deterministic, golden-string tested.
 
-**Tech Stack:** Python 3 stdlib-only; `uv run pytest`; ruff (line-length 100) + ty. Run all commands from `skills/sec-harness/helpers`.
+**Tech Stack:** Python 3 stdlib-only; `uv run pytest`; ruff (line-length 100) + ty. Run all commands from `skills/sec-overlay/helpers`.
 
 ## Global Constraints
 
@@ -15,12 +15,12 @@
 - **Epistemic honesty (LOAD-BEARING):** needs-deployment-testing findings are ALWAYS labeled needs-runtime and counted separately from confirmed — NEVER merged into the confirmed severity counts, never shown as confirmed.
 - **Determinism:** every emitter sorts its rows; identical input → byte-identical output (golden-tested).
 - **No literal secrets** in emitted output; redteam payloads already use `$SHELL_VAR` (unchanged here).
-- Conventional commits; all paths under `skills/sec-harness/`.
+- Conventional commits; all paths under `skills/sec-overlay/`.
 
 ## File Structure
 
-- `helpers/sec_harness/redteam.py` — `_directive_block` (markdown serialization of preconditions/expected_signal/telemetry) + two small helpers.
-- `helpers/sec_harness/report.py` — `render_finding` (dep-view branch + renumbered condensed tier), new `render_ndt`, `_triage_row`, and `to_markdown` restructure (bottom-line + triage table + reordered sections).
+- `helpers/sec_overlay/redteam.py` — `_directive_block` (markdown serialization of preconditions/expected_signal/telemetry) + two small helpers.
+- `helpers/sec_overlay/report.py` — `render_finding` (dep-view branch + renumbered condensed tier), new `render_ndt`, `_triage_row`, and `to_markdown` restructure (bottom-line + triage table + reordered sections).
 - `references/finding-template.md` — add triage-line, NDT-view, dep-view; renumber condensed tier note.
 - Tests: `tests/test_redteam.py` (extend or create), `tests/test_report.py` (extend), `tests/test_docs_invariants.py` (template contract).
 
@@ -29,8 +29,8 @@
 ### Task 1: redteam-plan serializer — markdown, not repr
 
 **Files:**
-- Modify: `helpers/sec_harness/redteam.py` (`_directive_block`, lines ~118-128)
-- Test: `helpers/sec_harness/tests/test_redteam.py`
+- Modify: `helpers/sec_overlay/redteam.py` (`_directive_block`, lines ~118-128)
+- Test: `helpers/sec_overlay/tests/test_redteam.py`
 
 **Interfaces:**
 - Consumes: `Finding.runtime_test` dict with `preconditions` (list[str]), `expected_signal` (dict `{secure,insecure}`), `telemetry` (list[str]).
@@ -39,8 +39,8 @@
 - [ ] **Step 1: Write the failing test**
 
 ```python
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.redteam import _directive_block
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.redteam import _directive_block
 
 
 def _ndt(**rt):
@@ -65,7 +65,7 @@ def test_directive_renders_markdown_not_repr():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_redteam.py::test_directive_renders_markdown_not_repr -q`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_redteam.py::test_directive_renders_markdown_not_repr -q`
 Expected: FAIL (`['` present — current code interpolates the raw list).
 
 - [ ] **Step 3: Write minimal implementation**
@@ -114,13 +114,13 @@ Then in `_directive_block`, replace the three raw interpolations:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_redteam.py -q && uv run ruff check sec_harness/redteam.py tests/test_redteam.py && uv run ty check sec_harness/redteam.py`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_redteam.py -q && uv run ruff check sec_overlay/redteam.py tests/test_redteam.py && uv run ty check sec_overlay/redteam.py`
 Expected: PASS, clean. (If pre-existing redteam tests assert the old raw format, update them to the markdown format — that is the intended change, not a regression.)
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add skills/sec-harness/helpers/sec_harness/redteam.py skills/sec-harness/helpers/tests/test_redteam.py
+git add skills/sec-overlay/helpers/sec_overlay/redteam.py skills/sec-overlay/helpers/tests/test_redteam.py
 git commit -m "fix(redteam): render preconditions/expected_signal/telemetry as markdown, not repr"
 ```
 
@@ -129,8 +129,8 @@ git commit -m "fix(redteam): render preconditions/expected_signal/telemetry as m
 ### Task 2: dep-view + renumber condensed tier in `render_finding`
 
 **Files:**
-- Modify: `helpers/sec_harness/report.py` (`render_finding`, lines ~25-103)
-- Test: `helpers/sec_harness/tests/test_report.py`
+- Modify: `helpers/sec_overlay/report.py` (`render_finding`, lines ~25-103)
+- Test: `helpers/sec_overlay/tests/test_report.py`
 
 **Interfaces:**
 - Consumes: `Finding.cls`, `.evidence` (`package@version`), `.rule_id`/`.evidence_sources` (advisory), `.reachability` (`{reachable, blocker}`).
@@ -141,8 +141,8 @@ Behavior: when `f.cls == "deps"`, render a purpose-built block (Summary with `pa
 - [ ] **Step 1: Write the failing test**
 
 ```python
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.report import render_finding
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.report import render_finding
 
 
 def _dep():
@@ -177,7 +177,7 @@ def test_condensed_tier_renumbers_without_gaps():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_report.py -q -k "dep_view or condensed_tier"`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_report.py -q -k "dep_view or condensed_tier"`
 Expected: FAIL (dep hits hollow slots; condensed renders `5`/`7`).
 
 - [ ] **Step 3: Write minimal implementation**
@@ -215,13 +215,13 @@ and interpolate `sev_no`/`fix_no` into the Severity and Fix headers. (The full t
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_report.py -q && uv run ruff check sec_harness/report.py tests/test_report.py && uv run ty check sec_harness/report.py`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_report.py -q && uv run ruff check sec_overlay/report.py tests/test_report.py && uv run ty check sec_overlay/report.py`
 Expected: PASS, clean. (Update any pre-existing golden test that asserted the old `5/7` condensed numbering or the dep hollow slots — that is the intended change.)
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add skills/sec-harness/helpers/sec_harness/report.py skills/sec-harness/helpers/tests/test_report.py
+git add skills/sec-overlay/helpers/sec_overlay/report.py skills/sec-overlay/helpers/tests/test_report.py
 git commit -m "feat(report): dep-view for dependency findings; renumber condensed tier (no gaps)"
 ```
 
@@ -230,8 +230,8 @@ git commit -m "feat(report): dep-view for dependency findings; renumber condense
 ### Task 3: `render_ndt` — a real view for needs-runtime findings
 
 **Files:**
-- Modify: `helpers/sec_harness/report.py` (new `render_ndt` function)
-- Test: `helpers/sec_harness/tests/test_report.py`
+- Modify: `helpers/sec_overlay/report.py` (new `render_ndt` function)
+- Test: `helpers/sec_overlay/tests/test_report.py`
 
 **Interfaces:**
 - Consumes: `Finding.message`, `.dataflow`, `.preconditions`, `.runtime_test` (`objective`, `expected_signal.{secure,insecure}`).
@@ -242,7 +242,7 @@ Renders a foregrounded, always-labeled-needs-runtime view: heading, one-line wha
 - [ ] **Step 1: Write the failing test**
 
 ```python
-from sec_harness.report import render_ndt
+from sec_overlay.report import render_ndt
 
 
 def _ndt():
@@ -268,7 +268,7 @@ def test_render_ndt_labels_needs_runtime_and_shows_test():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_report.py::test_render_ndt_labels_needs_runtime_and_shows_test -q`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_report.py::test_render_ndt_labels_needs_runtime_and_shows_test -q`
 Expected: FAIL (`render_ndt` not defined).
 
 - [ ] **Step 3: Write minimal implementation**
@@ -307,13 +307,13 @@ def render_ndt(f: Finding) -> str:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_report.py -q && uv run ruff check sec_harness/report.py tests/test_report.py && uv run ty check sec_harness/report.py`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_report.py -q && uv run ruff check sec_overlay/report.py tests/test_report.py && uv run ty check sec_overlay/report.py`
 Expected: PASS, clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add skills/sec-harness/helpers/sec_harness/report.py skills/sec-harness/helpers/tests/test_report.py
+git add skills/sec-overlay/helpers/sec_overlay/report.py skills/sec-overlay/helpers/tests/test_report.py
 git commit -m "feat(report): render_ndt — foregrounded needs-runtime view (never laundered to confirmed)"
 ```
 
@@ -322,8 +322,8 @@ git commit -m "feat(report): render_ndt — foregrounded needs-runtime view (nev
 ### Task 4: `to_markdown` restructure — bottom-line + triage table + reordered sections
 
 **Files:**
-- Modify: `helpers/sec_harness/report.py` (`to_markdown`, lines ~106-189; add `_triage_row`)
-- Test: `helpers/sec_harness/tests/test_report.py`
+- Modify: `helpers/sec_overlay/report.py` (`to_markdown`, lines ~106-189; add `_triage_row`)
+- Test: `helpers/sec_overlay/tests/test_report.py`
 
 **Interfaces:**
 - Consumes: confirmed `findings` + `needs_deployment` (both already passed to `to_markdown`), `render_ndt` (Task 3), `render_finding` dep-view (Task 2).
@@ -339,7 +339,7 @@ New structure (replacing the current Summary→Findings→Detailed→NDT-table o
 - [ ] **Step 1: Write the failing test**
 
 ```python
-from sec_harness.report import to_markdown
+from sec_overlay.report import to_markdown
 
 
 def _confirmed_dep():
@@ -378,7 +378,7 @@ def test_triage_puts_ndt_lead_above_low_dep():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_report.py -q -k "bottom_line or triage"`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_report.py -q -k "bottom_line or triage"`
 Expected: FAIL (current output has `## Summary`, no `Needs runtime proof:` count line, NDT below confirmed in a bare table).
 
 - [ ] **Step 3: Write minimal implementation**
@@ -407,7 +407,7 @@ In `to_markdown`, build:
 - `conf_counts = Counter(f.severity.value for f in findings)` (confirmed only).
 - Bottom line block:
   ```
-  # sec-harness Report
+  # sec-overlay Report
   **Bottom line.** <one honest sentence built from the counts>
   Confirmed: {crit}/{high}/{med}/{low}
   Needs runtime proof: {len(ndt)}
@@ -422,13 +422,13 @@ Drop the old `## Summary` per-severity list, the old `## Findings` table, the ol
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_report.py -q && uv run ruff check sec_harness/report.py tests/test_report.py && uv run ty check sec_harness/report.py`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_report.py -q && uv run ruff check sec_overlay/report.py tests/test_report.py && uv run ty check sec_overlay/report.py`
 Expected: PASS, clean. Update any pre-existing `to_markdown` golden test to the new structure (intended change). Confirm the epistemic-honesty assertion (NDT never in confirmed counts) holds.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add skills/sec-harness/helpers/sec_harness/report.py skills/sec-harness/helpers/tests/test_report.py
+git add skills/sec-overlay/helpers/sec_overlay/report.py skills/sec-overlay/helpers/tests/test_report.py
 git commit -m "feat(report): bottom-line + risk-ordered triage table; leads above confirmed; NDT counted separately"
 ```
 
@@ -438,7 +438,7 @@ git commit -m "feat(report): bottom-line + risk-ordered triage table; leads abov
 
 **Files:**
 - Modify: `references/finding-template.md`
-- Test: `helpers/sec_harness/tests/test_docs_invariants.py` (append)
+- Test: `helpers/sec_overlay/tests/test_docs_invariants.py` (append)
 
 **Interfaces:**
 - Consumes: nothing at runtime (doc contract). The test pins the load-bearing sections so the template stays the source of the views.
@@ -460,7 +460,7 @@ def test_finding_template_documents_triage_ndt_dep_views():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_docs_invariants.py::test_finding_template_documents_triage_ndt_dep_views -q`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_docs_invariants.py::test_finding_template_documents_triage_ndt_dep_views -q`
 Expected: FAIL (sections absent).
 
 - [ ] **Step 3: Write the doc**
@@ -498,13 +498,13 @@ Severity, Fix) — it does not preserve the full-tier section numbers, so no gap
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_docs_invariants.py -q`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_docs_invariants.py -q`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add skills/sec-harness/references/finding-template.md skills/sec-harness/helpers/tests/test_docs_invariants.py
+git add skills/sec-overlay/references/finding-template.md skills/sec-overlay/helpers/tests/test_docs_invariants.py
 git commit -m "docs(template): document triage-line, NDT-view, dep-view; condensed tier renumbered"
 ```
 

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.partition import partition_candidates_by_class
-from sec_harness.workspace import Workspace, write_findings
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.partition import partition_candidates_by_class
+from sec_overlay.workspace import Workspace, write_findings
 
 
 def _f(i, cls):
@@ -33,7 +33,7 @@ def test_partition_groups_and_sorts(tmp_path):
 
 
 def test_unrouted_candidate_classes(tmp_path):
-    from sec_harness.partition import unrouted_candidate_classes
+    from sec_overlay.partition import unrouted_candidate_classes
     ws = Workspace(tmp_path)
     ws.ensure()
     write_findings(ws, [_f(1, "xss"), _f(2, "security-other"), _f(3, "security-other"),
@@ -46,7 +46,7 @@ def test_unrouted_candidate_classes_flags_untriaged_deps(tmp_path):
     # Regression for a false-negative trap: deps candidates are not exempt by class name
     # alone — an untriaged one (still status=="candidate") must surface here, since nothing
     # else guarantees an SCA triage mechanism actually ran on it (harness defect 6).
-    from sec_harness.partition import unrouted_candidate_classes
+    from sec_overlay.partition import unrouted_candidate_classes
     ws = Workspace(tmp_path)
     ws.ensure()
     write_findings(ws, [_f(1, "xss"), _f(2, "deps")])
@@ -57,7 +57,7 @@ def test_unrouted_candidate_classes_flags_untriaged_deps(tmp_path):
 def test_unrouted_candidate_classes_triaged_deps_not_flagged(tmp_path):
     # Once a deps candidate has been triaged (status changed away from "candidate" by whatever
     # process handled it), it correctly stops appearing here.
-    from sec_harness.partition import unrouted_candidate_classes
+    from sec_overlay.partition import unrouted_candidate_classes
     ws = Workspace(tmp_path)
     ws.ensure()
     f = _f(1, "deps")
@@ -68,9 +68,9 @@ def test_unrouted_candidate_classes_triaged_deps_not_flagged(tmp_path):
 
 
 def test_demote_noise_moves_only_noise_candidates(tmp_path):
-    from sec_harness.models import Finding, FindingStatus, Severity
-    from sec_harness.partition import demote_noise
-    from sec_harness.workspace import Workspace, read_findings, write_findings
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.partition import demote_noise
+    from sec_overlay.workspace import Workspace, read_findings, write_findings
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     def c(id_, cls): return Finding(id=id_, rule_id="r", cls=cls, status=FindingStatus.CANDIDATE,
                                     severity=Severity.LOW, file="a.py", line=1, message="m")
@@ -84,9 +84,9 @@ def test_demote_noise_moves_only_noise_candidates(tmp_path):
 
 
 def test_demote_noise_routes_high_severity_unknown_to_security_other(tmp_path):
-    from sec_harness.models import Finding, FindingStatus, Severity
-    from sec_harness.partition import demote_noise
-    from sec_harness.workspace import Workspace, read_findings, write_findings
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.partition import demote_noise
+    from sec_overlay.workspace import Workspace, read_findings, write_findings
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     f = Finding(id="C-1", rule_id="js/insufficient-password-hash", cls="unknown",
                 status=FindingStatus.CANDIDATE, severity=Severity.HIGH,
@@ -99,9 +99,9 @@ def test_demote_noise_routes_high_severity_unknown_to_security_other(tmp_path):
 
 
 def test_reconcile_plan_adds_real_unrouted_classes(tmp_path):
-    from sec_harness.models import Finding, FindingStatus, Severity
-    from sec_harness.partition import reconcile_plan
-    from sec_harness.workspace import Workspace, write_findings
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.partition import reconcile_plan
+    from sec_overlay.workspace import Workspace, write_findings
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     def c(id_, cls): return Finding(id=id_, rule_id="r", cls=cls, status=FindingStatus.CANDIDATE,
                                     severity=Severity.LOW, file="a.py", line=1, message="m")
@@ -112,9 +112,9 @@ def test_reconcile_plan_adds_real_unrouted_classes(tmp_path):
 
 
 def test_reconcile_plan_skips_class_with_no_live_candidates(tmp_path):
-    from sec_harness.models import Finding, FindingStatus, Severity
-    from sec_harness.partition import reconcile_plan
-    from sec_harness.workspace import Workspace, write_findings
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.partition import reconcile_plan
+    from sec_overlay.workspace import Workspace, write_findings
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     def c(id_, cls, status): return Finding(id=id_, rule_id="r", cls=cls, status=status,
                                             severity=Severity.LOW, file="a.py", line=1, message="m")
@@ -124,8 +124,8 @@ def test_reconcile_plan_skips_class_with_no_live_candidates(tmp_path):
 
 
 def test_reconcile_plan_dedupes_input(tmp_path: Path):
-    from sec_harness.partition import reconcile_plan
-    from sec_harness.workspace import Workspace
+    from sec_overlay.partition import reconcile_plan
+    from sec_overlay.workspace import Workspace
     ws = Workspace(tmp_path); ws.ensure()  # no candidates -> no extras
     out = reconcile_plan(ws, ["authz", "secrets", "authz"])
     assert out == ["authz", "secrets"], "duplicate planned class must appear once"
@@ -134,7 +134,7 @@ def test_reconcile_plan_dedupes_input(tmp_path: Path):
 def test_must_investigate_true_when_classes_exist_even_at_zero_candidates():
     from typing import ClassVar
 
-    from sec_harness.partition import must_investigate
+    from sec_overlay.partition import must_investigate
 
     class P:
         agents_to_spawn: ClassVar = ["business-logic"]

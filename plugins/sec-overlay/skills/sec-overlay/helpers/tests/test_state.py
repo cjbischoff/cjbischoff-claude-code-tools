@@ -1,7 +1,7 @@
 """Tests for workspace layout + finding persistence + campaign state."""
 
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace, read_findings, write_findings
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace, read_findings, write_findings
 
 
 def _f(id_):
@@ -25,14 +25,14 @@ def test_findings_roundtrip(tmp_path):
 
 
 def test_load_state_defaults_to_pass_one(tmp_path):
-    from sec_harness.state import load_state
+    from sec_overlay.state import load_state
     ws = Workspace(tmp_path / "workspace"); ws.ensure()
     st = load_state(ws)
     assert st.pass_number == 1 and st.active_sha is None
 
 
 def test_begin_pass_increments_after_completed_pass(tmp_path):
-    from sec_harness.state import begin_pass, save_state
+    from sec_overlay.state import begin_pass, save_state
     ws = Workspace(tmp_path / "workspace"); ws.ensure()
     st = begin_pass(ws, "sha1")
     assert st.pass_number == 1

@@ -11,7 +11,7 @@ Fresh context — you do not inherit the correlation agent's reasoning.
 
 ## Imports
 Include ANTI_MANIPULATION and TOOL_TRUST from
-`{{HARNESS_ROOT}}/references/prompt-constants.md`. Envelope quoted repo text.
+`{{OVERLAY_ROOT}}/references/prompt-constants.md`. Envelope quoted repo text.
 
 ## Inputs
 - Target: `{{TARGET}}`  Workspace: `{{WORKSPACE}}`

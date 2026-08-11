@@ -2,14 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add four independently-scoped capabilities to `skills/sec-harness/`, inspired by
+**Goal:** Add four independently-scoped capabilities to `skills/sec-overlay/`, inspired by
 aghast/OpenAnt but re-implemented natively: (B) a formal `Finding` JSON schema wired into
 `findings_gate.py`, (D) deterministic entry-point detection in the Tier-1 graph substrate,
 (A) in-repo custom check bundles routed through the existing investigate/gate pipeline, and
 (C) a prompt-only anti-hallucination guard for multi-candidate investigate worklists.
 
 **Architecture:** Each piece is a small, focused stdlib-only module under
-`helpers/sec_harness/`, wired into one existing integration point (`findings_gate.py`,
+`helpers/sec_overlay/`, wired into one existing integration point (`findings_gate.py`,
 `graph.py`'s `build_tier1`, `SKILL.md`'s Phase 2-3 orchestration, `agents/investigate.md`).
 No new agent types, no new phases, no runtime dependencies.
 
@@ -18,16 +18,16 @@ tests; no third-party packages.
 
 ## Global Constraints
 
-- Scope is `skills/sec-harness/` only. Never touch `go/` (parallel Go-conversion workstream).
+- Scope is `skills/sec-overlay/` only. Never touch `go/` (parallel Go-conversion workstream).
 - The core is stdlib-only by design — no new runtime dependency in `pyproject.toml`.
 - Work on branch `skill-aghast-openant-adoption-20260804` (current branch). Never commit to `main`.
-- Stage explicit paths only (`git add skills/sec-harness/<path>`) — never `git add -A`/`-A`/`.`.
+- Stage explicit paths only (`git add skills/sec-overlay/<path>`) — never `git add -A`/`-A`/`.`.
   Run `git status` before every commit to confirm nothing from `go/` is staged.
-- `helpers/sec_harness/models.py` and `helpers/sec_harness/evidence.py` are the frozen
+- `helpers/sec_overlay/models.py` and `helpers/sec_overlay/evidence.py` are the frozen
   Go-parity contract (see root `CLAUDE.md`) — this plan does not modify either file.
 - Every task's test file lives under `helpers/tests/`; run via `uv run pytest <path> -v` from
-  `skills/sec-harness/helpers/`.
-- Lint after each task: `uv run ruff check sec_harness/ tests/` (line length 100).
+  `skills/sec-overlay/helpers/`.
+- Lint after each task: `uv run ruff check sec_overlay/ tests/` (line length 100).
 - `references/*.schema.json` files use two existing precedent styles (confirmed by reading
   both): `scan-profile.schema.json` (draft-07-ish, no `additionalProperties` restriction) and
   `fix-disposition.schema.json` (2020-12 `$schema`, `enum` fields, `"additionalProperties": false`).
@@ -37,18 +37,18 @@ tests; no third-party packages.
 
 ---
 
-### Task 1: `sec_harness/schema.py` — minimal JSON-Schema-subset validator
+### Task 1: `sec_overlay/schema.py` — minimal JSON-Schema-subset validator
 
 **Files:**
-- Create: `skills/sec-harness/helpers/sec_harness/schema.py`
-- Test: `skills/sec-harness/helpers/tests/test_schema.py`
+- Create: `skills/sec-overlay/helpers/sec_overlay/schema.py`
+- Test: `skills/sec-overlay/helpers/tests/test_schema.py`
 
 **Interfaces:**
 - Produces: `validate(data: dict, schema: dict) -> list[str]` — the only public entry point.
   Returns human-readable error strings (empty list = valid). Consumed by Task 4
   (`findings_gate.py`).
 
-**Background:** Grepping the codebase (`grep -rn "schema.json" helpers/sec_harness/*.py
+**Background:** Grepping the codebase (`grep -rn "schema.json" helpers/sec_overlay/*.py
 helpers/tests/*.py`) turns up exactly one hit —
 `tests/test_fix_and_gates.py::test_disposition_schema_exists_and_matches_enums` — and that test
 only checks `schema["properties"]["completeness_tier"]["enum"]` matches a code constant; it
@@ -60,8 +60,8 @@ nullable), `enum`, `required`, `items` (for arrays), `properties` (for nested ob
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-# skills/sec-harness/helpers/tests/test_schema.py
-from sec_harness.schema import validate
+# skills/sec-overlay/helpers/tests/test_schema.py
+from sec_overlay.schema import validate
 
 
 def test_accepts_valid_flat_object():
@@ -122,13 +122,13 @@ def test_top_level_non_object_is_flagged():
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run (from `skills/sec-harness/helpers/`): `uv run pytest tests/test_schema.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'sec_harness.schema'` (or import error).
+Run (from `skills/sec-overlay/helpers/`): `uv run pytest tests/test_schema.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named 'sec_overlay.schema'` (or import error).
 
 - [ ] **Step 3: Write the minimal implementation**
 
 ```python
-# skills/sec-harness/helpers/sec_harness/schema.py
+# skills/sec-overlay/helpers/sec_overlay/schema.py
 """Minimal JSON-Schema-subset validator (stdlib only).
 
 Supports the subset this repo's ``references/*.schema.json`` files actually use:
@@ -206,13 +206,13 @@ Expected: 8 passed.
 
 - [ ] **Step 5: Lint**
 
-Run: `uv run ruff check sec_harness/schema.py tests/test_schema.py`
+Run: `uv run ruff check sec_overlay/schema.py tests/test_schema.py`
 Expected: no findings.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add skills/sec-harness/helpers/sec_harness/schema.py skills/sec-harness/helpers/tests/test_schema.py
+git add skills/sec-overlay/helpers/sec_overlay/schema.py skills/sec-overlay/helpers/tests/test_schema.py
 git status
 git commit -m "feat(schema): add minimal JSON-Schema-subset validator"
 ```
@@ -222,15 +222,15 @@ git commit -m "feat(schema): add minimal JSON-Schema-subset validator"
 ### Task 2: `references/finding.schema.json` — formal Finding schema
 
 **Files:**
-- Create: `skills/sec-harness/references/finding.schema.json`
-- Test: `skills/sec-harness/helpers/tests/test_finding_schema.py`
+- Create: `skills/sec-overlay/references/finding.schema.json`
+- Test: `skills/sec-overlay/helpers/tests/test_finding_schema.py`
 
 **Interfaces:**
-- Consumes: `sec_harness.schema.validate` (Task 1).
+- Consumes: `sec_overlay.schema.validate` (Task 1).
 - Produces: the schema file itself, loaded by Task 4's `findings_gate.py` wiring.
 
 **Background:** The exact field set and defaults come from `Finding` in
-`helpers/sec_harness/models.py:89-117`. Fields with **no dataclass default** —
+`helpers/sec_overlay/models.py:89-117`. Fields with **no dataclass default** —
 `id, rule_id, cls, status, severity, file, line, message` — are the schema's `required` list;
 this was cross-checked against `helpers/fixtures/golden_raw_finding.json` (the fixture
 `test_golden_raw_finding_valid` in `test_findings_gate.py` asserts validates cleanly), which
@@ -245,11 +245,11 @@ confirming those must NOT be required. `severity` enum values come from the `Sev
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-# skills/sec-harness/helpers/tests/test_finding_schema.py
+# skills/sec-overlay/helpers/tests/test_finding_schema.py
 import json
 from pathlib import Path
 
-from sec_harness.schema import validate
+from sec_overlay.schema import validate
 
 SCHEMA_PATH = Path(__file__).resolve().parents[2] / "references" / "finding.schema.json"
 GOLDEN_PATH = Path(__file__).parent.parent / "fixtures" / "golden_raw_finding.json"
@@ -382,7 +382,7 @@ The `references/` path is checked into the repo (not under any `docs/` ignore ru
 force-add is needed here — verify with `git status` before staging.
 
 ```bash
-git add skills/sec-harness/references/finding.schema.json skills/sec-harness/helpers/tests/test_finding_schema.py
+git add skills/sec-overlay/references/finding.schema.json skills/sec-overlay/helpers/tests/test_finding_schema.py
 git status
 git commit -m "feat(schema): add formal finding.schema.json"
 ```
@@ -392,10 +392,10 @@ git commit -m "feat(schema): add formal finding.schema.json"
 ### Task 3: Confirm `Finding.from_dict` still round-trips a schema-valid dict (regression guard)
 
 **Files:**
-- Test: `skills/sec-harness/helpers/tests/test_finding_schema.py` (extend from Task 2)
+- Test: `skills/sec-overlay/helpers/tests/test_finding_schema.py` (extend from Task 2)
 
 **Interfaces:**
-- Consumes: `Finding.from_dict`/`Finding.to_dict` (`sec_harness.models`, unchanged), the golden
+- Consumes: `Finding.from_dict`/`Finding.to_dict` (`sec_overlay.models`, unchanged), the golden
   fixture, `finding.schema.json` (Task 2).
 
 This task exists to lock in the coupling between the new schema and the frozen `Finding`
@@ -405,8 +405,8 @@ itself is off-limits for edits in this plan.
 - [ ] **Step 1: Write the failing test**
 
 ```python
-# appended to skills/sec-harness/helpers/tests/test_finding_schema.py
-from sec_harness.models import Finding
+# appended to skills/sec-overlay/helpers/tests/test_finding_schema.py
+from sec_overlay.models import Finding
 
 
 def test_every_finding_to_dict_field_validates_against_schema():
@@ -419,8 +419,8 @@ def test_every_finding_to_dict_field_validates_against_schema():
 Replace the above with the real test (no placeholder committed):
 
 ```python
-# appended to skills/sec-harness/helpers/tests/test_finding_schema.py
-from sec_harness.models import Finding, FindingStatus, Severity
+# appended to skills/sec-overlay/helpers/tests/test_finding_schema.py
+from sec_overlay.models import Finding, FindingStatus, Severity
 
 
 def test_default_finding_to_dict_validates_against_schema():
@@ -447,7 +447,7 @@ a field mismatch and must be corrected before proceeding; re-run after fixing.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add skills/sec-harness/helpers/tests/test_finding_schema.py
+git add skills/sec-overlay/helpers/tests/test_finding_schema.py
 git status
 git commit -m "test(schema): lock Finding.to_dict output to finding.schema.json"
 ```
@@ -457,11 +457,11 @@ git commit -m "test(schema): lock Finding.to_dict output to finding.schema.json"
 ### Task 4: Wire schema validation into `findings_gate.py`
 
 **Files:**
-- Modify: `skills/sec-harness/helpers/sec_harness/findings_gate.py:14-59` (the `validate_findings` function)
-- Test: `skills/sec-harness/helpers/tests/test_findings_gate.py` (extend)
+- Modify: `skills/sec-overlay/helpers/sec_overlay/findings_gate.py:14-59` (the `validate_findings` function)
+- Test: `skills/sec-overlay/helpers/tests/test_findings_gate.py` (extend)
 
 **Interfaces:**
-- Consumes: `sec_harness.schema.validate` (Task 1), `references/finding.schema.json` (Task 2).
+- Consumes: `sec_overlay.schema.validate` (Task 1), `references/finding.schema.json` (Task 2).
 - Produces: no signature change to `validate_findings(ws) -> list[str]` — only additive error
   messages, prefixed with the finding's filename stem exactly like existing checks.
 
@@ -475,7 +475,7 @@ per-finding error-prefixing convention (`f"{p.stem}: ..."`).
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-# appended to skills/sec-harness/helpers/tests/test_findings_gate.py
+# appended to skills/sec-overlay/helpers/tests/test_findings_gate.py
 
 def test_schema_violation_is_flagged_with_finding_id(tmp_path):
     ws = _ws(tmp_path)
@@ -512,7 +512,7 @@ Add near the top of `findings_gate.py` (alongside existing imports):
 import json as _json  # only if json isn't already imported under this name — reuse existing import if present
 from pathlib import Path
 
-from sec_harness.schema import validate as _schema_validate
+from sec_overlay.schema import validate as _schema_validate
 
 _FINDING_SCHEMA_PATH = Path(__file__).resolve().parents[2] / "references" / "finding.schema.json"
 
@@ -544,24 +544,24 @@ tests, and the `needs-deployment-testing`-exempt test) — confirm none regresse
 
 - [ ] **Step 5: Lint**
 
-Run: `uv run ruff check sec_harness/findings_gate.py tests/test_findings_gate.py`
+Run: `uv run ruff check sec_overlay/findings_gate.py tests/test_findings_gate.py`
 Expected: no findings.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add skills/sec-harness/helpers/sec_harness/findings_gate.py skills/sec-harness/helpers/tests/test_findings_gate.py
+git add skills/sec-overlay/helpers/sec_overlay/findings_gate.py skills/sec-overlay/helpers/tests/test_findings_gate.py
 git status
 git commit -m "feat(gate): validate every finding against finding.schema.json"
 ```
 
 ---
 
-### Task 5: `sec_harness/entrypoints.py` — deterministic entry-point classification
+### Task 5: `sec_overlay/entrypoints.py` — deterministic entry-point classification
 
 **Files:**
-- Create: `skills/sec-harness/helpers/sec_harness/entrypoints.py`
-- Test: `skills/sec-harness/helpers/tests/test_entrypoints.py`
+- Create: `skills/sec-overlay/helpers/sec_overlay/entrypoints.py`
+- Test: `skills/sec-overlay/helpers/tests/test_entrypoints.py`
 
 **Interfaces:**
 - Produces: `classify_entry_point(lang: str, all_lines: list[str], start: int, end: int) -> str | None`
@@ -578,8 +578,8 @@ classification must look upward for contiguous `@`-prefixed lines before pattern
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-# skills/sec-harness/helpers/tests/test_entrypoints.py
-from sec_harness.entrypoints import classify_entry_point
+# skills/sec-overlay/helpers/tests/test_entrypoints.py
+from sec_overlay.entrypoints import classify_entry_point
 
 
 def test_python_route_decorator_detected():
@@ -727,12 +727,12 @@ def test_unsupported_language_returns_none():
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `uv run pytest tests/test_entrypoints.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'sec_harness.entrypoints'`.
+Expected: FAIL — `ModuleNotFoundError: No module named 'sec_overlay.entrypoints'`.
 
 - [ ] **Step 3: Write the minimal implementation**
 
 ```python
-# skills/sec-harness/helpers/sec_harness/entrypoints.py
+# skills/sec-overlay/helpers/sec_overlay/entrypoints.py
 """Deterministic, regex-based entry-point classification for the Tier-1 graph substrate.
 
 Flags a function/method definition as an external entry point when its body (or, for
@@ -867,13 +867,13 @@ Expected: 13 passed.
 
 - [ ] **Step 5: Lint**
 
-Run: `uv run ruff check sec_harness/entrypoints.py tests/test_entrypoints.py`
+Run: `uv run ruff check sec_overlay/entrypoints.py tests/test_entrypoints.py`
 Expected: no findings.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add skills/sec-harness/helpers/sec_harness/entrypoints.py skills/sec-harness/helpers/tests/test_entrypoints.py
+git add skills/sec-overlay/helpers/sec_overlay/entrypoints.py skills/sec-overlay/helpers/tests/test_entrypoints.py
 git status
 git commit -m "feat(graph): add deterministic entry-point classification"
 ```
@@ -883,12 +883,12 @@ git commit -m "feat(graph): add deterministic entry-point classification"
 ### Task 6: Wire entry-point classification into `graph.build_tier1`
 
 **Files:**
-- Modify: `skills/sec-harness/helpers/sec_harness/graph.py:151-211` (`build_tier1`), plus a new
+- Modify: `skills/sec-overlay/helpers/sec_overlay/graph.py:151-211` (`build_tier1`), plus a new
   `entry_point_nodes` function
-- Test: `skills/sec-harness/helpers/tests/test_graph.py` (extend)
+- Test: `skills/sec-overlay/helpers/tests/test_graph.py` (extend)
 
 **Interfaces:**
-- Consumes: `sec_harness.entrypoints.classify_entry_point` (Task 5).
+- Consumes: `sec_overlay.entrypoints.classify_entry_point` (Task 5).
 - Produces: `Node.attrs["is_entry_point"]: bool` and (when true) `Node.attrs["entry_point_reason"]: str`
   on every symbol node; `entry_point_nodes(graph: Graph) -> list[Node]`.
 
@@ -910,7 +910,7 @@ read `app/api.py` there. Add a new fixture route-style function so the entry-poi
 something concrete to assert on:
 
 ```python
-# skills/sec-harness/helpers/tests/fixtures/graph_target/app/api.py
+# skills/sec-overlay/helpers/tests/fixtures/graph_target/app/api.py
 # (append to the existing file — do NOT overwrite; read it first and add below the
 # existing `handler` definition so the existing call-edge test is unaffected)
 
@@ -920,7 +920,7 @@ def get_widget(id):
 ```
 
 ```python
-# appended to skills/sec-harness/helpers/tests/test_graph.py
+# appended to skills/sec-overlay/helpers/tests/test_graph.py
 
 def test_build_tier1_flags_entry_points():
     graph = g.build_tier1(FIXTURE, sha="deadbeef")
@@ -959,10 +959,10 @@ Expected: FAIL — `KeyError: 'is_entry_point'` (the key doesn't exist on nodes 
 Add the import at the top of `graph.py`:
 
 ```python
-from sec_harness import entrypoints, structural_index
+from sec_overlay import entrypoints, structural_index
 ```
 
-(replace the existing `from sec_harness import structural_index` line with this combined
+(replace the existing `from sec_overlay import structural_index` line with this combined
 import, or add `entrypoints` alongside it — match whatever import-grouping style the file
 already uses).
 
@@ -1011,24 +1011,24 @@ Expected: ALL tests pass, including the pre-existing `test_build_tier1_emits_nod
 
 - [ ] **Step 5: Lint**
 
-Run: `uv run ruff check sec_harness/graph.py tests/test_graph.py`
+Run: `uv run ruff check sec_overlay/graph.py tests/test_graph.py`
 Expected: no findings.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add skills/sec-harness/helpers/sec_harness/graph.py skills/sec-harness/helpers/tests/test_graph.py skills/sec-harness/helpers/tests/fixtures/graph_target/app/api.py
+git add skills/sec-overlay/helpers/sec_overlay/graph.py skills/sec-overlay/helpers/tests/test_graph.py skills/sec-overlay/helpers/tests/fixtures/graph_target/app/api.py
 git status
 git commit -m "feat(graph): flag entry-point nodes during Tier-1 build"
 ```
 
 ---
 
-### Task 7: `sec_harness/custom_checks.py` — in-repo custom check bundle discovery
+### Task 7: `sec_overlay/custom_checks.py` — in-repo custom check bundle discovery
 
 **Files:**
-- Create: `skills/sec-harness/helpers/sec_harness/custom_checks.py`
-- Test: `skills/sec-harness/helpers/tests/test_custom_checks.py`
+- Create: `skills/sec-overlay/helpers/sec_overlay/custom_checks.py`
+- Test: `skills/sec-overlay/helpers/tests/test_custom_checks.py`
 
 **Interfaces:**
 - Produces:
@@ -1044,7 +1044,7 @@ git commit -m "feat(graph): flag entry-point nodes during Tier-1 build"
   directly by the orchestrating agent per `SKILL.md`, the same way `reconcile_plan` is).
 
 **Background:** Bundle location and shape per the approved design:
-`.sec-harness/checks/<check-id>/<check-id>.json` (manifest: `name`, `severity`,
+`.sec-overlay/checks/<check-id>/<check-id>.json` (manifest: `name`, `severity`,
 `instructionsFile`, optional `semgrepRule`/`applicablePaths`/`excludedPaths`) plus an
 instructions file the manifest's `instructionsFile` key points to (by convention
 `<check-id>.md`, but the loader must honor whatever filename the manifest specifies rather than
@@ -1060,11 +1060,11 @@ existing "any planned class investigates regardless of candidate count" behavior
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-# skills/sec-harness/helpers/tests/test_custom_checks.py
+# skills/sec-overlay/helpers/tests/test_custom_checks.py
 import json
 from pathlib import Path
 
-from sec_harness.custom_checks import (
+from sec_overlay.custom_checks import (
     CustomCheck,
     custom_check_classes,
     custom_check_instructions,
@@ -1075,7 +1075,7 @@ from sec_harness.custom_checks import (
 
 def _write_bundle(root: Path, check_id: str, *, manifest: dict, instructions: str = "Check for X.",
                    instructions_filename: str | None = None):
-    bundle_dir = root / ".sec-harness" / "checks" / check_id
+    bundle_dir = root / ".sec-overlay" / "checks" / check_id
     bundle_dir.mkdir(parents=True, exist_ok=True)
     instructions_filename = instructions_filename or f"{check_id}.md"
     manifest = {**manifest, "instructionsFile": instructions_filename}
@@ -1111,7 +1111,7 @@ def test_discovers_multiple_bundles_sorted_by_id(tmp_path):
 
 
 def test_missing_manifest_skips_bundle_with_warning(tmp_path, capsys):
-    bundle_dir = tmp_path / ".sec-harness" / "checks" / "broken"
+    bundle_dir = tmp_path / ".sec-overlay" / "checks" / "broken"
     bundle_dir.mkdir(parents=True)
     (bundle_dir / "broken.md").write_text("instructions")
     checks = discover_custom_checks(tmp_path)
@@ -1120,7 +1120,7 @@ def test_missing_manifest_skips_bundle_with_warning(tmp_path, capsys):
 
 
 def test_invalid_json_manifest_skips_bundle_with_warning(tmp_path, capsys):
-    bundle_dir = tmp_path / ".sec-harness" / "checks" / "broken"
+    bundle_dir = tmp_path / ".sec-overlay" / "checks" / "broken"
     bundle_dir.mkdir(parents=True)
     (bundle_dir / "broken.json").write_text("{not valid json")
     checks = discover_custom_checks(tmp_path)
@@ -1136,7 +1136,7 @@ def test_invalid_severity_skips_bundle_with_warning(tmp_path, capsys):
 
 
 def test_missing_instructions_file_skips_bundle_with_warning(tmp_path, capsys):
-    bundle_dir = tmp_path / ".sec-harness" / "checks" / "no-instructions"
+    bundle_dir = tmp_path / ".sec-overlay" / "checks" / "no-instructions"
     bundle_dir.mkdir(parents=True)
     manifest = {"name": "X", "severity": "low", "instructionsFile": "no-instructions.md"}
     (bundle_dir / "no-instructions.json").write_text(json.dumps(manifest))
@@ -1186,16 +1186,16 @@ def test_custom_check_instructions_reads_file(tmp_path):
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `uv run pytest tests/test_custom_checks.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'sec_harness.custom_checks'`.
+Expected: FAIL — `ModuleNotFoundError: No module named 'sec_overlay.custom_checks'`.
 
 - [ ] **Step 3: Write the minimal implementation**
 
 ```python
-# skills/sec-harness/helpers/sec_harness/custom_checks.py
+# skills/sec-overlay/helpers/sec_overlay/custom_checks.py
 """In-repo custom security-check bundle discovery.
 
 A team encodes its own business-logic policy checks under a target repo's
-``.sec-harness/checks/<check-id>/`` directory (checked in, versioned alongside the code
+``.sec-overlay/checks/<check-id>/`` directory (checked in, versioned alongside the code
 it describes). Each bundle is registered as an additional attack-class entry and
 dispatched through the existing ``agents/investigate.md`` machinery — no separate,
 lighter-weight validation path. This module only discovers and loads bundles; it does
@@ -1236,7 +1236,7 @@ def _validate_manifest(manifest: dict) -> list[str]:
 
 
 def discover_custom_checks(target_root: str | Path) -> list[CustomCheck]:
-    """Scan ``.sec-harness/checks/`` under ``target_root`` for custom check bundles.
+    """Scan ``.sec-overlay/checks/`` under ``target_root`` for custom check bundles.
 
     A malformed bundle (missing/invalid manifest, missing required field, invalid
     severity, missing instructions file) is skipped with a warning printed to stderr —
@@ -1249,7 +1249,7 @@ def discover_custom_checks(target_root: str | Path) -> list[CustomCheck]:
         Discovered bundles, sorted by ``check_id``. Empty list if no checks directory
         exists.
     """
-    checks_dir = Path(target_root) / ".sec-harness" / "checks"
+    checks_dir = Path(target_root) / ".sec-overlay" / "checks"
     if not checks_dir.is_dir():
         return []
 
@@ -1339,13 +1339,13 @@ Expected: 13 passed.
 
 - [ ] **Step 5: Lint**
 
-Run: `uv run ruff check sec_harness/custom_checks.py tests/test_custom_checks.py`
+Run: `uv run ruff check sec_overlay/custom_checks.py tests/test_custom_checks.py`
 Expected: no findings.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add skills/sec-harness/helpers/sec_harness/custom_checks.py skills/sec-harness/helpers/tests/test_custom_checks.py
+git add skills/sec-overlay/helpers/sec_overlay/custom_checks.py skills/sec-overlay/helpers/tests/test_custom_checks.py
 git status
 git commit -m "feat(custom-checks): add in-repo custom check bundle discovery"
 ```
@@ -1355,7 +1355,7 @@ git commit -m "feat(custom-checks): add in-repo custom check bundle discovery"
 ### Task 8: Wire custom-check discovery into the orchestration playbook (`SKILL.md`)
 
 **Files:**
-- Modify: `skills/sec-harness/SKILL.md:96` (Phase order table) and `SKILL.md:191-211` (Phase 2-3 detail section)
+- Modify: `skills/sec-overlay/SKILL.md:96` (Phase order table) and `SKILL.md:191-211` (Phase 2-3 detail section)
 
 **Interfaces:**
 - Consumes: `discover_custom_checks`, `custom_check_classes`, `merge_custom_check_classes`,
@@ -1382,7 +1382,7 @@ Find the existing line (quoted verbatim above in Files section) that reads:
 Replace it with:
 
 ```
-...Then `demote_noise(ws)` (moves log-injection/clear-text-logging/unknown candidates to `informational`), `agents = reconcile_plan(ws, profile.agents_to_spawn)` (routes real-security classes recon omitted), and `agents = merge_custom_check_classes(agents, discover_custom_checks(target))` (from `sec_harness.custom_checks`; adds any in-repo `.sec-harness/checks/` bundles the target declares). Spawn investigate agents over the reconciled `agents`; for any class that is a custom-check id, append `custom_check_instructions(check)` to the standard `agents/investigate.md` prompt after the shared `prompt-constants.md` blocks, per its check's own bundle. The general-triage `security-other` agent handles any residual unrouted classes.
+...Then `demote_noise(ws)` (moves log-injection/clear-text-logging/unknown candidates to `informational`), `agents = reconcile_plan(ws, profile.agents_to_spawn)` (routes real-security classes recon omitted), and `agents = merge_custom_check_classes(agents, discover_custom_checks(target))` (from `sec_overlay.custom_checks`; adds any in-repo `.sec-overlay/checks/` bundles the target declares). Spawn investigate agents over the reconciled `agents`; for any class that is a custom-check id, append `custom_check_instructions(check)` to the standard `agents/investigate.md` prompt after the shared `prompt-constants.md` blocks, per its check's own bundle. The general-triage `security-other` agent handles any residual unrouted classes.
 ```
 
 - [ ] **Step 2: Edit `SKILL.md`'s Phase 2-3 detail section (around line 202)**
@@ -1401,7 +1401,7 @@ Replace with:
 ```
    subagents **in ONE message** — one per
    class in `scan-profile.json` `agents_to_spawn` (after merging in any custom-check
-   classes via `sec_harness.custom_checks.discover_custom_checks(target)` +
+   classes via `sec_overlay.custom_checks.discover_custom_checks(target)` +
    `merge_custom_check_classes`), each with `agents/investigate.md`
    (substituting `{{ATTACK_CLASS}}`, `{{TARGET}}`, `{{WORKSPACE}}`) and handed its
    partition — so they run concurrently. When `{{ATTACK_CLASS}}` is a custom-check id,
@@ -1416,13 +1416,13 @@ Replace with:
 - [ ] **Step 3: Verify the edited file renders sensibly**
 
 Run: `grep -n "merge_custom_check_classes\|custom_check_instructions" SKILL.md` from
-`skills/sec-harness/` — confirm both edits landed and read correctly in context (re-read the
+`skills/sec-overlay/` — confirm both edits landed and read correctly in context (re-read the
 surrounding lines).
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add skills/sec-harness/SKILL.md
+git add skills/sec-overlay/SKILL.md
 git status
 git commit -m "docs(skill): wire custom check discovery into orchestration playbook"
 ```
@@ -1432,7 +1432,7 @@ git commit -m "docs(skill): wire custom check discovery into orchestration playb
 ### Task 9: Section C — cross-target anti-hallucination self-check in `investigate.md`
 
 **Files:**
-- Modify: `skills/sec-harness/agents/investigate.md:76` (step 5 "Decide" of the Procedure section)
+- Modify: `skills/sec-overlay/agents/investigate.md:76` (step 5 "Decide" of the Procedure section)
 
 **Interfaces:** None (prompt-only change; no code, no schema, no new test — per the approved
 design's own Testing section: "no automated test (prompt-only change)").
@@ -1489,7 +1489,7 @@ they are; only the new sentence and its lead-in are added.)
 
 - [ ] **Step 2: Verify the edit**
 
-Run: `grep -n "sibling candidate" skills/sec-harness/agents/investigate.md` from the repo root
+Run: `grep -n "sibling candidate" skills/sec-overlay/agents/investigate.md` from the repo root
 — confirm exactly one match, in the expected location.
 
 - [ ] **Step 3: Manual verification note (no automated test for this task)**
@@ -1502,7 +1502,7 @@ a blocking step of this plan.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add skills/sec-harness/agents/investigate.md
+git add skills/sec-overlay/agents/investigate.md
 git status
 git commit -m "docs(investigate): add cross-candidate attribution self-check"
 ```

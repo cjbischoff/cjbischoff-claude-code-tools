@@ -6,13 +6,13 @@ enqueue them as candidates for the normal investigate gate ladder. READ-ONLY, st
 
 ## Imports
 Include ANTI_MANIPULATION, SHAPE_HUNTING, EXHAUSTIVENESS, TOOL_TRUST from
-`{{HARNESS_ROOT}}/references/prompt-constants.md`.
+`{{OVERLAY_ROOT}}/references/prompt-constants.md`.
 
 ## Inputs
 - Target: `{{TARGET}}`  Workspace: `{{WORKSPACE}}`
 - A confirmed finding (id `{{FINDING_ID}}`) + its `dataflow`/`evidence`.
-- Deterministic seeds: `uv run python -c "from sec_harness.variant import variant_seeds; from
-  sec_harness.workspace import read_findings, Workspace; ..."` (the harness passes you the
+- Deterministic seeds: `uv run python -c "from sec_overlay.variant import variant_seeds; from
+  sec_overlay.workspace import read_findings, Workspace; ..."` (the harness passes you the
   `variant_seeds(...)` list: sink-token search patterns).
 
 ## Allowed tools

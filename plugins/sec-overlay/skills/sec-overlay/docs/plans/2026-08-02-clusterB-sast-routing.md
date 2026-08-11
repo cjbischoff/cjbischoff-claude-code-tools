@@ -6,7 +6,7 @@
 
 **Architecture:** (1) new terminal `FindingStatus.INFORMATIONAL`; (2) `clsmap.NOISE_CLASSES` + `is_noise_class`; (3) `partition.demote_noise(ws)` marks noise-class candidates `informational`; (4) `partition.reconcile_plan(ws, profile)` returns an `agents_to_spawn` augmented with real-security candidate classes recon omitted (so codeql:sqli/ssrf/etc. always get an agent). Report/FP-ladder ignore `informational`.
 
-**Tech Stack:** Python 3.13 stdlib-only, pytest/ruff/ty. Run from `skills/sec-harness/helpers/`.
+**Tech Stack:** Python 3.13 stdlib-only, pytest/ruff/ty. Run from `skills/sec-overlay/helpers/`.
 
 ## Global Constraints
 - stdlib-only; line 100; ruff+ty clean on changed files.
@@ -19,15 +19,15 @@
 
 ### Task 1: FindingStatus.INFORMATIONAL (terminal, non-reporting)
 
-**Files:** Modify `helpers/sec_harness/models.py` (FindingStatus enum), `helpers/sec_harness/campaign.py` (TERMINAL_STATUSES). Test: `helpers/tests/test_models.py`.
+**Files:** Modify `helpers/sec_overlay/models.py` (FindingStatus enum), `helpers/sec_overlay/campaign.py` (TERMINAL_STATUSES). Test: `helpers/tests/test_models.py`.
 
 - [ ] **Step 1: failing test** (add to test_models.py):
 ```python
 def test_informational_status_roundtrips_and_is_terminal():
-    from sec_harness.models import Finding, FindingStatus
-    from sec_harness.campaign import TERMINAL_STATUSES
+    from sec_overlay.models import Finding, FindingStatus
+    from sec_overlay.campaign import TERMINAL_STATUSES
     f = Finding(id="C-1", rule_id="r", cls="log-injection", status=FindingStatus.INFORMATIONAL,
-                severity=__import__("sec_harness.models", fromlist=["Severity"]).Severity.INFO,
+                severity=__import__("sec_overlay.models", fromlist=["Severity"]).Severity.INFO,
                 file="a.py", line=1, message="noise")
     d = f.to_dict()
     assert d["status"] == "informational"
@@ -37,21 +37,21 @@ def test_informational_status_roundtrips_and_is_terminal():
 - [ ] **Step 2: run, expect FAIL** — `uv run pytest tests/test_models.py::test_informational_status_roundtrips_and_is_terminal -v` (no INFORMATIONAL member).
 - [ ] **Step 3: implement** — add to `FindingStatus` enum in models.py: `INFORMATIONAL = "informational"`. In `campaign.py`, add `FindingStatus.INFORMATIONAL` to the `TERMINAL_STATUSES` set/collection.
 - [ ] **Step 4: run, expect PASS**; full `uv run pytest tests/test_models.py -q`.
-- [ ] **Step 5: lint** — `uv run ruff check sec_harness/models.py sec_harness/campaign.py tests/test_models.py && uv run ty check sec_harness/models.py sec_harness/campaign.py`.
-- [ ] **Step 6: commit** — `git add skills/sec-harness/helpers/sec_harness/models.py skills/sec-harness/helpers/sec_harness/campaign.py skills/sec-harness/helpers/tests/test_models.py && git commit -m "feat(models): add terminal FindingStatus.INFORMATIONAL for SAST noise (O-027)"`
+- [ ] **Step 5: lint** — `uv run ruff check sec_overlay/models.py sec_overlay/campaign.py tests/test_models.py && uv run ty check sec_overlay/models.py sec_overlay/campaign.py`.
+- [ ] **Step 6: commit** — `git add skills/sec-overlay/helpers/sec_overlay/models.py skills/sec-overlay/helpers/sec_overlay/campaign.py skills/sec-overlay/helpers/tests/test_models.py && git commit -m "feat(models): add terminal FindingStatus.INFORMATIONAL for SAST noise (O-027)"`
 
 ---
 
 ### Task 2: clsmap NOISE_CLASSES
 
-**Files:** Modify `helpers/sec_harness/clsmap.py`. Test: `helpers/tests/test_clsmap.py` (create if absent).
+**Files:** Modify `helpers/sec_overlay/clsmap.py`. Test: `helpers/tests/test_clsmap.py` (create if absent).
 
 **Interfaces:** Produces `NOISE_CLASSES: frozenset[str]`, `is_noise_class(cls: str) -> bool`.
 
 - [ ] **Step 1: failing test**:
 ```python
 def test_noise_classes():
-    from sec_harness.clsmap import NOISE_CLASSES, is_noise_class
+    from sec_overlay.clsmap import NOISE_CLASSES, is_noise_class
     assert is_noise_class("log-injection") and is_noise_class("clear-text-logging")
     assert is_noise_class("unknown")
     assert not is_noise_class("sqli") and not is_noise_class("ssrf")
@@ -76,7 +76,7 @@ def is_noise_class(cls: str) -> bool:
 
 ### Task 3: partition.demote_noise + reconcile_plan
 
-**Files:** Modify `helpers/sec_harness/partition.py`. Test: `helpers/tests/test_partition.py`.
+**Files:** Modify `helpers/sec_overlay/partition.py`. Test: `helpers/tests/test_partition.py`.
 
 **Interfaces:**
 - `demote_noise(ws: Workspace) -> int` — sets every `candidate`-status finding whose `cls` is a noise class to `INFORMATIONAL`; returns the count demoted; writes findings.
@@ -85,9 +85,9 @@ def is_noise_class(cls: str) -> bool:
 - [ ] **Step 1: failing tests**:
 ```python
 def test_demote_noise_moves_only_noise_candidates(tmp_path):
-    from sec_harness.models import Finding, FindingStatus, Severity
-    from sec_harness.workspace import Workspace, read_findings, write_findings
-    from sec_harness.partition import demote_noise
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.workspace import Workspace, read_findings, write_findings
+    from sec_overlay.partition import demote_noise
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     def c(id_, cls): return Finding(id=id_, rule_id="r", cls=cls, status=FindingStatus.CANDIDATE,
                                     severity=Severity.LOW, file="a.py", line=1, message="m")
@@ -100,9 +100,9 @@ def test_demote_noise_moves_only_noise_candidates(tmp_path):
 
 
 def test_reconcile_plan_adds_real_unrouted_classes(tmp_path):
-    from sec_harness.models import Finding, FindingStatus, Severity
-    from sec_harness.workspace import Workspace, write_findings
-    from sec_harness.partition import reconcile_plan
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.workspace import Workspace, write_findings
+    from sec_overlay.partition import reconcile_plan
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     def c(id_, cls): return Finding(id=id_, rule_id="r", cls=cls, status=FindingStatus.CANDIDATE,
                                     severity=Severity.LOW, file="a.py", line=1, message="m")
@@ -116,7 +116,7 @@ def test_reconcile_plan_adds_real_unrouted_classes(tmp_path):
 ```python
 def demote_noise(ws: Workspace) -> int:
     """Demote candidate findings in a NOISE_CLASS to INFORMATIONAL (they never enter the FP ladder)."""
-    from sec_harness.clsmap import is_noise_class
+    from sec_overlay.clsmap import is_noise_class
     findings = read_findings(ws)
     n = 0
     for f in findings:
@@ -131,7 +131,7 @@ def demote_noise(ws: Workspace) -> int:
 
 def reconcile_plan(ws: Workspace, agents_to_spawn: list[str]) -> list[str]:
     """Augment agents_to_spawn with real-security candidate classes recon omitted (O-025)."""
-    from sec_harness.clsmap import is_noise_class
+    from sec_overlay.clsmap import is_noise_class
     parts = partition_candidates_by_class(ws)
     extra = sorted(
         cls for cls in parts
@@ -148,11 +148,11 @@ def reconcile_plan(ws: Workspace, agents_to_spawn: list[str]) -> list[str]:
 
 ### Task 4: Wire into SKILL + investigate prompt
 
-**Files:** Modify `skills/sec-harness/SKILL.md` (Phase 2-3 prefilter/investigate section), `skills/sec-harness/agents/investigate.md`. No test (docs).
+**Files:** Modify `skills/sec-overlay/SKILL.md` (Phase 2-3 prefilter/investigate section), `skills/sec-overlay/agents/investigate.md`. No test (docs).
 
 - [ ] **Step 1: SKILL.md** — in the prefilter/investigate step, add after `run_prefilter`: "Then `demote_noise(ws)` (moves log-injection/clear-text-logging/unknown candidates to `informational`) and `agents = reconcile_plan(ws, profile.agents_to_spawn)` (routes real-security classes recon omitted). Spawn investigate agents over the reconciled `agents`; the general-triage `security-other` agent handles any residual unrouted classes."
 - [ ] **Step 2: investigate.md** — in the disposition rules, add: "A candidate already demoted to `informational` (noise class) is out of scope — do not promote it to `raw`. Only escalate a noise-class hit if you find a concrete reachability-from-untrusted indicator, and say so."
-- [ ] **Step 3: commit** — `git add skills/sec-harness/SKILL.md skills/sec-harness/agents/investigate.md && git commit -m "docs(sec-harness): wire demote_noise + reconcile_plan into the run (O-025)"`
+- [ ] **Step 3: commit** — `git add skills/sec-overlay/SKILL.md skills/sec-overlay/agents/investigate.md && git commit -m "docs(sec-overlay): wire demote_noise + reconcile_plan into the run (O-025)"`
 
 ---
 

@@ -4,7 +4,7 @@
 
 **Goal:** Turn cross-repo context into receipt-backed verdicts — a `needs-deployment-testing` finding whose out-of-repo barrier lands in an ingested member is promoted (barrier proven absent) or demoted (compensating control present) using that member's own adversary-validated dispositions, with a provenance chain and immutable sources.
 
-**Architecture:** Additive to the `sec_harness.correlate` package (B-Plan 1). Ingest gains per-member coverage-ledger loading. A deterministic `control_enforces` edge joins a privilege/permission token shared between an `rbac-source` member and a `service-enforcer` member. The `rethreshold` engine is a **pure function** over `(ingested findings, edges, per-member coverage-ledgers)` → `CorrelationVerdict[]`; it never reads member source and never writes a member file. An opus `cross-repo-adversary` prompt gates promotions (applied by the orchestrator).
+**Architecture:** Additive to the `sec_overlay.correlate` package (B-Plan 1). Ingest gains per-member coverage-ledger loading. A deterministic `control_enforces` edge joins a privilege/permission token shared between an `rbac-source` member and a `service-enforcer` member. The `rethreshold` engine is a **pure function** over `(ingested findings, edges, per-member coverage-ledgers)` → `CorrelationVerdict[]`; it never reads member source and never writes a member file. An opus `cross-repo-adversary` prompt gates promotions (applied by the orchestrator).
 
 **Tech Stack:** Python 3 stdlib only; `pytest`/`uv run`; `ruff` (100) + `ty`. Reuses B-Plan 1 (`manifest`, `ingest`, `edges`, `workspace`) + `models.Finding`.
 
@@ -14,22 +14,22 @@
 - **Do NOT modify** `models.py`/`evidence.py` (frozen). `CorrelationVerdict` is a NEW correlation-only dataclass. **No Go-golden regen.**
 - **Sources immutable:** the engine reads ingested artifacts + member `kb/coverage-ledger.json` **read-only**; it writes ONLY the correlation workspace (`verdicts.json`, `gates/`). A member sidecar is byte-identical before/after. Tests assert this.
 - **Promotion discipline (load-bearing):** a verdict may reach `correlated_status="confirmed"` ONLY when (a) the resolving edge is a `deterministic` join AND (b) the resolving member supplies a mechanical signal that the barrier is absent (a `confirmed`/`needs-deployment-testing` finding of the enforcing class, OR a coverage-ledger surface for that class dispositioned `needs_follow_up`/`reported`). Cross-repo reasoning alone (an `llm`-join edge) may **demote/weaken**, never promote. Base status is always preserved beside the correlated status.
-- **You touch only `skills/` paths.** Never `git add -A`; stage explicit `skills/sec-harness/...`. Never touch `go/`.
+- **You touch only `skills/` paths.** Never `git add -A`; stage explicit `skills/sec-overlay/...`. Never touch `go/`.
 - Branch `spec/rethreshold-engine-20260808` (create off `main`). Personal remote → no GPG, no attribution. Do NOT push.
-- Run from `skills/sec-harness/helpers/`. `from __future__ import annotations` + Google-style docstrings on new public symbols.
+- Run from `skills/sec-overlay/helpers/`. `from __future__ import annotations` + Google-style docstrings on new public symbols.
 
 ## Already-built (B-Plan 1, on main — reuse, don't rebuild)
 
-`sec_harness.correlate`: `manifest` (`Member.member_key`), `workspace.CorrelationWorkspace`, `ingest` (`IngestedFinding`, `member_workspace`, `ingest`), `edges` (`Edge`, `shared_dependency_edges`, `same_class_recurrence_edges`, `write_edges`), `cli`. B-Plan 1 ingest loads findings only — this plan adds coverage-ledger loading.
+`sec_overlay.correlate`: `manifest` (`Member.member_key`), `workspace.CorrelationWorkspace`, `ingest` (`IngestedFinding`, `member_workspace`, `ingest`), `edges` (`Edge`, `shared_dependency_edges`, `same_class_recurrence_edges`, `write_edges`), `cli`. B-Plan 1 ingest loads findings only — this plan adds coverage-ledger loading.
 
 ---
 
 ## File Structure
 
-- **Modify** `helpers/sec_harness/correlate/ingest.py` — add `member_coverage(member) -> dict` (read-only load of `kb/coverage-ledger.json`).
-- **Modify** `helpers/sec_harness/correlate/edges.py` — add `_privilege_tokens(f)` + `control_enforces_edges(ings)`.
-- **Create** `helpers/sec_harness/correlate/rethreshold.py` — `CorrelationVerdict` + `rethreshold(ings, edges, coverage) -> list[CorrelationVerdict]` + `write_verdicts`.
-- **Modify** `helpers/sec_harness/correlate/cli.py` — run control-enforces + rethreshold; write `verdicts.json`.
+- **Modify** `helpers/sec_overlay/correlate/ingest.py` — add `member_coverage(member) -> dict` (read-only load of `kb/coverage-ledger.json`).
+- **Modify** `helpers/sec_overlay/correlate/edges.py` — add `_privilege_tokens(f)` + `control_enforces_edges(ings)`.
+- **Create** `helpers/sec_overlay/correlate/rethreshold.py` — `CorrelationVerdict` + `rethreshold(ings, edges, coverage) -> list[CorrelationVerdict]` + `write_verdicts`.
+- **Modify** `helpers/sec_overlay/correlate/cli.py` — run control-enforces + rethreshold; write `verdicts.json`.
 - **Create** `agents/cross-repo-adversary.md` — opus adversary prompt.
 - **Create/extend** tests: `test_correlate_ingest.py` (coverage load), `test_correlate_edges.py` (control-enforces), `test_correlate_rethreshold.py`, `test_correlate_cli.py` (verdicts), `test_docs_invariants.py` (adversary prompt contract).
 
@@ -38,7 +38,7 @@
 ### Task 1: Ingest per-member coverage-ledger (read-only)
 
 **Files:**
-- Modify: `helpers/sec_harness/correlate/ingest.py`
+- Modify: `helpers/sec_overlay/correlate/ingest.py`
 - Test: `helpers/tests/test_correlate_ingest.py` (extend)
 
 **Interfaces:**
@@ -51,8 +51,8 @@
 def test_member_coverage_loads_readonly(tmp_path):
     import hashlib
     from pathlib import Path
-    from sec_harness.correlate.manifest import Manifest, Member
-    from sec_harness.correlate.ingest import member_coverage, member_workspace
+    from sec_overlay.correlate.manifest import Manifest, Member
+    from sec_overlay.correlate.ingest import member_coverage, member_workspace
     from tests.correlate_fixtures import build_member
 
     ma = build_member(tmp_path, slug="a-1", scan_scope=".", findings=[])
@@ -77,7 +77,7 @@ def test_member_coverage_loads_readonly(tmp_path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_ingest.py::test_member_coverage_loads_readonly -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_ingest.py::test_member_coverage_loads_readonly -v`
 Expected: FAIL — `member_coverage` missing.
 
 - [ ] **Step 3: Write minimal implementation (append to ingest.py)**
@@ -105,14 +105,14 @@ def member_coverage(manifest) -> dict[str, dict]:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_ingest.py -v`
-Expected: PASS. `uv run ruff check sec_harness/correlate/ingest.py tests/test_correlate_ingest.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_ingest.py -v`
+Expected: PASS. `uv run ruff check sec_overlay/correlate/ingest.py tests/test_correlate_ingest.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/correlate/ingest.py skills/sec-harness/helpers/tests/test_correlate_ingest.py
+git add skills/sec-overlay/helpers/sec_overlay/correlate/ingest.py skills/sec-overlay/helpers/tests/test_correlate_ingest.py
 git status
 git commit -m "feat(correlate): read-only per-member coverage-ledger ingest"
 ```
@@ -122,7 +122,7 @@ git commit -m "feat(correlate): read-only per-member coverage-ledger ingest"
 ### Task 2: `control_enforces` edge (deterministic privilege-token join)
 
 **Files:**
-- Modify: `helpers/sec_harness/correlate/edges.py`
+- Modify: `helpers/sec_overlay/correlate/edges.py`
 - Test: `helpers/tests/test_correlate_edges.py` (extend)
 
 **Interfaces:**
@@ -135,9 +135,9 @@ git commit -m "feat(correlate): read-only per-member coverage-ledger ingest"
 
 ```python
 def test_control_enforces_joins_privilege_across_roles(tmp_path):
-    from sec_harness.correlate.manifest import Manifest, Member
-    from sec_harness.correlate.ingest import ingest
-    from sec_harness.correlate.edges import control_enforces_edges
+    from sec_overlay.correlate.manifest import Manifest, Member
+    from sec_overlay.correlate.ingest import ingest
+    from sec_overlay.correlate.edges import control_enforces_edges
     from tests.correlate_fixtures import build_member
 
     # rbac-source finding names a privilege; service-enforcer finding names the same privilege
@@ -162,7 +162,7 @@ def test_control_enforces_joins_privilege_across_roles(tmp_path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_edges.py::test_control_enforces_joins_privilege_across_roles -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_edges.py::test_control_enforces_joins_privilege_across_roles -v`
 Expected: FAIL — `control_enforces_edges` missing.
 
 - [ ] **Step 3: Write minimal implementation (append to edges.py)**
@@ -216,14 +216,14 @@ def control_enforces_edges(ings: list[IngestedFinding]) -> list[Edge]:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_edges.py -v`
-Expected: PASS (all, incl. B-Plan 1's). `uv run ruff check sec_harness/correlate/edges.py tests/test_correlate_edges.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_edges.py -v`
+Expected: PASS (all, incl. B-Plan 1's). `uv run ruff check sec_overlay/correlate/edges.py tests/test_correlate_edges.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/correlate/edges.py skills/sec-harness/helpers/tests/test_correlate_edges.py
+git add skills/sec-overlay/helpers/sec_overlay/correlate/edges.py skills/sec-overlay/helpers/tests/test_correlate_edges.py
 git status
 git commit -m "feat(correlate): control-enforces edge (privilege-token join across roles)"
 ```
@@ -233,7 +233,7 @@ git commit -m "feat(correlate): control-enforces edge (privilege-token join acro
 ### Task 3: `rethreshold` engine + `CorrelationVerdict`
 
 **Files:**
-- Create: `helpers/sec_harness/correlate/rethreshold.py`
+- Create: `helpers/sec_overlay/correlate/rethreshold.py`
 - Test: `helpers/tests/test_correlate_rethreshold.py`
 
 **Interfaces:**
@@ -257,10 +257,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.correlate.manifest import Manifest, Member
-from sec_harness.correlate.ingest import ingest, member_coverage
-from sec_harness.correlate.edges import control_enforces_edges
-from sec_harness.correlate.rethreshold import rethreshold, CorrelationVerdict
+from sec_overlay.correlate.manifest import Manifest, Member
+from sec_overlay.correlate.ingest import ingest, member_coverage
+from sec_overlay.correlate.edges import control_enforces_edges
+from sec_overlay.correlate.rethreshold import rethreshold, CorrelationVerdict
 from tests.correlate_fixtures import build_member
 
 
@@ -284,7 +284,7 @@ def _members(tmp_path, enf_findings, enf_ledger):
     man = Manifest(product="p", members=[Member(**ma), Member(**mb)])
     if enf_ledger is not None:
         (member_coverage.__self__ if False else None)  # noqa: keep import used
-        from sec_harness.correlate.ingest import member_workspace
+        from sec_overlay.correlate.ingest import member_workspace
         (member_workspace(Member(**mb)).kb / "coverage-ledger.json").write_text(enf_ledger)
     return man
 
@@ -326,13 +326,13 @@ def test_coverage_gap_when_no_edge(tmp_path: Path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_rethreshold.py -v`
-Expected: FAIL — `sec_harness.correlate.rethreshold` missing.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_rethreshold.py -v`
+Expected: FAIL — `sec_overlay.correlate.rethreshold` missing.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# helpers/sec_harness/correlate/rethreshold.py
+# helpers/sec_overlay/correlate/rethreshold.py
 """Cross-repo re-thresholding: resolve a finding's out-of-repo barrier using another member.
 
 A ``needs-deployment-testing`` finding's exploitability barrier is "out of repo" only from its own
@@ -349,8 +349,8 @@ import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from sec_harness.correlate.edges import Edge
-from sec_harness.correlate.ingest import IngestedFinding
+from sec_overlay.correlate.edges import Edge
+from sec_overlay.correlate.ingest import IngestedFinding
 
 _PROMOTE_ENFORCER_STATUSES = {"confirmed", "needs-deployment-testing"}
 _GAP_DISPOSITIONS = {"needs_follow_up", "reported"}
@@ -461,14 +461,14 @@ def write_verdicts(path: str | Path, verdicts: list[CorrelationVerdict]) -> None
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_rethreshold.py -v`
-Expected: PASS (3). `uv run ruff check sec_harness/correlate/rethreshold.py tests/test_correlate_rethreshold.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_rethreshold.py -v`
+Expected: PASS (3). `uv run ruff check sec_overlay/correlate/rethreshold.py tests/test_correlate_rethreshold.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/correlate/rethreshold.py skills/sec-harness/helpers/tests/test_correlate_rethreshold.py
+git add skills/sec-overlay/helpers/sec_overlay/correlate/rethreshold.py skills/sec-overlay/helpers/tests/test_correlate_rethreshold.py
 git status
 git commit -m "feat(correlate): re-thresholding engine (promote/demote/coverage-gap verdicts)"
 ```
@@ -478,7 +478,7 @@ git commit -m "feat(correlate): re-thresholding engine (promote/demote/coverage-
 ### Task 4: cross-repo-adversary prompt + contract test
 
 **Files:**
-- Create: `skills/sec-harness/agents/cross-repo-adversary.md`
+- Create: `skills/sec-overlay/agents/cross-repo-adversary.md`
 - Test: `helpers/tests/test_docs_invariants.py` (extend)
 
 **Interfaces:**
@@ -499,7 +499,7 @@ def test_cross_repo_adversary_prompt_exists_and_carries_rules():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_docs_invariants.py::test_cross_repo_adversary_prompt_exists_and_carries_rules -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_docs_invariants.py::test_cross_repo_adversary_prompt_exists_and_carries_rules -v`
 Expected: FAIL — the prompt file does not exist.
 
 - [ ] **Step 3: Write the prompt**
@@ -513,14 +513,14 @@ Create `agents/cross-repo-adversary.md` following the other adversary prompts' s
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_docs_invariants.py -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_docs_invariants.py -v`
 Expected: PASS. (No ruff/ty on a markdown file; run the existing doc-invariant tests to ensure none broke.)
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/agents/cross-repo-adversary.md skills/sec-harness/helpers/tests/test_docs_invariants.py
+git add skills/sec-overlay/agents/cross-repo-adversary.md skills/sec-overlay/helpers/tests/test_docs_invariants.py
 git status
 git commit -m "docs(correlate): cross-repo-adversary prompt gating promotions + contract test"
 ```
@@ -530,7 +530,7 @@ git commit -m "docs(correlate): cross-repo-adversary prompt gating promotions + 
 ### Task 5: CLI wiring + regression
 
 **Files:**
-- Modify: `helpers/sec_harness/correlate/cli.py`
+- Modify: `helpers/sec_overlay/correlate/cli.py`
 - Test: `helpers/tests/test_correlate_cli.py` (extend)
 
 **Interfaces:**
@@ -542,7 +542,7 @@ git commit -m "docs(correlate): cross-repo-adversary prompt gating promotions + 
 ```python
 def test_cli_writes_verdicts(tmp_path):
     import json
-    from sec_harness.correlate.cli import main
+    from sec_overlay.correlate.cli import main
     from tests.correlate_fixtures import build_member
 
     ma = build_member(tmp_path, slug="rbac-1", scan_scope=".", findings=[
@@ -567,7 +567,7 @@ def test_cli_writes_verdicts(tmp_path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_cli.py::test_cli_writes_verdicts -v`
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_cli.py::test_cli_writes_verdicts -v`
 Expected: FAIL — `verdicts.json` not written (CLI doesn't run rethreshold yet).
 
 - [ ] **Step 3: Write minimal implementation**
@@ -575,9 +575,9 @@ Expected: FAIL — `verdicts.json` not written (CLI doesn't run rethreshold yet)
 In `cli.py` `main`, after the existing edge computation, add control-enforces + rethreshold:
 
 ```python
-    from sec_harness.correlate.edges import control_enforces_edges
-    from sec_harness.correlate.ingest import member_coverage
-    from sec_harness.correlate.rethreshold import rethreshold, write_verdicts
+    from sec_overlay.correlate.edges import control_enforces_edges
+    from sec_overlay.correlate.ingest import member_coverage
+    from sec_overlay.correlate.rethreshold import rethreshold, write_verdicts
 
     edges = (shared_dependency_edges(ings) + same_class_recurrence_edges(ings)
              + control_enforces_edges(ings))
@@ -594,14 +594,14 @@ In `cli.py` `main`, after the existing edge computation, add control-enforces + 
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd skills/sec-harness/helpers && uv run pytest tests/test_correlate_cli.py -v`
-Expected: PASS. Then `uv run pytest -q` (only the 2 known env-only failures; zero NEW). `uv run ruff check sec_harness/correlate/ tests/test_correlate_*.py && uv run ty check` — clean.
+Run: `cd skills/sec-overlay/helpers && uv run pytest tests/test_correlate_cli.py -v`
+Expected: PASS. Then `uv run pytest -q` (only the 2 known env-only failures; zero NEW). `uv run ruff check sec_overlay/correlate/ tests/test_correlate_*.py && uv run ty check` — clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/christopher/Tools/security-harness
-git add skills/sec-harness/helpers/sec_harness/correlate/cli.py skills/sec-harness/helpers/tests/test_correlate_cli.py
+git add skills/sec-overlay/helpers/sec_overlay/correlate/cli.py skills/sec-overlay/helpers/tests/test_correlate_cli.py
 git status
 git commit -m "feat(correlate): CLI runs control-enforces + rethreshold -> verdicts.json"
 ```

@@ -1,7 +1,7 @@
 """Tests for stable finding fingerprints + cross-pass diffing."""
 
-from sec_harness.fingerprint import diff_findings, fingerprint
-from sec_harness.models import Finding, FindingStatus, Severity
+from sec_overlay.fingerprint import diff_findings, fingerprint
+from sec_overlay.models import Finding, FindingStatus, Severity
 
 
 def _f(rule, cls, file, line):
@@ -26,25 +26,25 @@ def test_diff_findings_partitions():
 
 
 def _f2(line, *, fp=None, rule="r", cls="sqli", file="a/b.py"):
-    from sec_harness.models import Finding, FindingStatus, Severity
+    from sec_overlay.models import Finding, FindingStatus, Severity
     return Finding(id="F-1", rule_id=rule, cls=cls, status=FindingStatus.RAW,
                    severity=Severity.HIGH, file=file, line=line, message="m", fingerprint=fp)
 
 
 def test_fingerprint_with_anchor_is_line_independent():
-    from sec_harness.fingerprint import fingerprint
+    from sec_overlay.fingerprint import fingerprint
     a = fingerprint(_f2(10), anchor="handler")
     b = fingerprint(_f2(42), anchor="handler")   # same symbol, moved lines
     assert a == b
 
 
 def test_fingerprint_without_anchor_falls_back_to_file_line():
-    from sec_harness.fingerprint import fingerprint
+    from sec_overlay.fingerprint import fingerprint
     assert fingerprint(_f2(10)) != fingerprint(_f2(11))   # distinct lines differ
 
 
 def test_diff_findings_uses_stamped_fingerprint():
-    from sec_harness.fingerprint import diff_findings
+    from sec_overlay.fingerprint import diff_findings
     prev = [_f2(10, fp="deadbeef0000")]
     cur = [_f2(88, fp="deadbeef0000")]   # moved, same stamped identity
     result = diff_findings(prev, cur)

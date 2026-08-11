@@ -6,7 +6,7 @@
 
 **Architecture:** Three changes in the deterministic scoring path. (1) `calibrate.py` weights preconditions by *difficulty* not count, so free preconditions (`unauthenticated`) no longer lower risk. (2) `calibrate.py` applies a per-severity floor so ordering can't invert, while inflation-flagging compares against the *pre-floor* derived score so the advisory signal survives. (3) `redteam.py` makes the plan's action bar disposition+severity-aware so `--min-risk` can't hide a critical/high.
 
-**Tech Stack:** Python 3.13, stdlib-only core, `pytest`, `ruff`, `ty`. Run everything from `skills/sec-harness/helpers/`.
+**Tech Stack:** Python 3.13, stdlib-only core, `pytest`, `ruff`, `ty`. Run everything from `skills/sec-overlay/helpers/`.
 
 ## Global Constraints
 
@@ -21,7 +21,7 @@
 ### Task 1: Difficulty-weighted precondition cap
 
 **Files:**
-- Modify: `helpers/sec_harness/calibrate.py` (`_PRECOND_CAP`, `_precondition_cap`; add weight constants + `_precondition_weight`)
+- Modify: `helpers/sec_overlay/calibrate.py` (`_PRECOND_CAP`, `_precondition_cap`; add weight constants + `_precondition_weight`)
 - Test: `helpers/tests/test_calibrate.py`
 
 **Interfaces:**
@@ -32,7 +32,7 @@
 
 ```python
 def test_precondition_weight_ignores_free_preconditions():
-    from sec_harness.calibrate import _precondition_weight
+    from sec_overlay.calibrate import _precondition_weight
     # unauthenticated / no-config / public are NOT mitigants -> weight 0
     assert _precondition_weight(
         ["unauthenticated buyer reaching checkout", "no config required", "public endpoint"]
@@ -43,7 +43,7 @@ def test_precondition_weight_ignores_free_preconditions():
 
 
 def test_precondition_cap_uses_weight_not_count():
-    from sec_harness.calibrate import _precondition_cap
+    from sec_overlay.calibrate import _precondition_cap
     # three FREE preconditions -> weight 0 -> no cap (was: count 3 -> cap 5)
     assert _precondition_cap(["unauthenticated", "remote", "no setup"]) == 10
     # one strong barrier -> weight 1 -> cap 8
@@ -136,7 +136,7 @@ Expected: the new weight tests PASS. (`test_precondition_cap_lowers_score` third
 
 - [ ] **Step 6: Lint**
 
-Run: `uv run ruff check sec_harness/calibrate.py tests/test_calibrate.py && uv run ty check`
+Run: `uv run ruff check sec_overlay/calibrate.py tests/test_calibrate.py && uv run ty check`
 Expected: clean.
 
 ---
@@ -144,7 +144,7 @@ Expected: clean.
 ### Task 2: Severity floor + pre-floor inflation
 
 **Files:**
-- Modify: `helpers/sec_harness/calibrate.py` (`calibrate_score`, `calibrate_findings`; add `_SEVERITY_FLOOR`, `_derived_score`)
+- Modify: `helpers/sec_overlay/calibrate.py` (`calibrate_score`, `calibrate_findings`; add `_SEVERITY_FLOOR`, `_derived_score`)
 - Test: `helpers/tests/test_calibrate.py`
 
 **Interfaces:**
@@ -155,7 +155,7 @@ Expected: clean.
 
 ```python
 def _sev(id_, sev, cvss, preconds):
-    from sec_harness.models import Finding, FindingStatus
+    from sec_overlay.models import Finding, FindingStatus
     return Finding(id=id_, rule_id="r", cls="authz", status=FindingStatus.CONFIRMED,
                    severity=sev, file="a.py", line=1, message="m",
                    cvss_vector=cvss, preconditions=preconds)
@@ -163,7 +163,7 @@ def _sev(id_, sev, cvss, preconds):
 
 def test_critical_never_ranks_below_medium():
     # O-031: NoSQL-ATO critical (3 free preconds) must outrank a committed-secret medium.
-    from sec_harness.models import Severity
+    from sec_overlay.models import Severity
     crit = _sev("C-CRIT", Severity.CRITICAL, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
                 ["unauthenticated", "extended query parsing", "route wiring"])
     med = _sev("C-MED", Severity.MEDIUM, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:H/A:N",
@@ -173,8 +173,8 @@ def test_critical_never_ranks_below_medium():
 
 
 def test_severity_floor_values():
-    from sec_harness.calibrate import _severity_floor
-    from sec_harness.models import Severity
+    from sec_overlay.calibrate import _severity_floor
+    from sec_overlay.models import Severity
     assert _severity_floor(Severity.CRITICAL) == 8
     assert _severity_floor(Severity.HIGH) == 6
     assert _severity_floor(Severity.MEDIUM) == 4
@@ -265,13 +265,13 @@ Expected: ALL pass (including `test_calibrate_uses_cvss_vector_when_present` == 
 
 - [ ] **Step 6: Lint**
 
-Run: `uv run ruff check sec_harness/calibrate.py tests/test_calibrate.py && uv run ty check`
+Run: `uv run ruff check sec_overlay/calibrate.py tests/test_calibrate.py && uv run ty check`
 Expected: clean.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add skills/sec-harness/helpers/sec_harness/calibrate.py skills/sec-harness/helpers/tests/test_calibrate.py
+git add skills/sec-overlay/helpers/sec_overlay/calibrate.py skills/sec-overlay/helpers/tests/test_calibrate.py
 git commit -m "fix(calibrate): weight preconditions by difficulty + severity floor (O-031)"
 ```
 
@@ -280,7 +280,7 @@ git commit -m "fix(calibrate): weight preconditions by difficulty + severity flo
 ### Task 3: Disposition-aware red-team action bar
 
 **Files:**
-- Modify: `helpers/sec_harness/redteam.py` (`discriminate`; add `_above_bar`)
+- Modify: `helpers/sec_overlay/redteam.py` (`discriminate`; add `_above_bar`)
 - Test: `helpers/tests/test_redteam.py`
 
 **Interfaces:**
@@ -291,7 +291,7 @@ git commit -m "fix(calibrate): weight preconditions by difficulty + severity flo
 
 ```python
 def _rt(id_, sev, risk, disp="needs-runtime", status=None):
-    from sec_harness.models import Finding, FindingStatus
+    from sec_overlay.models import Finding, FindingStatus
     return Finding(id=id_, rule_id="r", cls="authz",
                    status=status or FindingStatus.CONFIRMED, severity=sev,
                    file="a.py", line=1, message="m", risk_score=risk,
@@ -299,8 +299,8 @@ def _rt(id_, sev, risk, disp="needs-runtime", status=None):
 
 
 def test_confirmed_high_severity_needs_runtime_is_actionable_below_min_risk():
-    from sec_harness.redteam import discriminate
-    from sec_harness.models import Severity
+    from sec_overlay.redteam import discriminate
+    from sec_overlay.models import Severity
     # critical needs-runtime with risk 5 (below the 7 bar) MUST still be a directive (O-016/O-031).
     crit = _rt("A-1", Severity.CRITICAL, 5)
     disc = discriminate([crit], min_risk=7)
@@ -309,8 +309,8 @@ def test_confirmed_high_severity_needs_runtime_is_actionable_below_min_risk():
 
 
 def test_low_severity_needs_runtime_gated_by_min_risk():
-    from sec_harness.redteam import discriminate
-    from sec_harness.models import Severity
+    from sec_overlay.redteam import discriminate
+    from sec_overlay.models import Severity
     low = _rt("A-2", Severity.LOW, 4)
     disc = discriminate([low], min_risk=7)
     assert [f.id for f in disc["below_bar"]] == ["A-2"]
@@ -325,7 +325,7 @@ Expected: FAIL (critical at risk 5 currently lands in `below_bar`).
 - [ ] **Step 3: Write minimal implementation** — in `redteam.py`, add the import and helper, and use it in `discriminate`:
 
 ```python
-from sec_harness.models import Finding, FindingStatus, Severity  # add Severity
+from sec_overlay.models import Finding, FindingStatus, Severity  # add Severity
 
 _ACTIONABLE_SEVERITIES = {Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM}
 
@@ -355,13 +355,13 @@ Expected: PASS.
 
 - [ ] **Step 5: Lint**
 
-Run: `uv run ruff check sec_harness/redteam.py tests/test_redteam.py && uv run ty check`
+Run: `uv run ruff check sec_overlay/redteam.py tests/test_redteam.py && uv run ty check`
 Expected: clean.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add skills/sec-harness/helpers/sec_harness/redteam.py skills/sec-harness/helpers/tests/test_redteam.py
+git add skills/sec-overlay/helpers/sec_overlay/redteam.py skills/sec-overlay/helpers/tests/test_redteam.py
 git commit -m "fix(redteam): disposition-aware action bar so min-risk can't hide criticals (O-016)"
 ```
 
@@ -380,8 +380,8 @@ git commit -m "fix(redteam): disposition-aware action bar so min-risk can't hide
 ```python
 def test_cluster_a_acceptance_ordering(tmp_path):
     """A confirmed critical needs-runtime finding outranks a medium AND enters the plan."""
-    from sec_harness.models import Finding, FindingStatus, Severity
-    from sec_harness.redteam import discriminate
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.redteam import discriminate
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     crit = Finding(id="AUTHZ-0001", rule_id="r", cls="authz",
                    status=FindingStatus.CONFIRMED, severity=Severity.CRITICAL,
@@ -410,13 +410,13 @@ Expected: PASS.
 
 - [ ] **Step 3: Full suite + lint**
 
-Run: `uv run pytest -q && uv run ruff check sec_harness/ tests/ && uv run ty check`
+Run: `uv run pytest -q && uv run ruff check sec_overlay/ tests/ && uv run ty check`
 Expected: green (aside from the 2 known env-only failures documented in CLAUDE.md §2).
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add skills/sec-harness/helpers/tests/test_calibrate.py
+git add skills/sec-overlay/helpers/tests/test_calibrate.py
 git commit -m "test(calibrate): lock cluster-A prioritization ordering invariant (O-031)"
 ```
 

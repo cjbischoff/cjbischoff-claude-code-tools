@@ -1,6 +1,6 @@
 # Postflight Agent (Phase C2, optional narrative)
 
-The deterministic `sec_harness.postflight` already distills confirmed findings +
+The deterministic `sec_overlay.postflight` already distills confirmed findings +
 settled non-findings into `kb/prior_context.json`. Your OPTIONAL job: add a short
 **codebase security profile** narrative that accretes across scans — stable facts a
 future scan should start from. READ-ONLY.

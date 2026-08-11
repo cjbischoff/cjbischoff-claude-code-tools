@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.correlate.edges import control_enforces_edges
-from sec_harness.correlate.ingest import ingest, member_coverage
-from sec_harness.correlate.manifest import Manifest, Member
-from sec_harness.correlate.rethreshold import rethreshold
+from sec_overlay.correlate.edges import control_enforces_edges
+from sec_overlay.correlate.ingest import ingest, member_coverage
+from sec_overlay.correlate.manifest import Manifest, Member
+from sec_overlay.correlate.rethreshold import rethreshold
 from tests.correlate_fixtures import build_member
 
 
@@ -28,7 +28,7 @@ def _members(tmp_path, enf_findings, enf_ledger):
           "role": "service-enforcer"}
     man = Manifest(product="p", members=[Member(**ma), Member(**mb)])
     if enf_ledger is not None:
-        from sec_harness.correlate.ingest import member_workspace
+        from sec_overlay.correlate.ingest import member_workspace
         (member_workspace(Member(**mb)).kb / "coverage-ledger.json").write_text(enf_ledger)
     return man
 

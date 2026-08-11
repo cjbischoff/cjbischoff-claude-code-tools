@@ -16,9 +16,9 @@ from bench.adapter import BinaryAdapter, WorkspaceAdapter
 from bench.corpus import load_corpus
 from bench.judge import judge_all
 from bench.tally import tally
-from sec_harness.models import Finding
-from sec_harness.repo_memory import repo_slug
-from sec_harness.workspace import Workspace
+from sec_overlay.models import Finding
+from sec_overlay.repo_memory import repo_slug
+from sec_overlay.workspace import Workspace
 
 
 def git_clone_at_commit(repo_url: str, commit: str, dest: Path, *, runner=subprocess.run) -> Path:
@@ -116,7 +116,7 @@ def run_benchmark(corpus_dir, run_dir, adapter, *, clone_fn=git_clone_at_commit,
 def main(argv: list[str] | None = None) -> int:
     """CLI: run the benchmark. ``--binary`` drives a scanner binary; default reads
     an already-scanned workspace per repo (operator/CC-skill flow)."""
-    p = argparse.ArgumentParser(prog="sec-harness-bench")
+    p = argparse.ArgumentParser(prog="sec-overlay-bench")
     p.add_argument("--corpus", required=True)
     p.add_argument("--run-dir", required=True)
     p.add_argument("--binary", default=None, help="scanner binary argv (space-joined) to drive")

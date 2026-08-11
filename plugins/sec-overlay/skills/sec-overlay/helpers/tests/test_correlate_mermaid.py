@@ -1,7 +1,7 @@
-from sec_harness.correlate.edges import Edge
-from sec_harness.correlate.manifest import Manifest, Member
-from sec_harness.correlate.mermaid import _node_id, attack_chain_graph, component_graph
-from sec_harness.correlate.rethreshold import CorrelationVerdict
+from sec_overlay.correlate.edges import Edge
+from sec_overlay.correlate.manifest import Manifest, Member
+from sec_overlay.correlate.mermaid import _node_id, attack_chain_graph, component_graph
+from sec_overlay.correlate.rethreshold import CorrelationVerdict
 
 
 def _manifest():

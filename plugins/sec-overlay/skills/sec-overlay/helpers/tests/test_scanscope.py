@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.scanscope import ScanScope, load_scope, rel_to_root, resolve, write_scope
-from sec_harness.workspace import Workspace
+from sec_overlay.scanscope import ScanScope, load_scope, rel_to_root, resolve, write_scope
+from sec_overlay.workspace import Workspace
 
 
 def _fake_git(toplevel: str):

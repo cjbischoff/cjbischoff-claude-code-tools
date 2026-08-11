@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from sec_harness import graph as g
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace
+from sec_overlay import graph as g
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace
 
 
 def _ws(tmp_path: Path) -> Workspace:

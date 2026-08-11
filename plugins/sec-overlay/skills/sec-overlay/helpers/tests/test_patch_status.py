@@ -1,6 +1,6 @@
 """Tests for the deterministic patch-application check."""
 
-from sec_harness.patch_status import PatchStatus, check_patch_applied, not_applied_caution
+from sec_overlay.patch_status import PatchStatus, check_patch_applied, not_applied_caution
 
 
 def _runner(returncodes):

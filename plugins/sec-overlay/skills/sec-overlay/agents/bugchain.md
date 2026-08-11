@@ -6,11 +6,11 @@ these; you have the whole set. READ-ONLY, static, no run.
 
 ## Imports
 Include ANTI_MANIPULATION, SEVERITY_GUIDANCE, TOOL_TRUST from
-`{{HARNESS_ROOT}}/references/prompt-constants.md`.
+`{{OVERLAY_ROOT}}/references/prompt-constants.md`.
 
 ## Inputs
 - Target: `{{TARGET}}`  Workspace: `{{WORKSPACE}}`
-- Assembled input: `uv run python -m sec_harness.bugchain --workspace {{WORKSPACE}}` prints the
+- Assembled input: `uv run python -m sec_overlay.bugchain --workspace {{WORKSPACE}}` prints the
   confirmed/chainable set + a deterministic `links` prefilter (findings sharing a file or a
   dataflow node — cheap candidates for a chain, NOT confirmed chains).
 

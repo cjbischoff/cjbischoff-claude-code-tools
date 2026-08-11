@@ -1,10 +1,10 @@
 """Tests for postflight durable context (C2)."""
 import json
 
-from sec_harness.context import prior_context_path
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.postflight import build_prior_context, run_postflight
-from sec_harness.workspace import Workspace, write_findings
+from sec_overlay.context import prior_context_path
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.postflight import build_prior_context, run_postflight
+from sec_overlay.workspace import Workspace, write_findings
 
 
 def _f(id_, status, cls="crypto", file="a.py", line=5, fp=None, history=None):
@@ -44,7 +44,7 @@ def test_run_postflight_merges_and_drifts(tmp_path):
 
 
 def test_run_postflight_records_stage(tmp_path):
-    from sec_harness.state import load_state
+    from sec_overlay.state import load_state
 
     ws = Workspace(tmp_path); ws.ensure()
     write_findings(ws, [_f("A", FindingStatus.CONFIRMED)])

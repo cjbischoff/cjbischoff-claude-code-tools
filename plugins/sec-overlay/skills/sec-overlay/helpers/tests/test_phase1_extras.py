@@ -1,9 +1,9 @@
 """Tests for F5 rule_gaps, F6 detection_coverage, F7 coverage_guide."""
-from sec_harness.coverage_guide import coverage_complete, should_stop
-from sec_harness.detection_coverage import generate, known_classes
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.rule_gaps import is_rule_originated, load_rule_gaps, record_rule_gaps
-from sec_harness.workspace import Workspace, write_findings
+from sec_overlay.coverage_guide import coverage_complete, should_stop
+from sec_overlay.detection_coverage import generate, known_classes
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.rule_gaps import is_rule_originated, load_rule_gaps, record_rule_gaps
+from sec_overlay.workspace import Workspace, write_findings
 
 
 def _f(id_, status, sources, cls="authz"):

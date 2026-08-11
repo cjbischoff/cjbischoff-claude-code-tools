@@ -2,8 +2,8 @@
 
 Date: 2026-08-02
 Status: Approved design (pre-implementation)
-Scope: `skills/sec-harness/` only. Does not touch the `go/` workstream or the frozen
-JSON contract (`helpers/sec_harness/models.py`, `helpers/sec_harness/evidence.py`).
+Scope: `skills/sec-overlay/` only. Does not touch the `go/` workstream or the frozen
+JSON contract (`helpers/sec_overlay/models.py`, `helpers/sec_overlay/evidence.py`).
 
 ## 1. Motivation
 

@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-08
 **Status:** design (approved; awaiting user review before writing-plans)
-**Motivated by:** `~/Documents/Reports/2026-08-08-aem-report-artifact-critique.md` (AEM run `.sec-harness/aem-analytics-1eec8d50`).
+**Motivated by:** `~/Documents/Reports/2026-08-08-aem-report-artifact-critique.md` (AEM run `.sec-overlay/aem-analytics-1eec8d50`).
 **Scope:** presentation-layer only — the human-facing single-repo report render, the redteam-plan serializer, and the finding-template contract.
 **Out of scope:** findings analysis, scoring, `models.py`, `evidence.py`, `go/`, the cross-repo combined-artifacts emitters (B-Plan 3). No new findings; no findings removed.
 
@@ -60,8 +60,8 @@ Where the plan renders `preconditions` (list), `expected_signal` (dict `secure`/
 ## 6. Components / files
 
 - `references/finding-template.md` — add triage-line, NDT-view, dep-view sections; renumber condensed tier.
-- `helpers/sec_harness/report.py` — `render_finding` (dep-view branch, NDT-view function, renumbered condensed tier), `to_markdown` (bottom-line + triage table + reordered sections).
-- `helpers/sec_harness/redteam.py:120-124` — the render site that interpolates `rt['preconditions']` / `rt['expected_signal']` / `rt['telemetry']` raw; replace with markdown serialization (bulleted lists; `secure`/`insecure` as labeled sub-fields).
+- `helpers/sec_overlay/report.py` — `render_finding` (dep-view branch, NDT-view function, renumbered condensed tier), `to_markdown` (bottom-line + triage table + reordered sections).
+- `helpers/sec_overlay/redteam.py:120-124` — the render site that interpolates `rt['preconditions']` / `rt['expected_signal']` / `rt['telemetry']` raw; replace with markdown serialization (bulleted lists; `secure`/`insecure` as labeled sub-fields).
 
 ## 7. Testing
 

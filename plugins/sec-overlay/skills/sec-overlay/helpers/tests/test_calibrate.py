@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from sec_harness.calibrate import calibrate_findings, calibrate_score
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace, read_findings, write_findings
+from sec_overlay.calibrate import calibrate_findings, calibrate_score
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace, read_findings, write_findings
 
 
 def _f(id_, cls, sev, dataflow, status=FindingStatus.CONFIRMED):
@@ -42,7 +42,7 @@ def test_calibrate_findings_scores_only_confirmed(tmp_path):
 
 
 def test_calibrate_uses_cvss_vector_when_present():
-    from sec_harness.models import Finding, FindingStatus, Severity
+    from sec_overlay.models import Finding, FindingStatus, Severity
     f = Finding(id="F-1", rule_id="r", cls="sqli", status=FindingStatus.CONFIRMED,
                 severity=Severity.LOW, file="a.py", line=1, message="m",
                 cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H")
@@ -51,7 +51,7 @@ def test_calibrate_uses_cvss_vector_when_present():
 
 
 def test_calibrate_malformed_vector_falls_back():
-    from sec_harness.models import Finding, FindingStatus, Severity
+    from sec_overlay.models import Finding, FindingStatus, Severity
     f = Finding(id="F-2", rule_id="r", cls="xss", status=FindingStatus.CONFIRMED,
                 severity=Severity.LOW, file="a.py", line=1, message="m",
                 dataflow=[], cvss_vector="garbage")
@@ -65,7 +65,7 @@ def _crit(cvss, preconds):
 
 
 def test_precondition_weight_ignores_free_preconditions():
-    from sec_harness.calibrate import _precondition_weight
+    from sec_overlay.calibrate import _precondition_weight
     # unauthenticated / no-config / public are NOT mitigants -> weight 0
     assert _precondition_weight(
         ["unauthenticated buyer reaching checkout", "no config required", "public endpoint"]
@@ -76,7 +76,7 @@ def test_precondition_weight_ignores_free_preconditions():
 
 
 def test_precondition_weight_default_config_vs_non_default_config():
-    from sec_harness.calibrate import _precondition_weight
+    from sec_overlay.calibrate import _precondition_weight
     # "default config" (ships vulnerable out of the box) is a FREE substring of the STRONG
     # "non-default config" (requires a non-default setting) -- both directions must classify
     # correctly despite the substring collision.
@@ -85,7 +85,7 @@ def test_precondition_weight_default_config_vs_non_default_config():
 
 
 def test_precondition_cap_uses_weight_not_count():
-    from sec_harness.calibrate import _precondition_cap
+    from sec_overlay.calibrate import _precondition_cap
     # three FREE preconditions -> weight 0 -> no cap (was: count 3 -> cap 5)
     assert _precondition_cap(["unauthenticated", "remote", "no setup"]) == 10
     # one strong barrier -> weight 1 -> cap 8
@@ -105,7 +105,7 @@ def test_precondition_cap_lowers_score():
 
 
 def _sev(id_, sev, cvss, preconds):
-    from sec_harness.models import Finding, FindingStatus
+    from sec_overlay.models import Finding, FindingStatus
     return Finding(id=id_, rule_id="r", cls="authz", status=FindingStatus.CONFIRMED,
                    severity=sev, file="a.py", line=1, message="m",
                    cvss_vector=cvss, preconditions=preconds)
@@ -113,7 +113,7 @@ def _sev(id_, sev, cvss, preconds):
 
 def test_critical_never_ranks_below_medium():
     # O-031: NoSQL-ATO critical (3 free preconds) must outrank a committed-secret medium.
-    from sec_harness.models import Severity
+    from sec_overlay.models import Severity
     crit = _sev("C-CRIT", Severity.CRITICAL, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
                 ["unauthenticated", "extended query parsing", "route wiring"])
     med = _sev("C-MED", Severity.MEDIUM, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:H/A:N",
@@ -123,8 +123,8 @@ def test_critical_never_ranks_below_medium():
 
 
 def test_severity_floor_values():
-    from sec_harness.calibrate import _severity_floor
-    from sec_harness.models import Severity
+    from sec_overlay.calibrate import _severity_floor
+    from sec_overlay.models import Severity
     assert _severity_floor(Severity.CRITICAL) == 8
     assert _severity_floor(Severity.HIGH) == 6
     assert _severity_floor(Severity.MEDIUM) == 4
@@ -146,7 +146,7 @@ def test_inflation_flag_recorded(tmp_path):
 
 def test_cluster_a_acceptance_ordering(tmp_path):
     """A confirmed critical needs-runtime finding outranks a medium AND enters the plan."""
-    from sec_harness.redteam import discriminate
+    from sec_overlay.redteam import discriminate
     crit = Finding(id="AUTHZ-0001", rule_id="r", cls="authz",
                    status=FindingStatus.CONFIRMED, severity=Severity.CRITICAL,
                    file="orders.js", line=87, message="unauth order cancel",
@@ -172,9 +172,9 @@ def test_cluster_a_acceptance_ordering(tmp_path):
 
 
 def test_calibrate_promotes_runtime_dependent_before_scoring(tmp_path):
-    from sec_harness.calibrate import calibrate_findings
-    from sec_harness.models import Finding, FindingStatus, Severity
-    from sec_harness.workspace import Workspace, read_findings, write_findings
+    from sec_overlay.calibrate import calibrate_findings
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.workspace import Workspace, read_findings, write_findings
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     write_findings(ws, [Finding(id="A", rule_id="r", cls="business-logic",
                                 status=FindingStatus.RAW, severity=Severity.LOW,
@@ -185,7 +185,7 @@ def test_calibrate_promotes_runtime_dependent_before_scoring(tmp_path):
 
 
 def test_calibrate_findings_records_stage(tmp_path):
-    from sec_harness.state import load_state
+    from sec_overlay.state import load_state
 
     ws = Workspace(tmp_path / "workspace"); ws.ensure()
     write_findings(ws, [_f("F-1", "sqli", Severity.HIGH, ["a", "b"])])

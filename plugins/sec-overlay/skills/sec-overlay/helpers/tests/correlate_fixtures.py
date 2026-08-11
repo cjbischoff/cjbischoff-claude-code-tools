@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.models import Finding
-from sec_harness.repo_memory import RepoMemory
-from sec_harness.workspace import write_findings
+from sec_overlay.models import Finding
+from sec_overlay.repo_memory import RepoMemory
+from sec_overlay.workspace import write_findings
 
 
 def build_member(
@@ -30,7 +30,7 @@ def build_member(
     repo_root = base / slug
     target = repo_root if scan_scope == "." else repo_root / scan_scope
     target.mkdir(parents=True, exist_ok=True)
-    rm = RepoMemory(root=repo_root / ".sec-harness" / slug)
+    rm = RepoMemory(root=repo_root / ".sec-overlay" / slug)
     rm.workspace.ensure()
     write_findings(rm.workspace, [Finding.from_dict(f) for f in findings])
     return {

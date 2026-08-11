@@ -49,7 +49,7 @@ class Scorecard:
         def pct(x):
             return "-" if x is None else f"{x * 100:.0f}%"
         o = self.overall
-        lines = ["# sec-harness benchmark scorecard", "",
+        lines = ["# sec-overlay benchmark scorecard", "",
                  "## Headline (real-confirmed only)",
                  "",
                  (f"- Recall: **{pct(self._real.get('recall'))}** "

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_harness.correlate.workspace import CorrelationWorkspace
-from sec_harness.repo_memory import RepoMemory
-from sec_harness.workspace import read_findings
+from sec_overlay.correlate.workspace import CorrelationWorkspace
+from sec_overlay.repo_memory import RepoMemory
+from sec_overlay.workspace import read_findings
 from tests.correlate_fixtures import build_member
 
 
@@ -43,7 +43,7 @@ def test_fixture_builds_readable_member(tmp_path: Path) -> None:
     assert m["slug"] == "a-1" and m["scan_scope"] == "."
     # Reconstruct the sidecar path directly (same as fixture pinned it)
     repo_root = Path(m["repo_root"])
-    sidecar_root = repo_root / ".sec-harness" / m["slug"]
+    sidecar_root = repo_root / ".sec-overlay" / m["slug"]
     rm = RepoMemory(root=sidecar_root)
     assert any(f.id == "C-1" for f in read_findings(rm.workspace))
 
@@ -52,8 +52,8 @@ def test_ingest_tags_cross_repo_ids_readonly(tmp_path: Path) -> None:
     """Verify ingest reads-only, tagging findings with cross_repo_ids (member_key#file:line:rule_id)."""
     import hashlib
 
-    from sec_harness.correlate.ingest import ingest
-    from sec_harness.correlate.manifest import Manifest, Member
+    from sec_overlay.correlate.ingest import ingest
+    from sec_overlay.correlate.manifest import Manifest, Member
 
     ma = build_member(
         tmp_path,
@@ -129,8 +129,8 @@ def test_member_coverage_loads_readonly(tmp_path):
     import hashlib
     from pathlib import Path
 
-    from sec_harness.correlate.ingest import member_coverage, member_workspace
-    from sec_harness.correlate.manifest import Manifest, Member
+    from sec_overlay.correlate.ingest import member_coverage, member_workspace
+    from sec_overlay.correlate.manifest import Manifest, Member
     from tests.correlate_fixtures import build_member
 
     ma = build_member(tmp_path, slug="a-1", scan_scope=".", findings=[])

@@ -5,28 +5,28 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
-from sec_harness.campaign import record_stage
-from sec_harness.repo_memory import PHASES, RepoMemory, memory_root, repo_slug
-from sec_harness.state import begin_pass
+from sec_overlay.campaign import record_stage
+from sec_overlay.repo_memory import PHASES, RepoMemory, memory_root, repo_slug
+from sec_overlay.state import begin_pass
 
 
 def test_memory_root_env_override(monkeypatch, tmp_path):
-    monkeypatch.setenv("SEC_HARNESS_HOME", str(tmp_path / "mem"))
+    monkeypatch.setenv("SEC_OVERLAY_HOME", str(tmp_path / "mem"))
     assert memory_root() == tmp_path / "mem"
     # env override wins even when a target is given
     assert memory_root(tmp_path / "repo") == tmp_path / "mem"
-    monkeypatch.delenv("SEC_HARNESS_HOME")
-    assert memory_root().name == ".sec-harness"
+    monkeypatch.delenv("SEC_OVERLAY_HOME")
+    assert memory_root().name == ".sec-overlay"
 
 
 def test_memory_root_defaults_in_repo(monkeypatch, tmp_path):
-    monkeypatch.delenv("SEC_HARNESS_HOME", raising=False)
-    # default (no env) with a target → in-repo <target>/.sec-harness sidecar
-    assert memory_root(tmp_path) == tmp_path.resolve() / ".sec-harness"
-    # for_target roots the campaign at <target>/.sec-harness/<slug>/
+    monkeypatch.delenv("SEC_OVERLAY_HOME", raising=False)
+    # default (no env) with a target → in-repo <target>/.sec-overlay sidecar
+    assert memory_root(tmp_path) == tmp_path.resolve() / ".sec-overlay"
+    # for_target roots the campaign at <target>/.sec-overlay/<slug>/
     m = RepoMemory.for_target(tmp_path, runner=lambda *a, **k: type(
         "R", (), {"returncode": 128, "stdout": "", "stderr": ""})())
-    assert m.root.parent == tmp_path.resolve() / ".sec-harness"
+    assert m.root.parent == tmp_path.resolve() / ".sec-overlay"
     assert m.root.name.startswith(tmp_path.name.lower())
 
 
@@ -35,7 +35,7 @@ def test_ensure_seeds_self_ignoring_gitignore(tmp_path):
     m = RepoMemory.for_target(repo, runner=lambda *a, **k: type(
         "R", (), {"returncode": 128, "stdout": "", "stderr": ""})())
     m.ensure(target=str(repo))
-    ignore = repo / ".sec-harness" / ".gitignore"
+    ignore = repo / ".sec-overlay" / ".gitignore"
     assert ignore.exists() and ignore.read_text().strip().endswith("*")
     # idempotent: an existing .gitignore is never clobbered
     ignore.write_text("custom\n")
@@ -62,7 +62,7 @@ def test_for_target_and_ensure_seeds_index(tmp_path):
     m.ensure(target="/x/repo")
     assert m.index_path.exists()
     assert (m.root / "kb").is_dir() and (m.root / "findings").is_dir()
-    assert "sec-harness memory" in m.index_path.read_text()
+    assert "sec-overlay memory" in m.index_path.read_text()
 
 
 def test_run_status_resume_and_finished(tmp_path):

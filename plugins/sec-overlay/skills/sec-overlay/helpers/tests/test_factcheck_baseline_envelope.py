@@ -1,8 +1,8 @@
 """Tests for F8 factcheck, F10 baseline cap, F15 envelope hardening."""
-from sec_harness.calibrate import calibrate_score
-from sec_harness.envelope import attribution_banner, neutralize_markers, wrap_untrusted
-from sec_harness.factcheck import apply_verdict, validate_verdict
-from sec_harness.models import Finding, FindingStatus, Severity
+from sec_overlay.calibrate import calibrate_score
+from sec_overlay.envelope import attribution_banner, neutralize_markers, wrap_untrusted
+from sec_overlay.factcheck import apply_verdict, validate_verdict
+from sec_overlay.models import Finding, FindingStatus, Severity
 
 
 def _f(**kw):

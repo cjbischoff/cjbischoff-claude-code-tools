@@ -2,7 +2,7 @@
 
 import pytest
 
-from sec_harness.cvss import cvss31_base, offensive_priority
+from sec_overlay.cvss import cvss31_base, offensive_priority
 
 CRIT = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
 MED = "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"

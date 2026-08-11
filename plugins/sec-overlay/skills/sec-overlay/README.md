@@ -1,4 +1,4 @@
-# sec-harness
+# sec-overlay
 
 A self-contained, **agentic security-audit harness**. Point it at a codebase and it finds
 *actually-exploitable* vulnerabilities, then hands a security engineer artifacts they can act
@@ -29,8 +29,8 @@ These hold everywhere and are enforced in code where possible, prompt otherwise:
 1. **Never executes or modifies the reviewed source.** Static analysis only. Patches are
    applied to a *throwaway copy* to verify them — the repo's own files are never run or edited.
 2. **Writes only its own sidecar.** All output lives in an in-repo, self-ignoring
-   `<target>/.sec-harness/<slug>/` directory (override the base with `$SEC_HARNESS_HOME`, or
-   the whole workspace with `--workspace`). A seeded `.sec-harness/.gitignore` keeps output
+   `<target>/.sec-overlay/<slug>/` directory (override the base with `$SEC_OVERLAY_HOME`, or
+   the whole workspace with `--workspace`). A seeded `.sec-overlay/.gitignore` keeps output
    out of the reviewed repo's git tree.
 3. **Tool-receipt gate.** A finding reaches `confirmed`/`fixed` only with ≥1 mechanical
    receipt (`semgrep` / `codeql` / `ast-grep` / `tree-sitter` / `ripgrep` /
@@ -46,7 +46,7 @@ These hold everywhere and are enforced in code where possible, prompt otherwise:
 
 ```mermaid
 flowchart TB
-    subgraph HARNESS["skills/sec-harness/"]
+    subgraph HARNESS["skills/sec-overlay/"]
         direction TB
         SKILL["SKILL.md<br/>the orchestration playbook"]
         subgraph REF["references/ — the RULE BOOK"]
@@ -60,7 +60,7 @@ flowchart TB
         end
     end
     TARGET[("target codebase<br/>(read-only)")]
-    OUT[("<target>/.sec-harness/<slug>/<br/>KB + findings + reports")]
+    OUT[("<target>/.sec-overlay/<slug>/<br/>KB + findings + reports")]
 
     SKILL -->|drives| AG
     SKILL -->|calls| HP
@@ -157,11 +157,11 @@ Fastest way to see output. From `helpers/`:
 
 ```bash
 cd helpers
-uv run python -m sec_harness.cli scan \
+uv run python -m sec_overlay.cli scan \
   --target <path-to-code> \
   --config rules/smoke.yaml \
   --sha "$(git -C <path-to-code> rev-parse HEAD)"
-# workspace defaults to <target>/.sec-harness/<slug>/
+# workspace defaults to <target>/.sec-overlay/<slug>/
 ```
 
 This runs semgrep → normalize → SARIF/Markdown only. It is the smoke path, **not** a real
@@ -172,23 +172,23 @@ Driven by the main agent following [`SKILL.md`](SKILL.md). The short version:
 
 ```bash
 cd helpers
-uv run python -m sec_harness.preflight        # 0 — verify semgrep/codeql/ast-grep + CodeQL packs
+uv run python -m sec_overlay.preflight        # 0 — verify semgrep/codeql/ast-grep + CodeQL packs
 # 1  begin_pass(WS, sha)
 # C1 spawn agents/context-ingest.md → context-adversary.md
-uv run python -m sec_harness.graph build --target <T> --workspace <WS> --sha <sha>   # T1
+uv run python -m sec_overlay.graph build --target <T> --workspace <WS> --sha <sha>   # T1
 # 2-4 spawn recon → architecture → threat-model (+ phase-adversary each)
-# 5  from sec_harness.prefilter import run_prefilter; run_prefilter(ws, target, profile)
+# 5  from sec_overlay.prefilter import run_prefilter; run_prefilter(ws, target, profile)
 # 6  spawn agents/investigate.md in parallel per attack class
-uv run python -m sec_harness.dedupe        --workspace <WS>    # 7
+uv run python -m sec_overlay.dedupe        --workspace <WS>    # 7
 # 8-9 spawn critic → judge → validate
-uv run python -m sec_harness.calibrate     --workspace <WS>    # 10
+uv run python -m sec_overlay.calibrate     --workspace <WS>    # 10
 # 11 spawn patch → validate-fix
-uv run python -m sec_harness.verify        --workspace <WS> --target <T> --config <rules>   # 12
-uv run python -m sec_harness.findings_gate --workspace <WS>    # 13
+uv run python -m sec_overlay.verify        --workspace <WS> --target <T> --config <rules>   # 12
+uv run python -m sec_overlay.findings_gate --workspace <WS>    # 13
 # 13.5 spawn redteam → redteam-adversary
-uv run python -m sec_harness.redteam       --workspace <WS>
-uv run python -m sec_harness.report        --workspace <WS>    # 14
-uv run python -m sec_harness.postflight    --workspace <WS> --sha <sha>   # C2
+uv run python -m sec_overlay.redteam       --workspace <WS>
+uv run python -m sec_overlay.report        --workspace <WS>    # 14
+uv run python -m sec_overlay.postflight    --workspace <WS> --sha <sha>   # C2
 ```
 
 > **A scan is clean only if every planned backend actually ran.** If `preflight` shows a
@@ -199,7 +199,7 @@ uv run python -m sec_harness.postflight    --workspace <WS> --sha <sha>   # C2
 
 ## What you get — the output workspace
 
-Everything lands in `<target>/.sec-harness/<slug>/` (self-ignoring):
+Everything lands in `<target>/.sec-overlay/<slug>/` (self-ignoring):
 
 ```
 kb/scan-profile.json      recon output: languages, frameworks, attack_surface, sast_plan
@@ -218,7 +218,7 @@ state.json                campaign state (pass number, pinned SHA, stages)
 MEMORY.md, learnings/     durable per-repo memory across runs
 ```
 
-**Resume** an interrupted run: `python -m sec_harness.cli memory --target <T>` reports
+**Resume** an interrupted run: `python -m sec_overlay.cli memory --target <T>` reports
 `{finished, resumable, next_phase, stages_done}`.
 
 ---
@@ -229,13 +229,13 @@ From `helpers/` (stdlib-only core; dev deps pytest/ruff/ty):
 
 ```bash
 uv run pytest -q          # ~470 tests (3 env-only failures — see CLAUDE.md §2)
-uv run ruff check sec_harness/ bench/ tests/
+uv run ruff check sec_overlay/ bench/ tests/
 uv run ty check
 ```
 
 Two coupling points to respect before editing:
 
-- **The Go port.** `helpers/sec_harness/models.py` and `evidence.py` are a byte-for-byte
+- **The Go port.** `helpers/sec_overlay/models.py` and `evidence.py` are a byte-for-byte
   frozen contract with a parallel Go rewrite under `go/`. Changing a field or the mechanical
   whitelist breaks the Go build — coordinate first. Never touch `go/`. See [`CLAUDE.md`](CLAUDE.md) §1.
 - **Docs track code.** When you change anything in `agents/`, `helpers/`, or `references/`,

@@ -3,8 +3,8 @@
 import json
 from pathlib import Path
 
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import (
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import (
     Workspace,
     load_paths,
     read_agent_return,
@@ -134,7 +134,7 @@ def test_write_findings_atomic_no_temp_left(tmp_path):
 
 def test_write_findings_no_partial_on_serialize_failure(tmp_path, monkeypatch):
     """A serialization crash mid-write must not truncate an existing file (T8)."""
-    import sec_harness.workspace as wsmod
+    import sec_overlay.workspace as wsmod
 
     ws = Workspace(tmp_path)
     write_findings(ws, [_finding("F-1")])

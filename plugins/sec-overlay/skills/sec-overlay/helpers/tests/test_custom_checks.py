@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from sec_harness.custom_checks import (
+from sec_overlay.custom_checks import (
     CustomCheck,
     custom_check_classes,
     custom_check_instructions,
@@ -12,7 +12,7 @@ from sec_harness.custom_checks import (
 
 def _write_bundle(root: Path, check_id: str, *, manifest: dict, instructions: str = "Check for X.",
                    instructions_filename: str | None = None):
-    bundle_dir = root / ".sec-harness" / "checks" / check_id
+    bundle_dir = root / ".sec-overlay" / "checks" / check_id
     bundle_dir.mkdir(parents=True, exist_ok=True)
     instructions_filename = instructions_filename or f"{check_id}.md"
     manifest = {**manifest, "instructionsFile": instructions_filename}
@@ -48,7 +48,7 @@ def test_discovers_multiple_bundles_sorted_by_id(tmp_path):
 
 
 def test_missing_manifest_skips_bundle_with_warning(tmp_path, capsys):
-    bundle_dir = tmp_path / ".sec-harness" / "checks" / "broken"
+    bundle_dir = tmp_path / ".sec-overlay" / "checks" / "broken"
     bundle_dir.mkdir(parents=True)
     (bundle_dir / "broken.md").write_text("instructions")
     checks = discover_custom_checks(tmp_path)
@@ -57,7 +57,7 @@ def test_missing_manifest_skips_bundle_with_warning(tmp_path, capsys):
 
 
 def test_invalid_json_manifest_skips_bundle_with_warning(tmp_path, capsys):
-    bundle_dir = tmp_path / ".sec-harness" / "checks" / "broken"
+    bundle_dir = tmp_path / ".sec-overlay" / "checks" / "broken"
     bundle_dir.mkdir(parents=True)
     (bundle_dir / "broken.json").write_text("{not valid json")
     checks = discover_custom_checks(tmp_path)
@@ -73,7 +73,7 @@ def test_invalid_severity_skips_bundle_with_warning(tmp_path, capsys):
 
 
 def test_missing_instructions_file_skips_bundle_with_warning(tmp_path, capsys):
-    bundle_dir = tmp_path / ".sec-harness" / "checks" / "no-instructions"
+    bundle_dir = tmp_path / ".sec-overlay" / "checks" / "no-instructions"
     bundle_dir.mkdir(parents=True)
     manifest = {"name": "X", "severity": "low", "instructionsFile": "no-instructions.md"}
     (bundle_dir / "no-instructions.json").write_text(json.dumps(manifest))

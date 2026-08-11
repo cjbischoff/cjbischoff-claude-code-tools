@@ -1,7 +1,7 @@
-# CLAUDE.md — sec-harness operating manual
+# CLAUDE.md — sec-overlay operating manual
 
 This file provides guidance to Claude Code (claude.ai/code) when working **inside
-`skills/sec-harness/`**. It is the driver for two jobs: (1) running this security-audit skill
+`skills/sec-overlay/`**. It is the driver for two jobs: (1) running this security-audit skill
 against real codebases, and (2) maintaining the skill **without breaking the parallel Go conversion**.
 
 Repo-wide context lives in the root `CLAUDE.md`. This file governs the skill.
@@ -40,7 +40,7 @@ workstreams share this repo. **Boundary is absolute:**
 - **Never `git add -A`, `git add .`, or `git commit -a`.** Those sweep the other terminal's
   in-progress `go/` edits into your commit. **Always stage explicit skill paths:**
   ```bash
-  git add skills/sec-harness/<specific-paths>
+  git add skills/sec-overlay/<specific-paths>
   git status          # confirm ONLY skills/ paths are staged; if go/ appears, unstage it
   ```
 - **Work on a skill branch, never commit to `main`.** Current branch for this work:
@@ -50,15 +50,15 @@ workstreams share this repo. **Boundary is absolute:**
 ### The one coupling point — the JSON contract
 
 The Go port mirrors the Python data contract **byte-for-byte**. `go/bench/gen_golden.py`
-instantiates fixed `Finding`/`CampaignState` values against `sec_harness.models` and writes
+instantiates fixed `Finding`/`CampaignState` values against `sec_overlay.models` and writes
 `json.dumps(obj.to_dict(), indent=2)` (no trailing newline) into `go/internal/model/testdata/`;
 Go's `TestParity` asserts byte-equality. **Python is the source of truth; Go conforms to it.**
 
 Two files are the frozen contract — changing them breaks the Go build in the other terminal:
 
-- `helpers/sec_harness/models.py` — `Finding`/`CampaignState` fields, enum `.value` strings
+- `helpers/sec_overlay/models.py` — `Finding`/`CampaignState` fields, enum `.value` strings
   (note `needs-deployment-testing` is hyphenated), and `to_dict`/`from_dict` behavior.
-- `helpers/sec_harness/evidence.py` — the `_MECHANICAL` tool-receipt whitelist that gates
+- `helpers/sec_overlay/evidence.py` — the `_MECHANICAL` tool-receipt whitelist that gates
   `confirmed`/`fixed` (see §4). Drift here is a **silent gate weakening**, not just a serialization
   bug.
 
@@ -71,7 +71,7 @@ at all while the conversion is in flight.
 
 ## 2. Environment prerequisites for a full run
 
-`helpers/sec_harness/secrets.py` was **reconstructed 2026-07-31** (TDD; it had been missing, which
+`helpers/sec_overlay/secrets.py` was **reconstructed 2026-07-31** (TDD; it had been missing, which
 broke `redactor` and `prefilter` at import). The secrets backend + secret-masking helper now work and
 `uv run pytest` collects cleanly. Note `envelope.py:12`'s `import secrets` is the **stdlib** module,
 unrelated to this file.
@@ -81,7 +81,7 @@ Before a *full* audit, satisfy these environment prerequisites (a clean checkout
 - **Semgrep rules submodule** — `rules/semgrep/` must be checked out:
   `git submodule update --init --recursive`. Without it, semgrep has no rules and
   `test_preflight.py::test_report_finds_vendored_rules...` fails.
-- **External tool binaries** — `uv run python -m sec_harness.preflight` must show `semgrep`,
+- **External tool binaries** — `uv run python -m sec_overlay.preflight` must show `semgrep`,
   `codeql` (+ per-language query packs), `ast-grep`, `osv-scanner`. Missing backends are skipped and
   logged, but a missing CodeQL pack silently drops that language's dataflow (see §3 hard rules).
 - **Bench corpus is local-only** — `bench/corpus_seed/*.json` is gitignored (confirmed vulns in
@@ -97,7 +97,7 @@ defects — do not "fix" them by committing the submodule contents or fabricatin
 ## 3. How to run an audit
 
 The **main agent orchestrates**; deterministic steps run via `uv run` from
-`skills/sec-harness/helpers/`; agent steps spawn a subagent with the named `agents/*.md` prompt
+`skills/sec-overlay/helpers/`; agent steps spawn a subagent with the named `agents/*.md` prompt
 (tokens like `{{TARGET}}`/`{{WORKSPACE}}`/`{{ATTACK_CLASS}}` substituted). Record each phase with
 `record_stage(<WS>, "<phase>")` so passes advance. The full operational playbook — every phase in
 detail — is **`SKILL.md`**; read it before driving a run. This section is the map.
@@ -108,44 +108,44 @@ Legend: `<T>` = target repo, `<WS>` = workspace, `<sha>` = `git -C <T> rev-parse
 ### Phase order (one pass)
 
 ```
-0  Preflight        python -m sec_harness.preflight        # verify semgrep/codeql/ast-grep + CodeQL packs
-1  Begin pass       sec_harness.state.begin_pass(WS, sha)  # pins SHA, increments pass counter
+0  Preflight        python -m sec_overlay.preflight        # verify semgrep/codeql/ast-grep + CodeQL packs
+1  Begin pass       sec_overlay.state.begin_pass(WS, sha)  # pins SHA, increments pass counter
 C1 Context-ingest   agents/context-ingest.md (sonnet) → context-adversary.md (opus)   # repo docs as UNTRUSTED
-T1 Tier-1 substrate  python -m sec_harness.graph build --target <T> --workspace <WS> --sha <sha>
+T1 Tier-1 substrate  python -m sec_overlay.graph build --target <T> --workspace <WS> --sha <sha>
                      # LLM-free: structural_index + regex call-edge heuristic + osv/secrets/crypto facts
                      # → kb/graph.json v1 (consumed by recon, architecture, threat-model)
 2  Recon            agents/recon.md (sonnet)     → kb/scan-profile.json     ┐
 3  Architecture     agents/architecture.md (sonnet) → kb/architecture.md    ├ each → PHASE GATE
 4  Threat model     agents/threat-model.md (sonnet) → kb/THREAT_MODEL.md    ┘   (phase-adversary.md, opus)
 0.5 Tune (optional) agents/tune-config.md — ratcheted rule/exclusion loop, ≤3 rounds
-5  Prefilter        sec_harness.prefilter.run_prefilter(ws, target, profile) # semgrep+codeql+osv+secrets
+5  Prefilter        sec_overlay.prefilter.run_prefilter(ws, target, profile) # semgrep+codeql+osv+secrets
 6  Investigate      agents/investigate.md (sonnet, PARALLEL per attack-class) → raw / rejected
                     # loop-until-dry: waves until K no-new (saturated) or cap (capped) →
                     #   kb/discovery-ledger.json (discovery_ledger); on pass N>1 prior rejects
                     #   injected as envelope-wrapped negative examples (fp_feedback.{{FP_FEEDBACK}})
-   Gate             python -m sec_harness.findings_gate --workspace <WS>
-7  Dedupe           python -m sec_harness.dedupe --workspace <WS>
+   Gate             python -m sec_overlay.findings_gate --workspace <WS>
+7  Dedupe           python -m sec_overlay.dedupe --workspace <WS>
                     # stamps refactor-resistant fingerprint (rule_id|cls|enclosing-symbol via graph)
 8  Critic           agents/critic.md (sonnet, PARALLEL) — production-viability filter
    Judge            agents/judge.md (cheap, tool-free) — severity-inflation adjudicator
 9  Validate         agents/validate.md (opus, DIFFERENT family) — tries to REFUTE → confirmed / rejected
    Trace            agents/trace.md (opus) — reachability verdict (static-settled vs needs-runtime)
-10 Calibrate        python -m sec_harness.calibrate --workspace <WS>   # risk_score 1–10
+10 Calibrate        python -m sec_overlay.calibrate --workspace <WS>   # risk_score 1–10
 11 Patch            agents/patch.md (opus, PARALLEL) → patch_diff (throwaway copy only)
    Validate-fix     agents/validate-fix.md (opus; personas: security-architect + penetration-tester)
-12 Verify           python -m sec_harness.verify --workspace <WS> --target <T> --config <rules>
-13 Gate             python -m sec_harness.findings_gate --workspace <WS>
+12 Verify           python -m sec_overlay.verify --workspace <WS> --target <T> --config <rules>
+13 Gate             python -m sec_overlay.findings_gate --workspace <WS>
 13.5 Red Team       agents/redteam.md (sonnet) → agents/redteam-adversary.md (opus)
-                    python -m sec_harness.redteam --workspace <WS> [--min-risk N]  → redteam-plan.md
-14 Report           python -m sec_harness.report --workspace <WS>   → report.sarif + report.md
-C2 Postflight       python -m sec_harness.postflight --workspace <WS> --sha <sha>  # durable prior_context
+                    python -m sec_overlay.redteam --workspace <WS> [--min-risk N]  → redteam-plan.md
+14 Report           python -m sec_overlay.report --workspace <WS>   → report.sarif + report.md
+C2 Postflight       python -m sec_overlay.postflight --workspace <WS> --sha <sha>  # durable prior_context
 ```
 
 ### Quick deterministic scan (no agents)
 
 ```bash
-cd skills/sec-harness/helpers
-uv run python -m sec_harness.cli scan \
+cd skills/sec-overlay/helpers
+uv run python -m sec_overlay.cli scan \
   --target <T> --workspace <WS> --config rules/smoke.yaml \
   --sha "$(git -C <T> rev-parse HEAD)"
 ```
@@ -223,8 +223,8 @@ The harness **never executes the target** — it emits a plan a person runs.
 
 ## 5. Workspace artifacts (what a security engineer gets)
 
-Default workspace: `<target>/.sec-harness/<repo-slug>/` — an in-repo, self-ignoring sidecar next to
-the reviewed code (override base `$SEC_HARNESS_HOME`; override entirely with `--workspace`). The
+Default workspace: `<target>/.sec-overlay/<repo-slug>/` — an in-repo, self-ignoring sidecar next to
+the reviewed code (override base `$SEC_OVERLAY_HOME`; override entirely with `--workspace`). The
 read-only invariant is about the reviewed **source**, not this folder.
 
 ```
@@ -243,7 +243,7 @@ state.json               campaign state (pass number, pinned SHA, stages)
 MEMORY.md, learnings/     durable per-repo memory across runs
 ```
 
-Resume an interrupted campaign: `python -m sec_harness.cli memory --target <T>` reports
+Resume an interrupted campaign: `python -m sec_overlay.cli memory --target <T>` reports
 `{finished, resumable, next_phase, stages_done}`.
 
 ---
@@ -277,16 +277,16 @@ Under `references/`. Agents load these by target type; know when each applies:
 
 ## 7. Developing the skill
 
-From `skills/sec-harness/helpers/`:
+From `skills/sec-overlay/helpers/`:
 
 ```bash
 uv run pytest -q                                   # full suite (3 env-only failures — see §2)
 uv run pytest tests/test_fingerprint.py -q         # single file
 uv run pytest tests/test_x.py::test_name           # single test
-uv run ruff check sec_harness/ bench/ tests/       # lint (line-length 100)
-uv run ruff format sec_harness/ bench/ tests/
+uv run ruff check sec_overlay/ bench/ tests/       # lint (line-length 100)
+uv run ruff format sec_overlay/ bench/ tests/
 uv run ty check                                    # static types
-uv run python -m sec_harness.preflight             # tool availability
+uv run python -m sec_overlay.preflight             # tool availability
 ```
 
 **Conventions:**
@@ -302,7 +302,7 @@ uv run python -m sec_harness.preflight             # tool availability
 - **Semgrep rules are a git submodule** (`helpers/rules/semgrep/`). Clone with `--recurse-submodules`.
 - When editing an `agents/*.md` prompt, preserve its hard rules verbatim (model-family diversity,
   tool-receipt safety contract, count-invariant verdict tables) — these are load-bearing, not prose.
-- CLI-callable modules (`python -m sec_harness.<module>`): `cli`, `preflight`, `postflight`,
+- CLI-callable modules (`python -m sec_overlay.<module>`): `cli`, `preflight`, `postflight`,
   `calibrate`, `dedupe`, `verify`, `report`, `redteam`, `bugchain`, `astgrep`, `structural_index`,
   `citations`, `findings_gate`, `rule_gaps`, `redactor`, `graph`.
 
@@ -327,11 +327,11 @@ enforced by a scoped pre-commit hook at `.githooks/pre-commit`:
 
 ```bash
 # one-time, repo-local install (safe for the Go workstream — the hook no-ops
-# on commits that touch nothing under skills/sec-harness/):
-git config core.hooksPath skills/sec-harness/.githooks
+# on commits that touch nothing under skills/sec-overlay/):
+git config core.hooksPath skills/sec-overlay/.githooks
 ```
 
-The hook only inspects staged files under `skills/sec-harness/{agents,helpers,references}`; it
+The hook only inspects staged files under `skills/sec-overlay/{agents,helpers,references}`; it
 never reads, stages, or blocks `go/`. Bypass a genuinely doc-neutral change (e.g. a pure
 formatting pass) with `git commit --no-verify`.
 

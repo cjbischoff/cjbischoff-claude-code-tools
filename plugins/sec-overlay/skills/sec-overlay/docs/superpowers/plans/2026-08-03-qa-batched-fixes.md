@@ -1,4 +1,4 @@
-# sec-harness QA Batched-Fixes Implementation Plan
+# sec-overlay QA Batched-Fixes Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -10,14 +10,14 @@
 
 ## Global Constraints
 
-- **Go-safe, absolute:** NEVER edit `helpers/sec_harness/models.py` or `helpers/sec_harness/evidence.py`. No new enum values, no `to_dict`/`from_dict` changes, no `_MECHANICAL` whitelist changes. These are byte-for-byte mirrored by the parallel Go port; changing them breaks its build.
-- **Do not change `fingerprint()` identity** (`helpers/sec_harness/fingerprint.py`): its `rule_id|cls|enclosing-symbol` key is mirrored by Go (memory: fingerprint-anchor-go-parity). Dedupe fixes use grouping keys inside `dedupe.py`, never the fingerprint algorithm.
+- **Go-safe, absolute:** NEVER edit `helpers/sec_overlay/models.py` or `helpers/sec_overlay/evidence.py`. No new enum values, no `to_dict`/`from_dict` changes, no `_MECHANICAL` whitelist changes. These are byte-for-byte mirrored by the parallel Go port; changing them breaks its build.
+- **Do not change `fingerprint()` identity** (`helpers/sec_overlay/fingerprint.py`): its `rule_id|cls|enclosing-symbol` key is mirrored by Go (memory: fingerprint-anchor-go-parity). Dedupe fixes use grouping keys inside `dedupe.py`, never the fingerprint algorithm.
 - **stdlib-only:** no new runtime dependencies in `pyproject.toml` (dev deps stay pytest/ruff/ty).
-- **Line length 100.** Run `uv run ruff check sec_harness/ tests/` and `uv run ty check` before every commit; zero warnings.
+- **Line length 100.** Run `uv run ruff check sec_overlay/ tests/` and `uv run ty check` before every commit; zero warnings.
 - **TDD for code** (Python): failing test first, confirm RED, minimal GREEN, refactor. Not required for prose-only prompt/doc edits (tdd.md).
 - **Preserve agent-prompt hard rules verbatim:** model-family diversity, the tool-receipt safety contract, count-invariant verdict tables, and the OUTPUT_WRITE_FALLBACK import lines are load-bearing — never reword or drop them.
-- **Git boundary:** stage explicit `skills/sec-harness/...` paths only; never `git add -A`; never touch `go/`. Work on branch `skill-qa-batched-fixes-20260803`.
-- All work is from `helpers/` for Python (`cd skills/sec-harness/helpers`) and from `skills/sec-harness/` for prompts/docs.
+- **Git boundary:** stage explicit `skills/sec-overlay/...` paths only; never `git add -A`; never touch `go/`. Work on branch `skill-qa-batched-fixes-20260803`.
+- All work is from `helpers/` for Python (`cd skills/sec-overlay/helpers`) and from `skills/sec-overlay/` for prompts/docs.
 
 ---
 
@@ -31,7 +31,7 @@ These are Markdown edits. No red-green cycle except A5 (adds a wiring test). Eac
 
 - [ ] **Step 1:** In the Procedure section, add one instruction: when repo docs are thin/structural (a directory tree, header comments, a bare README) rather than narrative, follow directory-comment breadcrumbs into the implementation files they name, and record those as `prior-scan`/`untrusted-doc` leads — do not treat absence of prose docs as "no context".
 - [ ] **Step 2:** Verify the trust-envelope and import blocks are unchanged.
-- [ ] **Step 3:** Commit: `git add skills/sec-harness/agents/context-ingest.md && git commit -m "fix(context-ingest): handle thin structural docs (ISSUE-003)"`
+- [ ] **Step 3:** Commit: `git add skills/sec-overlay/agents/context-ingest.md && git commit -m "fix(context-ingest): handle thin structural docs (ISSUE-003)"`
 
 ### Task A2 — ISSUE-004: recon references kb/context.json
 
@@ -92,8 +92,8 @@ def test_every_required_class_has_extension_with_proof_tuple():
   - `ssrf.md`: tuple = (1) a server-side request built from input, (2) no allowlist/SSRF guard on every path, (3) attacker-controlled destination.
   - `business-logic.md`: tuple = (1) an invariant the workflow must hold, (2) a state/step sequence that violates it, (3) attacker-reachable trigger.
 - [ ] **Step 4 (GREEN):** Run the test — expect PASS.
-- [ ] **Step 5:** In `agents/investigate.md` and `agents/patch.md` Imports section, add one line: "Also load the class extension `{{HARNESS_ROOT}}/agents/classes/{{ATTACK_CLASS}}.md` if it exists — it adds the proof tuple and canonical fix shape for this class." Preserve all existing import lines verbatim.
-- [ ] **Step 6:** Commit: `git add skills/sec-harness/agents/classes/ skills/sec-harness/agents/investigate.md skills/sec-harness/agents/patch.md skills/sec-harness/helpers/tests/test_class_extensions.py && git commit -m "feat(classes): add 6 class extensions + wiring + test (ISSUE-010)"`
+- [ ] **Step 5:** In `agents/investigate.md` and `agents/patch.md` Imports section, add one line: "Also load the class extension `{{OVERLAY_ROOT}}/agents/classes/{{ATTACK_CLASS}}.md` if it exists — it adds the proof tuple and canonical fix shape for this class." Preserve all existing import lines verbatim.
+- [ ] **Step 6:** Commit: `git add skills/sec-overlay/agents/classes/ skills/sec-overlay/agents/investigate.md skills/sec-overlay/agents/patch.md skills/sec-overlay/helpers/tests/test_class_extensions.py && git commit -m "feat(classes): add 6 class extensions + wiring + test (ISSUE-010)"`
 
 ### Task A6 — ISSUE-014: investigate enumerates legal severity values
 
@@ -131,7 +131,7 @@ def test_every_required_class_has_extension_with_proof_tuple():
 ### Task B1 — ISSUE-011 (robust): high-sev unknown CodeQL → security-other
 
 **Files:**
-- Modify: `helpers/sec_harness/partition.py` (`demote_noise`, ~line 55-70)
+- Modify: `helpers/sec_overlay/partition.py` (`demote_noise`, ~line 55-70)
 - Test: `helpers/tests/test_partition.py`
 
 **Interfaces:**
@@ -142,9 +142,9 @@ def test_every_required_class_has_extension_with_proof_tuple():
 
 ```python
 def test_demote_noise_routes_high_severity_unknown_to_security_other(tmp_path):
-    from sec_harness.models import Finding, FindingStatus, Severity
-    from sec_harness.partition import demote_noise
-    from sec_harness.workspace import Workspace, read_findings, write_findings
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.partition import demote_noise
+    from sec_overlay.workspace import Workspace, read_findings, write_findings
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     f = Finding(id="C-1", rule_id="js/insufficient-password-hash", cls="unknown",
                 status=FindingStatus.CANDIDATE, severity=Severity.HIGH,
@@ -159,8 +159,8 @@ def test_demote_noise_routes_high_severity_unknown_to_security_other(tmp_path):
 - [ ] **Step 2:** Run `uv run pytest tests/test_partition.py::test_demote_noise_routes_high_severity_unknown_to_security_other -v` — expect FAIL (status becomes INFORMATIONAL, cls stays unknown).
 - [ ] **Step 3 (GREEN):** In `demote_noise`, before the `is_noise_class` demotion branch, add: if `f.status is FindingStatus.CANDIDATE and f.cls == "unknown" and f.severity in (Severity.HIGH, Severity.CRITICAL)`: set `f.cls = "security-other"`, append a history event `{"event": "partition:reroute-high-sev-unknown"}`, mark the finding dirty, and `continue` (skip demotion). Do not alter `clsmap.NOISE_CLASSES`.
 - [ ] **Step 4:** Run the full `tests/test_partition.py` — expect PASS including the existing low-severity noise test.
-- [ ] **Step 5:** `uv run ruff check sec_harness/ tests/ && uv run ty check`
-- [ ] **Step 6:** Commit: `git add skills/sec-harness/helpers/sec_harness/partition.py skills/sec-harness/helpers/tests/test_partition.py && git commit -m "fix(partition): reroute high-sev unknown CodeQL to security-other (ISSUE-011)"`
+- [ ] **Step 5:** `uv run ruff check sec_overlay/ tests/ && uv run ty check`
+- [ ] **Step 6:** Commit: `git add skills/sec-overlay/helpers/sec_overlay/partition.py skills/sec-overlay/helpers/tests/test_partition.py && git commit -m "fix(partition): reroute high-sev unknown CodeQL to security-other (ISSUE-011)"`
 
 ---
 
@@ -169,7 +169,7 @@ def test_demote_noise_routes_high_severity_unknown_to_security_other(tmp_path):
 ### Task C1 — ISSUE-012: index TS-typed const-arrow and class-field-arrow defs
 
 **Files:**
-- Modify: `helpers/sec_harness/structural_index.py` (regexes at lines 16-19; `list_definitions` tuple at ~line 35)
+- Modify: `helpers/sec_overlay/structural_index.py` (regexes at lines 16-19; `list_definitions` tuple at ~line 35)
 - Create: `helpers/tests/test_structural_index.py`
 
 **Interfaces:**
@@ -178,7 +178,7 @@ def test_demote_noise_routes_high_severity_unknown_to_security_other(tmp_path):
 - [ ] **Step 1 (RED):** Create `helpers/tests/test_structural_index.py`:
 
 ```python
-from sec_harness.structural_index import list_definitions
+from sec_overlay.structural_index import list_definitions
 
 def test_list_definitions_finds_typed_const_arrow(tmp_path):
     p = tmp_path / "a.ts"
@@ -206,7 +206,7 @@ def test_list_definitions_finds_class_field_arrow(tmp_path):
   Add `_JS_FIELD_ARROW = re.compile(r"^\s*([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>")` and append it to the patterns tuple in `list_definitions`. Restrict the field pattern to arrow RHS so `x = 5` is not matched.
 - [ ] **Step 4:** Run the test — expect PASS. Add a guard assertion (e.g. `x = 5` is NOT a def) inside the field-arrow test to prevent over-matching.
 - [ ] **Step 5:** `ruff` + `ty`. Note in the commit body that the "single-hop caller resolution" part of ISSUE-012 is out of scope (an architectural limit of a ripgrep-backed index, not a bug).
-- [ ] **Step 6:** Commit: `git add skills/sec-harness/helpers/sec_harness/structural_index.py skills/sec-harness/helpers/tests/test_structural_index.py && git commit -m "fix(structural-index): index typed/class-field arrow defs (ISSUE-012)"`
+- [ ] **Step 6:** Commit: `git add skills/sec-overlay/helpers/sec_overlay/structural_index.py skills/sec-overlay/helpers/tests/test_structural_index.py && git commit -m "fix(structural-index): index typed/class-field arrow defs (ISSUE-012)"`
 
 ---
 
@@ -216,7 +216,7 @@ D1 and D2 pull the dedupe key in opposite directions (narrower vs broader identi
 
 ### Task D1 — ISSUE-016: preserve distinct findings at the same site
 
-**Files:** Modify `helpers/sec_harness/dedupe.py` (grouping key at lines 55-58); Test `helpers/tests/test_dedupe.py`.
+**Files:** Modify `helpers/sec_overlay/dedupe.py` (grouping key at lines 55-58); Test `helpers/tests/test_dedupe.py`.
 
 **Interfaces:**
 - Consumes: `Finding.dataflow: list[str]` (frozen model field, read-only).
@@ -242,11 +242,11 @@ def test_dedupe_preserves_distinct_findings_at_same_site(tmp_path):
 - [ ] **Step 2:** Run it — expect FAIL (currently merges to 1).
 - [ ] **Step 3 (GREEN):** Change the same-class grouping key from `(f.file, f.line, f.cls)` to `(f.file, f.line, f.cls, tuple(f.dataflow) or f.message)`. Keep the highest-severity-wins merge for genuine collisions on the new key.
 - [ ] **Step 4:** Run the full `tests/test_dedupe.py` — expect PASS (existing tests still hold; `test_dedupe_leaves_distinct_findings` unaffected).
-- [ ] **Step 5:** `ruff` + `ty`. Commit: `git add skills/sec-harness/helpers/sec_harness/dedupe.py skills/sec-harness/helpers/tests/test_dedupe.py && git commit -m "fix(dedupe): preserve distinct findings at same site by dataflow (ISSUE-016)"`
+- [ ] **Step 5:** `ruff` + `ty`. Commit: `git add skills/sec-overlay/helpers/sec_overlay/dedupe.py skills/sec-overlay/helpers/tests/test_dedupe.py && git commit -m "fix(dedupe): preserve distinct findings at same site by dataflow (ISSUE-016)"`
 
 ### Task D2 — ISSUE-018: merge same-fact findings across classes
 
-**Files:** Modify `helpers/sec_harness/dedupe.py` (add a second pass after the same-class pass); Test `helpers/tests/test_dedupe.py`.
+**Files:** Modify `helpers/sec_overlay/dedupe.py` (add a second pass after the same-class pass); Test `helpers/tests/test_dedupe.py`.
 
 **Interfaces:**
 - Consumes: the D1-modified `dedupe_findings`.
@@ -280,7 +280,7 @@ def test_dedupe_merges_same_fact_across_classes(tmp_path):
 
 ### Task E1 — ISSUE-008: markdown claim-extractor for free-text KB
 
-**Files:** Modify `helpers/sec_harness/phase_gate.py` (add after `claims_from_context`, ~line 172); Test `helpers/tests/test_phase_gate.py`.
+**Files:** Modify `helpers/sec_overlay/phase_gate.py` (add after `claims_from_context`, ~line 172); Test `helpers/tests/test_phase_gate.py`.
 
 **Interfaces:**
 - Produces: `claims_from_markdown(text: str) -> list[dict]` returning `{"id": "md-<i>", "text": <line>, "refs": ["<path>:<line>"]}` for genuine `path.ext:line` citations only — never prose file mentions.
@@ -289,7 +289,7 @@ def test_dedupe_merges_same_fact_across_classes(tmp_path):
 
 ```python
 def test_claims_from_markdown_extracts_only_file_line_citations():
-    from sec_harness.phase_gate import claims_from_markdown
+    from sec_overlay.phase_gate import claims_from_markdown
     md = ("The gateway validates tokens in server/api/x.py:12 before dispatch.\n"
           "Also see server/api/y.py:40 for the session check.\n"
           "See the README for background; ARCHITECTURE mentions this too.\n")
@@ -304,13 +304,13 @@ def test_claims_from_markdown_extracts_only_file_line_citations():
   `r"\b([\w./-]+\.(?:py|js|ts|tsx|jsx|go|java|rb|php|c|cc|cpp|rs)):(\d+)\b"`.
   One claim per match, `id=f"md-{i}"`, `text` = the full line containing the match, `refs=[f"{path}:{line}"]`. No existence check here (that is `ref_resolves`' job downstream).
 - [ ] **Step 4:** Run it — expect PASS.
-- [ ] **Step 5:** `ruff` + `ty`. Commit: `git add skills/sec-harness/helpers/sec_harness/phase_gate.py skills/sec-harness/helpers/tests/test_phase_gate.py && git commit -m "feat(phase-gate): claims_from_markdown for free-text KB (ISSUE-008)"`
+- [ ] **Step 5:** `ruff` + `ty`. Commit: `git add skills/sec-overlay/helpers/sec_overlay/phase_gate.py skills/sec-overlay/helpers/tests/test_phase_gate.py && git commit -m "feat(phase-gate): claims_from_markdown for free-text KB (ISSUE-008)"`
 
 ### Task E2 — ISSUE-006: recon gate challenges attack_surface
 
 **⚠️ Pre-check (shared contract):** This task adds a field to `ScanProfile`. Before implementing, confirm `ScanProfile` is NOT in the Go golden set (goldens are `Finding`/`CampaignState` from `models.py` per root CLAUDE.md). Run `rg -n "ScanProfile|scan-profile|attack_surface" go/ 2>/dev/null` from the repo root. If Go mirrors it, STOP and coordinate; otherwise proceed (it is not the frozen contract).
 
-**Files:** Modify `helpers/sec_harness/profile.py` (add `attack_surface_evidence: dict[str, list[str]]`), `helpers/sec_harness/phase_gate.py` (`claims_from_profile`), `agents/recon.md`; Test `helpers/tests/test_phase_gate.py`.
+**Files:** Modify `helpers/sec_overlay/profile.py` (add `attack_surface_evidence: dict[str, list[str]]`), `helpers/sec_overlay/phase_gate.py` (`claims_from_profile`), `agents/recon.md`; Test `helpers/tests/test_phase_gate.py`.
 
 **Interfaces:**
 - Consumes: `profile.attack_surface`, new `profile.attack_surface_evidence`.
@@ -321,7 +321,7 @@ def test_claims_from_markdown_extracts_only_file_line_citations():
 ```python
 def test_claims_from_profile_extracts_attack_surface_claims():
     from types import SimpleNamespace
-    from sec_harness.phase_gate import claims_from_profile
+    from sec_overlay.phase_gate import claims_from_profile
     p = SimpleNamespace(entrypoints=[], subsystems=[], attack_surface=["sqli"],
                         agents_to_spawn=["sqli"],
                         attack_surface_evidence={"sqli": ["src/db.py:10"]})
@@ -334,11 +334,11 @@ def test_claims_from_profile_extracts_attack_surface_claims():
 - [ ] **Step 3 (GREEN):** Add `attack_surface_evidence: dict[str, list[str]] = field(default_factory=dict)` to `ScanProfile` (with `to_dict`/`from_dict` round-trip if the class defines them — verify it is not the frozen module). In `claims_from_profile`, loop over `attack_surface` emitting `{"id": f"surf-{k}", "text": f"attack_surface includes {k}", "refs": evidence.get(k, [])}` via `getattr(profile, "attack_surface_evidence", {})`.
 - [ ] **Step 4:** In `agents/recon.md`, instruct recon to populate `attack_surface_evidence` mapping each selected class to the `file:line` indicator that justified it.
 - [ ] **Step 5:** Run tests — expect PASS. `ruff` + `ty`.
-- [ ] **Step 6:** Commit: `git add skills/sec-harness/helpers/sec_harness/profile.py skills/sec-harness/helpers/sec_harness/phase_gate.py skills/sec-harness/agents/recon.md skills/sec-harness/helpers/tests/test_phase_gate.py && git commit -m "feat(recon-gate): challenge attack_surface with evidence claims (ISSUE-006)"`
+- [ ] **Step 6:** Commit: `git add skills/sec-overlay/helpers/sec_overlay/profile.py skills/sec-overlay/helpers/sec_overlay/phase_gate.py skills/sec-overlay/agents/recon.md skills/sec-overlay/helpers/tests/test_phase_gate.py && git commit -m "feat(recon-gate): challenge attack_surface with evidence claims (ISSUE-006)"`
 
 ### Task E3 — ISSUE-023: produce kb/gates/redteam.json
 
-**Files:** Modify `helpers/sec_harness/redteam.py` (add `build_redteam_gate_record`, wire into the plan writer); Test `helpers/tests/test_redteam.py`.
+**Files:** Modify `helpers/sec_overlay/redteam.py` (add `build_redteam_gate_record`, wire into the plan writer); Test `helpers/tests/test_redteam.py`.
 
 **Interfaces:**
 - Consumes: needs-runtime `Finding`s, `phase_gate.build_gate_record`/`write_gate_record`.
@@ -349,7 +349,7 @@ def test_claims_from_profile_extracts_attack_surface_claims():
 - [ ] **Step 3 (GREEN):** Implement `build_redteam_gate_record`: map each finding to a claim-shaped `GateDecision(status="to-adversary", claim_id=f.id, text=f.title or f.message, refs=[f"{f.file}:{f.line}"])`, then delegate to `phase_gate.build_gate_record("redteam", decisions, verdicts)`. Do not re-run `ref_resolves` (findings are already tool-receipt gated upstream). Wire a call into `redteam.write_plan` (or `main`) so the record is written whenever the plan is generated.
 - [ ] **Step 4:** Run tests — expect PASS. `ruff` + `ty`.
 - [ ] **Step 5:** Confirm `agents/redteam-adversary.md` verdict vocab (`CONFIRMED`/`WEAKENED`/`INVALIDATED`) already matches `build_gate_record`; no prompt change needed (documented — the ISSUE-023 "vocab mismatch" was a mischaracterization; the real defect was the missing writer).
-- [ ] **Step 6:** Commit: `git add skills/sec-harness/helpers/sec_harness/redteam.py skills/sec-harness/helpers/tests/test_redteam.py && git commit -m "feat(redteam): emit kb/gates/redteam.json gate record (ISSUE-023)"`
+- [ ] **Step 6:** Commit: `git add skills/sec-overlay/helpers/sec_overlay/redteam.py skills/sec-overlay/helpers/tests/test_redteam.py && git commit -m "feat(redteam): emit kb/gates/redteam.json gate record (ISSUE-023)"`
 
 ---
 
@@ -357,7 +357,7 @@ def test_claims_from_profile_extracts_attack_surface_claims():
 
 ### Task F1 — ISSUE-021: verify re-runs the finding's own backend
 
-**Files:** Modify `helpers/sec_harness/verify.py` (imports at 49-50; `verify_patch` 130-168; `_file_has_hit` 104-127; `verify_findings` 171-201); Test `helpers/tests/test_verify.py`.
+**Files:** Modify `helpers/sec_overlay/verify.py` (imports at 49-50; `verify_patch` 130-168; `_file_has_hit` 104-127; `verify_findings` 171-201); Test `helpers/tests/test_verify.py`.
 
 **Interfaces:**
 - Consumes: `Finding.evidence_sources` prefixes (`semgrep:` / `codeql:` / `sca:`), `sast.run_semgrep`, `codeql.run_codeql`, `sca.run_sca`.
@@ -367,7 +367,7 @@ def test_claims_from_profile_extracts_attack_surface_claims():
 
 ```python
 def test_codeql_finding_routes_to_codeql_rerun(monkeypatch):
-    import sec_harness.verify as V
+    import sec_overlay.verify as V
     calls = []
     monkeypatch.setattr(V, "run_semgrep",
                         lambda *a, **k: (_ for _ in ()).throw(AssertionError("no semgrep")))
@@ -380,11 +380,11 @@ def test_codeql_finding_routes_to_codeql_rerun(monkeypatch):
 - [ ] **Step 2:** Run it — expect FAIL (no `run_codeql` import/branch).
 - [ ] **Step 3 (GREEN):** Add a backend picker: inspect `evidence_sources` prefixes, dispatch to the matching runner (`run_semgrep`/`run_codeql`/`run_sca`), generalize `_semgrep_rules` → `_source_rules(prefix, evidence_sources)`. Thread `run_codeql`'s `language`/`db_dir` as optional kwargs on `verify_patch`/`verify_findings`; when unavailable, keep the finding at `static-only` (explicit, not silent-clean). Default to semgrep when no codeql/sca prefix is present (existing tests unaffected).
 - [ ] **Step 4:** Run the full `tests/test_verify.py` — expect PASS. `ruff` + `ty`.
-- [ ] **Step 5:** Commit: `git add skills/sec-harness/helpers/sec_harness/verify.py skills/sec-harness/helpers/tests/test_verify.py && git commit -m "fix(verify): re-run the finding's own backend, not just semgrep (ISSUE-021)"`
+- [ ] **Step 5:** Commit: `git add skills/sec-overlay/helpers/sec_overlay/verify.py skills/sec-overlay/helpers/tests/test_verify.py && git commit -m "fix(verify): re-run the finding's own backend, not just semgrep (ISSUE-021)"`
 
 ### Task F2 — ISSUE-027: calibrate promotes runtime-dependent findings
 
-**Files:** Modify `helpers/sec_harness/calibrate.py` (`calibrate_findings`, ~line 130); Test `helpers/tests/test_calibrate.py`.
+**Files:** Modify `helpers/sec_overlay/calibrate.py` (`calibrate_findings`, ~line 130); Test `helpers/tests/test_calibrate.py`.
 
 **Interfaces:**
 - Consumes: `campaign.promote_runtime_dependent`.
@@ -394,9 +394,9 @@ def test_codeql_finding_routes_to_codeql_rerun(monkeypatch):
 
 ```python
 def test_calibrate_promotes_runtime_dependent_before_scoring(tmp_path):
-    from sec_harness.calibrate import calibrate_findings
-    from sec_harness.models import Finding, FindingStatus, Severity
-    from sec_harness.workspace import Workspace, read_findings, write_findings
+    from sec_overlay.calibrate import calibrate_findings
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.workspace import Workspace, read_findings, write_findings
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     write_findings(ws, [Finding(id="A", rule_id="r", cls="business-logic",
                                 status=FindingStatus.RAW, severity=Severity.LOW,
@@ -407,14 +407,14 @@ def test_calibrate_promotes_runtime_dependent_before_scoring(tmp_path):
 ```
 
 - [ ] **Step 2:** Run it — expect FAIL (stays RAW).
-- [ ] **Step 3 (GREEN):** At the top of `calibrate_findings`, call `from sec_harness.campaign import promote_runtime_dependent; promote_runtime_dependent(ws)` before reading/scoring (re-read findings after). No schema change.
+- [ ] **Step 3 (GREEN):** At the top of `calibrate_findings`, call `from sec_overlay.campaign import promote_runtime_dependent; promote_runtime_dependent(ws)` before reading/scoring (re-read findings after). No schema change.
 - [ ] **Step 4:** Run tests — expect PASS. `ruff` + `ty`.
 - [ ] **Step 5:** Update `SKILL.md` phase table so promotion is documented as happening inside calibrate (remove any implication it is a separate manual step).
-- [ ] **Step 6:** Commit: `git add skills/sec-harness/helpers/sec_harness/calibrate.py skills/sec-harness/helpers/tests/test_calibrate.py skills/sec-harness/SKILL.md && git commit -m "fix(calibrate): auto-promote runtime-dependent findings (ISSUE-027)"`
+- [ ] **Step 6:** Commit: `git add skills/sec-overlay/helpers/sec_overlay/calibrate.py skills/sec-overlay/helpers/tests/test_calibrate.py skills/sec-overlay/SKILL.md && git commit -m "fix(calibrate): auto-promote runtime-dependent findings (ISSUE-027)"`
 
 ### Task F3 — ISSUE-019 + ISSUE-013: report-layer disposition split (Go-safe)
 
-**Files:** Modify `helpers/sec_harness/report.py` (`to_markdown`, needs-deployment block 137-148) and `helpers/sec_harness/redteam.py` (needs-runtime rendering); Test `helpers/tests/test_report.py`.
+**Files:** Modify `helpers/sec_overlay/report.py` (`to_markdown`, needs-deployment block 137-148) and `helpers/sec_overlay/redteam.py` (needs-runtime rendering); Test `helpers/tests/test_report.py`.
 
 **Interfaces:**
 - Produces: needs-deployment findings render under two sub-headings — "Code-settled, runtime-impact-pending" (non-empty `dataflow` AND `preconditions`) before "Verification-incomplete" (the rest). No status/enum/model change.
@@ -423,8 +423,8 @@ def test_calibrate_promotes_runtime_dependent_before_scoring(tmp_path):
 
 ```python
 def test_needs_deployment_split_by_dataflow_presence(tmp_path):
-    from sec_harness.report import to_markdown
-    from sec_harness.models import Finding, FindingStatus, Severity
+    from sec_overlay.report import to_markdown
+    from sec_overlay.models import Finding, FindingStatus, Severity
     settled = Finding(id="A", rule_id="r", cls="sqli",
                       status=FindingStatus.NEEDS_DEPLOYMENT_TESTING, severity=Severity.HIGH,
                       file="a.py", line=1, message="m", dataflow=["src", "sink"],
@@ -440,11 +440,11 @@ def test_needs_deployment_split_by_dataflow_presence(tmp_path):
 - [ ] **Step 2:** Run it — expect FAIL.
 - [ ] **Step 3 (GREEN):** In `to_markdown`, split `needs_deployment` into `settled = [f for f in needs_deployment if f.dataflow and f.preconditions]` and `incomplete = [the rest]`; render two subsections under the existing heading: "### Code-settled, runtime-impact-pending" then "### Verification-incomplete". Mirror the grouping in `redteam.py`'s needs-runtime section.
 - [ ] **Step 4:** Run the full `tests/test_report.py` — expect PASS (existing heading test still holds).
-- [ ] **Step 5:** `ruff` + `ty`. Commit: `git add skills/sec-harness/helpers/sec_harness/report.py skills/sec-harness/helpers/sec_harness/redteam.py skills/sec-harness/helpers/tests/test_report.py && git commit -m "fix(report): split needs-deployment by code-settled vs incomplete (ISSUE-019/013)"`
+- [ ] **Step 5:** `ruff` + `ty`. Commit: `git add skills/sec-overlay/helpers/sec_overlay/report.py skills/sec-overlay/helpers/sec_overlay/redteam.py skills/sec-overlay/helpers/tests/test_report.py && git commit -m "fix(report): split needs-deployment by code-settled vs incomplete (ISSUE-019/013)"`
 
 ### Task F4 — ISSUE-026: crypto_policy flags CBC-without-AEAD and bare-hash KDF
 
-**Files:** Modify `helpers/sec_harness/crypto_policy.py` (`check`, line 24); Create `helpers/tests/test_crypto_policy.py`.
+**Files:** Modify `helpers/sec_overlay/crypto_policy.py` (`check`, line 24); Create `helpers/tests/test_crypto_policy.py`.
 
 **Interfaces:**
 - Produces: `check("aes-256-cbc")["ok"] is False`; `check("sha256", params={"kdf_context": True})["ok"] is False`. Existing approved algos (e.g. `aes-256-gcm`) still `ok:true`.
@@ -452,7 +452,7 @@ def test_needs_deployment_split_by_dataflow_presence(tmp_path):
 - [ ] **Step 1 (RED):** Create `helpers/tests/test_crypto_policy.py`:
 
 ```python
-from sec_harness.crypto_policy import check
+from sec_overlay.crypto_policy import check
 
 def test_cbc_without_aead_is_denied():
     assert check("aes-256-cbc")["ok"] is False
@@ -467,11 +467,11 @@ def test_bare_hash_as_kdf_is_denied():
 - [ ] **Step 2:** Run it — expect the CBC and KDF tests FAIL, the GCM test PASS.
 - [ ] **Step 3 (GREEN):** In `check`, after the deny-set loop: (a) if `a` contains a non-AEAD mode (`cbc`/`cfb`/`ofb`, or `ecb` already denied) and lacks an AEAD/MAC indicator (`gcm`/`ccm`/`poly1305`/`hmac`), append `"non-AEAD block cipher mode without MAC: {algo}"`; (b) if `params.get("kdf_context")` is truthy and `a` is a bare fast hash (`sha256`/`sha512`/`md5`/`sha1` with no `pbkdf2`/`bcrypt`/`scrypt`/`argon2` substring), append `"bare fast hash used as KDF: {algo}"`. `params` is already an untyped dict — the new key is Go-safe.
 - [ ] **Step 4:** Run tests — expect PASS. `ruff` + `ty`.
-- [ ] **Step 5:** Commit: `git add skills/sec-harness/helpers/sec_harness/crypto_policy.py skills/sec-harness/helpers/tests/test_crypto_policy.py && git commit -m "fix(crypto-policy): flag CBC-no-AEAD and bare-hash KDF (ISSUE-026)"`
+- [ ] **Step 5:** Commit: `git add skills/sec-overlay/helpers/sec_overlay/crypto_policy.py skills/sec-overlay/helpers/tests/test_crypto_policy.py && git commit -m "fix(crypto-policy): flag CBC-no-AEAD and bare-hash KDF (ISSUE-026)"`
 
 ### Task F5 — ISSUE-022: redteam surfaces prime-manual-test None-risk findings (low priority)
 
-**Files:** Modify `helpers/sec_harness/redteam.py` (`_above_bar`, 40-50); Test `helpers/tests/test_redteam.py`.
+**Files:** Modify `helpers/sec_overlay/redteam.py` (`_above_bar`, 40-50); Test `helpers/tests/test_redteam.py`.
 
 **Interfaces:**
 - Produces: a finding carrying a `{"event": "redteam:prime-manual-test"}` history entry clears `_above_bar` even at low severity + `risk_score=None`.
@@ -490,7 +490,7 @@ def test_bare_hash_as_kdf_is_denied():
 
 - [ ] **Step 1:** In `SKILL.md` Phase 8, change any wording that runs judge "with"/concurrently to validate so judge completes and persists BEFORE validate begins (sequential per finding). State explicitly: never dispatch two agents that write the same finding file in the same wave — the last writer wins and silently drops the other's field.
 - [ ] **Step 2:** Add a one-line note to `agents/judge.md` and `agents/validate.md` Output sections: "You may be one of several writers of this file across phases; only ever modify your own fields, and assume your write is sequenced after the prior phase's — do not run concurrently with another writer of the same id."
-- [ ] **Step 3:** Commit: `git add skills/sec-harness/SKILL.md skills/sec-harness/agents/judge.md skills/sec-harness/agents/validate.md && git commit -m "fix(orchestration): serialize judge/validate writes per finding (ISSUE-017)"`
+- [ ] **Step 3:** Commit: `git add skills/sec-overlay/SKILL.md skills/sec-overlay/agents/judge.md skills/sec-overlay/agents/validate.md && git commit -m "fix(orchestration): serialize judge/validate writes per finding (ISSUE-017)"`
 
 ---
 

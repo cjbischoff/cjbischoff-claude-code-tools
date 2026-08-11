@@ -49,7 +49,7 @@ flowchart LR
         A["every agent prompt"]
     end
 
-    subgraph HELPERS["../helpers/sec_harness/ (Python)"]
+    subgraph HELPERS["../helpers/sec_overlay/ (Python)"]
         FG["findings_gate.py"]
         PROF["profile.py"]
         CP["crypto_policy.py"]
@@ -83,7 +83,7 @@ flowchart LR
 
 #### `prompt-constants.md` — the constitution (9 blocks, pasted into every agent)
 The single most load-bearing file here. Nine named blocks are copied **verbatim** into the
-top of every agent prompt (agents reference it via the `{{HARNESS_ROOT}}` path token). If
+top of every agent prompt (agents reference it via the `{{OVERLAY_ROOT}}` path token). If
 you change a word here, every agent's behaviour changes.
 
 | Block | What it forces |

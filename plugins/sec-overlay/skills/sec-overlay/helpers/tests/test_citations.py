@@ -1,15 +1,15 @@
 """Tests for F1 citation auto-attach."""
-from sec_harness.asvs import AsvsCatalog, default_catalog_path
-from sec_harness.citations import (
+from sec_overlay.asvs import AsvsCatalog, default_catalog_path
+from sec_overlay.citations import (
     CLASS_ASVS,
     CLASS_CODEGUARD,
     annotate_findings,
     attach,
     citations_for,
 )
-from sec_harness.codeguard import default_codeguard_dir, load_rules
-from sec_harness.models import Finding, FindingStatus, Severity
-from sec_harness.workspace import Workspace, read_findings, write_findings
+from sec_overlay.codeguard import default_codeguard_dir, load_rules
+from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.workspace import Workspace, read_findings, write_findings
 
 
 def _f(cls, status=FindingStatus.CONFIRMED, **kw):
@@ -56,7 +56,7 @@ def test_all_mapped_ids_exist_in_seed():
 
 
 def test_calibrate_attaches_citations(tmp_path):
-    from sec_harness.calibrate import calibrate_findings
+    from sec_overlay.calibrate import calibrate_findings
     ws = Workspace(tmp_path); ws.ensure()
     write_findings(ws, [_f("crypto", cvss_vector="CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:H/A:N")])
     calibrate_findings(ws)

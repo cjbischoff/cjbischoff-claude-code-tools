@@ -2,8 +2,8 @@
 
 import re
 
-from sec_harness.models import FindingStatus, Severity
-from sec_harness.secrets import _PATTERNS, _PLACEHOLDER, scan_secrets
+from sec_overlay.models import FindingStatus, Severity
+from sec_overlay.secrets import _PATTERNS, _PLACEHOLDER, scan_secrets
 
 
 def test_patterns_shape():

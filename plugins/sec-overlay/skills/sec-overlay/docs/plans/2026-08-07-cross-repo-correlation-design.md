@@ -1,9 +1,9 @@
 # Cross-repo correlation — feature design
 
 **Status:** design (from live need during the AEM 4-repo campaign, 2026-08-07)
-**Problem:** sec-harness is single-target. A product spanning a solution repo (RBAC defs), two
+**Problem:** sec-overlay is single-target. A product spanning a solution repo (RBAC defs), two
 eng/go services (enforcement), and an infra repo (deployment/entitlements) produces four
-independent `.sec-harness/<slug>/` workspaces with no link between them. The highest-value
+independent `.sec-overlay/<slug>/` workspaces with no link between them. The highest-value
 findings are *cross-repo by construction*: an RBAC privilege defined in repo A is enforced (or
 not) by a handler in repo B, wired by entitlements in repo C. Today that correlation is done by
 hand in the main agent. This designs a first-class capability.
@@ -30,7 +30,7 @@ Concrete cross-repo links already surfaced, each currently living only as prose 
 A new workspace type `CorrelationWorkspace` that ingests N per-repo memory folders (paths or
 slugs) read-only and writes its own `correlation/` artifacts. No re-scan; it joins existing
 `findings/`, `kb/context.json`, `kb/THREAT_MODEL.md`, `kb/architecture.md`, `kb/gates/`.
-CLI sketch: `python -m sec_harness.correlate --repos <slugOrPath>... --out <dir>`.
+CLI sketch: `python -m sec_overlay.correlate --repos <slugOrPath>... --out <dir>`.
 
 ### 2. Cross-repo finding identity + edges (deterministic-first)
 Add a `cross_repo` edge model. An edge is `{type, from: <repo:finding>, to: <repo:finding|symbol|proto>, evidence, confidence}`. Edge types:

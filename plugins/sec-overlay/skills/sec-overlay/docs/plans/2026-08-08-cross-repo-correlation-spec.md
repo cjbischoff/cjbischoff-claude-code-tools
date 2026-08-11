@@ -10,8 +10,8 @@
 
 ## 1. Goal & success criteria
 
-sec-harness is single-target. A product spanning a solution repo (RBAC defs), service repos
-(enforcement), and an infra repo (deployment) produces N independent `.sec-harness/<slug>/`
+sec-overlay is single-target. A product spanning a solution repo (RBAC defs), service repos
+(enforcement), and an infra repo (deployment) produces N independent `.sec-overlay/<slug>/`
 workspaces with no link. The 4-repo AEM audit proved the highest-value findings are cross-repo by
 construction and today live only as prose in a `needs-deployment-testing` "out-of-repo" note. Spec B
 makes correlation a first-class capability.
@@ -35,7 +35,7 @@ did not surface; it links, rolls up, and re-thresholds existing findings.
 
 ## 2. Architecture
 
-New module `sec_harness.correlate` + a `CorrelationWorkspace` dataclass rooted at an `--out` dir that
+New module `sec_overlay.correlate` + a `CorrelationWorkspace` dataclass rooted at an `--out` dir that
 holds the manifest, the edge graph, verdicts, gate records, and the combined artifacts. It spans
 repos, so it is NOT stored inside any member repo's sidecar.
 
@@ -68,7 +68,7 @@ repos, so it is NOT stored inside any member repo's sidecar.
 sub-services that share a `repo_slug` (the run-log collision: `internal/aemeventservice` and
 `internal/aemanalytics` both slug `go-<hash>`) — the manifest may list the same `slug` twice with
 different `scan_scope` and the member key stays unique. Ingest opens no member file for write. CLI:
-`python -m sec_harness.correlate --manifest product.json --out <dir>`.
+`python -m sec_overlay.correlate --manifest product.json --out <dir>`.
 
 ---
 

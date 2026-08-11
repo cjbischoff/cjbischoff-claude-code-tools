@@ -1,9 +1,9 @@
 ---
-name: sec-harness
+name: sec-overlay
 description: Self-contained agentic security-audit harness. Runs bundled SAST, normalizes findings, and emits SARIF + Markdown reports. Use for security audits and vulnerability scans of a codebase. This is the deterministic core; multi-agent investigation and remediation phases are added in later increments.
 ---
 
-# sec-harness
+# sec-overlay
 
 A self-contained security-audit harness. It calls binary tools directly (no other
 skills/plugins) and never executes the scanned code.
@@ -32,7 +32,7 @@ recon, architecture, threat-model, C1 context — each end with a reusable **pha
 output is trusted only after an independent challenge:
 
 ```
-phase output → deterministic pre-check (sec_harness.phase_gate.run_phase_checks)
+phase output → deterministic pre-check (sec_overlay.phase_gate.run_phase_checks)
                  cited code ref does not resolve / malformed → REJECT (no agent), log reason
                  resolves / can't-settle → independent adversary (agents/phase-adversary.md, opus,
                                             DIFFERENT family, fresh context)
@@ -51,8 +51,8 @@ different family than the sonnet producer.
 From the harness helpers directory:
 
 ```bash
-cd skills/sec-harness/helpers
-uv run python -m sec_harness.cli scan \
+cd skills/sec-overlay/helpers
+uv run python -m sec_overlay.cli scan \
   --target <path-to-code> \
   --workspace <path-to-output-workspace> \
   --config rules/smoke.yaml \
@@ -70,13 +70,13 @@ Outputs, under the workspace directory:
 One audit pass, in order. The main agent drives this; `<T>` = target repo,
 `<WS>` = workspace dir, `<sha>` = `git -C <T> rev-parse HEAD`, `<rules>` = a local
 semgrep ruleset. Deterministic steps run via `uv run` from `<HELPERS_DIR>` (the
-absolute path to `skills/sec-harness/helpers`); agent steps spawn a subagent with the
+absolute path to `skills/sec-overlay/helpers`); agent steps spawn a subagent with the
 named prompt (tokens substituted). Prompts use path tokens, never repo-root-relative
 paths, so a subagent reads the right file regardless of its CWD — substitute **all** of
 these before spawning: `{{TARGET}}`, `{{WORKSPACE}}`, `{{ATTACK_CLASS}}`, `{{PHASE}}`,
-`{{ROUND}}`, the two path anchors `{{HARNESS_ROOT}}` (absolute path to
-`skills/sec-harness/`) and `{{HELPERS_DIR}}` (absolute path to
-`skills/sec-harness/helpers`), and the two scope anchors `{{REPO_ROOT}}` (absolute
+`{{ROUND}}`, the two path anchors `{{OVERLAY_ROOT}}` (absolute path to
+`skills/sec-overlay/`) and `{{HELPERS_DIR}}` (absolute path to
+`skills/sec-overlay/helpers`), and the two scope anchors `{{REPO_ROOT}}` (absolute
 git top-level of the scanned repo, read from `kb/scan-scope.json`) and `{{SCAN_SCOPE}}`
 (the audit target path relative to `{{REPO_ROOT}}`, also from `kb/scan-scope.json`).
 All agents cite paths **repo-root-relative**; all gates/dedupe/verify resolve against
@@ -90,26 +90,26 @@ prompts carry the `OUTPUT_WRITE_FALLBACK` rule (write the KB/findings artifact v
 `python3 shutil.copy` from a temp file instead), so a blocked Write never silently loses a
 finding. When dispatching, keep that fallback in the agent's instructions.
 
-0. **Preflight** — `python -m sec_harness.preflight`; run any printed install/vendor commands before scanning (missing backends are skipped + logged). The report lists which **CodeQL query packs** are installed — the `codeql` binary being present does NOT mean the per-language packs exist, and a missing pack silently drops all of that language's dataflow coverage. If a language you will scan is not listed, run `codeql pack download codeql/<lang>-queries` first. CodeQL runs only on a trusted config (`codeql_config_trusted`); unsupported or untrusted configs are skipped and logged in the prefilter `failed` list.
-1. **Begin pass** — `from sec_harness.state import begin_pass; begin_pass(<WS>, <sha>)` (pins the SHA; increments on repeat passes). Note the import path: `begin_pass` lives in `sec_harness.state`; `record_stage`/`pass_report` live in `sec_harness.campaign`.
+0. **Preflight** — `python -m sec_overlay.preflight`; run any printed install/vendor commands before scanning (missing backends are skipped + logged). The report lists which **CodeQL query packs** are installed — the `codeql` binary being present does NOT mean the per-language packs exist, and a missing pack silently drops all of that language's dataflow coverage. If a language you will scan is not listed, run `codeql pack download codeql/<lang>-queries` first. CodeQL runs only on a trusted config (`codeql_config_trusted`); unsupported or untrusted configs are skipped and logged in the prefilter `failed` list.
+1. **Begin pass** — `from sec_overlay.state import begin_pass; begin_pass(<WS>, <sha>)` (pins the SHA; increments on repeat passes). Note the import path: `begin_pass` lives in `sec_overlay.state`; `record_stage`/`pass_report` live in `sec_overlay.campaign`.
 C1. **Context-ingest** (sonnet) — `agents/context-ingest.md` → `kb/context.json`; `agents/context-adversary.md` (opus) pressure-checks it. Runs here, BEFORE recon, so its leads can feed recon's `attack_surface`. See **Context ingestion (C1/C2)** below.
-T1. **Tier-1 substrate** (no LLM) — `python -m sec_harness.graph build --target <T> --workspace <WS> --sha <sha>`; structural_index + a regex call-edge heuristic + osv/secrets/crypto facts → `kb/graph.json` v1, consumed by recon, architecture, and threat-model.
+T1. **Tier-1 substrate** (no LLM) — `python -m sec_overlay.graph build --target <T> --workspace <WS> --sha <sha>`; structural_index + a regex call-edge heuristic + osv/secrets/crypto facts → `kb/graph.json` v1, consumed by recon, architecture, and threat-model.
 2. **Recon** (sonnet) — `agents/recon.md` → `kb/scan-profile.json`. Validate with `load_profile`. **→ phase gate** (`agents/phase-adversary.md`, opus).
 3. **Architecture** (sonnet) — `agents/architecture.md` → `kb/architecture.md` + `kb/entities/`. **→ phase gate**.
 4. **Threat model** (sonnet) — `agents/threat-model.md` → `kb/THREAT_MODEL.md` (hunt list). **→ phase gate**.
-5. **Prefilter** (no LLM) — `from sec_harness.prefilter import run_prefilter; run_prefilter(ws, target, profile)` (args: `Workspace`, target path, the `ScanProfile` from recon — NOT the raw `sast_plan` dict). Backends run concurrently (one unit per semgrep ruleset / codeql language); results are merged deterministically (sorted, `C-####` ids) so serial and concurrent runs are byte-identical. Returns `{candidates, backends_run, skipped, failed, excluded, dropped_nonsecurity, skipped_reasons}`: `skipped_reasons` maps each backend that did NOT run to a reason (`disabled`/`absent`/`untrusted`/`pack-missing`); `dropped_nonsecurity` counts non-security semgrep lint dropped by the security-only filter; `failed` lists backends that errored. **A scan is only clean if every PLANNED backend ran. STOP and surface a setup error if `backends_run` is empty OR any planned backend appears in `failed` / `skipped_reasons` (e.g. `codeql: pack-missing` = a missing query pack → zero dataflow for that language). A partial scan (semgrep ran, codeql failed) is a coverage hole, not "no findings" — do NOT report it as clean.** Then `demote_noise(ws)` (moves log-injection/clear-text-logging/unknown candidates to `informational`), `agents = reconcile_plan(ws, profile.agents_to_spawn)` (routes real-security classes recon omitted), and `agents = merge_custom_check_classes(agents, discover_custom_checks(target))` (from `sec_harness.custom_checks`; adds any in-repo `.sec-harness/checks/` bundles the target declares). Spawn investigate agents over the reconciled `agents`; for any class that is a custom-check id, append `custom_check_instructions(check)` to the standard `agents/investigate.md` prompt after the shared `prompt-constants.md` blocks, per its check's own bundle. The general-triage `security-other` agent handles any residual unrouted classes.
+5. **Prefilter** (no LLM) — `from sec_overlay.prefilter import run_prefilter; run_prefilter(ws, target, profile)` (args: `Workspace`, target path, the `ScanProfile` from recon — NOT the raw `sast_plan` dict). Backends run concurrently (one unit per semgrep ruleset / codeql language); results are merged deterministically (sorted, `C-####` ids) so serial and concurrent runs are byte-identical. Returns `{candidates, backends_run, skipped, failed, excluded, dropped_nonsecurity, skipped_reasons}`: `skipped_reasons` maps each backend that did NOT run to a reason (`disabled`/`absent`/`untrusted`/`pack-missing`); `dropped_nonsecurity` counts non-security semgrep lint dropped by the security-only filter; `failed` lists backends that errored. **A scan is only clean if every PLANNED backend ran. STOP and surface a setup error if `backends_run` is empty OR any planned backend appears in `failed` / `skipped_reasons` (e.g. `codeql: pack-missing` = a missing query pack → zero dataflow for that language). A partial scan (semgrep ran, codeql failed) is a coverage hole, not "no findings" — do NOT report it as clean.** Then `demote_noise(ws)` (moves log-injection/clear-text-logging/unknown candidates to `informational`), `agents = reconcile_plan(ws, profile.agents_to_spawn)` (routes real-security classes recon omitted), and `agents = merge_custom_check_classes(agents, discover_custom_checks(target))` (from `sec_overlay.custom_checks`; adds any in-repo `.sec-overlay/checks/` bundles the target declares). Spawn investigate agents over the reconciled `agents`; for any class that is a custom-check id, append `custom_check_instructions(check)` to the standard `agents/investigate.md` prompt after the shared `prompt-constants.md` blocks, per its check's own bundle. The general-triage `security-other` agent handles any residual unrouted classes.
 6. **Investigate** (sonnet, parallel over `scan-profile.agents_to_spawn`) — `agents/investigate.md` per class → `raw`/`rejected`/new `A-####`.
-7. **Dedupe** (no LLM) — `python -m sec_harness.dedupe --workspace <WS>`.
+7. **Dedupe** (no LLM) — `python -m sec_overlay.dedupe --workspace <WS>`.
 8. **Critic** (sonnet) — `agents/critic.md` (production viability) → rejects non-shipping.
 9. **Adversarial validate** (opus, DIFFERENT family) — `agents/validate.md` → `confirmed`/`rejected`.
-10. **Calibrate** (no LLM) — `python -m sec_harness.calibrate --workspace <WS>` → `risk_score`.
+10. **Calibrate** (no LLM) — `python -m sec_overlay.calibrate --workspace <WS>` → `risk_score`.
 11. **Patch** (opus) — `agents/patch.md` → `patch_diff` on confirmed findings.
-12. **Verify** (no LLM) — `python -m sec_harness.verify --workspace <WS> --target <T> --config <rules>` → `fixed`/`verified-static`.
-13. **Gate** (no LLM) — `python -m sec_harness.findings_gate --workspace <WS>`.
+12. **Verify** (no LLM) — `python -m sec_overlay.verify --workspace <WS> --target <T> --config <rules>` → `fixed`/`verified-static`.
+13. **Gate** (no LLM) — `python -m sec_overlay.findings_gate --workspace <WS>`.
 13.5 **Red Team** (sonnet + opus adversary) — `agents/redteam.md` sets `runtime_disposition` +
     `runtime_test` on confirmed findings; `agents/redteam-adversary.md` pressure-checks the plan;
-    `python -m sec_harness.redteam --workspace <WS>` renders `redteam-plan.md`. See **Phase 5.5**.
-14. **Report** (no LLM) — `python -m sec_harness.report --workspace <WS>` → final `report.sarif` + `report.md` (confirmed/fixed only, with risk + verification); points at `redteam-plan.md`. Report auto-builds `kb/coverage-ledger.json` from `attack_surface × finding status` when absent (`coverage_ledger.build_coverage_ledger`); a class with no confirmed/NDT finding blocks `completeness==complete`. `findings.json` now carries confirmed/fixed **and** needs-deployment-testing findings (distinguished by `status`).
+    `python -m sec_overlay.redteam --workspace <WS>` renders `redteam-plan.md`. See **Phase 5.5**.
+14. **Report** (no LLM) — `python -m sec_overlay.report --workspace <WS>` → final `report.sarif` + `report.md` (confirmed/fixed only, with risk + verification); points at `redteam-plan.md`. Report auto-builds `kb/coverage-ledger.json` from `attack_surface × finding status` when absent (`coverage_ledger.build_coverage_ledger`); a class with no confirmed/NDT finding blocks `completeness==complete`. `findings.json` now carries confirmed/fixed **and** needs-deployment-testing findings (distinguished by `status`).
 
 For repeat passes see **Phase 6** (incremental scoping + carry-forward). The per-phase
 sections below detail each step.
@@ -197,7 +197,7 @@ are READ-ONLY over the target and call only binary tools (`rg`, file reads).
 
 1. **Recon** (model: sonnet) — prompt `agents/recon.md`. Surveys the repo, writes
    `{{WORKSPACE}}/kb/scan-profile.json`. Validate it afterward:
-   `uv run python -c "from sec_harness.profile import load_profile; load_profile('{{WORKSPACE}}/kb/scan-profile.json')"` (raises on invalid).
+   `uv run python -c "from sec_overlay.profile import load_profile; load_profile('{{WORKSPACE}}/kb/scan-profile.json')"` (raises on invalid).
 2. **Architecture** (model: sonnet) — prompt `agents/architecture.md`. Reads the
    profile + repo, writes `kb/architecture.md` and `kb/entities/*.md`.
 3. **Threat model** (model: sonnet) — prompt `agents/threat-model.md`. Reads the KB
@@ -263,15 +263,15 @@ Run AFTER the KB build. Prerequisites in the workspace: `kb/scan-profile.json`,
 
 1. **Prefilter** (no LLM): run the deterministic scan to produce candidate
    findings (Plan 1):
-   `uv run python -m sec_harness.cli scan --target <T> --workspace <WS> --config <rules> --sha <sha>`
+   `uv run python -m sec_overlay.cli scan --target <T> --workspace <WS> --config <rules> --sha <sha>`
 2. **Investigate** (model: sonnet, PARALLEL): partition candidates first —
-   `partition_candidates_by_class(ws)` (from `sec_harness.partition`) groups them
+   `partition_candidates_by_class(ws)` (from `sec_overlay.partition`) groups them
    by `cls`. Investigate runs whenever `must_investigate(profile)` is true (any
    planned class) — even at 0 SAST candidates. A 0-candidate business-logic repo
    is a coverage story, not a clean bill (O-007). Then dispatch the investigate
    subagents **in ONE message** — one per
    class in `scan-profile.json` `agents_to_spawn` (after merging in any custom-check
-   classes via `sec_harness.custom_checks.discover_custom_checks(target)` +
+   classes via `sec_overlay.custom_checks.discover_custom_checks(target)` +
    `merge_custom_check_classes`), each with `agents/investigate.md`
    (substituting `{{ATTACK_CLASS}}`, `{{TARGET}}`, `{{WORKSPACE}}`) and handed its
    partition — so they run concurrently. When `{{ATTACK_CLASS}}` is a custom-check id,
@@ -284,7 +284,7 @@ Run AFTER the KB build. Prerequisites in the workspace: `kb/scan-profile.json`,
    **Do not orphan candidates.** The classifier produces classes beyond
    `agents_to_spawn` — `security-other`/`unknown` for vendored rules that carry no
    `cls`/CWE, and these can hold high-value hits (command-exec, weak-crypto).
-   Call `unrouted_candidate_classes(ws, agents_to_spawn)` (from `sec_harness.partition`);
+   Call `unrouted_candidate_classes(ws, agents_to_spawn)` (from `sec_overlay.partition`);
    if it returns anything, LOG the counts and spawn a general-triage investigate
    agent (`{{ATTACK_CLASS}}=security-other`, handed those candidates) so nothing is
    silently dropped. The rule-id router in `clsmap` now maps the common vendored
@@ -317,10 +317,10 @@ Run AFTER the KB build. Prerequisites in the workspace: `kb/scan-profile.json`,
    adversarial coverage gate still runs after the loop; saturation is a recall floor, not
    a replacement for it.
 3. **Gate** (no LLM): validate all findings conform:
-   `uv run python -m sec_harness.findings_gate --workspace <WS>` (exit 1 on any invalid finding).
+   `uv run python -m sec_overlay.findings_gate --workspace <WS>` (exit 1 on any invalid finding).
 
 Confirmed (`raw`) findings flow to the FP-reduction ladder (Plan 4).
-The structural index (`python -m sec_harness.structural_index ...`) is the agents'
+The structural index (`python -m sec_overlay.structural_index ...`) is the agents'
 navigation aid; it uses `rg` only and degrades to search when heuristics don't apply.
 tree-sitter is an optional future upgrade to structural-index precision; not required.
 
@@ -331,7 +331,7 @@ every step to reach `confirmed` with a risk score. Count-invariant validation en
 the total finding count is tracked at each rung; findings require file:line evidence
 to advance.
 
-1. **Dedupe** (no LLM): `uv run python -m sec_harness.dedupe --workspace <WS>` —
+1. **Dedupe** (no LLM): `uv run python -m sec_overlay.dedupe --workspace <WS>` —
    merges exact `(file, line, cls)` collisions; losers become `duplicate`.
 2. **Critic** (model: sonnet, PARALLEL): critic is per-finding independent —
    dispatch critic subagents for the `raw` findings **in one message** (one per
@@ -354,11 +354,11 @@ to advance.
    only tool receipts suppress the LLM's hallucination risk). `verify-error` is a
    valid terminal state (distinct from `confirmed` and `rejected`) for findings that
    fail validation infrastructure.
-4. **Calibrate** (no LLM): `uv run python -m sec_harness.calibrate --workspace <WS>` —
+4. **Calibrate** (no LLM): `uv run python -m sec_overlay.calibrate --workspace <WS>` —
    promotes raw findings marked `runtime_dependent` to `needs-deployment-testing` (via
-   `promote_runtime_dependent`, `sec_harness.campaign`; ISSUE-027) before setting `risk_score`
+   `promote_runtime_dependent`, `sec_overlay.campaign`; ISSUE-027) before setting `risk_score`
    1–10 on every `confirmed` finding.
-5. **Gate** (no LLM): `uv run python -m sec_harness.findings_gate --workspace <WS>`.
+5. **Gate** (no LLM): `uv run python -m sec_overlay.findings_gate --workspace <WS>`.
 
 `confirmed` findings with `risk_score` are the harness's output. Patch generation +
 static verification (Plan 5) and final report assembly (Plan 7) come next.
@@ -375,8 +375,8 @@ patches apply to a throwaway copy only.
    writers touch distinct per-id files and never collide. Read-only on the target.
 2. **Validate-fix** (model: opus, personas: `security-architect` + `penetration-tester`):
    spawn a subagent with `agents/validate-fix.md` to assess patch viability and exploit
-   resistance. Uses `sec_harness.scoring.score_fix` to grade each patch.
-3. **Verify** (no LLM): `uv run python -m sec_harness.verify --workspace <WS>
+   resistance. Uses `sec_overlay.scoring.score_fix` to grade each patch.
+3. **Verify** (no LLM): `uv run python -m sec_overlay.verify --workspace <WS>
    --target <T> --config <rules>` — for each confirmed finding with a patch, copies
    the target, applies the patch with `git apply`, re-runs the SAST on the copy, and
    compares the pre/post presence of the finding's class. Flagged pre-patch and
@@ -385,7 +385,7 @@ patches apply to a throwaway copy only.
    the patch). Applied cleanly but the hit survives → `verification: not-fixed` (kept `confirmed`).
    Not SAST-detectable pre-patch or the patch fails to apply → `verification:
    static-only` (kept `confirmed`). The original target is never modified.
-4. **Gate** (no LLM): `uv run python -m sec_harness.findings_gate --workspace <WS>`.
+4. **Gate** (no LLM): `uv run python -m sec_overlay.findings_gate --workspace <WS>`.
 
 `fixed` findings carry a `verified-static` verification; `confirmed`/`static-only`
 findings are real but unverified fixes. Final report assembly + the multi-pass
@@ -413,7 +413,7 @@ runs manually.**
    It strips items that are actually static-settled, whose payload doesn't match the code path,
    or whose confidence isn't tool-receipt-grade. Applies verdicts (see the gate schema); record
    into `kb/gates/redteam.json`.
-3. **Render** (no LLM): `python -m sec_harness.redteam --workspace <WS> [--min-risk N]` writes
+3. **Render** (no LLM): `python -m sec_overlay.redteam --workspace <WS> [--min-risk N]` writes
    `redteam-plan.md`: prioritization table · manual test directives (payloads with shell vars) ·
    runtime-validation gaps · static-settled summary. Only findings at/above the confidence bar
    (`risk_score >= min-risk`, default 7) enter the actionable plan — signal over noise; weaker
@@ -427,7 +427,7 @@ Cross-cutting reliability + recall additions, wired into the phases above:
 
 - **Reachability gate (trace).** Before the red-team phase, optionally run `agents/trace.md`
   (opus) on confirmed findings: it backward-traces sink→entry, writes a `reachability`
-  verdict (`{reachable, blocker, chain}`; blocker taxonomy in `sec_harness.reachability`), and
+  verdict (`{reachable, blocker, chain}`; blocker taxonomy in `sec_overlay.reachability`), and
   demotes findings proven unreachable with a cited blocker. `reachability` is the primary
   static-settled-vs-needs-runtime discriminator the red-team phase reads. Recall-safe:
   unassessed ≠ unreachable.
@@ -438,11 +438,11 @@ Cross-cutting reliability + recall additions, wired into the phases above:
   its write before validate starts: never dispatch judge and validate concurrently against the
   same finding file — the last writer wins and silently drops the other's field (ISSUE-017).
 - **Schema-per-stage validation + in-session repair.** After any structured stage output, call
-  `sec_harness.stage_validate.validate_stage(stage, obj)`; on errors, re-prompt the SAME
+  `sec_overlay.stage_validate.validate_stage(stage, obj)`; on errors, re-prompt the SAME
   subagent with `repair_prompt(...)` (quotes the exact errors, asks to re-emit only broken
   fields) and re-validate — bounded attempts. Reuses `validate_profile`/`Context.validate`/
   `validate_reachability`.
-- **Fail-open parsing.** Parse agent JSON with `sec_harness.parse.extract_json` (whole → fenced
+- **Fail-open parsing.** Parse agent JSON with `sec_overlay.parse.extract_json` (whole → fenced
   → largest-balanced, string-aware); it returns `None` on failure so a parse miss is surfaced,
   never mistaken for "nothing found".
 - **Salvage + terminal statuses.** On an investigate/patch subagent error, call
@@ -459,20 +459,20 @@ Cross-cutting reliability + recall additions, wired into the phases above:
   first; calibrate caps risk by precondition count + flags severity inflation; validate applies
   the threat model as a kill-filter.
 - **Recall + grounding loops (bucket B).**
-  - **Variant hunt** — after a finding is `confirmed`, `sec_harness.variant.variant_seeds`
+  - **Variant hunt** — after a finding is `confirmed`, `sec_overlay.variant.variant_seeds`
     turns it into sibling-search seeds; `agents/variant-hunt.md` enqueues siblings as
     `candidate`s that re-enter the gate ladder (one bug → its family).
-  - **Git-history mining** — `sec_harness.githist.security_fix_commits` seeds recon with past
+  - **Git-history mining** — `sec_overlay.githist.security_fix_commits` seeds recon with past
     security-fix patterns ("was the fix complete + applied everywhere?").
-  - **Bug-chain analysis** — `python -m sec_harness.bugchain` assembles the confirmed set +
+  - **Bug-chain analysis** — `python -m sec_overlay.bugchain` assembles the confirmed set +
     a link prefilter; `agents/bugchain.md` traces low findings that compose into a critical and
     re-prioritizes; chains are prime needs-runtime items for the red-team phase.
   - **logic-chain finding type** — a single investigate finding may span 2–3 files as a
     multi-primitive chain (`cls: "logic-chain"`).
-  - **Codify confirmed as rules** — `sec_harness.rule_gaps.emit_semgrep_rule` drafts a semgrep
+  - **Codify confirmed as rules** — `sec_overlay.rule_gaps.emit_semgrep_rule` drafts a semgrep
     rule from a confirmed syntactic finding (a cheap floor that becomes a mechanical receipt
     next run).
-  - **Novelty** — `sec_harness.novelty.upstream_status` (host-side git, opt-in) tells a human
+  - **Novelty** — `sec_overlay.novelty.upstream_status` (host-side git, opt-in) tells a human
     FIXED/UNFIXED/UNKNOWN before spending runtime effort.
 
 ## Phase 6: Multi-pass campaign
@@ -486,7 +486,7 @@ pass resumes after interruption.
 1. `begin_pass(ws, sha)` (pins the current git SHA; increments `pass_number` if the
    prior pass recorded stages).
 2. Runs Phases 0–5. After each phase, records completion:
-   `uv run python -c "from pathlib import Path; from sec_harness.campaign import record_stage; from sec_harness.workspace import Workspace; record_stage(Workspace(Path('<WS>')), '<stage>')"`
+   `uv run python -c "from pathlib import Path; from sec_overlay.campaign import record_stage; from sec_overlay.workspace import Workspace; record_stage(Workspace(Path('<WS>')), '<stage>')"`
    (the deterministic prefilter, `run_scan`, records `"prefilter"` itself).
 3. Ends with `pass_report` for a state + findings-by-status summary.
 
@@ -494,7 +494,7 @@ pass resumes after interruption.
 - Scope to changed code:
   `changed = diffscope.changed_files(<prior_sha>, "HEAD")`.
 - Carry settled findings forward with a drift re-check:
-  `uv run python -c "from pathlib import Path; from sec_harness.campaign import carry_forward; from sec_harness.workspace import Workspace; print(carry_forward(Workspace(Path('<WS>')), <changed>))"`
+  `uv run python -c "from pathlib import Path; from sec_overlay.campaign import carry_forward; from sec_overlay.workspace import Workspace; print(carry_forward(Workspace(Path('<WS>')), <changed>))"`
   Settled findings (`confirmed`/`fixed`/`rejected`) on changed files become `stale`
   (re-examined this pass); those on unchanged files are kept — the campaign never
   re-litigates stable conclusions but always re-checks code that moved.
@@ -513,7 +513,7 @@ both into scan-driving material — while treating repo docs as untrusted claims
 **Phase C1 — context-ingest** (canonical order: after preflight, BEFORE recon — its leads
 feed recon; a recon `attack_surface` class may be added from a lead only if a code indicator
 also exists): spawn `agents/context-ingest.md` (sonnet, READ-ONLY). It discovers context docs
-(`sec_harness.context.discover_context_files` — `docs/`, `openspec/`, ADRs, `SECURITY*`,
+(`sec_overlay.context.discover_context_files` — `docs/`, `openspec/`, ADRs, `SECURITY*`,
 runbooks, `*-review*.md`, `test-findings*`) **and** the prior scan's `kb/prior_context.json`,
 distills them into `kb/context.json` (+ `CONTEXT.md`). Every item is trust-tagged
 (`untrusted-doc` / `prior-scan`). **C1 verifies now (rework):** for each `claimed_control` it
@@ -527,7 +527,7 @@ class to route it to. Then `agents/context-adversary.md` (opus, different family
 pressure-checks the verification (PRESENT-without-proof? finding on doc text alone? missed
 bypass? trust-contract breach?) before any later phase consumes it. Both this phase and the
 Phase 0-1 phase gates (recon/architecture/threat-model) build their claims with
-`sec_harness.phase_gate.claims_from_profile(profile)` / `claims_from_context(ctx)` rather than
+`sec_overlay.phase_gate.claims_from_profile(profile)` / `claims_from_context(ctx)` rather than
 hand-rolling `{"id","refs"}` dicts — use these helpers, don't reimplement them. This DRIVES
 later phases:
 - threat-model imports `context.hunt_rows(ctx)` → trust boundaries + claimed controls
@@ -540,7 +540,7 @@ later phases:
 **Trust contract:** a claimed control is a finding only when investigate proves it missing
 with a tool receipt; a doc claim NEVER suppresses a finding and NEVER auto-confirms one.
 
-**Phase C2 — postflight** (after report): `python -m sec_harness.postflight --workspace
+**Phase C2 — postflight** (after report): `python -m sec_overlay.postflight --workspace
 <WS> --sha <sha>` distills settled results into the durable `kb/prior_context.json`
 (confirmed findings, rejected-with-rationale so they're not re-litigated, drift-keyed by
 SHA). Optionally spawn `agents/postflight.md` to add a durable codebase-security-profile
@@ -548,11 +548,11 @@ narrative. The NEXT scan's C1 reads this as higher-trust prior context (still dr
 
 ## Per-repo memory (default workspace)
 
-Each scanned repo has a durable memory folder — default `<target>/.sec-harness/<repo-slug>/`,
-an in-repo sidecar next to the reviewed code (override the base with `$SEC_HARNESS_HOME`;
+Each scanned repo has a durable memory folder — default `<target>/.sec-overlay/<repo-slug>/`,
+an in-repo sidecar next to the reviewed code (override the base with `$SEC_OVERLAY_HOME`;
 the CLI's `--workspace` overrides entirely). The read-only invariant is about the reviewed
 SOURCE — the harness never executes or modifies it — NOT about the folder: its own artifacts
-live in this `.sec-harness/` sidecar, which is self-ignoring (a seeded `.sec-harness/.gitignore`
+live in this `.sec-overlay/` sidecar, which is self-ignoring (a seeded `.sec-overlay/.gitignore`
 keeps scan output out of the repo's git tree). The `<repo-slug>` is keyed by repo identity
 (git `origin` URL if present, else path) + a short hash.
 
@@ -563,7 +563,7 @@ The folder IS the campaign workspace and persists across invocations:
 - `learnings/<date>.md` — dated free-text learnings accumulated across runs
 - `runs/` — optional per-run report snapshots
 
-Resume: `RepoMemory(...).run_status()` (CLI: `python -m sec_harness.cli memory --target
+Resume: `RepoMemory(...).run_status()` (CLI: `python -m sec_overlay.cli memory --target
 <T>`) reads `state.json` and reports `{finished, resumable, next_phase, stages_done}` —
 `finished` when `report` is recorded for the active SHA; otherwise `next_phase` is the
 first canonical phase not yet recorded. An interrupted campaign resumes there instead of

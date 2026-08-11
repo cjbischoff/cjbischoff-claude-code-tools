@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
 #
-# README-sync pre-commit hook for the sec-harness skill.
+# README-sync pre-commit hook for the sec-overlay skill.
 #
 # Policy: when code in agents/, helpers/, or references/ changes, that folder's
 # README.md must be updated in the SAME commit. This keeps the docs from rotting
 # behind the code (the docs are meant to let a human — not just an LLM —
 # understand the codebase).
 #
-# Scope: only inspects staged files under skills/sec-harness/. If a commit
+# Scope: only inspects staged files under skills/sec-overlay/. If a commit
 # touches nothing there (e.g. a go/ commit from the parallel workstream), the
 # hook no-ops and exits 0. It never looks at, stages, or blocks go/.
 #
 # Install (repo-local, one time):
-#     git config core.hooksPath skills/sec-harness/.githooks
+#     git config core.hooksPath skills/sec-overlay/.githooks
 #
 # Bypass a single commit (discouraged; use only for genuinely doc-neutral changes
 # such as a pure formatting pass): git commit --no-verify
 #
 set -euo pipefail
 
-prefix="skills/sec-harness"
+prefix="skills/sec-overlay"
 staged="$(git diff --cached --name-only)"
 fail=0
 
@@ -41,7 +41,7 @@ check references
 if [ "$fail" -ne 0 ]; then
     echo ""
     echo "README-sync policy: update the folder's README.md in the same commit."
-    echo "  (docs must track code — see skills/sec-harness/CLAUDE.md §8)"
+    echo "  (docs must track code — see skills/sec-overlay/CLAUDE.md §8)"
     echo "Bypass a doc-neutral change with: git commit --no-verify"
     exit 1
 fi

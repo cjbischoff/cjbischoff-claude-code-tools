@@ -1,7 +1,7 @@
 """Tests for the preflight tool checker."""
 
 
-from sec_harness.preflight import (
+from sec_overlay.preflight import (
     check_tools,
     default_rules_dir,
     preflight_report,
@@ -46,7 +46,7 @@ def test_report_finds_vendored_rules_regardless_of_cwd():
 
 
 def test_installed_codeql_langs(tmp_path):
-    from sec_harness.preflight import installed_codeql_langs
+    from sec_overlay.preflight import installed_codeql_langs
     assert installed_codeql_langs(packages_dir=tmp_path / "nope") == []
     ns = tmp_path / "codeql"
     (ns / "javascript-queries").mkdir(parents=True)
@@ -56,13 +56,13 @@ def test_installed_codeql_langs(tmp_path):
 
 
 def test_codeql_pack_download_cmd():
-    from sec_harness.preflight import codeql_pack_download_cmd
+    from sec_overlay.preflight import codeql_pack_download_cmd
     cmd = codeql_pack_download_cmd(["go", "python"])
     assert cmd == "codeql pack download codeql/go-queries codeql/python-queries"
 
 
 def test_missing_codeql_packs():
-    from sec_harness.preflight import CODEQL_QUERY_LANGS, missing_codeql_packs
+    from sec_overlay.preflight import CODEQL_QUERY_LANGS, missing_codeql_packs
     # nothing installed -> every canonical pack is missing
     assert missing_codeql_packs([]) == CODEQL_QUERY_LANGS
     # some installed -> only the rest are missing, order preserved

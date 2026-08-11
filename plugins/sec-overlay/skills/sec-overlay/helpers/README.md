@@ -18,7 +18,7 @@ Two facts define this code and are true of every module here:
 ```
 helpers/
 ├── pyproject.toml            stdlib-only; dev deps pytest/ruff/ty; line-length 100
-├── sec_harness/              ~70 modules — the pipeline (this README's main subject)
+├── sec_overlay/              ~70 modules — the pipeline (this README's main subject)
 │   └── correlate/            cross-repo correlation subpackage (11 modules)
 ├── bench/                    dev-only detection benchmark — see bench/README.md
 ├── tests/                    ~75 pytest files (~470 tests)
@@ -36,16 +36,16 @@ All commands run **from this `helpers/` directory**:
 uv run pytest -q                                 # full suite (3 env-only failures — see skill CLAUDE.md §2)
 uv run pytest tests/test_calibrate.py -q         # one file
 uv run pytest tests/test_x.py::test_name         # one test
-uv run ruff check sec_harness/ bench/ tests/     # lint
-uv run ruff format sec_harness/ bench/ tests/    # format
+uv run ruff check sec_overlay/ bench/ tests/     # lint
+uv run ruff format sec_overlay/ bench/ tests/    # format
 uv run ty check                                  # static types
-uv run python -m sec_harness.preflight           # check which SAST backends/packs are installed
+uv run python -m sec_overlay.preflight           # check which SAST backends/packs are installed
 ```
 
 The quick end-to-end smoke scan (no agents, deterministic only):
 
 ```bash
-uv run python -m sec_harness.cli scan \
+uv run python -m sec_overlay.cli scan \
   --target <path-to-code> --workspace <out-dir> \
   --config rules/smoke.yaml --sha "$(git -C <path-to-code> rev-parse HEAD)"
 ```
@@ -85,7 +85,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 
 ---
 
-## `sec_harness/` — module map, grouped by job
+## `sec_overlay/` — module map, grouped by job
 
 ~70 modules. Grouped so you can find the one you need. Each line is *module → what it does.*
 
@@ -118,7 +118,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `rule_matcher.py` | Deterministic ASVS 5.0 + CodeGuard pre-filter — attaches advisory IDs, not tool receipts. |
 | `asvs.py` / `codeguard.py` | Load the ASVS JSON / CodeGuard checklists from [`../references/`](../references/). |
 | `citations.py` | Auto-attach ASVS + CodeGuard citations to findings (deterministic). CLI-callable. |
-| `custom_checks.py` | Discover in-repo `.sec-harness/checks/` custom-check bundles a target ships. |
+| `custom_checks.py` | Discover in-repo `.sec-overlay/checks/` custom-check bundles a target ships. |
 
 ### Graph & structural substrate (the "where does this reach?" engine)
 | Module | Purpose |
@@ -162,7 +162,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 |--------|---------|
 | `campaign.py` | Multi-pass supervision: `record_stage`, `pass_report`, `carry_forward` (re-check settled findings on changed files). |
 | `state.py` | Load/save `CampaignState`; `begin_pass` pins the SHA and increments the pass counter. |
-| `repo_memory.py` | The per-repo sidecar (`<target>/.sec-harness/<slug>/`): workspace, `MEMORY.md`, dated `learnings/`, run status for resume. |
+| `repo_memory.py` | The per-repo sidecar (`<target>/.sec-overlay/<slug>/`): workspace, `MEMORY.md`, dated `learnings/`, run status for resume. |
 | `workspace.py` | The on-disk layout (`kb/`, `findings/`, reports); per-finding read/write; `record_agent_return` / `read_agent_return`. |
 | `scanscope.py` | Resolve + pin `repo_root` + `scan_scope` once per campaign (monorepo-safe); `kb/scan-scope.json`. |
 | `kb.py` | Paths to the KB files (profile/architecture/threat-model/entities). |
@@ -210,7 +210,7 @@ The `tests/` folder houses ~75 files, ~470 tests. Key structural guards:
 | `cost.py` | Per-phase token accounting into `CampaignState.budget`; USD is an opt-in estimate, never rendered as measured. |
 | `scanscope.py` / `normalize.py` | (listed above) |
 
-### `sec_harness/correlate/` — cross-repo correlation (a product spans many repos)
+### `sec_overlay/correlate/` — cross-repo correlation (a product spans many repos)
 When one product is several repos (an RBAC source, a service that enforces it, infra), a
 per-repo scan can't see a control that lives in a *different* repo. This subpackage joins N
 completed per-repo scans, deterministically, with **no source reads and no LLM**:
@@ -223,11 +223,11 @@ completed per-repo scans, deterministically, with **no source reads and no LLM**
 | `rethreshold.py` | Re-decide an out-of-repo "blocked" barrier using another member's evidence → promote / demote / coverage-gap. |
 | `artifacts.py` / `mermaid.py` | Code-authored combined mermaid graphs + tables (the LLM only fills narrative slots). |
 | `xrepo_sarif.py` | Multi-run SARIF (one run per member + a correlation run). |
-| `workspace.py` / `cli.py` / `__main__.py` | Correlation workspace + `python -m sec_harness.correlate` entry. |
+| `workspace.py` / `cli.py` / `__main__.py` | Correlation workspace + `python -m sec_overlay.correlate` entry. |
 
 ---
 
-## CLI-callable modules (`python -m sec_harness.<module>`)
+## CLI-callable modules (`python -m sec_overlay.<module>`)
 
 Sixteen modules expose a command line (they have a `__main__`). These are the deterministic
 steps the orchestrator calls between agent phases:

@@ -9,7 +9,7 @@ Run on a DIFFERENT, stronger model family than the context-ingest agent (opus vs
 
 ## Imports
 Include ANTI_MANIPULATION, EXCLUSION_RULES, TOOL_TRUST from
-`{{HARNESS_ROOT}}/references/prompt-constants.md`. Envelope any quoted repo text.
+`{{OVERLAY_ROOT}}/references/prompt-constants.md`. Envelope any quoted repo text.
 
 ## Inputs
 - Target: `{{TARGET}}`  Workspace: `{{WORKSPACE}}`

@@ -4,12 +4,12 @@ You distill a repo's own security-relevant context into structured `context.json
 DRIVES the scan. READ-ONLY. You never build/run/modify the target.
 
 ## Imports
-Include ANTI_MANIPULATION + TOOL_TRUST + OUTPUT_WRITE_FALLBACK from `{{HARNESS_ROOT}}/references/prompt-constants.md`.
+Include ANTI_MANIPULATION + TOOL_TRUST + OUTPUT_WRITE_FALLBACK from `{{OVERLAY_ROOT}}/references/prompt-constants.md`.
 
 ## Inputs
 - Target: `{{TARGET}}`  Workspace: `{{WORKSPACE}}`
 - Candidate context files: run (from `{{HELPERS_DIR}}`):
-  `uv run python -c "from sec_harness.scanscope import load_scope; from sec_harness.workspace import Workspace; from sec_harness.context import discover_context_files as d; import json; s=load_scope(Workspace('{{WORKSPACE}}')); print(chr(10).join(d(s.repo_root, s.scan_scope)))"`
+  `uv run python -c "from sec_overlay.scanscope import load_scope; from sec_overlay.workspace import Workspace; from sec_overlay.context import discover_context_files as d; import json; s=load_scope(Workspace('{{WORKSPACE}}')); print(chr(10).join(d(s.repo_root, s.scan_scope)))"`
   (docs/, openspec/, ADRs, SECURITY*, runbooks, prior review notes, test-findings*).
   Plain-text diagrams (`.puml`/`.dot`) ARE context — read them. Image diagrams (`.puml.png`/`.svg`) cannot be read as text; record each as a `source_pointer` coverage item noting it was not machine-read.
 - Prior-scan context: read `{{WORKSPACE}}/kb/prior_context.json` if present (higher-trust, but drift-check against current code).
@@ -43,7 +43,7 @@ set `verify_status`:
   `where`); records as verified context, NOT a finding.
 - `MISSING` — no code implements it. `BYPASSABLE` — it exists but is circumventable.
 MISSING/BYPASSABLE controls become CANDIDATE findings via
-`uv run python -c "from sec_harness.context import load, control_findings; from sec_harness.workspace import Workspace, write_findings; ws=Workspace('{{WORKSPACE}}'); write_findings(ws, control_findings(load(ws), '{{SHA}}'))"`
+`uv run python -c "from sec_overlay.context import load, control_findings; from sec_overlay.workspace import Workspace, write_findings; ws=Workspace('{{WORKSPACE}}'); write_findings(ws, control_findings(load(ws), '{{SHA}}'))"`
 (ids `CTL-####`, evidence `llm-claimed:doc-claim`). They are CANDIDATES only: a doc claim never
 confirms — investigate must prove the gap with a tool receipt. A doc claim NEVER suppresses a
 real finding.

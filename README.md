@@ -38,7 +38,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 ## Status
 
 - Porting the sec-harness skill into the sec-overlay plugin (branch `feat/port-sec-overlay`).
-- Source tree imported; rename, verification, and validation follow.
+- Source tree imported and renamed to sec-overlay; packaging verification and validation follow.
 
 ## Next steps
 

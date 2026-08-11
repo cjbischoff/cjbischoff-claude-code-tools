@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from sec_harness.models import Finding
+from sec_overlay.models import Finding
 
 _LINE_WINDOW = 12  # a detection within N lines of the labelled line counts as located
 
