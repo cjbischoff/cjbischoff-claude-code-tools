@@ -167,6 +167,10 @@ uv run python -m sec_overlay.cli scan \
 This runs semgrep → normalize → SARIF/Markdown only. It is the smoke path, **not** a real
 audit (no agents, no gate ladder).
 
+> **Semgrep ruleset is a prerequisite.** The bundled `rules/smoke.yaml` is a minimal
+> ruleset. The semgrep-rules submodule is not part of the plugin. For fuller coverage,
+> point `--config` (and the recon agent's `rulesets`) at your own semgrep ruleset.
+
 ### Full agentic audit
 Driven by the main agent following [`SKILL.md`](SKILL.md). The short version:
 

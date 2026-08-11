@@ -10,4 +10,4 @@ Holds one directory per Claude Code plugin distributed by this marketplace.
 
 | Directory | Purpose |
 |-----------|---------|
-| `sec-overlay/` | Agentic security-audit harness; SAST + multi-agent investigation. Python core is the `sec_overlay` package under `skills/sec-overlay/helpers/`. |
+| `sec-overlay/` | Agentic security-audit harness; SAST + multi-agent investigation. Python core is the `sec_overlay` package under `skills/sec-overlay/helpers/`; run instructions resolve paths from `${CLAUDE_PLUGIN_ROOT}`. |

@@ -48,16 +48,21 @@ different family than the sonnet producer.
 
 ## Deterministic scan (current capability)
 
-From the harness helpers directory:
+From the harness helpers directory (inside the installed plugin, this is
+`${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay/helpers`):
 
 ```bash
-cd skills/sec-overlay/helpers
+cd "${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay/helpers"
 uv run python -m sec_overlay.cli scan \
   --target <path-to-code> \
   --workspace <path-to-output-workspace> \
   --config rules/smoke.yaml \
   --sha "$(git -C <path-to-code> rev-parse HEAD)"
 ```
+
+The bundled `rules/smoke.yaml` is a minimal ruleset. For fuller semgrep
+coverage, point `--config` (and the recon agent's `rulesets`) at your own
+semgrep ruleset; the semgrep-rules submodule is not shipped with this plugin.
 
 Outputs, under the workspace directory:
 - `findings/F-*.json` — one file per normalized finding (the contract for later phases).
@@ -80,8 +85,10 @@ these before spawning: `{{TARGET}}`, `{{WORKSPACE}}`, `{{ATTACK_CLASS}}`, `{{PHA
 git top-level of the scanned repo, read from `kb/scan-scope.json`) and `{{SCAN_SCOPE}}`
 (the audit target path relative to `{{REPO_ROOT}}`, also from `kb/scan-scope.json`).
 All agents cite paths **repo-root-relative**; all gates/dedupe/verify resolve against
-`{{REPO_ROOT}}` (read from `kb/scan-scope.json`). Record each phase with `record_stage(<WS>, "<phase>")` so
-passes advance. Persist each agent's final return with
+`{{REPO_ROOT}}` (read from `kb/scan-scope.json`). When this skill runs as the installed
+`sec-overlay` plugin, set `{{OVERLAY_ROOT}}` = `${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay`
+and `{{HELPERS_DIR}}` = `${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay/helpers`. Record each phase
+with `record_stage(<WS>, "<phase>")` so passes advance. Persist each agent's final return with
 `workspace.record_agent_return(ws, "<agent-label>", <text>)` (→ `runs/<agent>.txt`) and
 read it back with `read_agent_return` — never depend on a subagent's summary message
 propagating; disk state is the source of truth. **Subagent Write-tool guard:** some hosts
