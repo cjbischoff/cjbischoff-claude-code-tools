@@ -167,7 +167,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `workspace.py` | The on-disk layout (`kb/`, `findings/`, reports); per-finding read/write; `record_agent_return` / `read_agent_return`. |
 | `scanscope.py` | Resolve + pin `repo_root` + `scan_scope` once per campaign (monorepo-safe); `kb/scan-scope.json`. |
 | `kb.py` | Paths to the KB files (profile/architecture/threat-model/entities). |
-| `context.py` | Deterministic context ingestion (docs/specs/runbooks + prior scans), trust-tagged. |
+| `context.py` | Deterministic context ingestion (docs/specs/runbooks + prior scans), trust-tagged. Also discovers IaC/deployment-config files (Pulumi, Terraform, Helm, k8s, docker-compose, serverless) as `deployment_config` items, carrying a `deployed_in` env tag. `Context.diagram` holds the C1 agent's claimed-control status map (a raw mermaid block); `render_markdown` writes it into `CONTEXT.md`, which is regenerated on every `save()` and never hand-edited. |
 | `profile.py` | The `ScanProfile` contract; validate/load `kb/scan-profile.json`. |
 | `diffscope.py` | `changed_files(base, head)` — scope incremental passes to changed code. |
 | `githist.py` | Mine git history for likely security-fix commits to seed recon/context. |
