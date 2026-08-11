@@ -45,6 +45,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 - Task 3 (KB doc/diagram redesign): flagged comment-only `file:line` citations in the phase gate as a scrutiny note (`is_comment_line`); 562 tests pass, 2 env-only failures unchanged.
 - Started the KB doc/diagram redesign port (Task 1: prompt-constants added on branch `feat/kb-doc-diagram-redesign`).
 - Task 2: added the `open_questions` field to `Finding` and the finding schema (TDD; 559 pass, 2 env-only failures).
+- Task 4: `verify.py` rejects placeholder-version deps bumps and `verify_findings` no longer overrides a `validate-fix` not-fixed verdict (TDD; 565 pass, 2 env-only failures unchanged).
 
 ## Next steps
 
