@@ -39,3 +39,20 @@ for dir in "${guide_dirs[@]}"; do
     exit 1
   fi
 done
+
+# General rule: any staged file whose immediate folder has a tracked README.md
+# requires that README.md to be staged too.
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  d=$(dirname "$f")
+  [ "$d" = "." ] && continue
+  readme="$d/README.md"
+  [ "$f" = "$readme" ] && continue
+  if git ls-files --error-unmatch "$readme" >/dev/null 2>&1; then
+    if ! grep -qx "$readme" <<<"$staged"; then
+      echo "error: this commit changes ${f} but does not update ${readme}." >&2
+      echo "fix: update ${readme} in the same commit and stage it." >&2
+      exit 1
+    fi
+  fi
+done <<<"$staged"

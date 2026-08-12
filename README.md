@@ -62,6 +62,8 @@ Corrected the sec-overlay README/helpers test counts and verified the diagrams a
 
 Added six per-folder READMEs under the sec-overlay skill.
 
+Generalized the pre-commit hook to enforce per-folder README freshness (with a Bash test).
+
 ## Decisions
 
 - plugin.json declares no components; the default `skills/` directory scan handles discovery, strict mode stays at its default (true).

@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 - Rewrite the root README to the marketplace template (Installation, Plugins, Development, Governance, License) and collapse the per-task Status log.
 - Refocus the sec-overlay skill CLAUDE.md on repo mechanics: real git/governance section, the correct 2 env-only failure count, and the prek folder-README hook.
+- Extend the pre-commit hook to require a folder's README.md whenever files in that folder change, with a Bash invocation test.
 
 ### Added
 
