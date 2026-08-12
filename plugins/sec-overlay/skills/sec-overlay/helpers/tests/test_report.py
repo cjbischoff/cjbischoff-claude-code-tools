@@ -5,7 +5,14 @@ from pathlib import Path
 
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.patch_status import PatchStatus
-from sec_overlay.report import render_finding, select_reportable, to_markdown, write_report
+from sec_overlay.report import (
+    collapse_clusters,
+    render_finding,
+    render_ndt,
+    select_reportable,
+    to_markdown,
+    write_report,
+)
 from sec_overlay.workspace import Workspace, write_findings
 
 
@@ -456,3 +463,34 @@ def test_triage_dep_row_preserves_semver_and_advisory():
     dep_row = next(l for l in triage.splitlines() if "DEP-T4" in l)
     assert "decompress@4.2.1" in dep_row       # semver intact
     assert "decompress@4 " not in dep_row      # not clipped at the first bare dot
+
+
+def _ndt_cluster(id_, cluster_id=None, affected=None):
+    return Finding(id=id_, rule_id="r", cls="authz",
+                   status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
+                   severity=Severity.MEDIUM, file=f"r_{id_}.py", line=1,
+                   message="missing owner check", cluster_id=cluster_id,
+                   affected_sites=affected or [])
+
+
+def test_collapse_clusters_keeps_one_representative():
+    sites = [{"id": "F-1", "file": "r_F-1.py", "line": 1},
+             {"id": "F-2", "file": "r_F-2.py", "line": 1},
+             {"id": "F-3", "file": "r_F-3.py", "line": 1}]
+    findings = [_ndt_cluster("F-1", "cluster:F-2"),
+                _ndt_cluster("F-2", "cluster:F-2", sites),   # primary carries affected_sites
+                _ndt_cluster("F-3", "cluster:F-2"),
+                _ndt_cluster("F-9")]                          # un-clustered
+    reps = collapse_clusters(findings)
+    assert len(reps) == 2                             # one cluster + one singleton
+    rep_ids = {f.id for f in reps}
+    assert rep_ids == {"F-2", "F-9"}
+
+
+def test_render_ndt_shows_affected_sites_table():
+    sites = [{"id": "F-1", "file": "r_F-1.py", "line": 1},
+             {"id": "F-2", "file": "r_F-2.py", "line": 1},
+             {"id": "F-3", "file": "r_F-3.py", "line": 1}]
+    md = render_ndt(_ndt_cluster("F-2", "cluster:F-2", sites))
+    assert "Affected sites" in md
+    assert "r_F-1.py" in md and "r_F-3.py" in md

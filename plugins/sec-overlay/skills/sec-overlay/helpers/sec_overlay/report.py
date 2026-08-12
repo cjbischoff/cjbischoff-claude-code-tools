@@ -169,6 +169,11 @@ def render_ndt(f: Finding) -> str:
     if rt.get("objective"):
         out += [f"**Runtime test.** {rt['objective']}"]
         out += sig_lines
+    if f.affected_sites:
+        out += ["", f"**Affected sites ({len(f.affected_sites)}).** One systemic pattern:",
+                "", "| id | location |", "|----|----------|"]
+        out += [f"| {s['id']} | `{s['file']}:{s['line']}` |" for s in f.affected_sites]
+        out += [""]
     out += ["_Runnable payloads + telemetry: see `redteam-plan.md`._", ""]
     return "\n".join(out)
 
@@ -308,6 +313,37 @@ def to_markdown(findings: list[Finding], token_spend: dict[str, int] | None = No
     return "\n".join(lines) + "\n"
 
 
+def collapse_clusters(findings: list[Finding]) -> list[Finding]:
+    """Reduce each systemic cluster to a single representative finding.
+
+    Un-clustered findings pass through unchanged. For each ``cluster_id`` group the
+    representative is the member carrying ``affected_sites`` (the elected primary);
+    if that member is absent from this bucket, the highest-risk member is chosen and
+    its ``affected_sites`` is synthesized from the group so the sites table is intact.
+
+    Args:
+        findings: Findings in one report bucket.
+
+    Returns:
+        One representative per cluster plus every un-clustered finding.
+    """
+    singletons = [f for f in findings if not f.cluster_id]
+    groups: dict[str, list[Finding]] = {}
+    for f in findings:
+        if f.cluster_id:
+            groups.setdefault(f.cluster_id, []).append(f)
+    reps: list[Finding] = list(singletons)
+    for members in groups.values():
+        primary = next((m for m in members if m.affected_sites), None)
+        if primary is None:
+            primary = min(members, key=_risk_sort_key)
+            primary.affected_sites = [
+                {"id": m.id, "file": m.file, "line": m.line} for m in members
+            ]
+        reps.append(primary)
+    return reps
+
+
 def select_reportable(findings: list[Finding]) -> list[Finding]:
     """Select findings suitable for the final report.
 
@@ -345,6 +381,8 @@ def write_report(ws: Workspace, *, target: str | None = None) -> dict:
     all_findings = read_findings(ws)
     reportable = select_reportable(all_findings)
     ndt = [f for f in all_findings if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING]
+    reportable = collapse_clusters(reportable)
+    ndt = collapse_clusters(ndt)
     coverage_path = ws.kb / "coverage.json"
     coverage = json.loads(coverage_path.read_text()) if coverage_path.exists() else None
     cl_path = ws.kb / "coverage-ledger.json"

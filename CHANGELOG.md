@@ -18,6 +18,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Add `sec_overlay.cluster`, a deterministic pass that groups ≥3 same-class, same-sink `raw` findings into one systemic cluster before the critic/gate ladder.
 - Add `sec_overlay.selfscore`, a per-run finding-status score persisted to `state.budget`.
 - Document token proxy fallback and self-score call in the sec-overlay SKILL orchestration (cost recording when harness token reporting is ambiguous; per-run self-score persisted to state for next-run calibration).
+- Add `report.collapse_clusters`, which reduces each systemic cluster to one representative finding (un-clustered findings pass through unchanged) applied to both the confirmed and needs-runtime report buckets.
+- Add an "Affected sites" table to the needs-runtime finding view, listing every member of a collapsed cluster.
 
 ## 0.1.0 - 2026-08-11
 

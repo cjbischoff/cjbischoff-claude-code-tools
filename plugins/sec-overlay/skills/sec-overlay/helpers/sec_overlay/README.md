@@ -28,3 +28,8 @@ sites on a cluster primary) — additive, nullable fields that round-trip throug
 
 `cluster.py` (new) groups ≥3 same-class, same-sink `raw` findings into one systemic cluster,
 run after dedupe and before the critic/gate ladder — see the module map entry.
+
+`report.py` gained `collapse_clusters`, which reduces each systemic cluster to one representative
+finding (highest-risk member, or the elected primary if present) before the confirmed and
+needs-runtime buckets are counted and rendered; `render_ndt` renders an affected-sites table when
+the finding carries `affected_sites`.

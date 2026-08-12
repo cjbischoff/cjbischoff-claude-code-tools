@@ -54,7 +54,9 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 ## Status
 
-sec-overlay is ported and green (582 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
+sec-overlay is ported and green (584 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
+
+Collapsed systemic clusters to one representative in the rendered report, with a per-representative affected-sites table.
 
 Added a systemic finding-clustering pass that groups related findings by class and sink before the critic/gate ladder.
 
