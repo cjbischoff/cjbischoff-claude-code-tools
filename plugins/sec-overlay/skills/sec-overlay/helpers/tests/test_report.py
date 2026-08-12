@@ -506,3 +506,35 @@ def test_render_ndt_shows_affected_sites_table():
     md = render_ndt(_ndt_cluster("F-2", "cluster:F-2", sites))
     assert "Affected sites" in md
     assert "r_F-1.py" in md and "r_F-3.py" in md
+
+
+def test_write_report_defaults_to_suppressed_full_sarif(tmp_path):
+    ws = Workspace(tmp_path / "ws"); ws.ensure()
+    write_findings(ws, [
+        Finding(id="F-1", rule_id="r", cls="authz", status=FindingStatus.CONFIRMED,
+                severity=Severity.HIGH, file="a.py", line=1, message="m", risk_score=7),
+        Finding(id="F-2", rule_id="r", cls="authz",
+                status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
+                severity=Severity.MEDIUM, file="b.py", line=2, message="m", risk_score=4),
+    ])
+    write_report(ws)
+    doc = json.loads(ws.sarif_path.read_text())
+    uris = {r["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+            for r in doc["runs"][0]["results"]}
+    assert uris == {"a.py", "b.py"}                    # NDT now reaches SARIF
+
+
+def test_write_report_confirmed_only_flag_restores_prior_output(tmp_path):
+    ws = Workspace(tmp_path / "ws"); ws.ensure()
+    write_findings(ws, [
+        Finding(id="F-1", rule_id="r", cls="authz", status=FindingStatus.CONFIRMED,
+                severity=Severity.HIGH, file="a.py", line=1, message="m", risk_score=7),
+        Finding(id="F-2", rule_id="r", cls="authz",
+                status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
+                severity=Severity.MEDIUM, file="b.py", line=2, message="m", risk_score=4),
+    ])
+    write_report(ws, confirmed_only=True)
+    doc = json.loads(ws.sarif_path.read_text())
+    uris = {r["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+            for r in doc["runs"][0]["results"]}
+    assert uris == {"a.py"}                             # NDT excluded again

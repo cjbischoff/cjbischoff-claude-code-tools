@@ -371,19 +371,25 @@ def select_reportable(findings: list[Finding]) -> list[Finding]:
     return sorted(reportable, key=_risk_sort_key)
 
 
-def write_report(ws: Workspace, *, target: str | None = None) -> dict:
+def write_report(ws: Workspace, *, target: str | None = None, confirmed_only: bool = False) -> dict:
     """Assemble the final SARIF + Markdown report from a workspace's findings.
 
     Overwrites ``report.sarif``, ``report.md``, and ``findings.json`` so they
     reflect the finished analysis rather than prefilter-time candidates.
-    ``findings.json`` carries confirmed/fixed findings plus needs-deployment-testing
-    findings (distinguished by status); SARIF carries confirmed/fixed only.
+    ``findings.json`` always carries confirmed/fixed findings plus
+    needs-deployment-testing findings (distinguished by status). By default,
+    SARIF carries the same set, with needs-deployment-testing findings marked
+    with an ``inSource`` suppression so downstream tools see them without
+    failing a gate; ``confirmed_only=True`` restores the prior behavior of
+    emitting confirmed/fixed findings only, with no suppressions.
 
     Args:
         ws: Workspace to read findings from and write reports into.
         target: Path to the real target repo. When given, ``fixed`` findings are mechanically
             checked (``git apply --check``) against the real working tree so the report never
             implies a still-vulnerable finding's patch is deployed.
+        confirmed_only: When true, SARIF excludes needs-deployment-testing findings
+            entirely, matching the pre-suppression default output.
 
     Returns:
         ``{"reported": <count>, "sarif": <path>, "report": <path>}``.
@@ -414,7 +420,11 @@ def write_report(ws: Workspace, *, target: str | None = None) -> dict:
             f.id: check_patch_applied(target, f.patch_diff)
             for f in reportable if f.status is FindingStatus.FIXED and f.patch_diff
         }
-    ws.sarif_path.write_text(json.dumps(to_sarif(reportable), indent=2))
+    if confirmed_only:
+        sarif_findings, suppressed = reportable, None
+    else:
+        sarif_findings, suppressed = reportable + ndt, ndt
+    ws.sarif_path.write_text(json.dumps(to_sarif(sarif_findings, suppressed=suppressed), indent=2))
     ws.report_path.write_text(to_markdown(reportable, needs_deployment=ndt,
                                           coverage=coverage,
                                           coverage_ledger=coverage_ledger,
@@ -443,11 +453,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--kb-dir", default=None)
     parser.add_argument("--paths-config", default=None)
     parser.add_argument("--target", default=None)
+    parser.add_argument("--confirmed-only", action="store_true")
     args = parser.parse_args(argv)
     ws = load_paths(workspace=args.workspace, paths_config=args.paths_config,
                     reports_dir=args.reports_dir, findings_dir=args.findings_dir,
                     kb_dir=args.kb_dir)
-    result = write_report(ws, target=args.target)
+    result = write_report(ws, target=args.target, confirmed_only=args.confirmed_only)
     print(f"reported {result['reported']}")
     return 0
 

@@ -46,18 +46,25 @@ def _rules(findings: list[Finding]) -> list[dict]:
     return list(by_id.values())
 
 
-def to_sarif(findings: list[Finding], tool_name: str = "sec-overlay") -> dict:
+def to_sarif(
+    findings: list[Finding], tool_name: str = "sec-overlay", suppressed: list[Finding] | None = None
+) -> dict:
     """Convert findings to a SARIF 2.1.0 document.
 
     Args:
         findings: Findings to serialize.
         tool_name: Name recorded as the SARIF tool driver.
+        suppressed: Findings that should carry an ``inSource`` suppression
+            entry (e.g. needs-deployment-testing) so downstream gates see
+            them without treating them as blocking.
 
     Returns:
         A SARIF 2.1.0 document as a dict.
     """
-    results = [
-        {
+    suppressed_ids = {f.id for f in (suppressed or [])}
+    results = []
+    for f in findings:
+        result = {
             "ruleId": f.rule_id,
             "level": _level(f.severity),
             "message": {"text": f.message},
@@ -70,8 +77,11 @@ def to_sarif(findings: list[Finding], tool_name: str = "sec-overlay") -> dict:
                 }
             ],
         }
-        for f in findings
-    ]
+        if f.id in suppressed_ids:
+            result["suppressions"] = [
+                {"kind": "inSource", "justification": "needs runtime proof"}
+            ]
+        results.append(result)
     return {
         "version": "2.1.0",
         "$schema": _SCHEMA,

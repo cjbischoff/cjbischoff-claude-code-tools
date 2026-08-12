@@ -42,3 +42,16 @@ def test_driver_rules_populated_from_findings():
     assert rule["id"] == "authz-owner"
     assert rule["properties"]["asvs_ids"] == ["4.2.1"]
     assert rule["properties"]["codeguard_ids"] == ["CG-12"]
+
+
+def test_suppressed_findings_carry_insource_suppression():
+    confirmed = Finding(id="F-1", rule_id="r", cls="authz", status=FindingStatus.CONFIRMED,
+                        severity=Severity.HIGH, file="a.py", line=1, message="m")
+    ndt = Finding(id="F-2", rule_id="r", cls="authz",
+                  status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
+                  severity=Severity.MEDIUM, file="b.py", line=2, message="m")
+    doc = to_sarif([confirmed, ndt], suppressed=[ndt])
+    by_id = {r["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]: r
+             for r in doc["runs"][0]["results"]}
+    assert "suppressions" not in by_id["a.py"]
+    assert by_id["b.py"]["suppressions"][0]["kind"] == "inSource"

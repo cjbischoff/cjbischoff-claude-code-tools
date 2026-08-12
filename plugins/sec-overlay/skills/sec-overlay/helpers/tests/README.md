@@ -1,8 +1,14 @@
 # `tests/` — the deterministic test suite
 
-81 pytest files, 592 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+81 pytest files, 595 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §2.
+
+`test_sarif.py` gained `test_suppressed_findings_carry_insource_suppression`, covering
+`to_sarif`'s `suppressed` parameter. `test_report.py` gained
+`test_write_report_defaults_to_suppressed_full_sarif` and
+`test_write_report_confirmed_only_flag_restores_prior_output`, covering `write_report`'s new
+suppressed-full default and the `confirmed_only` restore path.
 
 ## Structural guards (know these)
 

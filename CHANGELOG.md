@@ -9,6 +9,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ## Unreleased
 
+### Changed
+
+- Default `report.write_report` SARIF output to carry every reportable finding plus `needs-deployment-testing` findings marked with an `inSource` suppression, so downstream gates see them without failing on them; pass `--confirmed-only` (or `confirmed_only=True`) to restore the prior confirmed/fixed-only SARIF.
+
 ### Added
 
 - Populate SARIF `driver.rules` from the finding set, de-duplicated by `rule_id`, with `cls` as the rule name and ASVS/CodeGuard ids as properties.
