@@ -18,3 +18,7 @@ pointer if the package layout changed — in the same commit (enforced by the pr
 
 `cost.py` gained `aggregate_by_model` (per-model token totals, alongside the existing
 `aggregate_by_phase`), feeding `report.py`'s "Run economics" section — see the module map entry.
+
+`models.py`'s `Finding` gained `cluster_id` (systemic-cluster id) and `affected_sites` (member
+sites on a cluster primary) — additive, nullable fields that round-trip through `to_dict`/
+`from_dict`.

@@ -143,3 +143,16 @@ def test_open_questions_backcompat_missing_key_defaults_empty():
     ).to_dict()
     del old["open_questions"]
     assert Finding.from_dict(old).open_questions == []
+
+
+def test_cluster_fields_round_trip():
+    f = Finding(id="F-1", rule_id="r", cls="authz", status=FindingStatus.RAW,
+                severity=Severity.MEDIUM, file="a.py", line=1, message="m",
+                cluster_id="cluster:F-1",
+                affected_sites=[{"id": "F-2", "file": "b.py", "line": 5}])
+    d = f.to_dict()
+    assert d["cluster_id"] == "cluster:F-1"
+    assert d["affected_sites"] == [{"id": "F-2", "file": "b.py", "line": 5}]
+    back = Finding.from_dict(d)
+    assert back.cluster_id == "cluster:F-1"
+    assert back.affected_sites == [{"id": "F-2", "file": "b.py", "line": 5}]

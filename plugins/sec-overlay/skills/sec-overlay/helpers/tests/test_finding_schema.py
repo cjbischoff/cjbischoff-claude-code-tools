@@ -81,3 +81,11 @@ def test_default_finding_to_dict_validates_against_schema():
         message="m",
     )
     assert validate(f.to_dict(), _schema()) == []
+
+
+def test_schema_accepts_cluster_fields():
+    doc = {"id": "F-1", "rule_id": "r", "cls": "authz", "status": "raw",
+           "severity": "medium", "file": "a.py", "line": 1, "message": "m",
+           "cluster_id": "cluster:F-1",
+           "affected_sites": [{"id": "F-2", "file": "b.py", "line": 5}]}
+    assert validate(doc, _schema()) == []

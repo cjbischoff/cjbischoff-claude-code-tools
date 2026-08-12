@@ -91,6 +91,10 @@ class Finding:
             static/runtime discrimination surfaces a question, not a payload). Unrelated
             to ``coverage_ledger``'s same-named ``open_questions`` list, which is a
             differently-shaped surface-coverage concept, not per-finding questions.
+        cluster_id: Id of the systemic cluster this finding belongs to (set by the cluster
+            pass).
+        affected_sites: On a cluster primary only, the list of member sites
+            ``{"id", "file", "line"}``.
     """
 
     id: str
@@ -123,6 +127,8 @@ class Finding:
     judge_verdict: str | None = None
     runtime_dependent: bool = False
     open_questions: list[dict] = field(default_factory=list)
+    cluster_id: str | None = None
+    affected_sites: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Serialize to a JSON-safe dict (enums become their string values)."""

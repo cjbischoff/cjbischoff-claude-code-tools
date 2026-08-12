@@ -54,7 +54,9 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 ## Status
 
-sec-overlay is ported and green (573 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
+sec-overlay is ported and green (577 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
+
+Added `cluster_id` and `affected_sites` fields to the `Finding` model and finding schema.
 
 Added the design spec and the task-by-task TDD implementation plan for four sec-overlay improvements from the lumedeodorant review (token accounting/self-score, systemic finding clustering, external-boundary disposition, SARIF completeness).
 

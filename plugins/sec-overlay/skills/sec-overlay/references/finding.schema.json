@@ -46,6 +46,8 @@
     "reachability": {"type": ["object", "null"]},
     "judge_verdict": {"type": ["string", "null"]},
     "runtime_dependent": {"type": "boolean"},
-    "open_questions": {"type": "array", "items": {"type": "object"}}
+    "open_questions": {"type": "array", "items": {"type": "object"}},
+    "cluster_id": {"type": ["string", "null"]},
+    "affected_sites": {"type": "array", "items": {"type": "object"}}
   }
 }
