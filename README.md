@@ -56,7 +56,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 sec-overlay is ported and green (573 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
 
-Added the design spec for four sec-overlay improvements from the lumedeodorant review (token accounting/self-score, systemic finding clustering, external-boundary disposition, SARIF completeness).
+Added the design spec and the task-by-task TDD implementation plan for four sec-overlay improvements from the lumedeodorant review (token accounting/self-score, systemic finding clustering, external-boundary disposition, SARIF completeness).
 
 Refocused the sec-overlay skill CLAUDE.md on repo mechanics (git/governance, testing, hook).
 

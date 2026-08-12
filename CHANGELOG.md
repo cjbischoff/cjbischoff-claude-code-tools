@@ -12,6 +12,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 ### Added
 
 - Add the design spec for four sec-overlay improvements from the lumedeodorant review: per-stage token accounting with a run self-score, systemic finding clustering, an external-boundary confidence disposition, and SARIF completeness.
+- Add the task-by-task TDD implementation plan for the four sec-overlay improvements (build order I3, I1, I2, I4).
 
 ## 0.1.0 - 2026-08-11
 
