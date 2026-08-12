@@ -58,6 +58,8 @@ sec-overlay is ported and green (573 pass, 2 env-only failures); plugin and mark
 
 Refocused the sec-overlay skill CLAUDE.md on repo mechanics (git/governance, testing, hook).
 
+Added an EXIT-trap cleanup to the pre-commit hook test so it leaves no temp directories behind.
+
 Corrected the sec-overlay README/helpers test counts and verified the diagrams and worked example.
 
 Added six per-folder READMEs under the sec-overlay skill.

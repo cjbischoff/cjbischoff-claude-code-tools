@@ -47,3 +47,4 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Reject placeholder-version deps bumps and stop `verify_findings` from overriding a `validate-fix` not-fixed verdict.
 - Document the `open_questions` field in the `finding.schema.json` reference table and correct the sec-overlay `CLAUDE.md` prompt-constants block counts (§6 and §8) from six and nine to twelve.
 - Correct the sec-overlay README and helpers/README test counts to 575 tests / 2 env-only failures and verify the diagrams and worked example against the current pipeline.
+- Clean up the hook test's temporary repos with an EXIT trap so no `mktemp` directories are left behind.

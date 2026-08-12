@@ -5,12 +5,18 @@ set -euo pipefail
 HOOK="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/pre-commit-check.sh"
 pass=0
 fail=0
+tmpdirs=()
+cleanup() {
+  [ ${#tmpdirs[@]} -gt 0 ] && rm -rf "${tmpdirs[@]}"
+}
+trap cleanup EXIT
 
 # Run the hook inside a fresh temp repo seeded by $1 (a function), assert exit code $2.
 run_case() {
   local name="$1" setup="$2" want="$3"
   local dir
   dir="$(mktemp -d)"
+  tmpdirs+=("$dir")
   set +e
   (
     cd "$dir"
