@@ -60,3 +60,6 @@ carry none. `report.write_report` now defaults to passing all reportable finding
 `needs-deployment-testing` findings as `suppressed` (behavior change on upgrade — SARIF used to
 carry confirmed/fixed only); `confirmed_only=True` (CLI: `--confirmed-only`) restores the prior
 confirmed/fixed-only SARIF with no suppressions.
+
+`calibrate.py`, `selfscore.py`, `sarif.py`, and `report.py` are `ruff format`-clean as of the
+review-improvements branch; keep them that way (run `ruff format` before committing edits here).

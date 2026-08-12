@@ -5,8 +5,16 @@ from sec_overlay.sarif import to_sarif
 
 
 def _f(sev):
-    return Finding(id="F-0001", rule_id="r", cls="sqli", status=FindingStatus.CONFIRMED,
-                   severity=sev, file="app.py", line=18, message="SQLi")
+    return Finding(
+        id="F-0001",
+        rule_id="r",
+        cls="sqli",
+        status=FindingStatus.CONFIRMED,
+        severity=sev,
+        file="app.py",
+        line=18,
+        message="SQLi",
+    )
 
 
 def test_sarif_shape_and_level_mapping():
@@ -29,15 +37,32 @@ def test_sarif_level_for_medium_and_low():
 
 def test_driver_rules_populated_from_findings():
     findings = [
-        Finding(id="F-1", rule_id="authz-owner", cls="authz", status=FindingStatus.CONFIRMED,
-                severity=Severity.HIGH, file="a.py", line=1, message="m",
-                asvs_ids=["4.2.1"], codeguard_ids=["CG-12"]),
-        Finding(id="F-2", rule_id="authz-owner", cls="authz", status=FindingStatus.CONFIRMED,
-                severity=Severity.HIGH, file="b.py", line=2, message="m"),
+        Finding(
+            id="F-1",
+            rule_id="authz-owner",
+            cls="authz",
+            status=FindingStatus.CONFIRMED,
+            severity=Severity.HIGH,
+            file="a.py",
+            line=1,
+            message="m",
+            asvs_ids=["4.2.1"],
+            codeguard_ids=["CG-12"],
+        ),
+        Finding(
+            id="F-2",
+            rule_id="authz-owner",
+            cls="authz",
+            status=FindingStatus.CONFIRMED,
+            severity=Severity.HIGH,
+            file="b.py",
+            line=2,
+            message="m",
+        ),
     ]
     doc = to_sarif(findings)
     rules = doc["runs"][0]["tool"]["driver"]["rules"]
-    assert len(rules) == 1                              # deduped by rule_id
+    assert len(rules) == 1  # deduped by rule_id
     rule = rules[0]
     assert rule["id"] == "authz-owner"
     assert rule["properties"]["asvs_ids"] == ["4.2.1"]
@@ -45,13 +70,30 @@ def test_driver_rules_populated_from_findings():
 
 
 def test_suppressed_findings_carry_insource_suppression():
-    confirmed = Finding(id="F-1", rule_id="r", cls="authz", status=FindingStatus.CONFIRMED,
-                        severity=Severity.HIGH, file="a.py", line=1, message="m")
-    ndt = Finding(id="F-2", rule_id="r", cls="authz",
-                  status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
-                  severity=Severity.MEDIUM, file="b.py", line=2, message="m")
+    confirmed = Finding(
+        id="F-1",
+        rule_id="r",
+        cls="authz",
+        status=FindingStatus.CONFIRMED,
+        severity=Severity.HIGH,
+        file="a.py",
+        line=1,
+        message="m",
+    )
+    ndt = Finding(
+        id="F-2",
+        rule_id="r",
+        cls="authz",
+        status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
+        severity=Severity.MEDIUM,
+        file="b.py",
+        line=2,
+        message="m",
+    )
     doc = to_sarif([confirmed, ndt], suppressed=[ndt])
-    by_id = {r["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]: r
-             for r in doc["runs"][0]["results"]}
+    by_id = {
+        r["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]: r
+        for r in doc["runs"][0]["results"]
+    }
     assert "suppressions" not in by_id["a.py"]
     assert by_id["b.py"]["suppressions"][0]["kind"] == "inSource"

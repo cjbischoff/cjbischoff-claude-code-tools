@@ -35,6 +35,8 @@ def _risk_sort_key(f: Finding) -> tuple[int, int, str]:
         A ``(-risk, severity_rank, id)`` sort tuple.
     """
     return (-(f.risk_score or 0), _ORDER.get(f.severity.value, 9), f.id)
+
+
 # Full template for these tiers; condensed (Summary/Mechanism/Severity/Fix) below.
 _FULL_TIERS = {"critical", "high"}
 
@@ -65,20 +67,30 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
         reach = f.reachability or {}
         rstate = "reachable" if reach.get("reachable") else "not reachable"
         blocker = reach.get("blocker") or "—"
-        adv = f.rule_id if f.rule_id.startswith("osv:") else (
-            next((s for s in f.evidence_sources if "osv:" in s), f.rule_id))
+        adv = (
+            f.rule_id
+            if f.rule_id.startswith("osv:")
+            else (next((s for s in f.evidence_sources if "osv:" in s), f.rule_id))
+        )
         pkg = (f.evidence or "").strip() or "(package unknown)"
-        out = [f"### {f.id} — deps — {f.severity.value.title()}", "",
-               f"**Package.** `{pkg}` — advisory `{adv}`.  ",
-               f"Location: `{f.file}:{f.line}`.", "",
-               (f"**Reachability.** {rstate} in this repo (blocker: {blocker}). "
-                f"{f.message.split('|', 1)[0].strip()}"), "",
-               (f"**Fix.** Bump `{pkg.split('@')[0]}` to a release that resolves "
-                f"`{adv}`."), ""]
+        out = [
+            f"### {f.id} — deps — {f.severity.value.title()}",
+            "",
+            f"**Package.** `{pkg}` — advisory `{adv}`.  ",
+            f"Location: `{f.file}:{f.line}`.",
+            "",
+            (
+                f"**Reachability.** {rstate} in this repo (blocker: {blocker}). "
+                f"{f.message.split('|', 1)[0].strip()}"
+            ),
+            "",
+            (f"**Fix.** Bump `{pkg.split('@')[0]}` to a release that resolves `{adv}`."),
+            "",
+        ]
         if f.status is FindingStatus.FIXED and patch_status is not None:
             caution = not_applied_caution(patch_status)
             if caution:
-                out.insert(1, caution)   # right after the header line
+                out.insert(1, caution)  # right after the header line
         return "\n".join(out)
 
     receipts = [s for s in f.evidence_sources if is_tool_receipt(s)]
@@ -86,8 +98,11 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
     flow = "\n".join(f"   - `{hop}`" for hop in (f.dataflow or [])) or "   - (no dataflow recorded)"
     risk = f.risk_score if f.risk_score is not None else "-"
     verification = f.verification or "static analysis only — not dynamically confirmed"
-    patch = (f"```diff\n{f.patch_diff.strip()}\n```" if f.patch_diff
-             else "_(no patch generated; remediate per §2 root cause)_")
+    patch = (
+        f"```diff\n{f.patch_diff.strip()}\n```"
+        if f.patch_diff
+        else "_(no patch generated; remediate per §2 root cause)_"
+    )
     full = f.severity.value in _FULL_TIERS
 
     out = [f"### {f.id} — {f.cls} — {f.severity.value.title()}", ""]
@@ -111,36 +126,69 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
     out += [""]
     # §3 Confirmation (full tier only)
     if full:
-        out += ["**3. Confirmation (static).** Mechanical tool receipts: "
-                + (", ".join(f"`{r}`" for r in receipts)
-                   or "**NONE — not confirmable on llm-claimed evidence alone**") + ".  "]
+        out += [
+            "**3. Confirmation (static).** Mechanical tool receipts: "
+            + (
+                ", ".join(f"`{r}`" for r in receipts)
+                or "**NONE — not confirmable on llm-claimed evidence alone**"
+            )
+            + ".  "
+        ]
         if claimed:
             out += ["Non-receipt / llm-claimed: " + ", ".join(f"`{c}`" for c in claimed) + ".  "]
         out += [f"Verification: `{verification}`.", ""]
         # §4 Impact
-        out += [(f"**4. Impact.** Attack class `{f.cls}`; scope per Summary. Assess CIA "
-                 "and whether impact is bounded/scriptable per the template."), ""]
+        out += [
+            (
+                f"**4. Impact.** Attack class `{f.cls}`; scope per Summary. Assess CIA "
+                "and whether impact is bounded/scriptable per the template."
+            ),
+            "",
+        ]
     # §5 Severity (full) / §3 Severity (condensed)
     sev_no, fix_no = ("5", "7") if full else ("3", "4")
-    out += [(f"**{sev_no}. Severity Rationale.** "
-             f"`{f.cvss_vector or '(no vector)'}` — computed risk **{risk}**. "
-             "Score computed deterministically from the vector; tier held lower when a "
-             "precondition is unproven."), ""]
+    out += [
+        (
+            f"**{sev_no}. Severity Rationale.** "
+            f"`{f.cvss_vector or '(no vector)'}` — computed risk **{risk}**. "
+            "Score computed deterministically from the vector; tier held lower when a "
+            "precondition is unproven."
+        ),
+        "",
+    ]
     if not full:
-        out += [("**Confirmation:** "
-                 + (", ".join(f"`{r}`" for r in receipts)
-                    or "**NONE — not confirmable on llm-claimed evidence alone**") + "."), ""]
+        out += [
+            (
+                "**Confirmation:** "
+                + (
+                    ", ".join(f"`{r}`" for r in receipts)
+                    or "**NONE — not confirmable on llm-claimed evidence alone**"
+                )
+                + "."
+            ),
+            "",
+        ]
     # §6 Attack Scenario (full tier only)
     if full:
-        out += [("**6. Confirmed Attack Scenario** (theoretical — not dynamically "
-                 "confirmed): follow the §2 data flow from source to sink."), ""]
+        out += [
+            (
+                "**6. Confirmed Attack Scenario** (theoretical — not dynamically "
+                "confirmed): follow the §2 data flow from source to sink."
+            ),
+            "",
+        ]
     # §7 Fix (full) / §4 Fix (condensed)
     out += [f"**{fix_no}. Fix.**", patch, ""]
     # §8 Testing (full tier only)
     if full:
-        out += [("**8. Testing.** Negative: the §2 exploit path must return the expected "
-                 "rejection post-fix. Regression: legitimate use still works. Static: the "
-                 "detector rule must no longer fire in the file."), ""]
+        out += [
+            (
+                "**8. Testing.** Negative: the §2 exploit path must return the expected "
+                "rejection post-fix. Regression: legitimate use still works. Static: the "
+                "detector rule must no longer fire in the file."
+            ),
+            "",
+        ]
     return "\n".join(out)
 
 
@@ -160,18 +208,33 @@ def render_ndt(f: Finding) -> str:
     """
     rt = f.runtime_test or {}
     sig_lines = signal_lines(rt.get("expected_signal"))
-    flow = "\n".join(f"  - `{hop}`" for hop in (f.dataflow or [])) or "  - (no source chain recorded)"
+    flow = (
+        "\n".join(f"  - `{hop}`" for hop in (f.dataflow or [])) or "  - (no source chain recorded)"
+    )
     pre = "\n".join(f"  - {p}" for p in (f.preconditions or [])) or "  - (none recorded)"
-    out = [f"### {f.id} — {f.cls} — {f.severity.value.title()} · needs runtime proof", "",
-           f"**What.** {f.message}  \nLocation: `{f.file}:{f.line}`.", "",
-           "**Source-side chain.**", flow, "",
-           "**Preconditions (out-of-repo barrier).**", pre, ""]
+    out = [
+        f"### {f.id} — {f.cls} — {f.severity.value.title()} · needs runtime proof",
+        "",
+        f"**What.** {f.message}  \nLocation: `{f.file}:{f.line}`.",
+        "",
+        "**Source-side chain.**",
+        flow,
+        "",
+        "**Preconditions (out-of-repo barrier).**",
+        pre,
+        "",
+    ]
     if rt.get("objective"):
         out += [f"**Runtime test.** {rt['objective']}"]
         out += sig_lines
     if f.affected_sites:
-        out += ["", f"**Affected sites ({len(f.affected_sites)}).** One systemic pattern:",
-                "", "| id | location |", "|----|----------|"]
+        out += [
+            "",
+            f"**Affected sites ({len(f.affected_sites)}).** One systemic pattern:",
+            "",
+            "| id | location |",
+            "|----|----------|",
+        ]
         out += [f"| {s['id']} | `{s['file']}:{s['line']}` |" for s in f.affected_sites]
         out += [""]
     out += ["_Runnable payloads + telemetry: see `redteam-plan.md`._", ""]
@@ -194,12 +257,16 @@ def _triage_row(f: Finding, status_label: str, action: str) -> str:
     return f"| {f.id} | {risk} | {what} | {f.file}:{f.line} | {status_label} | {action} |"
 
 
-def to_markdown(findings: list[Finding], token_spend: dict[str, int] | None = None,
-                needs_deployment: list[Finding] | None = None,
-                coverage: dict | None = None, coverage_ledger: dict | None = None,
-                has_redteam_plan: bool = False,
-                patch_statuses: dict[str, PatchStatus] | None = None,
-                economics: dict | None = None) -> str:
+def to_markdown(
+    findings: list[Finding],
+    token_spend: dict[str, int] | None = None,
+    needs_deployment: list[Finding] | None = None,
+    coverage: dict | None = None,
+    coverage_ledger: dict | None = None,
+    has_redteam_plan: bool = False,
+    patch_statuses: dict[str, PatchStatus] | None = None,
+    economics: dict | None = None,
+) -> str:
     """Render findings and optional token accounting as Markdown.
 
     Structure: Bottom line → Triage table → Needs runtime proof section →
@@ -247,7 +314,8 @@ def to_markdown(findings: list[Finding], token_spend: dict[str, int] | None = No
     else:
         summary_sentence = "Source-provable findings at medium/low severity."
     lines = [
-        "# sec-overlay Report", "",
+        "# sec-overlay Report",
+        "",
         f"**Bottom line.** {summary_sentence}  ",
         f"Confirmed: {crit}/{high}/{med}/{low}",
         f"Needs runtime proof: {len(ndt)}",
@@ -255,15 +323,13 @@ def to_markdown(findings: list[Finding], token_spend: dict[str, int] | None = No
     ]
 
     # Triage table — all findings merged, risk-ordered desc
-    all_triage = (
-        [(f, "needs-runtime",
-          "run redteam-plan test") for f in ndt]
-        + [(f, "confirmed",
-            "bump" if f.cls == "deps" else "apply fix (§ below)") for f in conf]
-    )
+    all_triage = [(f, "needs-runtime", "run redteam-plan test") for f in ndt] + [
+        (f, "confirmed", "bump" if f.cls == "deps" else "apply fix (§ below)") for f in conf
+    ]
     all_triage.sort(key=lambda t: _risk_sort_key(t[0]))
     lines += [
-        "## Triage", "",
+        "## Triage",
+        "",
         "| ID | Risk | What | Location | Status | Next action |",
         "|----|------|------|----------|--------|-------------|",
     ]
@@ -279,9 +345,15 @@ def to_markdown(findings: list[Finding], token_spend: dict[str, int] | None = No
 
     # External-unverifiable leads — sink crosses into an un-ingested dependency
     if external:
-        lines += ["", "## Leads — pending external-dependency verification", "",
-                  ("These findings' sinks cross into a package whose source was not "
-                   "ingested. They are capped leads, not confirmed findings.")]
+        lines += [
+            "",
+            "## Leads — pending external-dependency verification",
+            "",
+            (
+                "These findings' sinks cross into a package whose source was not "
+                "ingested. They are capped leads, not confirmed findings."
+            ),
+        ]
         for f in external:
             lines += ["", render_ndt(f)]
 
@@ -289,23 +361,38 @@ def to_markdown(findings: list[Finding], token_spend: dict[str, int] | None = No
     if conf:
         lines += ["## Confirmed (source-provable)", ""]
         for f in conf:
-            lines += [render_finding(f, patch_status=(patch_statuses or {}).get(f.id)),
-                      "---", ""]
+            lines += [render_finding(f, patch_status=(patch_statuses or {}).get(f.id)), "---", ""]
 
     if coverage:
-        lines += ["", "## Coverage & limitations", "",
-                  ("_SAST coverage by language. `none` = no mechanical dataflow OR pattern "
-                   "analysis (LLM shape-hunting only)._"), "",
-                  "| Language | Files | Tier |", "|----------|-------|------|"]
+        lines += [
+            "",
+            "## Coverage & limitations",
+            "",
+            (
+                "_SAST coverage by language. `none` = no mechanical dataflow OR pattern "
+                "analysis (LLM shape-hunting only)._"
+            ),
+            "",
+            "| Language | Files | Tier |",
+            "|----------|-------|------|",
+        ]
         for lang in coverage.get("languages", []):
             lines.append(f"| {lang['language']} | {lang['files']} | {lang['tier']} |")
         uncovered = ", ".join(coverage.get("uncovered", [])) or "none"
-        lines += ["", (f"Dataflow coverage: {coverage.get('dataflow_pct', 0)}% of counted "
-                       f"source. Uncovered (LLM-only): {uncovered}.")]
+        lines += [
+            "",
+            (
+                f"Dataflow coverage: {coverage.get('dataflow_pct', 0)}% of counted "
+                f"source. Uncovered (LLM-only): {uncovered}."
+            ),
+        ]
     if has_redteam_plan:
-        lines += ["", "## Manual runtime testing", "",
-                  ("See `redteam-plan.md` for the runtime test directives "
-                   "(needs-runtime findings).")]
+        lines += [
+            "",
+            "## Manual runtime testing",
+            "",
+            ("See `redteam-plan.md` for the runtime test directives (needs-runtime findings)."),
+        ]
     if coverage_ledger:
         lines += ["", render_coverage_ledger(coverage_ledger)]
     if economics:
@@ -347,9 +434,7 @@ def collapse_clusters(findings: list[Finding]) -> list[Finding]:
         primary = next((m for m in members if m.affected_sites), None)
         if primary is None:
             primary = min(members, key=_risk_sort_key)
-            primary.affected_sites = [
-                {"id": m.id, "file": m.file, "line": m.line} for m in members
-            ]
+            primary.affected_sites = [{"id": m.id, "file": m.file, "line": m.line} for m in members]
         reps.append(primary)
     return reps
 
@@ -404,33 +489,44 @@ def write_report(ws: Workspace, *, target: str | None = None, confirmed_only: bo
     cl_path = ws.kb / "coverage-ledger.json"
     if not cl_path.exists():
         from sec_overlay.coverage_ledger import build_coverage_ledger  # local: avoid cycle
+
         build_coverage_ledger(ws)
     coverage_ledger = json.loads(cl_path.read_text()) if cl_path.exists() else None
     has_redteam_plan = (ws.reports / "redteam-plan.md").exists()
     state = load_state(ws)
     by_phase = cost.aggregate_by_phase(state)
-    economics = {
-        "by_phase": by_phase,
-        "by_model": cost.aggregate_by_model(state),
-        "usd_estimate": cost.estimate_cost_usd(state),
-    } if by_phase else None
+    economics = (
+        {
+            "by_phase": by_phase,
+            "by_model": cost.aggregate_by_model(state),
+            "usd_estimate": cost.estimate_cost_usd(state),
+        }
+        if by_phase
+        else None
+    )
     patch_statuses = None
     if target:
         patch_statuses = {
             f.id: check_patch_applied(target, f.patch_diff)
-            for f in reportable if f.status is FindingStatus.FIXED and f.patch_diff
+            for f in reportable
+            if f.status is FindingStatus.FIXED and f.patch_diff
         }
     if confirmed_only:
         sarif_findings, suppressed = reportable, None
     else:
         sarif_findings, suppressed = reportable + ndt, ndt
     ws.sarif_path.write_text(json.dumps(to_sarif(sarif_findings, suppressed=suppressed), indent=2))
-    ws.report_path.write_text(to_markdown(reportable, needs_deployment=ndt,
-                                          coverage=coverage,
-                                          coverage_ledger=coverage_ledger,
-                                          has_redteam_plan=has_redteam_plan,
-                                          patch_statuses=patch_statuses,
-                                          economics=economics))
+    ws.report_path.write_text(
+        to_markdown(
+            reportable,
+            needs_deployment=ndt,
+            coverage=coverage,
+            coverage_ledger=coverage_ledger,
+            has_redteam_plan=has_redteam_plan,
+            patch_statuses=patch_statuses,
+            economics=economics,
+        )
+    )
     findings_out = reportable + ndt
     ws.findings_json_path.write_text(json.dumps([f.to_dict() for f in findings_out], indent=2))
     record_stage(ws, "report")
@@ -455,9 +551,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--target", default=None)
     parser.add_argument("--confirmed-only", action="store_true")
     args = parser.parse_args(argv)
-    ws = load_paths(workspace=args.workspace, paths_config=args.paths_config,
-                    reports_dir=args.reports_dir, findings_dir=args.findings_dir,
-                    kb_dir=args.kb_dir)
+    ws = load_paths(
+        workspace=args.workspace,
+        paths_config=args.paths_config,
+        reports_dir=args.reports_dir,
+        findings_dir=args.findings_dir,
+        kb_dir=args.kb_dir,
+    )
     result = write_report(ws, target=args.target, confirmed_only=args.confirmed_only)
     print(f"reported {result['reported']}")
     return 0

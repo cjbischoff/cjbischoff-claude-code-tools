@@ -11,7 +11,16 @@ from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.workspace import Workspace, read_findings, write_findings
 
 _BASE = {"critical": 9, "high": 7, "medium": 5, "low": 3, "info": 1}
-_HIGH_IMPACT = {"sqli", "cmdi", "deserialization", "ssti", "authz", "ssrf", "path-traversal", "secrets"}
+_HIGH_IMPACT = {
+    "sqli",
+    "cmdi",
+    "deserialization",
+    "ssti",
+    "authz",
+    "ssrf",
+    "path-traversal",
+    "secrets",
+}
 # F10: a pattern the validate agent judged industry-standard-safe (a comparable
 # mainstream app does the same, unexploited in years of prod) is capped low — a
 # textbook deviation that a real baseline accepts is not a high-risk finding.
@@ -21,14 +30,51 @@ _SCOREABLE = {FindingStatus.CONFIRMED, FindingStatus.NEEDS_DEPLOYMENT_TESTING}
 # A precondition lowers risk only when it is a real barrier an attacker must overcome.
 # Free conditions (unauthenticated/remote/default) are NOT mitigants and never lower risk
 # (fixes O-031: enumerating free preconditions must not penalize a finding).
-_PRECOND_FREE = ("unauth", "no auth", "without auth", "anonymous", "public", "no config",
-                 "default config", "no setup", "remote", "any user", "no special", "no privilege")
-_PRECOND_STRONG = ("admin", "operator", "root", "superuser", "non-default", "feature flag",
-                   "feature-flag", "local access", "local-only", "physical", "prior primitive",
-                   "prior-primitive", "chained", "mitm", "man-in-the-middle",
-                   "specific config", "specific configuration", "guessed", "brute")
-_PRECOND_WEAK = ("auth", "login", "logged", "session", "account", "one hop", "csrf",
-                 "user interaction")
+_PRECOND_FREE = (
+    "unauth",
+    "no auth",
+    "without auth",
+    "anonymous",
+    "public",
+    "no config",
+    "default config",
+    "no setup",
+    "remote",
+    "any user",
+    "no special",
+    "no privilege",
+)
+_PRECOND_STRONG = (
+    "admin",
+    "operator",
+    "root",
+    "superuser",
+    "non-default",
+    "feature flag",
+    "feature-flag",
+    "local access",
+    "local-only",
+    "physical",
+    "prior primitive",
+    "prior-primitive",
+    "chained",
+    "mitm",
+    "man-in-the-middle",
+    "specific config",
+    "specific configuration",
+    "guessed",
+    "brute",
+)
+_PRECOND_WEAK = (
+    "auth",
+    "login",
+    "logged",
+    "session",
+    "account",
+    "one hop",
+    "csrf",
+    "user interaction",
+)
 # A claimed severity this far above the derived score is flagged as inflation (recall-safe:
 # we flag, we do not silently drop or re-score).
 _INFLATION_THRESHOLD = 3
@@ -149,6 +195,7 @@ def calibrate_findings(ws: Workspace) -> int:
         promote_runtime_dependent,  # local: avoid cycle
     )
     from sec_overlay.citations import attach as _attach_citations  # local: avoid cycle
+
     promote_runtime_dependent(ws)
     promote_deps(ws)
     findings = read_findings(ws)
@@ -162,25 +209,36 @@ def calibrate_findings(ws: Workspace) -> int:
                 if _is_baseline_standard(f):
                     f.risk_score = min(f.risk_score, _BASELINE_CAP)
                 if f.judge_verdict in ("severity-inflated", "downgrade"):
-                    lowered = min(f.risk_score, derived)  # drop the severity-band floor; never raise
+                    lowered = min(
+                        f.risk_score, derived
+                    )  # drop the severity-band floor; never raise
                     if lowered < f.risk_score:
-                        f.history.append({"event": "calibrate:judge-downgrade-applied",
-                                          "judge_verdict": f.judge_verdict,
-                                          "from": f.risk_score, "to": lowered})
+                        f.history.append(
+                            {
+                                "event": "calibrate:judge-downgrade-applied",
+                                "judge_verdict": f.judge_verdict,
+                                "from": f.risk_score,
+                                "to": lowered,
+                            }
+                        )
                         f.risk_score = lowered
                 if _is_external_boundary(f):
                     f.risk_score = min(f.risk_score, _EXTERNAL_CAP)
                     f.completeness_tier = "external-unverifiable"
-                    if not any(h.get("event") == "calibrate:external-boundary"
-                               for h in f.history):
+                    if not any(h.get("event") == "calibrate:external-boundary" for h in f.history):
                         f.history.append({"event": "calibrate:external-boundary"})
                 delta = inflation_delta(f, derived)
                 if delta >= _INFLATION_THRESHOLD and not any(
                     h.get("event") == "calibrate:severity-inflated" for h in f.history
                 ):
-                    f.history.append({"event": "calibrate:severity-inflated",
-                                      "claimed": f.severity.value, "derived": derived,
-                                      "delta": delta})
+                    f.history.append(
+                        {
+                            "event": "calibrate:severity-inflated",
+                            "claimed": f.severity.value,
+                            "derived": derived,
+                            "delta": delta,
+                        }
+                    )
                 if f.cvss_vector:
                     try:
                         f.priority = offensive_priority(f.cvss_vector)

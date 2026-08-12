@@ -30,8 +30,7 @@ def build_self_score(ws: Workspace) -> dict:
     findings = read_findings(ws)
     clusters = {f.cluster_id for f in findings if getattr(f, "cluster_id", None)}
     external = sum(
-        1 for f in findings
-        if (f.reachability or {}).get("blocker") == "external-boundary"
+        1 for f in findings if (f.reachability or {}).get("blocker") == "external-boundary"
     )
     return {
         "reported": sum(1 for f in findings if f.status in _REPORTED),

@@ -11,6 +11,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Apply `ruff format` to the sec-overlay helper files touched by the review-improvements branch (`calibrate.py`, `selfscore.py`, `sarif.py`, `report.py`, and their tests), so the branch's own code conforms to the project formatter.
 - Default `report.write_report` SARIF output to carry every reportable finding plus `needs-deployment-testing` findings marked with an `inSource` suppression, so downstream gates see them without failing on them; pass `--confirmed-only` (or `confirmed_only=True`) to restore the prior confirmed/fixed-only SARIF.
 
 ### Added

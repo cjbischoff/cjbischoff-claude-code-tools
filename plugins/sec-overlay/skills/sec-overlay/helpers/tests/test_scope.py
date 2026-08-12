@@ -5,7 +5,8 @@ from sec_overlay.workspace import Workspace
 
 
 def _ws(tmp_path, packages=None):
-    ws = Workspace(tmp_path / "ws"); ws.ensure()
+    ws = Workspace(tmp_path / "ws")
+    ws.ensure()
     if packages is not None:
         ws.kb.mkdir(parents=True, exist_ok=True)
         (ws.kb / "scan-scope.json").write_text(json.dumps({"ingested_packages": packages}))

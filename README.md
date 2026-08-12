@@ -54,7 +54,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 ## Status
 
-sec-overlay is ported and green (593 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
+sec-overlay is ported and green (593 pass, 2 env-only failures); plugin and marketplace manifests validate. The `feat/sec-overlay-review-improvements` branch is complete: all 12 planned tasks landed and passed final whole-branch review, and the branch-touched helpers are `ruff format`-clean. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
 
 Changed the default SARIF output to carry every reportable finding plus `needs-deployment-testing` findings marked with an `inSource` suppression, so downstream gates see them without failing; `--confirmed-only` restores the prior confirmed/fixed-only SARIF.
 

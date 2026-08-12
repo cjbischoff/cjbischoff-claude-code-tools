@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from sec_overlay.models import Finding, Severity
 
-_SCHEMA = "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json"
+_SCHEMA = (
+    "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json"
+)
 
 
 def _level(sev: Severity) -> str:
@@ -40,8 +42,7 @@ def _rules(findings: list[Finding]) -> list[dict]:
         by_id[f.rule_id] = {
             "id": f.rule_id,
             "name": f.cls,
-            "properties": {"asvs_ids": list(f.asvs_ids),
-                           "codeguard_ids": list(f.codeguard_ids)},
+            "properties": {"asvs_ids": list(f.asvs_ids), "codeguard_ids": list(f.codeguard_ids)},
         }
     return list(by_id.values())
 
@@ -78,9 +79,7 @@ def to_sarif(
             ],
         }
         if f.id in suppressed_ids:
-            result["suppressions"] = [
-                {"kind": "inSource", "justification": "needs runtime proof"}
-            ]
+            result["suppressions"] = [{"kind": "inSource", "justification": "needs runtime proof"}]
         results.append(result)
     return {
         "version": "2.1.0",

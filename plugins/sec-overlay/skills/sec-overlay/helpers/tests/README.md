@@ -27,3 +27,7 @@ bench/citation tests (`test_bench.py`, `test_citations.py`) that need local seed
 
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
+
+The review-improvements test files (`test_cluster.py`, `test_scope.py`, `test_selfscore.py`,
+`test_sarif.py`, `test_calibrate.py`, `test_report.py`) are `ruff format`-clean; run `ruff format`
+before committing edits.
