@@ -456,6 +456,18 @@ def test_run_economics_section_renders_phase_model_and_usd_estimate():
     assert "$0.0045" in md
 
 
+def test_external_leads_render_in_their_own_bucket():
+    f = Finding(id="F-1", rule_id="r", cls="authz",
+                status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
+                severity=Severity.MEDIUM, file="a.py", line=1,
+                message="owner check may live in @lume/account-portal-core",
+                completeness_tier="external-unverifiable",
+                preconditions=["ownership check in @lume/account-portal-core"])
+    md = to_markdown([], needs_deployment=[f])
+    assert "pending external-dependency verification" in md.lower()
+    assert "@lume/account-portal-core" in md
+
+
 def test_triage_dep_row_preserves_semver_and_advisory():
     """`what` clip splits on period-space, so `decompress@4.2.1` isn't truncated to `decompress@4`."""
     out = to_markdown([_confirmed_dep()])

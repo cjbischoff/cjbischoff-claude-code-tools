@@ -22,6 +22,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Add an "Affected sites" table to the needs-runtime finding view, listing every member of a collapsed cluster.
 - Add `sec_overlay.scope`, an ingested-package boundary check (`is_external_package`) reading `kb/scan-scope.json`, so a sink resolving into an un-ingested dependency can be flagged without inventing a boundary when no manifest exists.
 - Cap calibrated `risk_score` at 3 and set `completeness_tier` to `external-unverifiable` for findings whose `reachability.blocker` is `external-boundary`, so they can never present as a confirmed medium.
+- Render findings stamped `completeness_tier == "external-unverifiable"` in their own report section, "Leads — pending external-dependency verification", separate from the source-provable needs-runtime bucket.
 
 ## 0.1.0 - 2026-08-11
 

@@ -228,7 +228,9 @@ def to_markdown(findings: list[Finding], token_spend: dict[str, int] | None = No
     Returns:
         A Markdown report string.
     """
-    ndt = sorted(needs_deployment or [], key=_risk_sort_key)
+    ndt_all = sorted(needs_deployment or [], key=_risk_sort_key)
+    external = [f for f in ndt_all if f.completeness_tier == "external-unverifiable"]
+    ndt = [f for f in ndt_all if f.completeness_tier != "external-unverifiable"]
     conf = sorted(findings, key=_risk_sort_key)
 
     # Bottom line — confirmed counts exclude NDT entirely (epistemic honesty)
@@ -274,6 +276,14 @@ def to_markdown(findings: list[Finding], token_spend: dict[str, int] | None = No
         lines += ["## Needs runtime proof — the real leads", ""]
         for f in ndt:
             lines += [render_ndt(f), "---", ""]
+
+    # External-unverifiable leads — sink crosses into an un-ingested dependency
+    if external:
+        lines += ["", "## Leads — pending external-dependency verification", "",
+                  ("These findings' sinks cross into a package whose source was not "
+                   "ingested. They are capped leads, not confirmed findings.")]
+        for f in external:
+            lines += ["", render_ndt(f)]
 
     # Confirmed section
     if conf:

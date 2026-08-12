@@ -43,3 +43,9 @@ never invents a boundary — see the module map entry.
 `reachability.blocker == "external-boundary"` has its `risk_score` capped at 3 (below the medium
 floor of 4) and `completeness_tier` set to `"external-unverifiable"`, so it can never present as a
 confirmed medium regardless of claimed severity.
+
+`report.to_markdown` partitions the needs-runtime bucket further: findings with
+`completeness_tier == "external-unverifiable"` render in their own "Leads — pending
+external-dependency verification" section (via `render_ndt`), separate from the source-provable
+needs-runtime section, so a capped external-boundary lead is never conflated with an in-repo
+needs-runtime finding.

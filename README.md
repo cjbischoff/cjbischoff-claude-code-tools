@@ -54,7 +54,9 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 ## Status
 
-sec-overlay is ported and green (588 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
+sec-overlay is ported and green (591 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
+
+Rendered external-unverifiable findings in their own report section, separate from the source-provable needs-runtime bucket.
 
 Capped calibrated risk for external-boundary findings so they can never present as a confirmed medium, regardless of claimed severity.
 
