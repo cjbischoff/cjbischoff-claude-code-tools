@@ -48,3 +48,4 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Document the `open_questions` field in the `finding.schema.json` reference table and correct the sec-overlay `CLAUDE.md` prompt-constants block counts (§6 and §8) from six and nine to twelve.
 - Correct the sec-overlay README and helpers/README test counts to 575 tests / 2 env-only failures and verify the diagrams and worked example against the current pipeline.
 - Clean up the hook test's temporary repos with an EXIT trap so no `mktemp` directories are left behind.
+- Rename the sec-overlay overview architecture diagram's subgraph id from `HARNESS` to `OVERLAY` (rendered label unchanged).

@@ -46,7 +46,7 @@ These hold everywhere and are enforced in code where possible, prompt otherwise:
 
 ```mermaid
 flowchart TB
-    subgraph HARNESS["skills/sec-overlay/"]
+    subgraph OVERLAY["skills/sec-overlay/"]
         direction TB
         SKILL["SKILL.md<br/>the orchestration playbook"]
         subgraph REF["references/ — the RULE BOOK"]
