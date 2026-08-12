@@ -170,6 +170,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `repo_memory.py` | The per-repo sidecar (`<target>/.sec-overlay/<slug>/`): workspace, `MEMORY.md`, dated `learnings/`, run status for resume. |
 | `workspace.py` | The on-disk layout (`kb/`, `findings/`, reports); per-finding read/write; `record_agent_return` / `read_agent_return`. |
 | `scanscope.py` | Resolve + pin `repo_root` + `scan_scope` once per campaign (monorepo-safe); `kb/scan-scope.json`. |
+| `scope.py` | `is_external_package(pkg, ws)` reads `kb/scan-scope.json`'s `ingested_packages` list to decide whether a sink's package was scanned; `True` only when a manifest exists and excludes `pkg`, so the check never invents a boundary when no manifest is present. |
 | `kb.py` | Paths to the KB files (profile/architecture/threat-model/entities). |
 | `context.py` | Deterministic context ingestion (docs/specs/runbooks + prior scans), trust-tagged. Also discovers IaC/deployment-config files (Pulumi, Terraform, Helm, k8s, docker-compose, serverless) as `deployment_config` items, carrying a `deployed_in` env tag. `Context.diagram` holds the C1 agent's claimed-control status map (a raw mermaid block); `render_markdown` writes it into `CONTEXT.md`, which is regenerated on every `save()` and never hand-edited. |
 | `profile.py` | The `ScanProfile` contract; validate/load `kb/scan-profile.json`. |
@@ -189,7 +190,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 
 ## Test coverage & contracts
 
-The `tests/` folder houses 80 files, 582 tests. Key structural guards:
+The `tests/` folder houses 81 files, 589 tests. Key structural guards:
 - `test_docs_invariants.py` enforces documentation contracts: prompt-constants block presence, `finding-template.md` sections (triage line, NDT-view, dep-view, reachability, renumber), and agent prompt rules (determinism, tool receipt trust, evidence chains). Regression-tested so template drift is caught early.
 
 ### Hunting aids & tuning

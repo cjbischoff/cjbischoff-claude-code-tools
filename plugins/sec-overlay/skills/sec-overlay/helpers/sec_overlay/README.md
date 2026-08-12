@@ -7,7 +7,7 @@ scoring, reporting, campaign state, and per-repo memory. Stdlib-only (no runtime
 table lists every module by job and is kept current with the code. This file is the in-package
 entry point; read the parent map for the full inventory.
 
-- Package layout: ~71 modules at the top level, plus the `correlate/` subpackage (cross-repo
+- Package layout: ~72 modules at the top level, plus the `correlate/` subpackage (cross-repo
   correlation — see the parent map's `sec_overlay/correlate/` section).
 - Two in-code invariants enforced here: the tool-receipt gate (`evidence.py` + `findings_gate.py`)
   and never-silent backends (`prefilter.py`). See [`../README.md`](../README.md#the-two-invariants-in-code).
@@ -33,3 +33,8 @@ run after dedupe and before the critic/gate ladder — see the module map entry.
 finding (highest-risk member, or the elected primary if present) before the confirmed and
 needs-runtime buckets are counted and rendered; `render_ndt` renders an affected-sites table when
 the finding carries `affected_sites`.
+
+`scope.py` (new) checks `is_external_package(pkg, ws)` against `kb/scan-scope.json`'s
+`ingested_packages` list, so a sink that resolves into an un-ingested dependency can be flagged as
+outside the scanned source — returns `False` (not external) when no manifest exists, so the check
+never invents a boundary — see the module map entry.

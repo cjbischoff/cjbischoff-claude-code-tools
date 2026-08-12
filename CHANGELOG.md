@@ -20,6 +20,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Document token proxy fallback and self-score call in the sec-overlay SKILL orchestration (cost recording when harness token reporting is ambiguous; per-run self-score persisted to state for next-run calibration).
 - Add `report.collapse_clusters`, which reduces each systemic cluster to one representative finding (un-clustered findings pass through unchanged) applied to both the confirmed and needs-runtime report buckets.
 - Add an "Affected sites" table to the needs-runtime finding view, listing every member of a collapsed cluster.
+- Add `sec_overlay.scope`, an ingested-package boundary check (`is_external_package`) reading `kb/scan-scope.json`, so a sink resolving into an un-ingested dependency can be flagged without inventing a boundary when no manifest exists.
 
 ## 0.1.0 - 2026-08-11
 
