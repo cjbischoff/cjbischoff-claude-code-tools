@@ -16,6 +16,7 @@ _HIGH_IMPACT = {"sqli", "cmdi", "deserialization", "ssti", "authz", "ssrf", "pat
 # mainstream app does the same, unexploited in years of prod) is capped low — a
 # textbook deviation that a real baseline accepts is not a high-risk finding.
 _BASELINE_CAP = 4
+_EXTERNAL_CAP = 3  # external-boundary leads cannot present as a confirmed medium (>=4)
 _SCOREABLE = {FindingStatus.CONFIRMED, FindingStatus.NEEDS_DEPLOYMENT_TESTING}
 # A precondition lowers risk only when it is a real barrier an attacker must overcome.
 # Free conditions (unauthenticated/remote/default) are NOT mitigants and never lower risk
@@ -129,6 +130,11 @@ def inflation_delta(finding: Finding, score: int) -> int:
     return max(0, claimed - score)
 
 
+def _is_external_boundary(finding: Finding) -> bool:
+    """True when the finding's sink crosses into an un-ingested dependency."""
+    return (finding.reachability or {}).get("blocker") == "external-boundary"
+
+
 def calibrate_findings(ws: Workspace) -> int:
     """Set ``risk_score`` on every confirmed finding in the workspace.
 
@@ -162,6 +168,12 @@ def calibrate_findings(ws: Workspace) -> int:
                                           "judge_verdict": f.judge_verdict,
                                           "from": f.risk_score, "to": lowered})
                         f.risk_score = lowered
+                if _is_external_boundary(f):
+                    f.risk_score = min(f.risk_score, _EXTERNAL_CAP)
+                    f.completeness_tier = "external-unverifiable"
+                    if not any(h.get("event") == "calibrate:external-boundary"
+                               for h in f.history):
+                        f.history.append({"event": "calibrate:external-boundary"})
                 delta = inflation_delta(f, derived)
                 if delta >= _INFLATION_THRESHOLD and not any(
                     h.get("event") == "calibrate:severity-inflated" for h in f.history

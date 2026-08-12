@@ -54,7 +54,9 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 ## Status
 
-sec-overlay is ported and green (587 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
+sec-overlay is ported and green (588 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
+
+Capped calibrated risk for external-boundary findings so they can never present as a confirmed medium, regardless of claimed severity.
 
 Added an ingested-package scope check (`scope.is_external_package`) so a sink resolving into an un-ingested dependency can be flagged, without inventing a boundary when no manifest exists.
 

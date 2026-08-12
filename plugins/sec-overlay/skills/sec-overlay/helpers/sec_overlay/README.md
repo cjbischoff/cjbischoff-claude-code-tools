@@ -38,3 +38,8 @@ the finding carries `affected_sites`.
 `ingested_packages` list, so a sink that resolves into an un-ingested dependency can be flagged as
 outside the scanned source — returns `False` (not external) when no manifest exists, so the check
 never invents a boundary — see the module map entry.
+
+`calibrate.py` gained `_EXTERNAL_CAP` (3) and `_is_external_boundary`: a finding whose
+`reachability.blocker == "external-boundary"` has its `risk_score` capped at 3 (below the medium
+floor of 4) and `completeness_tier` set to `"external-unverifiable"`, so it can never present as a
+confirmed medium regardless of claimed severity.

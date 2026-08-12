@@ -263,3 +263,15 @@ def test_judge_uphold_does_not_lower(tmp_path: Path):
     result = read_findings(ws)[0].risk_score
     assert result is not None
     assert result >= 6  # floor intact
+
+
+def test_external_boundary_finding_is_capped_and_tagged(tmp_path):
+    ws = Workspace(tmp_path / "ws"); ws.ensure()
+    f = Finding(id="F-1", rule_id="r", cls="authz", status=FindingStatus.CONFIRMED,
+                severity=Severity.MEDIUM, file="a.py", line=1, message="m",
+                reachability={"reachable": False, "blocker": "external-boundary"})
+    write_findings(ws, [f])
+    calibrate_findings(ws)
+    out = read_findings(ws)[0]
+    assert out.risk_score <= 3                         # below the medium floor of 4
+    assert out.completeness_tier == "external-unverifiable"
