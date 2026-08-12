@@ -15,3 +15,6 @@ entry point; read the parent map for the full inventory.
 
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
+
+`cost.py` gained `aggregate_by_model` (per-model token totals, alongside the existing
+`aggregate_by_phase`), feeding `report.py`'s "Run economics" section — see the module map entry.

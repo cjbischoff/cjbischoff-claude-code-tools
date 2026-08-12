@@ -43,6 +43,22 @@ def aggregate_by_phase(state: CampaignState) -> dict[str, int]:
     return out
 
 
+def aggregate_by_model(state: CampaignState) -> dict[str, int]:
+    """Sum recorded token usage by model.
+
+    Args:
+        state: Campaign state holding budget records.
+
+    Returns:
+        ``{model: total_tokens}`` (empty when nothing was recorded).
+    """
+    out: dict[str, int] = {}
+    for rec in state.budget.get("records", []):
+        model = rec.get("model", "default")
+        out[model] = out.get(model, 0) + int(rec.get("tokens", 0))
+    return out
+
+
 def estimate_cost_usd(state: CampaignState, rates: dict[str, float] | None = None) -> float:
     """Estimate run cost in USD from recorded usage and a rates table.
 

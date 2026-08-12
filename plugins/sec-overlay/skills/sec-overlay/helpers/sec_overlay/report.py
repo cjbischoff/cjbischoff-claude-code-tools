@@ -193,7 +193,8 @@ def to_markdown(findings: list[Finding], token_spend: dict[str, int] | None = No
                 needs_deployment: list[Finding] | None = None,
                 coverage: dict | None = None, coverage_ledger: dict | None = None,
                 has_redteam_plan: bool = False,
-                patch_statuses: dict[str, PatchStatus] | None = None) -> str:
+                patch_statuses: dict[str, PatchStatus] | None = None,
+                economics: dict | None = None) -> str:
     """Render findings and optional token accounting as Markdown.
 
     Structure: Bottom line → Triage table → Needs runtime proof section →
@@ -215,6 +216,9 @@ def to_markdown(findings: list[Finding], token_spend: dict[str, int] | None = No
             "Manual runtime testing" section pointing the engineer at it (O-022).
         patch_statuses: Optional ``finding.id`` → :class:`PatchStatus`, from
             :func:`check_patch_applied` against the real target, for ``fixed`` findings.
+        economics: Optional ``{"by_phase": dict, "by_model": dict, "usd_estimate": float}``
+            from :func:`sec_overlay.cost`; renders a "Run economics" section and takes
+            priority over ``token_spend`` when both are given.
 
     Returns:
         A Markdown report string.
@@ -289,7 +293,16 @@ def to_markdown(findings: list[Finding], token_spend: dict[str, int] | None = No
                    "(needs-runtime findings).")]
     if coverage_ledger:
         lines += ["", render_coverage_ledger(coverage_ledger)]
-    if token_spend:
+    if economics:
+        lines += ["", "## Run economics", ""]
+        lines += ["**Tokens by phase** (measured):"]
+        lines += [f"- **{phase}**: {n}" for phase, n in economics.get("by_phase", {}).items()]
+        lines += ["", "**Tokens by model** (measured):"]
+        lines += [f"- **{model}**: {n}" for model, n in economics.get("by_model", {}).items()]
+        usd = economics.get("usd_estimate")
+        if usd is not None:
+            lines += ["", f"**Estimated cost:** ${usd:.4f} (estimate, not a billed figure)."]
+    elif token_spend:
         lines += ["", "## Token spend by phase", ""]
         lines += [f"- **{phase}**: {n}" for phase, n in token_spend.items()]
     return "\n".join(lines) + "\n"
@@ -340,7 +353,13 @@ def write_report(ws: Workspace, *, target: str | None = None) -> dict:
         build_coverage_ledger(ws)
     coverage_ledger = json.loads(cl_path.read_text()) if cl_path.exists() else None
     has_redteam_plan = (ws.reports / "redteam-plan.md").exists()
-    token_spend = cost.aggregate_by_phase(load_state(ws)) or None
+    state = load_state(ws)
+    by_phase = cost.aggregate_by_phase(state)
+    economics = {
+        "by_phase": by_phase,
+        "by_model": cost.aggregate_by_model(state),
+        "usd_estimate": cost.estimate_cost_usd(state),
+    } if by_phase else None
     patch_statuses = None
     if target:
         patch_statuses = {
@@ -348,11 +367,12 @@ def write_report(ws: Workspace, *, target: str | None = None) -> dict:
             for f in reportable if f.status is FindingStatus.FIXED and f.patch_diff
         }
     ws.sarif_path.write_text(json.dumps(to_sarif(reportable), indent=2))
-    ws.report_path.write_text(to_markdown(reportable, token_spend=token_spend, needs_deployment=ndt,
+    ws.report_path.write_text(to_markdown(reportable, needs_deployment=ndt,
                                           coverage=coverage,
                                           coverage_ledger=coverage_ledger,
                                           has_redteam_plan=has_redteam_plan,
-                                          patch_statuses=patch_statuses))
+                                          patch_statuses=patch_statuses,
+                                          economics=economics))
     findings_out = reportable + ndt
     ws.findings_json_path.write_text(json.dumps([f.to_dict() for f in findings_out], indent=2))
     record_stage(ws, "report")

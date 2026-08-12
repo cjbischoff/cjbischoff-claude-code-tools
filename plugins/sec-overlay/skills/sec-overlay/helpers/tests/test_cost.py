@@ -23,3 +23,11 @@ def test_estimate_cost_usd_uses_rates():
 
 def test_aggregate_empty_budget_is_empty():
     assert cost.aggregate_by_phase(_state()) == {}
+
+
+def test_aggregate_by_model():
+    st = _state()
+    cost.record_agent(st, "investigate", "sonnet", 1000)
+    cost.record_agent(st, "validate", "opus", 2000)
+    cost.record_agent(st, "investigate", "sonnet", 500)
+    assert cost.aggregate_by_model(st) == {"sonnet": 1500, "opus": 2000}

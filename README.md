@@ -62,6 +62,8 @@ Refocused the sec-overlay skill CLAUDE.md on repo mechanics (git/governance, tes
 
 Added an EXIT-trap cleanup to the pre-commit hook test so it leaves no temp directories behind.
 
+Added a "Run economics" report section (tokens by phase/model, USD estimate) via `cost.aggregate_by_model`.
+
 Renamed the sec-overlay overview diagram's subgraph id to `OVERLAY`.
 
 Corrected the sec-overlay README/helpers test counts and verified the diagrams and worked example.
