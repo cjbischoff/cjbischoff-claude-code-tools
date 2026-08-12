@@ -34,6 +34,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Flag comment-only `file:line` citations in the phase gate as a scrutiny note.
 - Add the `deployment_config` context kind, `deployed_in` tag, and `Context.diagram` slot rendered into `CONTEXT.md`.
 - Render a Questions-to-ask section in the red-team plan and wire the diagram/field-ownership/qualifier guidance and deployment-config lens into the agent prompts.
+- Add per-folder READMEs for agents/classes, references/asvs, references/codeguard, references/hunting, helpers/sec_overlay, and helpers/tests.
 
 ### Removed
 

@@ -60,6 +60,8 @@ Refocused the sec-overlay skill CLAUDE.md on repo mechanics (git/governance, tes
 
 Corrected the sec-overlay README/helpers test counts and verified the diagrams and worked example.
 
+Added six per-folder READMEs under the sec-overlay skill.
+
 ## Decisions
 
 - plugin.json declares no components; the default `skills/` directory scan handles discovery, strict mode stays at its default (true).

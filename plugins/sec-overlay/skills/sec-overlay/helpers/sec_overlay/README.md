@@ -1,0 +1,17 @@
+# `sec_overlay/` — the Python core package
+
+The deterministic pipeline package: SAST orchestration, the tool-receipt gate, finding identity,
+scoring, reporting, campaign state, and per-repo memory. Stdlib-only (no runtime dependencies).
+
+**The authoritative, grouped module map lives in [`../README.md`](../README.md#sec_overlay--module-map-grouped-by-job)** — that
+table lists every module by job and is kept current with the code. This file is the in-package
+entry point; read the parent map for the full inventory.
+
+- Package layout: ~71 modules at the top level, plus the `correlate/` subpackage (cross-repo
+  correlation — see the parent map's `sec_overlay/correlate/` section).
+- Two in-code invariants enforced here: the tool-receipt gate (`evidence.py` + `findings_gate.py`)
+  and never-silent backends (`prefilter.py`). See [`../README.md`](../README.md#the-two-invariants-in-code).
+- CLI-callable modules (`python -m sec_overlay.<module>`) are listed in the parent map.
+
+When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
+pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
