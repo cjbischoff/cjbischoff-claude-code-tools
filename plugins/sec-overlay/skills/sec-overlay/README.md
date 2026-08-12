@@ -98,7 +98,8 @@ flowchart TD
     RA --> PRE["5 · prefilter<br/>semgrep+codeql+sca+secrets, never-silent"]
     PRE --> INV(("6 · investigate<br/>parallel per class, loop-until-dry"))
     INV --> DED["7 · dedupe<br/>refactor-resistant fingerprint"]
-    DED --> LAD(("8-9 · critic → judge → validate(opus refutes)"))
+    DED --> CLUS["7.5 · cluster<br/>≥3 same-class/sink -> systemic cluster"]
+    CLUS --> LAD(("8-9 · critic → judge → validate(opus refutes)"))
     LAD --> CAL["10 · calibrate<br/>risk_score 1-10 + citations"]
     CAL --> PAT(("11 · patch(opus) → validate-fix"))
     PAT --> VER["12 · verify<br/>apply patch to COPY, re-scan"]
@@ -135,6 +136,7 @@ def get_user():
 | **5 prefilter** | semgrep + codeql (no LLM) | semgrep's SQLi rule fires on line 4 → a **candidate** with a real receipt `semgrep:<rule>`. | `findings/C-0001.json` (candidate) |
 | **6 investigate** | `investigate.md` (sonnet, `injection`) | Walks the gate ladder: cited code exists (Gate −1 ✓), reachable from `request.args` (Gate 1 ✓, `codeql:dataflow` receipt), `uid` is attacker-controlled (Gate 2a ✓), **reads the claimed middleware — it only trims whitespace, doesn't parameterize** (Gate 2b: sanitizer does *not* apply ✓), yields DB read/write (Gate 3 ✓). Promoted to **`raw`**. | status → `raw` |
 | **7 dedupe** | `dedupe` (no LLM) | Stamps fingerprint `sha256(sqli\|injection\|get_user)` so a later refactor that shifts the line still maps to the same finding. | `fingerprint` field |
+| **7.5 cluster** | `cluster` (no LLM) | Only one route hits this sink, so no group of ≥3 forms — `cluster_id` stays unset. | none (single-site finding) |
 | **8 critic** | `critic.md` (sonnet) | It's on a live route, not debug/test code → stays `raw`. | history: `critic:viable` |
 | **9 validate** | `validate.md` (**opus**) | *Assumes it's wrong* and re-traces independently, trying to refute. Cannot find a sanitizer on any path → **survives** → **`confirmed`**. (To reject it would have needed a `file:line` cite of a real defeating control.) | status → `confirmed` |
 | **10 calibrate** | `calibrate` (no LLM) | Preconditions enumerated first (unauthenticated, no WAF assumed) → CVSS computed by formula → `risk_score: 9`. ASVS/CodeGuard citations auto-attached. | `risk_score`, `asvs_ids` |
@@ -184,6 +186,7 @@ uv run python -m sec_overlay.graph build --target <T> --workspace <WS> --sha <sh
 # 5  from sec_overlay.prefilter import run_prefilter; run_prefilter(ws, target, profile)
 # 6  spawn agents/investigate.md in parallel per attack class
 uv run python -m sec_overlay.dedupe        --workspace <WS>    # 7
+uv run python -m sec_overlay.cluster       --workspace <WS>    # 7.5
 # 8-9 spawn critic → judge → validate
 uv run python -m sec_overlay.calibrate     --workspace <WS>    # 10
 # 11 spawn patch → validate-fix

@@ -25,3 +25,6 @@ sites on a cluster primary) — additive, nullable fields that round-trip throug
 
 `selfscore.py` (new) computes the per-run self-score from workspace findings and persists it to
 `CampaignState.budget["self_score"]` — see the module map entry.
+
+`cluster.py` (new) groups ≥3 same-class, same-sink `raw` findings into one systemic cluster,
+run after dedupe and before the critic/gate ladder — see the module map entry.

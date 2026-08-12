@@ -15,6 +15,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Add the task-by-task TDD implementation plan for the four sec-overlay improvements (build order I3, I1, I2, I4).
 - Add a "Run economics" report section (token totals by phase and model, plus a USD estimate) backed by `cost.aggregate_by_model`.
 - Add `cluster_id` and `affected_sites` fields to `Finding` and the finding schema.
+- Add `sec_overlay.cluster`, a deterministic pass that groups ≥3 same-class, same-sink `raw` findings into one systemic cluster before the critic/gate ladder.
 - Add `sec_overlay.selfscore`, a per-run finding-status score persisted to `state.budget`.
 - Document token proxy fallback and self-score call in the sec-overlay SKILL orchestration (cost recording when harness token reporting is ambiguous; per-run self-score persisted to state for next-run calibration).
 

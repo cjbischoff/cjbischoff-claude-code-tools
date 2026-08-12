@@ -54,7 +54,9 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 ## Status
 
-sec-overlay is ported and green (578 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
+sec-overlay is ported and green (582 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
+
+Added a systemic finding-clustering pass that groups related findings by class and sink before the critic/gate ladder.
 
 Wired token proxy fallback and self-score call into the sec-overlay SKILL orchestration documentation (cost recording for ambiguous harness token reporting; per-run self-score persisted to state).
 

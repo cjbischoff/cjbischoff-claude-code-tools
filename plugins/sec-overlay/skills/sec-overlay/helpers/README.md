@@ -68,7 +68,8 @@ flowchart TD
     NORM --> PART["partition.py<br/>group candidates by attack class"]
     PART --> INV(("investigate agents<br/>(../agents/)"))
     INV --> DED["dedupe.py<br/>refactor-resistant fingerprint"]
-    DED --> GATE1["findings_gate.py<br/>schema + tool-receipt gate"]
+    DED --> CLUS["cluster.py<br/>systemic clustering (≥3 same-class/sink)"]
+    CLUS --> GATE1["findings_gate.py<br/>schema + tool-receipt gate"]
     GATE1 --> LADDER(("critic / judge / validate agents"))
     LADDER --> CAL["calibrate.py<br/>risk_score 1–10"]
     CAL --> CIT["citations.py<br/>attach ASVS/CodeGuard"]
@@ -136,6 +137,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `normalize.py` | Dedup `(file, line, cls)`, keep the highest-severity survivor, assign stable `F-####` ids. |
 | `dedupe.py` | Active-finding dedup; stamps the **refactor-resistant fingerprint** so a finding survives line-shift refactors across passes. CLI-callable. |
 | `fingerprint.py` | The fingerprint itself: `sha256(rule_id\|cls\|enclosing-symbol)`, degrading to file:line if no symbol. |
+| `cluster.py` | Groups ≥3 same-class, same-sink `raw` findings into one systemic cluster: elects a primary (highest severity, tiebreak smallest id), stamps `cluster_id` on every member, and records all member sites on the primary's `affected_sites`. Runs after dedupe, before the critic/gate ladder. CLI-callable. |
 | `findings_gate.py` | Schema-validates every finding; forbids `raw`+`duplicate_of` collisions; **enforces the tool-receipt bar** for `confirmed`/`fixed`. CLI-callable. |
 | `partition.py` | Group candidates by attack class for parallel agent fan-out. |
 | `fp_feedback.py` | Recycle prior-pass rejections into the next pass's investigate/critic prompts as negative examples. |
@@ -187,7 +189,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 
 ## Test coverage & contracts
 
-The `tests/` folder houses 79 files, 580 tests. Key structural guards:
+The `tests/` folder houses 80 files, 582 tests. Key structural guards:
 - `test_docs_invariants.py` enforces documentation contracts: prompt-constants block presence, `finding-template.md` sections (triage line, NDT-view, dep-view, reachability, renumber), and agent prompt rules (determinism, tool receipt trust, evidence chains). Regression-tested so template drift is caught early.
 
 ### Hunting aids & tuning
@@ -232,7 +234,7 @@ completed per-repo scans, deterministically, with **no source reads and no LLM**
 
 ## CLI-callable modules (`python -m sec_overlay.<module>`)
 
-Sixteen modules expose a command line (they have a `__main__`). These are the deterministic
+Seventeen modules expose a command line (they have a `__main__`). These are the deterministic
 steps the orchestrator calls between agent phases:
 
 | Module | Command does |
@@ -243,6 +245,7 @@ steps the orchestrator calls between agent phases:
 | `structural_index` | Build the ripgrep symbol index. |
 | `astgrep` | ast-grep availability + structural search. |
 | `dedupe` | Mark duplicates + stamp fingerprints. |
+| `cluster` | Group ≥3 same-class, same-sink `raw` findings into one systemic cluster. |
 | `findings_gate` | Schema + tool-receipt gate over `findings/*.json`. |
 | `calibrate` | Assign 1–10 risk scores. |
 | `citations` | Attach ASVS/CodeGuard citations. |
