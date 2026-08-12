@@ -16,6 +16,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Add a "Run economics" report section (token totals by phase and model, plus a USD estimate) backed by `cost.aggregate_by_model`.
 - Add `cluster_id` and `affected_sites` fields to `Finding` and the finding schema.
 - Add `sec_overlay.selfscore`, a per-run finding-status score persisted to `state.budget`.
+- Document token proxy fallback and self-score call in the sec-overlay SKILL orchestration (cost recording when harness token reporting is ambiguous; per-run self-score persisted to state for next-run calibration).
 
 ## 0.1.0 - 2026-08-11
 

@@ -126,6 +126,12 @@ usage with `cost.record_agent(state, <phase>, <model>, <tokens>)` and `save_stat
 report renders measured per-phase token totals ("Token spend by phase"). USD is an opt-in
 estimate (`cost.estimate_cost_usd`), never shown as a measured figure.
 
+If the harness does not surface a subagent's token usage, record a labelled proxy
+instead of a fabricated token count: call
+`cost.record_agent(state, <phase>, <model>, 0)` and additionally note the agent
+count and output byte size in the run log. Never write an invented number into the
+`tokens` field. The Run-economics section states "measured" only for real usage.
+
 ## Process methodology (knobs + playbook)
 
 Four `scan_options` knobs let the orchestrator tune cost, coverage, and fan-out without
@@ -551,6 +557,11 @@ with a tool receipt; a doc claim NEVER suppresses a finding and NEVER auto-confi
 (confirmed findings, rejected-with-rationale so they're not re-litigated, drift-keyed by
 SHA). Optionally spawn `agents/postflight.md` to add a durable codebase-security-profile
 narrative. The NEXT scan's C1 reads this as higher-trust prior context (still drift-checked).
+
+After postflight, write the per-run self-score:
+`python -m sec_overlay.selfscore --workspace "$WS"`. It persists post-gate counts
+(reported, needs-runtime, rejected, clusters, external-boundary) to
+`state.json` `budget.self_score` for the next run to calibrate against.
 
 ## Per-repo memory (default workspace)
 

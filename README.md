@@ -56,6 +56,8 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 sec-overlay is ported and green (578 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
 
+Wired token proxy fallback and self-score call into the sec-overlay SKILL orchestration documentation (cost recording for ambiguous harness token reporting; per-run self-score persisted to state).
+
 Added `cluster_id` and `affected_sites` fields to the `Finding` model and finding schema.
 
 Added a per-run self-score module that counts findings by status and persists them to state.

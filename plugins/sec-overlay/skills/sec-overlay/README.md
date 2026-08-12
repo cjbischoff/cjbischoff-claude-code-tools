@@ -193,6 +193,7 @@ uv run python -m sec_overlay.findings_gate --workspace <WS>    # 13
 uv run python -m sec_overlay.redteam       --workspace <WS>
 uv run python -m sec_overlay.report        --workspace <WS>    # 14
 uv run python -m sec_overlay.postflight    --workspace <WS> --sha <sha>   # C2
+uv run python -m sec_overlay.selfscore     --workspace <WS>
 ```
 
 > **A scan is clean only if every planned backend actually ran.** If `preflight` shows a
