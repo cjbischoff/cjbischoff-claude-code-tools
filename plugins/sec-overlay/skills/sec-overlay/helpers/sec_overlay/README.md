@@ -49,3 +49,7 @@ confirmed medium regardless of claimed severity.
 external-dependency verification" section (via `render_ndt`), separate from the source-provable
 needs-runtime section, so a capped external-boundary lead is never conflated with an in-repo
 needs-runtime finding.
+
+`sarif.py` gained `_rules()`, populating `driver.rules` from the finding set (de-duplicated by
+`rule_id`, `cls` as `name`, `asvs_ids`/`codeguard_ids` as `properties`) — additive only, `results`
+unchanged — see the module map entry.

@@ -11,6 +11,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Added
 
+- Populate SARIF `driver.rules` from the finding set, de-duplicated by `rule_id`, with `cls` as the rule name and ASVS/CodeGuard ids as properties.
 - Instruct the trace agent to set `reachability.blocker = "external-boundary"` when a sink resolves into a dependency outside the ingested set, and instruct the validate agent to never promote such a finding to `confirmed`.
 - Add the design spec for four sec-overlay improvements from the lumedeodorant review: per-stage token accounting with a run self-score, systemic finding clustering, an external-boundary confidence disposition, and SARIF completeness.
 - Add the task-by-task TDD implementation plan for the four sec-overlay improvements (build order I3, I1, I2, I4).

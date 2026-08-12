@@ -54,7 +54,9 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 ## Status
 
-sec-overlay is ported and green (591 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
+sec-overlay is ported and green (592 pass, 2 env-only failures); plugin and marketplace manifests validate. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
+
+Populated SARIF `driver.rules` from the finding set (de-duplicated by `rule_id`, `cls` as name, ASVS/CodeGuard ids as properties); `results` unchanged.
 
 Instructed the trace and validate agents to set `reachability.blocker = "external-boundary"` when a sink resolves into an un-ingested dependency, and to keep such findings as leads rather than promoting them to confirmed.
 

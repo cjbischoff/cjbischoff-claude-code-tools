@@ -23,6 +23,29 @@ def _level(sev: Severity) -> str:
     return "note"
 
 
+def _rules(findings: list[Finding]) -> list[dict]:
+    """Build a de-duplicated SARIF rule array from the finding set.
+
+    Args:
+        findings: Findings to derive rules from.
+
+    Returns:
+        One rule per distinct ``rule_id``, carrying ``cls`` as the name and
+        ASVS/CodeGuard ids as properties. First occurrence of a ``rule_id`` wins.
+    """
+    by_id: dict[str, dict] = {}
+    for f in findings:
+        if f.rule_id in by_id:
+            continue
+        by_id[f.rule_id] = {
+            "id": f.rule_id,
+            "name": f.cls,
+            "properties": {"asvs_ids": list(f.asvs_ids),
+                           "codeguard_ids": list(f.codeguard_ids)},
+        }
+    return list(by_id.values())
+
+
 def to_sarif(findings: list[Finding], tool_name: str = "sec-overlay") -> dict:
     """Convert findings to a SARIF 2.1.0 document.
 
@@ -52,5 +75,7 @@ def to_sarif(findings: list[Finding], tool_name: str = "sec-overlay") -> dict:
     return {
         "version": "2.1.0",
         "$schema": _SCHEMA,
-        "runs": [{"tool": {"driver": {"name": tool_name, "rules": []}}, "results": results}],
+        "runs": [
+            {"tool": {"driver": {"name": tool_name, "rules": _rules(findings)}}, "results": results}
+        ],
     }
