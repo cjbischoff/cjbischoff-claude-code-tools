@@ -151,6 +151,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `scoring.py` | Weighted fix-validation score (root_cause, scope_verified, …); regression is non-waivable. |
 | `fix_disposition.py` | Conservative fix-completeness tier (FULL / MITIGATION / WORKAROUND); ambiguity → LLM_REVIEW. |
 | `crypto_policy.py` | Machine-checked crypto policy from the two `references/approved-*.yaml` files (deny md5/sha1/des/ecb; floor rsa≥3072/pbkdf2≥600000/…). |
+| `selfscore.py` | Per-run self-score: counts findings by status (`reported`, `confirmed`, `needs_runtime`, `rejected`), plus `clusters` and `external_boundary` (both read defensively via `getattr`/`.get`, since `cluster_id` and `reachability.blocker` are populated by later phases). Persisted to `CampaignState.budget["self_score"]`. CLI-callable. |
 
 ### Reporting
 | Module | Purpose |
@@ -186,7 +187,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 
 ## Test coverage & contracts
 
-The `tests/` folder houses 78 files, 575 tests. Key structural guards:
+The `tests/` folder houses 79 files, 580 tests. Key structural guards:
 - `test_docs_invariants.py` enforces documentation contracts: prompt-constants block presence, `finding-template.md` sections (triage line, NDT-view, dep-view, reachability, renumber), and agent prompt rules (determinism, tool receipt trust, evidence chains). Regression-tested so template drift is caught early.
 
 ### Hunting aids & tuning

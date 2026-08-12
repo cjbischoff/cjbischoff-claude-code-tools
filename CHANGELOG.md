@@ -15,6 +15,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Add the task-by-task TDD implementation plan for the four sec-overlay improvements (build order I3, I1, I2, I4).
 - Add a "Run economics" report section (token totals by phase and model, plus a USD estimate) backed by `cost.aggregate_by_model`.
 - Add `cluster_id` and `affected_sites` fields to `Finding` and the finding schema.
+- Add `sec_overlay.selfscore`, a per-run finding-status score persisted to `state.budget`.
 
 ## 0.1.0 - 2026-08-11
 

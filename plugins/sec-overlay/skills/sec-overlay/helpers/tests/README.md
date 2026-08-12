@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-78 pytest files, 579 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+79 pytest files, 580 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §2.
 

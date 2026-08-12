@@ -22,3 +22,6 @@ pointer if the package layout changed — in the same commit (enforced by the pr
 `models.py`'s `Finding` gained `cluster_id` (systemic-cluster id) and `affected_sites` (member
 sites on a cluster primary) — additive, nullable fields that round-trip through `to_dict`/
 `from_dict`.
+
+`selfscore.py` (new) computes the per-run self-score from workspace findings and persists it to
+`CampaignState.budget["self_score"]` — see the module map entry.
