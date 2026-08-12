@@ -37,6 +37,12 @@ Include ANTI_MANIPULATION, EXHAUSTIVENESS, TOOL_TRUST, FIELD_OWNERSHIP from
      question must name a specific person/team/system to check, not be vague
      ("verify this is safe" is not acceptable; "ask the identity team whether
      Conditional Access enforces group X" is).
+
+     When a sink resolves into a dependency whose source is not in the ingested set
+     (check `kb/scan-scope.json`), set `reachability.blocker = "external-boundary"` and
+     record the package name in `preconditions` (e.g. "ownership check in
+     @lume/account-portal-core"). Do not mark the finding reachable or confirmed from
+     source you cannot read.
 3. Write the verdict onto the finding's `reachability` field:
    `{"reachable": true|false, "blocker": "<taxonomy>"|null, "chain": ["file:line", ...]}`.
    A finding proven unreachable with a cited blocker should be demoted (`status: "rejected"`,

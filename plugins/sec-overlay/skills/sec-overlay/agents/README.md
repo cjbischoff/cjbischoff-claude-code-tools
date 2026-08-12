@@ -115,7 +115,7 @@ the agent doesn't re-raise known false positives.
 |--------|-------|-----|
 | `critic.md` | sonnet | production-viability filter: reject debug-only/dead/test-fixture/vendored/fully-mitigated code. **Demote on doubt, don't hard-reject.** |
 | `judge.md` | cheap, **no tools** | reads only the finding + critic verdict; asks "is the severity inflated?" Uphold / downgrade / flag. |
-| `validate.md` | opus (different family) | **assumes every finding is wrong** and tries to refute it independently. Survival = confirmation. A `false-positive` verdict *requires* a `file:line` cite of the defeating control. |
+| `validate.md` | opus (different family) | **assumes every finding is wrong** and tries to refute it independently. Survival = confirmation. A `false-positive` verdict *requires* a `file:line` cite of the defeating control. Never confirms a finding whose `reachability.blocker == "external-boundary"` — it stays a lead for calibrate/report to handle. |
 
 > `judge` and `validate` must **never** run concurrently against the same finding file — the
 > last writer silently drops the other's field. (Enforced by orchestration order, not code.)
@@ -129,7 +129,7 @@ the agent doesn't re-raise known false positives.
 ### Phase 5.5 — Red team (static → runtime bridge)
 | Prompt | Model | Job |
 |--------|-------|-----|
-| `trace.md` | opus | backward-trace each confirmed sink to an entry point; verdict `reachable?` + blocker taxonomy; when the blocker is an external fact this repo can't answer, populates `open_questions` instead of guessing. |
+| `trace.md` | opus | backward-trace each confirmed sink to an entry point; verdict `reachable?` + blocker taxonomy; when the blocker is an external fact this repo can't answer, populates `open_questions` instead of guessing; when a sink resolves into an un-ingested dependency, sets `reachability.blocker = "external-boundary"` and records the package in `preconditions` rather than guessing reachable/confirmed. |
 | `redteam.md` | sonnet | split confirmed findings into `static-settled` vs `needs-runtime`; write a `runtime_test` block (objective, preconditions, `$SHELL_VAR` payloads — **never literal secrets**, expected signal, telemetry). `expected_signal` must be an object `{secure, insecure}` — not a bare string — because the deterministic renderer reads both keys. For findings that hinge on a human-answerable fact rather than a runtime test, populates `open_questions` instead of forcing a hollow `runtime_test`. |
 | `redteam-adversary.md` | opus | strip items that are actually settleable from source, payloads not tied to a real sink, or claims resting on `llm-claimed` confidence alone. |
 
