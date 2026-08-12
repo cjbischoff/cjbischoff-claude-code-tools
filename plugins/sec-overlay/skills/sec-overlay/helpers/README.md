@@ -21,7 +21,7 @@ helpers/
 ├── sec_overlay/              ~70 modules — the pipeline (this README's main subject)
 │   └── correlate/            cross-repo correlation subpackage (11 modules)
 ├── bench/                    dev-only detection benchmark — see bench/README.md
-├── tests/                    ~75 pytest files (~470 tests)
+├── tests/                    78 pytest files (575 tests)
 ├── fixtures/                 golden JSON + a deliberately vulnerable_repo/ for tests
 └── rules/                    vendored semgrep rules (git submodule) + smoke.yaml
 ```
@@ -33,7 +33,7 @@ helpers/
 All commands run **from this `helpers/` directory**:
 
 ```bash
-uv run pytest -q                                 # full suite (3 env-only failures — see skill CLAUDE.md §2)
+uv run pytest -q                                 # full suite (2 env-only failures — see skill CLAUDE.md §2)
 uv run pytest tests/test_calibrate.py -q         # one file
 uv run pytest tests/test_x.py::test_name         # one test
 uv run ruff check sec_overlay/ bench/ tests/     # lint
@@ -186,7 +186,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 
 ## Test coverage & contracts
 
-The `tests/` folder houses ~75 files, ~470 tests. Key structural guards:
+The `tests/` folder houses 78 files, 575 tests. Key structural guards:
 - `test_docs_invariants.py` enforces documentation contracts: prompt-constants block presence, `finding-template.md` sections (triage line, NDT-view, dep-view, reachability, renumber), and agent prompt rules (determinism, tool receipt trust, evidence chains). Regression-tested so template drift is caught early.
 
 ### Hunting aids & tuning
@@ -276,11 +276,11 @@ flowchart LR
 
 ## `tests/` and `bench/`
 
-- **`tests/`** — ~75 files, ~470 tests, deterministic. Two are structural guards worth
+- **`tests/`** — 78 files, 575 tests, deterministic. Two are structural guards worth
   knowing: `test_contracts.py` catches **prompt↔schema drift** (a Finding JSON example in an
   agent prompt must parse against the real `models.py`), and `test_wiring.py` catches
-  **silent-backend / clsmap / dead-link regressions**. Three failures on a clean checkout are
-  *environmental* (missing semgrep submodule, gitignored bench corpus) — see skill
+  **silent-backend / clsmap / dead-link regressions**. Two failures on a clean checkout are
+  *environmental* (gitignored bench corpus, excluded semgrep submodule) — see skill
   [`CLAUDE.md`](../CLAUDE.md) §2, do not "fix" them by committing the missing data.
 - **`bench/`** — the dev-only detection benchmark (precision/recall on a labelled corpus +
   regression lock). **Not part of an audit run.** Its own docs: [`bench/README.md`](bench/README.md).

@@ -58,6 +58,8 @@ sec-overlay is ported and green (573 pass, 2 env-only failures); plugin and mark
 
 Refocused the sec-overlay skill CLAUDE.md on repo mechanics (git/governance, testing, hook).
 
+Corrected the sec-overlay README/helpers test counts and verified the diagrams and worked example.
+
 ## Decisions
 
 - plugin.json declares no components; the default `skills/` directory scan handles discovery, strict mode stays at its default (true).
