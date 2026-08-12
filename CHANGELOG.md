@@ -7,6 +7,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Each entry is one sentence in the imperative mood, describing the change from the user's point of view.
 - Every commit that changes a tracked file adds an entry here in the same commit.
 
+## Unreleased
+
+### Added
+
+- Add the design spec for four sec-overlay improvements from the lumedeodorant review: per-stage token accounting with a run self-score, systemic finding clustering, an external-boundary confidence disposition, and SARIF completeness.
+
 ## 0.1.0 - 2026-08-11
 
 ### Changed
