@@ -23,6 +23,16 @@ Every change to a tracked file goes through a branch and a Conventional Commits 
 - Every commit that changes tracked files must update `README.md` and add a `CHANGELOG.md` entry (Common Changelog format) in the same commit.
 - Every folder in the README.md Directory Guide has its own `README.md`. A commit that changes a tracked file inside one of those folders must update that folder's README.md in the same commit.
 
+## Waiting for the CodeRabbit review
+
+CodeRabbit reviews every pull request against `main`, but a review takes a few minutes. Merging sooner than that wastes the review; the first three pull requests on this repo merged so fast that CodeRabbit reported `Review failed — the pull request is closed` and produced no findings.
+
+- Open the pull request, then wait for CodeRabbit's walkthrough comment before merging. `gh pr view <n> --comments` shows whether the review landed.
+- CodeRabbit does not gate the merge (`request_changes_workflow: false`), so nothing blocks an early merge except this rule.
+- `abort_on_close: false` lets an in-flight review finish even if the pull request merges first, so a late merge still produces findings — they just arrive after the fact.
+- Automatic incremental reviews pause after 2 reviewed commits to conserve the open-source rate limit. Comment `@coderabbitai review` to request another pass, or `@coderabbitai rate limit` to check remaining capacity.
+- Pre-merge checks run in `warning` mode and restate this repo's governance (README and CHANGELOG updated, plugin version bumped, folder README updated, no paths outside a plugin, no agent attribution). Treat a warning as a real finding: it means a hook would have caught the same thing.
+
 ## Conventions
 
 - Plugin skills keep all executable logic under `skills/<name>/scripts/`, not in SKILL.md.

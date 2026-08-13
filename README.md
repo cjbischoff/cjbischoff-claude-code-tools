@@ -49,6 +49,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `.github/dependabot.yml` | Weekly Dependabot updates for Actions and pip |
 | `.github/codeql/codeql-config.yml` | CodeQL path exclusions (test fixtures, caches) |
 | `.gitignore` | Keeps caches, venvs, and local secrets out of git |
+| `.coderabbit.yaml` | CodeRabbit pull request review config: path rules, governance pre-merge checks, tool selection |
 | `.cursor/rules/no-agent-attribution.mdc` | Always-on rule: no Cursor/agent commit or PR attribution |
 | `.cursor/cli.json` | Project CLI overlay: disable agent commit/PR attribution |
 
@@ -61,6 +62,15 @@ Each folder below has its own README.md describing what it holds, its naming con
 - Every commit that changes tracked files updates `README.md` and `CHANGELOG.md` in the same commit, plus the affected folder's `README.md`. Hooks enforce this.
 - A commit that changes a plugin's shipping files bumps that plugin's `version` in the same commit: breaking → major, `feat` → minor, all other types → patch. Editing a plugin `CLAUDE.md` alone does not bump.
 - Run `prek install` once after cloning to activate the hooks.
+
+## Code review
+
+CodeRabbit reviews every pull request against `main`, configured by `.coderabbit.yaml`. Because this repository is public it qualifies for CodeRabbit's open-source plan, which grants Pro+ features without a subscription.
+
+- Wait for CodeRabbit's walkthrough comment before merging. A pull request merged within seconds of opening gets no findings.
+- The review comments but never blocks: the GitHub ruleset is the only required gate on `main`.
+- Pre-merge checks mirror the governance rules above in `warning` mode, so a violation shows up in the review as well as in the hooks.
+- Intentionally vulnerable detector fixtures under `**/fixtures/` are excluded from review, so seeded findings do not bury real ones.
 
 ## Status
 

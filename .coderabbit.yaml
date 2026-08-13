@@ -1,0 +1,414 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# Tuned for the open-source plan, which grants Pro+ features to public
+# repositories. Pro/Pro+ keys are inert rather than invalid if the plan ever
+# drops to Free, and enable_free_tier keeps summaries running in that case.
+language: "en-US"
+tone_instructions: >-
+  Be direct and technical. Prioritize security correctness, determinism, and
+  subprocess and shell safety. Skip formatting already enforced by ruff.
+early_access: false
+enable_free_tier: true
+
+reviews:
+  profile: "chill"
+  # CodeRabbit comments but never gates the merge; the GitHub ruleset is the
+  # only required gate on main.
+  request_changes_workflow: false
+  high_level_summary: true
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  review_status: true
+  commit_status: true
+  fail_commit_status: false
+  poem: false
+  in_progress_fortune: false
+  enable_prompt_for_ai_agents: true
+
+  # Single-maintainer repo: reviewer suggestions are noise.
+  suggested_reviewers: false
+  auto_assign_reviewers: false
+  suggested_labels: true
+  auto_apply_labels: false
+
+  # Reviews on this repo previously died with "Review failed - the pull request
+  # is closed" because branches merge within seconds of opening the PR.
+  abort_on_close: false
+
+  slop_detection:
+    enabled: true
+    label: "needs-human-review"
+
+  labeling_instructions:
+    - label: "feat"
+      instructions: "Apply when the PR adds a plugin, skill, or new capability."
+    - label: "fix"
+      instructions: "Apply when the PR corrects broken behavior."
+    - label: "docs"
+      instructions: >-
+        Apply when the PR only changes Markdown, README, or CHANGELOG content.
+    - label: "governance"
+      instructions: >-
+        Apply when the PR changes hook scripts, prek config, Cursor rules, or
+        the commit and branching policy.
+    - label: "security"
+      instructions: >-
+        Apply when the PR changes detector logic, CodeGuard or ASVS references,
+        SARIF output, or the GitHub security workflows.
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    # OSS rate limits are tight; pause early instead of reviewing every push.
+    auto_pause_after_reviewed_commits: 2
+    drafts: false
+    base_branches:
+      - "main"
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+      - "DNM"
+      - "DRAFT"
+      - "[skip ci]"
+    ignore_usernames:
+      - "dependabot[bot]"
+      - "dependabot-preview[bot]"
+      - "renovate[bot]"
+      - "github-actions[bot]"
+      - "pre-commit-ci[bot]"
+      - "codecov[bot]"
+      - "snyk-bot"
+      - "semantic-release-bot"
+      - "mergify[bot]"
+      - "kodiakhq[bot]"
+      - "allcontributors[bot]"
+      - "imgbot[bot]"
+
+  # fixtures/ and fixtures_struct/ hold intentionally vulnerable detector test
+  # data. Reviewing them would bury real findings under seeded ones.
+  path_filters:
+    - "!**/fixtures/**"
+    - "!**/fixtures_struct/**"
+    - "!**/uv.lock"
+    - "!**/*.sarif"
+    - "!**/*.diff"
+    - "!**/__pycache__/**"
+    - "!**/.venv/**"
+    - "!**/.pytest_cache/**"
+    - "!**/.ruff_cache/**"
+
+  path_instructions:
+    - path: "plugins/sec-overlay/skills/sec-overlay/helpers/sec_overlay/**/*.py"
+      instructions: |
+        This is the deterministic core of a security-audit harness. Review for:
+        - Determinism: identical inputs must yield identical findings, ordering,
+          and ids. Flag set iteration, dict ordering assumptions, unseeded
+          randomness, wall-clock reads, and locale-dependent sorting.
+        - Subprocess safety: external tools must be invoked as argument lists
+          without shell=True, with explicit timeouts and non-zero exit handling.
+        - Path handling: resolve and validate paths before reading or writing.
+          Flag traversal beyond the scanned workspace and unvalidated archive
+          extraction.
+        - Untrusted parsing: SARIF, JSON, and tool output are untrusted input.
+          Flag unbounded reads, eval, pickle, and unsafe YAML loaders.
+        - Never weaken a gate silently. A change that lets a finding bypass the
+          critic or gate ladder must be called out explicitly.
+        Requires Python 3.12; the package declares no runtime dependencies, so
+        flag any new third-party import.
+    - path: "plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_*.py"
+      instructions: |
+        Pytest suite for the harness core. Verify:
+        - Both the success and the failure path are asserted, not just the happy
+          path.
+        - Assertions are specific; avoid bare `assert result` truthiness checks.
+        - Filesystem work uses tmp_path or tmp_path_factory and leaves nothing
+          behind.
+        - No network access, and no dependency on tool binaries being installed
+          unless the test is explicitly marked as environment-dependent.
+        - Boundary cases are covered: empty finding sets, missing manifests,
+          malformed SARIF, and duplicate rule ids.
+        - Gate and threshold tests assert the exact classification, not merely
+          that some finding was produced.
+    - path: "plugins/sec-overlay/skills/sec-overlay/helpers/bench/**/*.py"
+      instructions: |
+        Benchmark and judging harness. Confirm scoring is reproducible, corpus
+        paths are parameterized rather than hardcoded to a machine, and any
+        model or token cost accounting cannot silently divide by zero.
+    - path: "scripts/hooks/**/*.sh"
+      instructions: |
+        Git hook scripts that enforce repo governance. Require `set -euo
+        pipefail`, quoted expansions, and `$(...)` over backticks. Flag `eval`,
+        unquoted globs, and parsing `git` porcelain output positionally. A hook
+        must fail closed: if a check cannot run, it exits non-zero rather than
+        passing silently. Verify the accompanying test script covers each new
+        rejection path.
+    - path: "plugins/**/SKILL.md"
+      instructions: |
+        Skill playbooks. Per repo convention, executable logic belongs in
+        `skills/<name>/scripts/`, not inline in SKILL.md. Flag shell pipelines
+        embedded here that should be a script. Confirm no path escapes the
+        plugin directory, since only that directory is copied to the plugin
+        cache on install.
+    - path: "**/.claude-plugin/*.json"
+      instructions: |
+        Plugin and marketplace manifests. Confirm valid JSON, that `version` is
+        semver, and that a marketplace entry exists for every plugin directory.
+        Per repo policy, a change to a plugin shipping file must bump that
+        plugin's `version` in the same commit.
+    - path: ".github/workflows/**"
+      instructions: |
+        Verify third-party actions are pinned to a full commit SHA with the
+        version in a trailing comment, that `permissions` is declared at the
+        least privilege the job needs, and that no untrusted PR input reaches a
+        `run` block through interpolation.
+
+  pre_merge_checks:
+    title:
+      mode: "warning"
+      requirements: >-
+        The title must be a Conventional Commit: `<type>(<optional-scope>):
+        <imperative summary>` where type is one of feat, fix, chore, docs,
+        style, refactor, perf, or test. The summary must be under 50
+        characters, imperative mood, and not end with a period. A breaking
+        change adds `!` after the type or scope.
+    description:
+      mode: "warning"
+    docstrings:
+      mode: "warning"
+      threshold: 80
+    # This repo does not track work in issues.
+    issue_assessment:
+      mode: "off"
+    custom_checks:
+      - name: "readme-and-changelog-updated"
+        mode: "warning"
+        instructions: |
+          FAIL if the PR changes any tracked file other than README.md or
+          CHANGELOG.md and does not also modify both README.md and
+          CHANGELOG.md.
+          FAIL if CHANGELOG.md is modified but no entry was added under the
+          `## Unreleased` heading in a `### Changed`, `### Added`, `### Removed`,
+          or `### Fixed` group.
+          PASS if the PR touches only README.md, only CHANGELOG.md, or both.
+          PASS if every other change is accompanied by updates to both files.
+      - name: "plugin-version-bump"
+        mode: "warning"
+        instructions: |
+          A shipping file is any tracked file under `plugins/<name>/` matching
+          `.claude-plugin/plugin.json`, `SKILL.md`, or any path under
+          `skills/`, `agents/`, `helpers/`, or `references/`.
+          FAIL if a shipping file changed under `plugins/<name>/` and the
+          `version` field in `plugins/<name>/.claude-plugin/plugin.json` is
+          unchanged.
+          FAIL if the version increment does not match the PR's Conventional
+          Commit type: a breaking change (`!` or a `BREAKING CHANGE:` footer)
+          requires a major bump, `feat` requires a minor bump, and every other
+          type requires a patch bump.
+          PASS if no shipping file changed.
+          PASS if only `plugins/<name>/CLAUDE.md` changed, which is an operating
+          manual and not a shipping file.
+      - name: "folder-readme-updated"
+        mode: "warning"
+        instructions: |
+          FAIL if the PR changes a file in a directory that already contains a
+          tracked README.md and does not also modify that same directory's
+          README.md.
+          PASS if every changed file's directory either has no README.md or has
+          its README.md updated in this PR.
+      - name: "no-paths-outside-plugin"
+        mode: "warning"
+        instructions: |
+          Only a plugin's own directory is copied to the plugin cache on
+          install, so an absolute or upward path breaks at runtime.
+          FAIL if a file under `plugins/<name>/` references a path outside that
+          plugin directory: a parent-relative path that escapes the plugin
+          root, an absolute path under /Users, /home, or /tmp, or a reference to
+          a sibling top-level directory such as `scripts/` or `docs/`.
+          PASS if all references stay within the plugin directory or are
+          resolved relative to the plugin root at runtime.
+      - name: "no-agent-attribution"
+        mode: "warning"
+        instructions: |
+          FAIL if any commit message in the PR, or the PR description, contains
+          a `Co-authored-by:` trailer naming Cursor, Claude, or an agent; any
+          address at `cursoragent@`; or a footer such as "Generated by" or
+          "Made with" naming an AI tool.
+          PASS if no commit message or description carries agent attribution.
+
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+    autofix:
+      enabled: true
+    fix_ci:
+      enabled: true
+    resolve_merge_conflict:
+      enabled: true
+    # Rewriting security-gate logic for brevity is not a trade worth making.
+    simplify:
+      enabled: false
+    custom:
+      - name: "codeguard-reference-audit"
+        enabled: true
+        instructions: |
+          Audit changed files under `references/codeguard/` and
+          `.cursor/rules/`. Each rule document should carry a `rule_id` that
+          matches its filename, state whether a pattern is banned or merely
+          deprecated, and name a concrete replacement API for every construct
+          it forbids. Report any rule that bans a primitive without offering a
+          replacement, and any `rule_id` that collides with another file.
+      - name: "detector-coverage-gap"
+        enabled: true
+        instructions: |
+          For each new or changed detector, finding class, or ASVS mapping in
+          this PR, check whether a corresponding test exists under
+          `helpers/tests/`. List each detector that gained logic but no test,
+          and name the specific test file where it belongs.
+
+  tools:
+    # Python
+    ruff:
+      enabled: true
+    # Redundant with ruff on this codebase.
+    flake8:
+      enabled: false
+    pylint:
+      enabled: false
+    # Shell and Make
+    shellcheck:
+      enabled: true
+    checkmake:
+      enabled: true
+    # Docs, config, and data
+    markdownlint:
+      enabled: true
+    yamllint:
+      enabled: true
+    dotenvLint:
+      enabled: true
+    # GitHub Actions
+    actionlint:
+      enabled: true
+    zizmor:
+      enabled: true
+    # Security scanning
+    gitleaks:
+      enabled: true
+    trufflehog:
+      enabled: true
+    semgrep:
+      enabled: true
+    osvScanner:
+      enabled: true
+    # Structural rules, matching this repo's own ast-grep usage.
+    ast-grep:
+      essential_rules: true
+    # Reads failing CI so review comments account for it.
+    github-checks:
+      enabled: true
+      timeout_ms: 120000
+    # No IaC, and prose linting on 110 Markdown files is noise.
+    checkov:
+      enabled: false
+    tflint:
+      enabled: false
+    languagetool:
+      enabled: false
+    # Languages absent from this repo.
+    eslint:
+      enabled: false
+    biome:
+      enabled: false
+    oxc:
+      enabled: false
+    stylelint:
+      enabled: false
+    htmlhint:
+      enabled: false
+    rubocop:
+      enabled: false
+    brakeman:
+      enabled: false
+    golangci-lint:
+      enabled: false
+    clippy:
+      enabled: false
+    phpstan:
+      enabled: false
+    phpmd:
+      enabled: false
+    phpcs:
+      enabled: false
+    detekt:
+      enabled: false
+    swiftlint:
+      enabled: false
+    pmd:
+      enabled: false
+    clang:
+      enabled: false
+    cppcheck:
+      enabled: false
+    luacheck:
+      enabled: false
+
+chat:
+  auto_reply: true
+  art: false
+  # Public repo on a shared OSS rate limit; keep chat spend to the maintainer.
+  allow_non_org_members: false
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "CLAUDE.md"
+      - "**/CLAUDE.md"
+      - "SECURITY.md"
+      - ".cursor/rules/*.mdc"
+  # Single-repo marketplace: keep learnings and history scoped to this repo.
+  learnings:
+    scope: "local"
+  issues:
+    scope: "local"
+  pull_requests:
+    scope: "local"
+  mcp:
+    usage: "auto"
+  automatic_repository_linking: false
+
+code_generation:
+  docstrings:
+    language: "en-US"
+    path_instructions:
+      - path: "plugins/sec-overlay/skills/sec-overlay/helpers/**/*.py"
+        instructions: >-
+          Write PEP 257 docstrings. State what the function returns and which
+          exceptions it raises. For gate, calibration, and threshold functions,
+          document the classification boundaries explicitly.
+  unit_tests:
+    path_instructions:
+      - path: "plugins/sec-overlay/skills/sec-overlay/helpers/sec_overlay/**/*.py"
+        instructions: >-
+          Generate pytest tests in `helpers/tests/` named `test_<module>.py`.
+          Use tmp_path for filesystem work and monkeypatch for environment
+          lookups. Cover the failure path, malformed tool output, and empty
+          finding sets. No network access and no reliance on installed tool
+          binaries.
+      - path: "plugins/sec-overlay/skills/sec-overlay/helpers/sec_overlay/correlate/**/*.py"
+        instructions: >-
+          Generate pytest tests that build finding and edge fixtures inline
+          rather than reading the seeded fixtures directory. Assert exact
+          cluster membership, edge direction, and manifest contents, and assert
+          that repeated runs produce identical ordering.
+      - path: "plugins/sec-overlay/skills/sec-overlay/helpers/bench/**/*.py"
+        instructions: >-
+          Generate pytest tests that stub the model adapter instead of calling
+          a live model. Assert tally arithmetic, including the zero-finding and
+          zero-token cases, and assert that scoring is reproducible across runs.
