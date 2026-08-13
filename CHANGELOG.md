@@ -15,7 +15,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Added
 
-- Add `scripts/hooks/pr-body-check.sh` and the `PR attribution` workflow, which fail a pull request whose body carries a `Made with Cursor` footer or an agent `Co-authored-by` trailer, so the no-agent-attribution policy is enforced rather than left to an agent to remember.
+- Add `scripts/hooks/pr-body-check.sh` and the `PR attribution` workflow, which fail a pull request whose body carries a `Made with Cursor` footer or an agent `Co-authored-by` trailer, so the no-agent-attribution policy is enforced rather than left to an agent to remember. Both patterns anchor to the start of a line, so prose that quotes the phrase still passes.
 - Document in the README that agent attribution is configured per surface in the global `~/.cursor/cli-config.json` and in Cursor's IDE settings, neither of which this repository can commit.
 - Add `.coderabbit.yaml` so CodeRabbit reviews pull requests with repo-specific path instructions, governance pre-merge checks, and only the linters this stack uses, and exclude the intentionally vulnerable detector fixtures from review.
 - Document the open-source review rate limit in the README code review section, including `@coderabbitai rate limit` to check capacity and `@coderabbitai review` to run a skipped review, after a pull request was skipped with "Review limit reached".

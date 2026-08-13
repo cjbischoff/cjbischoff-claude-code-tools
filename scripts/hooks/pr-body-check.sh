@@ -13,8 +13,13 @@ else
   exit 2
 fi
 
-named='\[?(Cursor|Claude)'
-pattern="Co-authored-by:[[:space:]]*${named}|cursoragent@|(Made|Generated)[[:space:]]+(with|by)[[:space:]]+${named}"
+# Attribution is emitted as its own footer or trailer line, so both patterns
+# anchor to the start of a line. Prose that quotes the phrase is not a
+# violation, and this repo's own docs quote it.
+lead='^[[:space:]]*[>*_-]*[[:space:]]*'
+trailer="${lead}Co-authored-by:.*(Cursor|Claude|cursoragent@)"
+footer="${lead}(Made|Generated)[[:space:]]+(with|by)[[:space:]]+\\[?(Cursor|Claude)"
+pattern="${trailer}|${footer}"
 
 if hits=$(grep -inE "$pattern" <<<"$body"); then
   echo "error: pull request body carries agent attribution." >&2

@@ -40,12 +40,20 @@ run_stdin "rejects a Cursor co-author trailer" \
   $'## Summary\n\nCo-authored-by: Cursor <cursoragent@cursor.com>\n' \
   1
 
-run_stdin "rejects a bare cursoragent address" \
-  $'## Summary\n\nAsk cursoragent@cursor.com about it.\n' \
+run_stdin "rejects a trailer naming only the agent address" \
+  $'## Summary\n\nCo-authored-by: someone <cursoragent@cursor.com>\n' \
   1
 
 run_stdin "rejects a Generated with Claude footer" \
   $'## Summary\n\nGenerated with Claude\n' \
+  1
+
+run_stdin "rejects an italicised footer line" \
+  $'## Summary\n\n*Made with [Cursor](https://cursor.com)*\n' \
+  1
+
+run_stdin "rejects a footer in a bullet" \
+  $'## Summary\n\n- Made with Cursor\n' \
   1
 
 run_stdin "accepts a clean body" \
@@ -54,6 +62,10 @@ run_stdin "accepts a clean body" \
 
 run_stdin "accepts prose naming Cursor without attribution" \
   $'## Summary\n\n- Explain how Cursor appends the footer, and how the check strips it.\n' \
+  0
+
+run_stdin "accepts prose quoting the footer phrase" \
+  $'## Summary\n\nCursor appends a `Made with Cursor` footer, and a `Co-authored-by: Cursor <cursoragent@cursor.com>` trailer, to what it creates.\n' \
   0
 
 run_stdin "accepts an empty body" "" 0

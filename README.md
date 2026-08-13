@@ -75,7 +75,7 @@ Attribution is also per surface. Turning it off requires a change outside this r
 Because that opt-out lives on each machine and cannot be committed, the repository enforces the policy instead of relying on it:
 
 - `scripts/hooks/commit-msg-check.sh` strips attribution trailers from commit messages.
-- `.github/workflows/pr-attribution.yml` runs `scripts/hooks/pr-body-check.sh` on every pull request against `main` and fails when the body carries an attribution footer. It reruns on `edited`, so removing the footer clears the check.
+- `.github/workflows/pr-attribution.yml` runs `scripts/hooks/pr-body-check.sh` on every pull request against `main` and fails when the body carries an attribution footer. It reruns on `edited`, so removing the footer clears the check. Both patterns anchor to the start of a line, because attribution is emitted as its own footer or trailer line; prose that quotes the phrase, as this section does, is not a violation.
 - CodeRabbit's `no-agent-attribution` pre-merge check covers the same ground in `warning` mode, but it is LLM-judged and can be skipped entirely when the open-source rate limit is exhausted. The workflow is the deterministic backstop.
 
 ## Code review
