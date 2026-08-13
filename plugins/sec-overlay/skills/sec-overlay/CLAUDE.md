@@ -46,8 +46,11 @@ governance with prek hooks. The rules that bind every change here:
   `--no-verify`.
 - **Tests are required for scripts.** New or changed executable logic ships with a test in the
   same change (Python under `helpers/tests/`; shell scripts get a colocated invocation test).
-- **Do not bump the plugin `version`.** The user bumps it manually on release so update
-  detection works.
+- **Bump the plugin `version` on shipping-file changes.** A commit that changes a shipping file
+  (`plugin.json`, `SKILL.md`, or anything under `skills/`, `agents/`, `helpers/`, `references/`,
+  including their folder READMEs) bumps `.claude-plugin/plugin.json` in the same commit: breaking
+  → major, `feat` → minor, all other types → patch. Editing this `CLAUDE.md` alone does not bump.
+  See the root `CLAUDE.md` for the full rule.
 
 Merge a branch to `main` only after the user approves.
 

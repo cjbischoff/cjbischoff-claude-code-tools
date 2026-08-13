@@ -50,11 +50,12 @@ Each folder below has its own README.md describing what it holds, its naming con
 - Direct commits to `main` are blocked by a pre-commit hook; work on a `<type>/<short-kebab-description>` branch.
 - Conventional Commits; summary under 50 chars; body wrapped at 72.
 - Every commit that changes tracked files updates `README.md` and `CHANGELOG.md` in the same commit, plus the affected folder's `README.md`. Hooks enforce this.
+- A commit that changes a plugin's shipping files bumps that plugin's `version` in the same commit: breaking → major, `feat` → minor, all other types → patch. Editing a plugin `CLAUDE.md` alone does not bump.
 - Run `prek install` once after cloning to activate the hooks.
 
 ## Status
 
-sec-overlay is ported and green (593 pass, 2 env-only failures); plugin and marketplace manifests validate. The `feat/sec-overlay-review-improvements` branch is complete: all 12 planned tasks landed and passed final whole-branch review, and the branch-touched helpers are `ruff format`-clean. Version stays at 0.1.0 until the user approves a bump. Pending user approval to merge the completed feature branches into `main`.
+sec-overlay is ported and green (593 pass, 2 env-only failures); plugin and marketplace manifests validate. The `feat/sec-overlay-review-improvements` branch is complete: all 12 planned tasks landed and passed final whole-branch review, and the branch-touched helpers are `ruff format`-clean. Plugin versions bump automatically on shipping-file changes (Conventional-Commits semver); this review-improvements release ships sec-overlay as 0.2.0, above the 0.1.1 governance release on `main`.
 
 Changed the default SARIF output to carry every reportable finding plus `needs-deployment-testing` findings marked with an `inSource` suppression, so downstream gates see them without failing; `--confirmed-only` restores the prior confirmed/fixed-only SARIF.
 
@@ -97,7 +98,7 @@ Generalized the pre-commit hook to enforce per-folder README freshness (with a B
 ## Decisions
 
 - plugin.json declares no components; the default `skills/` directory scan handles discovery, strict mode stays at its default (true).
-- Version stays at 0.1.0 until the user approves a bump.
+- Plugin versions bump automatically on shipping-file changes, using Conventional-Commits semver (breaking → major, `feat` → minor, other types → patch); a plugin `CLAUDE.md` edit alone does not bump. Replaces the prior manual-bump policy.
 - Governance is enforced with prek local hooks rather than convention only, per user request for forced updates.
 
 ## License
