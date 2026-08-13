@@ -50,13 +50,10 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `.github/codeql/codeql-config.yml` | CodeQL path exclusions (test fixtures, caches) |
 | `.gitignore` | Keeps caches, venvs, and local secrets out of git |
 | `.coderabbit.yaml` | CodeRabbit pull request review config: path rules, governance pre-merge checks, tool selection |
-| `.cursor/rules/no-agent-attribution.mdc` | Always-on rule: no Cursor/agent commit or PR attribution |
-
 ## Governance
 
 - Direct commits to `main` are blocked by a pre-commit hook and by a GitHub ruleset (pull requests required; force-push and deletion blocked). Work on a `<type>/<short-kebab-description>` branch.
 - Do not add `.github/README.md`; GitHub would show it as the repository homepage instead of this file.
-- Do not attribute commits or PRs to Cursor or any agent (`Co-authored-by: Cursor` is stripped by the commit-msg hook).
 - Conventional Commits; summary under 50 chars; body wrapped at 72.
 - Every commit that changes tracked files updates `README.md` and `CHANGELOG.md` in the same commit, plus the affected folder's `README.md`. Hooks enforce this.
 - A commit that changes a plugin's shipping files bumps that plugin's `version` in the same commit: breaking → major, `feat` → minor, all other types → patch. Editing a plugin `CLAUDE.md` alone does not bump.
