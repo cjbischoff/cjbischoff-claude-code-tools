@@ -1,0 +1,66 @@
+# OpenWiki ignore — gitignore syntax, last match wins.
+#
+# OpenWiki does not read .gitignore. Keep this file in lockstep with any
+# new data, cache, or fixture path that must stay out of wiki runs.
+#
+# Rule: exclude DATA and seeded vulns; keep FUNCTIONALITY, SCHEMA, and
+# authored docs. While this file has active rules, the agent cannot run
+# shell discovery; it uses read_file, ls, glob, and grep instead.
+
+# ---------------------------------------------------------------
+# Environment, caches, and OS
+# ---------------------------------------------------------------
+.venv/
+venv/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tycache/
+.coverage
+htmlcov/
+.DS_Store
+node_modules/
+
+# ---------------------------------------------------------------
+# Secrets and local env (sample files stay visible)
+# ---------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+id_rsa
+id_ed25519
+
+# ---------------------------------------------------------------
+# Tool sidecars and local agent state
+# ---------------------------------------------------------------
+.sec-overlay/
+.ghost/
+.firecrawl/
+.code-review-graph/
+.superpowers/
+.claude/
+.tmp-openwiki-src/
+
+# ---------------------------------------------------------------
+# Seeded detector fixtures — intentionally vulnerable, not architecture
+# ---------------------------------------------------------------
+**/fixtures/**
+**/fixtures_struct/**
+!**/fixtures/**/README.md
+!**/fixtures_struct/**/README.md
+
+# ---------------------------------------------------------------
+# Local audit notes — operational, not marketplace contract
+# ---------------------------------------------------------------
+plugins/sec-overlay/skills/sec-overlay/docs/dogfooding/
+plugins/sec-overlay/skills/sec-overlay/docs/gsd/
+
+# ---------------------------------------------------------------
+# Generated scan artifacts if they appear in-tree
+# ---------------------------------------------------------------
+**/*.sarif
+**/*.diff
+!**/fixtures/**/*.diff

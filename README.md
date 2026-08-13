@@ -21,6 +21,20 @@ prek run                      # run governance hooks
 cd plugins/sec-overlay/skills/sec-overlay/helpers && uv run pytest -q   # Python core tests
 ```
 
+### OpenWiki
+
+First init is local (do not run `--init` in CI). From the repo root, with an Anthropic key in the environment:
+
+```bash
+export OPENWIKI_PROVIDER=anthropic
+export OPENWIKI_MODEL_ID=claude-sonnet-5
+export OPENWIKI_TELEMETRY_DISABLED=1
+export DO_NOT_TRACK=1
+openwiki code --init --print
+```
+
+Keep `openwiki/INSTRUCTIONS.md` and `.openwikiignore`. The generated wiki under `openwiki/` is tracked; start at `openwiki/quickstart.md`. Later refreshes: `openwiki code --update --print`, or the `OpenWiki Update` workflow (set `ANTHROPIC_API_KEY` as a repository secret; weekly Monday 08:00 UTC plus manual dispatch).
+
 ## Directory Guide
 
 Each folder below has its own README.md describing what it holds, its naming convention, and who writes to it. A commit that changes a tracked file inside a folder that has a README.md must update that folder's README.md in the same commit.
@@ -51,6 +65,12 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `.gitignore` | Keeps caches, venvs, and local secrets out of git |
 | `.coderabbit.yaml` | CodeRabbit pull request review config: path rules, governance pre-merge checks, tool selection |
 | `.cursor/rules/codeguard-*.mdc` | CodeGuard secure-coding rules; three always apply, the rest match file globs |
+| `.openwikiignore` | Paths OpenWiki must not read during wiki init/update (separate from `.gitignore`) |
+| `openwiki/INSTRUCTIONS.md` | User-authored wiki brief for init and CI `--update`; OpenWiki does not rewrite it |
+| `.env.example` | Local OpenWiki provider, model, and telemetry-off settings (no secrets) |
+| `.github/workflows/openwiki-update.yml` | Weekly/manual OpenWiki `--update` that opens a PR using Anthropic Sonnet 5 |
+| `openwiki/` | Generated marketplace wiki (quickstart, marketplace, governance, sec-overlay, operations); do not hand-edit except `INSTRUCTIONS.md` |
+| `AGENTS.md` | OpenWiki pointer block for coding agents; the generated `<!-- OPENWIKI:START -->` region only |
 
 ## Governance
 
