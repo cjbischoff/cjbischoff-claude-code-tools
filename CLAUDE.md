@@ -39,3 +39,9 @@ CodeRabbit reviews every pull request against `main`, but a review takes a few m
 - Scripts must not reference paths outside their plugin directory. Only the plugin directory is copied to the plugin cache on install.
 - Bump a plugin's `version` automatically, in the same commit that changes a **shipping file** in that plugin. A shipping file is any tracked file a user receives on install: `plugin.json`, `SKILL.md`, and everything under `skills/`, `agents/`, `helpers/`, and `references/`, including their folder `README.md` files. A plugin `CLAUDE.md` (operating manual) is **not** a shipping file; editing one alone does not bump.
 - Derive the increment from the commit's Conventional Commit type with semver: a breaking change (`!` or `BREAKING CHANGE:`) bumps major, `feat` bumps minor, and every other type (`fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`) bumps patch. Edit `version` in the plugin's `.claude-plugin/plugin.json` in the same commit. `marketplace.json` does not pin versions, so it needs no edit.
+
+## OpenWiki
+
+The generated wiki lives under `openwiki/`. `openwiki/INSTRUCTIONS.md` is the user-authored brief for `--init` and `--update`; do not rewrite it. `.openwikiignore` is a read boundary separate from `.gitignore`. Do not hand-edit generated pages; change source and regenerate.
+
+First init is local: `openwiki code --init --print` with `OPENWIKI_PROVIDER=anthropic`, `OPENWIKI_MODEL_ID=claude-sonnet-5`, `OPENWIKI_TELEMETRY_DISABLED=1`, and `DO_NOT_TRACK=1`. Later refreshes use `.github/workflows/openwiki-update.yml` (needs the `ANTHROPIC_API_KEY` repository secret) or `openwiki code --update --print`.

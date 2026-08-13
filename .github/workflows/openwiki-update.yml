@@ -1,0 +1,114 @@
+# Refresh generated openwiki/ after a local init has produced .last-update.json.
+#
+# Why this is not a copy of langchain-ai/openwiki's example:
+# - Their example installs unpinned `openwiki` (latest), leaves persist-credentials
+#   on, enables LangSmith tracing + telemetry, and lets `openwiki --update`
+#   rewrite this workflow (langchain-ai/openwiki#423).
+# - This public marketplace must not send traces off-box. Telemetry is off.
+# - Init is run locally once. This job is --update only.
+# - Output is a PR, never a direct push to main (ruleset requires PRs).
+# - Third-party create-pull-request is skipped: this repo allows GitHub-owned
+#   and verified actions only, with SHA pinning required. `gh` is on the runner.
+#
+# Required repository secret: ANTHROPIC_API_KEY
+# Manual run: Actions → OpenWiki Update → Run workflow
+name: OpenWiki Update
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly. The wiki only changes when functionality files change.
+    - cron: "0 8 * * 1"
+
+permissions: {}
+
+concurrency:
+  group: openwiki-update
+  cancel-in-progress: true
+
+jobs:
+  update:
+    # Scheduled runs on forks would be a no-op without the secret; still skip
+    # them so a fork cannot arm a weekly Anthropic job by accident.
+    if: github.repository == 'cjbischoff/cjbischoff-claude-code-tools'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Require ANTHROPIC_API_KEY
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "${ANTHROPIC_API_KEY}" ]; then
+            echo "Set the ANTHROPIC_API_KEY repository secret before running this workflow." >&2
+            exit 1
+          fi
+
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Full history so `openwiki code --update` can diff HEAD against the
+          # commit it last documented; a shallow clone hides that commit.
+          fetch-depth: 0
+
+      - name: Require a prior local init
+        run: |
+          if [ ! -f openwiki/.last-update.json ]; then
+            echo "Run openwiki code --init locally and commit openwiki/ before CI --update." >&2
+            exit 1
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Install OpenWiki
+        # mermaid + jsdom match OpenWiki's own example pins for diagram checks.
+        # zizmor: ignore[adhoc-packages] versions are pinned; OpenWiki ships as a CLI, not a lockfile
+        run: npm install --global openwiki@0.3.2 mermaid@11.16.0 jsdom@29.1.1
+
+      - name: Run OpenWiki
+        run: openwiki code --update --print
+        env:
+          OPENWIKI_PROVIDER: anthropic
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENWIKI_MODEL_ID: claude-sonnet-5
+          OPENWIKI_TELEMETRY_DISABLED: "1"
+          DO_NOT_TRACK: "1"
+
+      - name: Discard files OpenWiki must not commit
+        if: always()
+        run: |
+          # openwiki --update rewrites this workflow from its template
+          # (langchain-ai/openwiki#423). Keep our hardened copy.
+          git checkout -- .github/workflows/openwiki-update.yml
+
+      - name: Create OpenWiki update pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          gh auth setup-git
+
+          git add openwiki CLAUDE.md
+          if [ -f AGENTS.md ]; then
+            git add AGENTS.md
+          fi
+          if git diff --cached --quiet; then
+            echo "No OpenWiki changes."
+            exit 0
+          fi
+
+          branch="openwiki/update-${GITHUB_RUN_ID}"
+          git checkout -B "${branch}"
+          git commit -m "docs(openwiki): refresh generated wiki"
+          git push -u origin "HEAD:${branch}"
+          gh pr create --base main --head "${branch}" \
+            --title "docs(openwiki): refresh generated wiki" \
+            --body "Automated OpenWiki documentation update. Review the diff before merging. The generator is an LLM writing process docs; it does not change plugin behavior."
