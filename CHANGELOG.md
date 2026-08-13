@@ -21,7 +21,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Protect `main` with a GitHub ruleset requiring pull requests and blocking force-pushes and deletions, and turn on free GitHub code security (CodeQL default setup, Dependency review, Dependabot updates, private vulnerability reporting).
 - Track the CodeGuard secure-coding rules under `.cursor/rules/`, so the guidance applies to anyone working in a clone rather than only on the machine that happens to have them.
 - Extend the pre-commit Directory Guide special-case to `docs/` so that folder's README stays in lockstep with its files.
-- Normalise trailers in the commit-msg hook before the Conventional Commits format check.
+- Reduce the commit-msg hook to the Conventional Commits format and summary length checks.
 
 ### Removed
 
