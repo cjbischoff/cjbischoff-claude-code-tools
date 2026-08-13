@@ -11,7 +11,7 @@ Holds repo-level tooling scripts. Plugin logic does not live here — it lives i
 | File | Purpose |
 |------|---------|
 | `hooks/pre-commit-check.sh` | Blocks commits to main; requires README.md, CHANGELOG.md, and folder README updates |
-| `hooks/commit-msg-check.sh` | Enforces Conventional Commits; strips Cursor `Co-authored-by` trailers |
+| `hooks/commit-msg-check.sh` | Enforces Conventional Commits and a summary under 50 chars |
 | `hooks/test-pre-commit-check.sh` | Bash invocation test for `pre-commit-check.sh`; cleans its temp repos via an EXIT trap; run with `bash scripts/hooks/test-pre-commit-check.sh` |
 | `hooks/test-commit-msg-check.sh` | Bash invocation test for `commit-msg-check.sh`; run with `bash scripts/hooks/test-commit-msg-check.sh` |
 

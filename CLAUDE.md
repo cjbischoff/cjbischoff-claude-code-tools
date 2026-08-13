@@ -31,7 +31,7 @@ CodeRabbit reviews every pull request against `main`, but a review takes a few m
 - CodeRabbit does not gate the merge (`request_changes_workflow: false`), so nothing blocks an early merge except this rule.
 - `abort_on_close: false` lets an in-flight review finish even if the pull request merges first, so a late merge still produces findings — they just arrive after the fact.
 - Automatic incremental reviews pause after 2 reviewed commits to conserve the open-source rate limit. Comment `@coderabbitai review` to request another pass, or `@coderabbitai rate limit` to check remaining capacity.
-- Pre-merge checks run in `warning` mode and restate this repo's governance (README and CHANGELOG updated, plugin version bumped, folder README updated, no paths outside a plugin, no agent attribution). Treat a warning as a real finding: it means a hook would have caught the same thing.
+- Pre-merge checks run in `warning` mode and restate this repo's governance (README and CHANGELOG updated, plugin version bumped, folder README updated, no paths outside a plugin). Treat a warning as a real finding: it means a hook would have caught the same thing.
 
 ## Conventions
 

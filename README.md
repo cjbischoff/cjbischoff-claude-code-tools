@@ -50,13 +50,12 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `.github/codeql/codeql-config.yml` | CodeQL path exclusions (test fixtures, caches) |
 | `.gitignore` | Keeps caches, venvs, and local secrets out of git |
 | `.coderabbit.yaml` | CodeRabbit pull request review config: path rules, governance pre-merge checks, tool selection |
-| `.cursor/rules/no-agent-attribution.mdc` | Always-on rule: no Cursor/agent commit or PR attribution |
+| `.cursor/rules/codeguard-*.mdc` | CodeGuard secure-coding rules; three always apply, the rest match file globs |
 
 ## Governance
 
 - Direct commits to `main` are blocked by a pre-commit hook and by a GitHub ruleset (pull requests required; force-push and deletion blocked). Work on a `<type>/<short-kebab-description>` branch.
 - Do not add `.github/README.md`; GitHub would show it as the repository homepage instead of this file.
-- Do not attribute commits or PRs to Cursor or any agent (`Co-authored-by: Cursor` is stripped by the commit-msg hook).
 - Conventional Commits; summary under 50 chars; body wrapped at 72.
 - Every commit that changes tracked files updates `README.md` and `CHANGELOG.md` in the same commit, plus the affected folder's `README.md`. Hooks enforce this.
 - A commit that changes a plugin's shipping files bumps that plugin's `version` in the same commit: breaking → major, `feat` → minor, all other types → patch. Editing a plugin `CLAUDE.md` alone does not bump.
@@ -68,7 +67,7 @@ CodeRabbit reviews every pull request against `main`, configured by `.coderabbit
 
 - Wait for CodeRabbit's walkthrough comment before merging. A pull request merged within seconds of opening gets no findings.
 - The review comments but never blocks: the GitHub ruleset is the only required gate on `main`.
-- Pre-merge checks mirror the governance rules above in `warning` mode, so a violation shows up in the review as well as in the hooks.
+- Pre-merge checks mirror the governance rules above in `warning` mode, so a violation shows up in the review as well as in the hooks: README and CHANGELOG updated, plugin version bumped, folder README updated, and no path escaping a plugin directory.
 - Intentionally vulnerable detector fixtures under `**/fixtures/` are excluded from review, so seeded findings do not bury real ones.
 - The open-source plan meters reviews per hour, so a burst of pull requests can exhaust the allowance and skip a review outright. Comment `@coderabbitai rate limit` to check remaining capacity, then `@coderabbitai review` to run the review once capacity returns.
 

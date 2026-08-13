@@ -19,8 +19,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Document the open-source review rate limit in the README code review section, including `@coderabbitai rate limit` to check capacity and `@coderabbitai review` to run a skipped review, after a pull request was skipped with "Review limit reached".
 - Set `abort_on_close: false` so a CodeRabbit review still finishes when a pull request merges mid-review, and document waiting for the review in `CLAUDE.md`.
 - Protect `main` with a GitHub ruleset requiring pull requests and blocking force-pushes and deletions, and turn on free GitHub code security (CodeQL default setup, Dependency review, Dependabot updates, private vulnerability reporting).
+- Track the CodeGuard secure-coding rules under `.cursor/rules/`, so the guidance applies to anyone working in a clone rather than only on the machine that happens to have them.
 - Extend the pre-commit Directory Guide special-case to `docs/` so that folder's README stays in lockstep with its files.
-- Add a project Cursor rule that forbids attributing commits or pull requests to Cursor, and strip `Co-authored-by: Cursor` trailers in the commit-msg hook.
+- Reduce the commit-msg hook to the Conventional Commits format and summary length checks.
 
 ### Removed
 
