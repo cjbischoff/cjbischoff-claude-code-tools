@@ -7,11 +7,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Each entry is one sentence in the imperative mood, describing the change from the user's point of view.
 - Every commit that changes a tracked file adds an entry here in the same commit.
 
-## Unreleased
+## 0.1.1 - 2026-08-12
 
 ### Changed
 
 - Replace the manual plugin-version-bump policy with automatic Conventional-Commits semver bumping, triggered when a commit changes a plugin's shipping files (breaking → major, `feat` → minor, other types → patch); a plugin `CLAUDE.md` edit alone does not bump.
+- Align the sec-overlay skill `CLAUDE.md` with the automatic-bump rule and bump sec-overlay to 0.1.1.
 
 ## 0.1.0 - 2026-08-11
 

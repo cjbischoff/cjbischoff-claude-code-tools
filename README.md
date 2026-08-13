@@ -55,7 +55,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 ## Status
 
-sec-overlay is ported and green (573 pass, 2 env-only failures); plugin and marketplace manifests validate. Plugin versions now bump automatically on shipping-file changes (Conventional-Commits semver); sec-overlay is at 0.1.0. Pending user approval to merge the completed feature branches into `main`.
+sec-overlay is ported and green (573 pass, 2 env-only failures); plugin and marketplace manifests validate. Plugin versions now bump automatically on shipping-file changes (Conventional-Commits semver); sec-overlay is at 0.1.1. Pending user approval to merge the completed feature branches into `main`.
 
 Refocused the sec-overlay skill CLAUDE.md on repo mechanics (git/governance, testing, hook).
 

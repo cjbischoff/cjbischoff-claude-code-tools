@@ -245,3 +245,7 @@ One coupling point to respect before editing:
 - **Docs track code.** When you change anything in `agents/`, `helpers/`, or `references/`,
   update that folder's README in the **same commit**. A pre-commit hook enforces this — see
   [`CLAUDE.md`](CLAUDE.md) §8.
+- **Version bumps are automatic.** A commit that changes a shipping file (`plugin.json`,
+  `SKILL.md`, or anything under `skills/`, `agents/`, `helpers/`, `references/`, incl. their
+  READMEs) bumps `.claude-plugin/plugin.json` by Conventional-Commits semver — see
+  [`CLAUDE.md`](CLAUDE.md) §1.
