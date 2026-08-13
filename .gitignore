@@ -1,0 +1,27 @@
+# Local environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tycache/
+.coverage
+htmlcov/
+
+# Secrets and local env
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+id_rsa
+id_ed25519
+
+# Tool sidecars
+.sec-overlay/
+.ghost/
+
+# OS
+.DS_Store

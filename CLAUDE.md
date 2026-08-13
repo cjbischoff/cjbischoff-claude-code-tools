@@ -14,6 +14,7 @@ This workspace is a Claude Code plugin marketplace. It distributes personal plug
 
 Every change to a tracked file goes through a branch and a Conventional Commits message. Direct commits to `main` are not permitted, including by an agent. Hooks enforce these rules (`prek install` activates them).
 
+- Direct pushes to `main` are also blocked on GitHub by a repository ruleset (pull request required; force-push and deletion blocked).
 - **Branch naming:** `<type>/<short-kebab-description>`, e.g. `feat/poc-reproducer-retry`, `fix/hook-grace-period`.
 - **Commit types:** `feat` · `fix` · `chore` · `docs` · `style` · `refactor` · `perf` · `test`.
 - **Message format:** `<type>(<optional-scope>): <imperative summary, under 50 chars>`, optional body wrapped at 72 chars explaining why, optional footer.

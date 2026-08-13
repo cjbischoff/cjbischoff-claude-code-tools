@@ -30,6 +30,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `plugins/` | One directory per distributed plugin |
 | `scripts/` | Repo-level tooling (git hook scripts) |
 | `docs/` | Design specs and planning documents |
+| `.github/` | GitHub-native security and automation (see `.github/README.md`) |
 
 ## Artifact inventory
 
@@ -44,10 +45,14 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `.pre-commit-config.yaml` | prek hook config: doc-update guard + commit message check |
 | `scripts/hooks/` | Hook scripts that enforce commit governance |
 | `CHANGELOG.md` | Common Changelog; one entry per functionality commit |
+| `SECURITY.md` | How to report vulnerabilities (GitHub private reporting) |
+| `.github/workflows/dependency-review.yml` | GitHub Dependency review on pull requests |
+| `.github/dependabot.yml` | Weekly Dependabot updates for Actions and pip |
+| `.gitignore` | Keeps caches, venvs, and local secrets out of git |
 
 ## Governance
 
-- Direct commits to `main` are blocked by a pre-commit hook; work on a `<type>/<short-kebab-description>` branch.
+- Direct commits to `main` are blocked by a pre-commit hook and by a GitHub ruleset (pull requests required; force-push and deletion blocked). Work on a `<type>/<short-kebab-description>` branch.
 - Conventional Commits; summary under 50 chars; body wrapped at 72.
 - Every commit that changes tracked files updates `README.md` and `CHANGELOG.md` in the same commit, plus the affected folder's `README.md`. Hooks enforce this.
 - A commit that changes a plugin's shipping files bumps that plugin's `version` in the same commit: breaking → major, `feat` → minor, all other types → patch. Editing a plugin `CLAUDE.md` alone does not bump.
