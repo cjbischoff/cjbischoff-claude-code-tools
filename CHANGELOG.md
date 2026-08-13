@@ -25,6 +25,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 ### Removed
 
 - Drop `.github/README.md` so GitHub shows the marketplace README on the repository homepage instead of the `.github/` folder guide.
+- Remove `.cursor/cli.json`, which never took effect because Cursor reads `attribution` only from the global `~/.cursor/cli-config.json`.
 
 ## 0.2.0 - 2026-08-12
 

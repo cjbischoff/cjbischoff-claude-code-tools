@@ -51,7 +51,6 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `.gitignore` | Keeps caches, venvs, and local secrets out of git |
 | `.coderabbit.yaml` | CodeRabbit pull request review config: path rules, governance pre-merge checks, tool selection |
 | `.cursor/rules/no-agent-attribution.mdc` | Always-on rule: no Cursor/agent commit or PR attribution |
-| `.cursor/cli.json` | Project CLI overlay: disable agent commit/PR attribution |
 
 ## Governance
 
