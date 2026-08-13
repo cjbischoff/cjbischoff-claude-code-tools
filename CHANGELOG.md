@@ -9,10 +9,18 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ## Unreleased
 
+### Changed
+
+- Stop treating `.github/` as a Directory Guide folder so it does not require a README that GitHub would promote to the repository homepage.
+
 ### Added
 
 - Protect `main` with a GitHub ruleset requiring pull requests and blocking force-pushes and deletions, and turn on free GitHub code security (CodeQL default setup, Dependency review, Dependabot updates, private vulnerability reporting).
-- Extend the pre-commit Directory Guide special-case to `docs/` and `.github/` so those folders' READMEs stay in lockstep with their files.
+- Extend the pre-commit Directory Guide special-case to `docs/` so that folder's README stays in lockstep with its files.
+
+### Removed
+
+- Drop `.github/README.md` so GitHub shows the marketplace README on the repository homepage instead of the `.github/` folder guide.
 
 ## 0.2.0 - 2026-08-12
 
