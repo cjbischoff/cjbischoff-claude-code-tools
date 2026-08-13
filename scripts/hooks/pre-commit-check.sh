@@ -30,7 +30,7 @@ if [ -n "$nondoc" ]; then
 fi
 
 # Changes inside a Directory Guide folder require that folder's README.md.
-guide_dirs=(plugins scripts)
+guide_dirs=(plugins scripts docs .github)
 for dir in "${guide_dirs[@]}"; do
   others=$(grep -E "^${dir}/" <<<"$staged" | grep -vx "${dir}/README.md" || true)
   if [ -n "$others" ] && ! grep -qx "${dir}/README.md" <<<"$staged"; then
