@@ -71,6 +71,7 @@ CodeRabbit reviews every pull request against `main`, configured by `.coderabbit
 - The review comments but never blocks: the GitHub ruleset is the only required gate on `main`.
 - Pre-merge checks mirror the governance rules above in `warning` mode, so a violation shows up in the review as well as in the hooks.
 - Intentionally vulnerable detector fixtures under `**/fixtures/` are excluded from review, so seeded findings do not bury real ones.
+- The open-source plan meters reviews per hour, so a burst of pull requests can exhaust the allowance and skip a review outright. Comment `@coderabbitai rate limit` to check remaining capacity, then `@coderabbitai review` to run the review once capacity returns.
 
 ## Status
 
