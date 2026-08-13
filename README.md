@@ -46,22 +46,37 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `CHANGELOG.md` | Common Changelog; one entry per functionality commit |
 | `SECURITY.md` | How to report vulnerabilities (GitHub private reporting) |
 | `.github/workflows/dependency-review.yml` | GitHub Dependency review on pull requests |
+| `.github/workflows/pr-attribution.yml` | Runs `pr-body-check.sh` against every pull request body |
 | `.github/dependabot.yml` | Weekly Dependabot updates for Actions and pip |
 | `.github/codeql/codeql-config.yml` | CodeQL path exclusions (test fixtures, caches) |
 | `.gitignore` | Keeps caches, venvs, and local secrets out of git |
 | `.coderabbit.yaml` | CodeRabbit pull request review config: path rules, governance pre-merge checks, tool selection |
 | `.cursor/rules/no-agent-attribution.mdc` | Always-on rule: no Cursor/agent commit or PR attribution |
-| `.cursor/cli.json` | Project CLI overlay: disable agent commit/PR attribution |
 
 ## Governance
 
 - Direct commits to `main` are blocked by a pre-commit hook and by a GitHub ruleset (pull requests required; force-push and deletion blocked). Work on a `<type>/<short-kebab-description>` branch.
 - Do not add `.github/README.md`; GitHub would show it as the repository homepage instead of this file.
-- Do not attribute commits or PRs to Cursor or any agent (`Co-authored-by: Cursor` is stripped by the commit-msg hook).
+- Do not attribute commits or PRs to Cursor or any agent. The commit-msg hook strips `Co-authored-by: Cursor` trailers, and the `PR attribution` workflow fails a pull request whose body carries a `Made with Cursor` footer.
 - Conventional Commits; summary under 50 chars; body wrapped at 72.
 - Every commit that changes tracked files updates `README.md` and `CHANGELOG.md` in the same commit, plus the affected folder's `README.md`. Hooks enforce this.
 - A commit that changes a plugin's shipping files bumps that plugin's `version` in the same commit: breaking → major, `feat` → minor, all other types → patch. Editing a plugin `CLAUDE.md` alone does not bump.
 - Run `prek install` once after cloning to activate the hooks.
+
+## Agent attribution
+
+Cursor appends a `Made with Cursor` trailer to agent commits and to pull requests it creates through `gh pr create`. No file in this repository can turn that off. Cursor's [CLI configuration reference](https://cursor.com/docs/cli/reference/configuration) states that only `permissions` is read from a project-level `.cursor/cli.json`; every other setting, `attribution` included, is read from the global `~/.cursor/cli-config.json`. A project-level `attribution` block is ignored silently, which is why one was removed from this repo rather than corrected.
+
+Attribution is also per surface. Turning it off requires a change outside this repository, once per surface in use:
+
+- Cursor CLI: set `attribution.attributeCommitsToAgent` and `attribution.attributePRsToAgent` to `false` in `~/.cursor/cli-config.json`.
+- Cursor IDE agent: **Cursor Settings > Git & PRs > Attribution**, which is stored separately from the CLI config.
+
+Because that opt-out lives on each machine and cannot be committed, the repository enforces the policy instead of relying on it:
+
+- `scripts/hooks/commit-msg-check.sh` strips attribution trailers from commit messages.
+- `.github/workflows/pr-attribution.yml` runs `scripts/hooks/pr-body-check.sh` on every pull request against `main` and fails when the body carries an attribution footer. It reruns on `edited`, so removing the footer clears the check.
+- CodeRabbit's `no-agent-attribution` pre-merge check covers the same ground in `warning` mode, but it is LLM-judged and can be skipped entirely when the open-source rate limit is exhausted. The workflow is the deterministic backstop.
 
 ## Code review
 

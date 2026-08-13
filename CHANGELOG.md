@@ -15,15 +15,18 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Added
 
+- Add `scripts/hooks/pr-body-check.sh` and the `PR attribution` workflow, which fail a pull request whose body carries a `Made with Cursor` footer or an agent `Co-authored-by` trailer, so the no-agent-attribution policy is enforced rather than left to an agent to remember.
+- Document in the README that agent attribution is configured per surface in the global `~/.cursor/cli-config.json` and in Cursor's IDE settings, neither of which this repository can commit.
 - Add `.coderabbit.yaml` so CodeRabbit reviews pull requests with repo-specific path instructions, governance pre-merge checks, and only the linters this stack uses, and exclude the intentionally vulnerable detector fixtures from review.
 - Document the open-source review rate limit in the README code review section, including `@coderabbitai rate limit` to check capacity and `@coderabbitai review` to run a skipped review, after a pull request was skipped with "Review limit reached".
 - Set `abort_on_close: false` so a CodeRabbit review still finishes when a pull request merges mid-review, and document waiting for the review in `CLAUDE.md`.
 - Protect `main` with a GitHub ruleset requiring pull requests and blocking force-pushes and deletions, and turn on free GitHub code security (CodeQL default setup, Dependency review, Dependabot updates, private vulnerability reporting).
 - Extend the pre-commit Directory Guide special-case to `docs/` so that folder's README stays in lockstep with its files.
-- Add a project Cursor rule and CLI overlay that forbid attributing commits or pull requests to Cursor, and strip `Co-authored-by: Cursor` trailers in the commit-msg hook.
+- Add a project Cursor rule that forbids attributing commits or pull requests to Cursor, and strip `Co-authored-by: Cursor` trailers in the commit-msg hook.
 
 ### Removed
 
+- Drop `.cursor/cli.json`, whose `attribution` block never took effect: Cursor reads only `permissions` from a project-level CLI config, so the settings meant to suppress the `Made with Cursor` pull request footer were ignored.
 - Drop `.github/README.md` so GitHub shows the marketplace README on the repository homepage instead of the `.github/` folder guide.
 
 ## 0.2.0 - 2026-08-12

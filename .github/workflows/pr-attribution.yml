@@ -1,0 +1,24 @@
+name: PR attribution
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-body:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the pull request body for agent attribution
+        # The body is untrusted input, so it reaches the script through the
+        # environment rather than through workflow interpolation.
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s' "$PR_BODY" | bash scripts/hooks/pr-body-check.sh
