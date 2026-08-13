@@ -16,6 +16,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 ### Added
 
 - Add OpenWiki ignore rules, a durable `openwiki/INSTRUCTIONS.md` brief, local env sample with telemetry off, and a SHA-pinned weekly/manual update workflow that uses Anthropic Claude Sonnet 5 and opens a review PR instead of writing to main.
+- Add the generated OpenWiki pages covering marketplace contract, commit governance, the sec-overlay pipeline, and repository operations.
 - Add `.coderabbit.yaml` so CodeRabbit reviews pull requests with repo-specific path instructions, governance pre-merge checks, and only the linters this stack uses, and exclude the intentionally vulnerable detector fixtures from review.
 - Document the open-source review rate limit in the README code review section, including `@coderabbitai rate limit` to check capacity and `@coderabbitai review` to run a skipped review, after a pull request was skipped with "Review limit reached".
 - Set `abort_on_close: false` so a CodeRabbit review still finishes when a pull request merges mid-review, and document waiting for the review in `CLAUDE.md`.

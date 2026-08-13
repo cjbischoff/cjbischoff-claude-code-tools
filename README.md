@@ -33,7 +33,7 @@ export DO_NOT_TRACK=1
 openwiki code --init --print
 ```
 
-Keep `openwiki/INSTRUCTIONS.md` and `.openwikiignore`. Commit the generated `openwiki/` pages on this branch after init. Later refreshes: `openwiki code --update --print`, or the `OpenWiki Update` workflow (set `ANTHROPIC_API_KEY` as a repository secret; weekly Monday 08:00 UTC plus manual dispatch).
+Keep `openwiki/INSTRUCTIONS.md` and `.openwikiignore`. The generated wiki under `openwiki/` is tracked; start at `openwiki/quickstart.md`. Later refreshes: `openwiki code --update --print`, or the `OpenWiki Update` workflow (set `ANTHROPIC_API_KEY` as a repository secret; weekly Monday 08:00 UTC plus manual dispatch).
 
 ## Directory Guide
 
@@ -69,6 +69,8 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `openwiki/INSTRUCTIONS.md` | User-authored wiki brief for init and CI `--update`; OpenWiki does not rewrite it |
 | `.env.example` | Local OpenWiki provider, model, and telemetry-off settings (no secrets) |
 | `.github/workflows/openwiki-update.yml` | Weekly/manual OpenWiki `--update` that opens a PR using Anthropic Sonnet 5 |
+| `openwiki/` | Generated marketplace wiki (quickstart, marketplace, governance, sec-overlay, operations); do not hand-edit except `INSTRUCTIONS.md` |
+| `AGENTS.md` | OpenWiki pointer block for coding agents; the generated `<!-- OPENWIKI:START -->` region only |
 
 ## Governance
 
