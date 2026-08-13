@@ -17,6 +17,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 - Protect `main` with a GitHub ruleset requiring pull requests and blocking force-pushes and deletions, and turn on free GitHub code security (CodeQL default setup, Dependency review, Dependabot updates, private vulnerability reporting).
 - Extend the pre-commit Directory Guide special-case to `docs/` so that folder's README stays in lockstep with its files.
+- Add a project Cursor rule and CLI overlay that forbid attributing commits or pull requests to Cursor, and strip `Co-authored-by: Cursor` trailers in the commit-msg hook.
 
 ### Removed
 

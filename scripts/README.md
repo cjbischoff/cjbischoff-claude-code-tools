@@ -11,7 +11,8 @@ Holds repo-level tooling scripts. Plugin logic does not live here — it lives i
 | File | Purpose |
 |------|---------|
 | `hooks/pre-commit-check.sh` | Blocks commits to main; requires README.md, CHANGELOG.md, and folder README updates |
-| `hooks/commit-msg-check.sh` | Enforces Conventional Commits message format with summary under 50 chars |
+| `hooks/commit-msg-check.sh` | Enforces Conventional Commits; strips Cursor `Co-authored-by` trailers |
 | `hooks/test-pre-commit-check.sh` | Bash invocation test for `pre-commit-check.sh`; cleans its temp repos via an EXIT trap; run with `bash scripts/hooks/test-pre-commit-check.sh` |
+| `hooks/test-commit-msg-check.sh` | Bash invocation test for `commit-msg-check.sh`; run with `bash scripts/hooks/test-commit-msg-check.sh` |
 
 `pre-commit-check.sh` enforces a generalized per-folder rule: any staged file whose immediate directory has a tracked `README.md` requires that `README.md` to be staged too (folders with no tracked README are not gated). The `plugins`/`scripts`/`docs` top-level check is kept alongside this as a stricter, redundant-but-harmless special case. `.github/` has no folder README: GitHub would display `.github/README.md` as the repository homepage instead of the root README.
