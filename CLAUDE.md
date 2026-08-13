@@ -26,4 +26,5 @@ Every change to a tracked file goes through a branch and a Conventional Commits 
 
 - Plugin skills keep all executable logic under `skills/<name>/scripts/`, not in SKILL.md.
 - Scripts must not reference paths outside their plugin directory. Only the plugin directory is copied to the plugin cache on install.
-- Do not bump a plugin's `version` field without user approval. The user bumps it manually on each release so update detection works.
+- Bump a plugin's `version` automatically, in the same commit that changes a **shipping file** in that plugin. A shipping file is any tracked file a user receives on install: `plugin.json`, `SKILL.md`, and everything under `skills/`, `agents/`, `helpers/`, and `references/`, including their folder `README.md` files. A plugin `CLAUDE.md` (operating manual) is **not** a shipping file; editing one alone does not bump.
+- Derive the increment from the commit's Conventional Commit type with semver: a breaking change (`!` or `BREAKING CHANGE:`) bumps major, `feat` bumps minor, and every other type (`fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`) bumps patch. Edit `version` in the plugin's `.claude-plugin/plugin.json` in the same commit. `marketplace.json` does not pin versions, so it needs no edit.
