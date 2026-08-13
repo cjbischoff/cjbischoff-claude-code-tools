@@ -7,6 +7,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Each entry is one sentence in the imperative mood, describing the change from the user's point of view.
 - Every commit that changes a tracked file adds an entry here in the same commit.
 
+## Unreleased
+
+### Added
+
+- Protect `main` with a GitHub ruleset requiring pull requests and blocking force-pushes and deletions, and turn on free GitHub code security (CodeQL default setup, Dependency review, Dependabot updates, private vulnerability reporting).
+- Extend the pre-commit Directory Guide special-case to `docs/` and `.github/` so those folders' READMEs stay in lockstep with their files.
+
 ## 0.2.0 - 2026-08-12
 
 ### Changed
