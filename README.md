@@ -50,6 +50,8 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `.github/codeql/codeql-config.yml` | CodeQL path exclusions (test fixtures, caches) |
 | `.gitignore` | Keeps caches, venvs, and local secrets out of git |
 | `.coderabbit.yaml` | CodeRabbit pull request review config: path rules, governance pre-merge checks, tool selection |
+| `.cursor/rules/codeguard-*.mdc` | CodeGuard secure-coding rules; three always apply, the rest match file globs |
+
 ## Governance
 
 - Direct commits to `main` are blocked by a pre-commit hook and by a GitHub ruleset (pull requests required; force-push and deletion blocked). Work on a `<type>/<short-kebab-description>` branch.
