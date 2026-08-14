@@ -11,11 +11,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Direct the OpenWiki brief to read the change digest first on an update run and to mine `docs/superpowers/` under an explicit budget (specs in full, plans by summary only), and drop its reference to a README status section that no longer exists.
 - Move governance, code review, status, and decisions sections from README.md to CLAUDE.md for better separation of concerns; README now focuses on what the project is and how to use it.
 - Stop treating `.github/` as a Directory Guide folder so it does not require a README that GitHub would promote to the repository homepage.
 
 ### Added
 
+- Add `scripts/openwiki-history-digest.sh` and run it from the OpenWiki Update workflow, so each update run reads a bounded `.openwiki-history.md` digest of commits and changed files; the agent cannot run `git log` itself while `.openwikiignore` restricts its shell to `pwd` and `git rev-parse HEAD`.
 - Add OpenWiki ignore rules, a durable `openwiki/INSTRUCTIONS.md` brief, local env sample with telemetry off, and a SHA-pinned weekly/manual update workflow that uses Anthropic Claude Sonnet 5 and opens a review PR instead of writing to main.
 - Add the generated OpenWiki pages covering marketplace contract, commit governance, the sec-overlay pipeline, and repository operations.
 - Add `.coderabbit.yaml` so CodeRabbit reviews pull requests with repo-specific path instructions, governance pre-merge checks, and only the linters this stack uses, and exclude the intentionally vulnerable detector fixtures from review.

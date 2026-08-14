@@ -35,6 +35,12 @@ openwiki code --init --print
 
 Keep `openwiki/INSTRUCTIONS.md` and `.openwikiignore`. The generated wiki under `openwiki/` is tracked; start at `openwiki/quickstart.md`. Later refreshes: `openwiki code --update --print`, or the `OpenWiki Update` workflow (set `ANTHROPIC_API_KEY` as a repository secret; weekly Monday 08:00 UTC plus manual dispatch).
 
+An update run reads `.openwiki-history.md` to learn what changed since the last run, because `.openwikiignore` blocks the agent from running `git log`. CI regenerates it automatically; before a local `--update`, run it yourself:
+
+```bash
+./scripts/openwiki-history-digest.sh
+```
+
 ## Directory Guide
 
 Each folder below has its own README.md describing what it holds, its naming convention, and who writes to it. A commit that changes a tracked file inside a folder that has a README.md must update that folder's README.md in the same commit.
@@ -57,6 +63,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `docs/` | Design specs and implementation plans (see `docs/README.md`) |
 | `.pre-commit-config.yaml` | prek hook config: doc-update guard + commit message check |
 | `scripts/hooks/` | Hook scripts that enforce commit governance |
+| `scripts/openwiki-history-digest.sh` | Writes the bounded `.openwiki-history.md` change digest an OpenWiki update run reads in place of `git log` |
 | `CHANGELOG.md` | Common Changelog; one entry per functionality commit |
 | `SECURITY.md` | How to report vulnerabilities (GitHub private reporting) |
 | `.github/workflows/dependency-review.yml` | GitHub Dependency review on pull requests |
