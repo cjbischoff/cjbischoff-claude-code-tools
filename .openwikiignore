@@ -64,3 +64,11 @@ plugins/sec-overlay/skills/sec-overlay/docs/gsd/
 **/*.sarif
 **/*.diff
 !**/fixtures/**/*.diff
+
+# ---------------------------------------------------------------
+# Do not ignore .openwiki-history.md
+# ---------------------------------------------------------------
+# It is the only way the agent can see git history: an active rule set
+# restricts shell to pwd and `git rev-parse HEAD`, so `git log` is refused.
+# CI regenerates the file each run and .gitignore keeps it out of commits.
+# Adding it here would silently blind every update run.

@@ -24,5 +24,8 @@ id_ed25519
 .ghost/
 .firecrawl/
 
+# OpenWiki run inputs — regenerated per run, never committed
+.openwiki-history.md
+
 # OS
 .DS_Store
