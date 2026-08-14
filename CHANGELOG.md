@@ -16,6 +16,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Direct the OpenWiki brief to read the change digest first on an update run and to mine `docs/superpowers/` under an explicit budget (specs in full, plans by summary only), and drop its reference to a README status section that no longer exists.
 - Move governance, code review, status, and decisions sections from README.md to CLAUDE.md for better separation of concerns; README now focuses on what the project is and how to use it.
 - Stop treating `.github/` as a Directory Guide folder so it does not require a README that GitHub would promote to the repository homepage.
+- Exempt a plugin's own `CHANGELOG.md` from the general immediate-folder README rule in `pre-commit-check.sh`, so a changelog-only plugin commit can pass even when the plugin also has a tracked `README.md`, and restore two governance rules dropped from the root `CLAUDE.md` during the skill-`CLAUDE.md` condensation: stage explicit paths only (never `git add -A`/`-a` or `--no-verify`), and ship new or changed executable logic with a test in the same change.
 
 ### Added
 

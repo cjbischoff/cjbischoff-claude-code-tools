@@ -174,6 +174,50 @@ run_case "repo-level change without root docs" setup_repo_level_no_docs 1
 run_case "repo-level change with root docs" setup_repo_level_with_docs 0
 run_case "blocks when plugin folder README not restaged" setup_plugin_folder_readme_not_staged 1
 
+# Case I: plugin CHANGELOG.md is a TRACKED sibling of a TRACKED plugin
+# README.md, and the commit stages only the changelog edit -> pass (exit 0).
+# Proves the changelog exemption from the general immediate-folder README
+# loop, in the real-repo shape where plugins/demo/README.md also exists.
+setup_plugin_changelog_only_readme_tracked() {
+  mkdir -p plugins/demo
+  printf '# r\n' >README.md
+  printf '# c\n' >CHANGELOG.md
+  printf '# plugins\n' >plugins/README.md
+  printf '# demo\n' >plugins/demo/README.md
+  printf 'x\n' >plugins/demo/CHANGELOG.md
+  printf 'x\n' >plugins/demo/somefile
+  git add README.md CHANGELOG.md plugins/README.md plugins/demo/README.md \
+    plugins/demo/CHANGELOG.md plugins/demo/somefile
+  git commit -q -m "seed"
+  printf 'note\n' >>plugins/demo/CHANGELOG.md
+  git add plugins/demo/CHANGELOG.md
+}
+
+# Case J: same tracked fixture as Case I, but the commit also touches
+# plugins/demo/somefile without restaging plugins/demo/README.md -> still
+# blocked (exit 1). The changelog exemption covers only the changelog itself,
+# not its siblings.
+setup_plugin_changelog_and_file_no_readme() {
+  mkdir -p plugins/demo
+  printf '# r\n' >README.md
+  printf '# c\n' >CHANGELOG.md
+  printf '# plugins\n' >plugins/README.md
+  printf '# demo\n' >plugins/demo/README.md
+  printf 'x\n' >plugins/demo/CHANGELOG.md
+  printf 'x\n' >plugins/demo/somefile
+  git add README.md CHANGELOG.md plugins/README.md plugins/demo/README.md \
+    plugins/demo/CHANGELOG.md plugins/demo/somefile
+  git commit -q -m "seed"
+  printf 'note\n' >>plugins/demo/CHANGELOG.md
+  printf 'y\n' >>plugins/demo/somefile
+  git add plugins/demo/CHANGELOG.md plugins/demo/somefile
+}
+
+run_case "plugin changelog-only commit passes with plugin README tracked" \
+  setup_plugin_changelog_only_readme_tracked 0
+run_case "plugin changelog plus file still blocks without plugin README" \
+  setup_plugin_changelog_and_file_no_readme 1
+
 echo "----"
 echo "pass=$pass fail=$fail"
 [ "$fail" -eq 0 ]

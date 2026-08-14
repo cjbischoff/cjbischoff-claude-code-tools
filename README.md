@@ -43,7 +43,7 @@ An update run reads `.openwiki-history.md` to learn what changed since the last 
 
 ## Directory Guide
 
-Each folder below has its own README.md describing what it holds, its naming convention, and who writes to it. A commit that changes a tracked file inside a folder that has a README.md must update that folder's README.md in the same commit; inside `plugins/`, this applies per plugin (see [CLAUDE.md](CLAUDE.md) for the exact routing).
+Each folder below has its own README.md describing what it holds, its naming convention, and who writes to it. A commit that changes a tracked file inside a folder that has a README.md must update that folder's README.md in the same commit; inside `plugins/`, this applies per plugin, with a plugin's own `CHANGELOG.md` exempt from that rule (see [CLAUDE.md](CLAUDE.md) for the exact routing).
 
 | Folder | Purpose |
 |--------|---------|

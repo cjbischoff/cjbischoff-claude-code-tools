@@ -59,6 +59,10 @@ done
 # requires that README.md to be staged too.
 while IFS= read -r f; do
   [ -z "$f" ] && continue
+  # A plugin-root CHANGELOG.md is exempt: the plugin-changelog loop above
+  # already gates it, and requiring the plugin's README.md too would make a
+  # changelog-only plugin commit impossible.
+  [[ "$f" =~ ^plugins/[^/]+/CHANGELOG\.md$ ]] && continue
   d=$(dirname "$f")
   [ "$d" = "." ] && continue
   readme="$d/README.md"
