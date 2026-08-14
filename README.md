@@ -71,7 +71,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `.github/codeql/codeql-config.yml` | CodeQL path exclusions (test fixtures, caches) |
 | `.gitignore` | Keeps caches, venvs, and local secrets out of git |
 | `.coderabbit.yaml` | CodeRabbit pull request review config: path rules, governance pre-merge checks, tool selection |
-| `.cursor/rules/codeguard-*.mdc` | CodeGuard secure-coding rules; three always apply, the rest match file globs |
+| `.cursor/rules/codeguard-1-hardcoded-credentials.mdc` | Always-on Cursor rule: never commit secrets, API keys, or credentials |
 | `.openwikiignore` | Paths OpenWiki must not read during wiki init/update (separate from `.gitignore`) |
 | `openwiki/INSTRUCTIONS.md` | User-authored wiki brief for init and CI `--update`; OpenWiki does not rewrite it |
 | `.env.example` | Local OpenWiki provider, model, and telemetry-off settings (no secrets) |

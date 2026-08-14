@@ -30,6 +30,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Removed
 
+- Drop 21 unused CodeGuard Cursor rules so editor context keeps only the always-on hardcoded-credentials rule.
 - Drop `.github/README.md` so GitHub shows the marketplace README on the repository homepage instead of the `.github/` folder guide.
 
 ## 0.2.0 - 2026-08-12
