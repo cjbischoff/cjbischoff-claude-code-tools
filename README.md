@@ -81,7 +81,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 ## Contributing
 
-All changes go through feature branches with Conventional Commits. See [CLAUDE.md](CLAUDE.md) for detailed branching, commit, and code review processes.
+All changes go through feature branches with Conventional Commits. See [CLAUDE.md](CLAUDE.md) for detailed branching, commit, and code review processes. Design specs for in-flight work live under `docs/superpowers/specs/` (see [docs/README.md](docs/README.md)).
 
 ## License
 
