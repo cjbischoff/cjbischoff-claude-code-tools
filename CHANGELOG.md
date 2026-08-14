@@ -29,7 +29,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Track the CodeGuard secure-coding rules under `.cursor/rules/`, so the guidance applies to anyone working in a clone rather than only on the machine that happens to have them.
 - Extend the pre-commit Directory Guide special-case to `docs/` so that folder's README stays in lockstep with its files.
 - Reduce the commit-msg hook to the Conventional Commits format and summary length checks.
-- Split sec-overlay plugin docs by audience: a user-facing README and CHANGELOG at the plugin root, a maintainer CLAUDE.md that never loads for plugin installers, and a trimmed skill CLAUDE.md focused on running the harness.
+- Split sec-overlay plugin docs by audience: a user-facing README and CHANGELOG at the plugin root, a maintainer CLAUDE.md that never loads for plugin installers, and a trimmed skill CLAUDE.md focused on running the harness. Point SKILL.md at the skill CLAUDE.md and fix the skill README's semver-bump link to the marketplace root CLAUDE.md.
 
 ### Removed
 

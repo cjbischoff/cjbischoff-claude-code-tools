@@ -60,7 +60,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `plugins/sec-overlay/README.md` | sec-overlay user-facing README: install, prerequisites, quick start |
 | `plugins/sec-overlay/CHANGELOG.md` | sec-overlay Common Changelog |
 | `plugins/sec-overlay/CLAUDE.md` | sec-overlay maintainer manual: development commands, folder-README rule, history |
-| `plugins/sec-overlay/skills/sec-overlay/SKILL.md` | Skill playbook: agentic security-audit harness |
+| `plugins/sec-overlay/skills/sec-overlay/SKILL.md` | Skill playbook: agentic security-audit harness; links to the skill's `CLAUDE.md` for prerequisites and operating rules |
 | `plugins/sec-overlay/skills/sec-overlay/helpers/` | Python core (`sec_overlay` package) that runs tools and enforces gates |
 | `plugins/sec-overlay/skills/sec-overlay/agents/` | LLM subagent prompts for the investigate/validate/patch phases |
 | `docs/` | Design specs and implementation plans (see `docs/README.md`) |

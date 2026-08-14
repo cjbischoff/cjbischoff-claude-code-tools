@@ -252,5 +252,5 @@ One coupling point to respect before editing:
   [`../../CLAUDE.md`](../../CLAUDE.md).
 - **Version bumps are automatic.** A commit that changes a shipping file (`plugin.json`,
   `SKILL.md`, or anything under `skills/`, `agents/`, `helpers/`, `references/`, incl. their
-  READMEs) bumps `.claude-plugin/plugin.json` by Conventional-Commits semver — see
-  [`../../CLAUDE.md`](../../CLAUDE.md).
+  READMEs) bumps `.claude-plugin/plugin.json` by Conventional-Commits semver — see the
+  marketplace root [`CLAUDE.md`](../../../../CLAUDE.md).

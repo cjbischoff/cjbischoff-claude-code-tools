@@ -72,6 +72,9 @@ Outputs, under the workspace directory:
 
 ## Running a full audit
 
+Read [`CLAUDE.md`](CLAUDE.md) first for environment prerequisites, hard operating rules, and
+workspace artifacts.
+
 One audit pass, in order. The main agent drives this; `<T>` = target repo,
 `<WS>` = workspace dir, `<sha>` = `git -C <T> rev-parse HEAD`, `<rules>` = a local
 semgrep ruleset. Deterministic steps run via `uv run` from `<HELPERS_DIR>` (the
