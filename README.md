@@ -67,7 +67,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `.pre-commit-config.yaml` | prek hook config: doc-update guard + commit message check |
 | `scripts/hooks/` | Hook scripts that enforce commit governance |
 | `scripts/openwiki-history-digest.sh` | Writes the bounded `.openwiki-history.md` change digest an OpenWiki update run reads in place of `git log` |
-| `CHANGELOG.md` | Common Changelog; one entry per functionality commit |
+| `CHANGELOG.md` | Common Changelog for repo-level changes; plugin changes live in `plugins/<name>/CHANGELOG.md` |
 | `SECURITY.md` | How to report vulnerabilities (GitHub private reporting) |
 | `.github/workflows/dependency-review.yml` | GitHub Dependency review on pull requests |
 | `.github/dependabot.yml` | Weekly Dependabot updates for Actions and pip |
@@ -84,7 +84,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 ## Contributing
 
-All changes go through feature branches with Conventional Commits. See [CLAUDE.md](CLAUDE.md) for detailed branching, commit, and code review processes. Design specs and implementation plans for in-flight work live under `docs/superpowers/` (see [docs/README.md](docs/README.md)).
+All changes go through feature branches with Conventional Commits. See [CLAUDE.md](CLAUDE.md) for detailed branching, commit, and code review processes. Root and plugin docs are split by audience: this README and the root `CHANGELOG.md` cover repo-level changes, while each plugin carries its own README, CHANGELOG, and maintainer CLAUDE.md under `plugins/<name>/`. Design specs and implementation plans for in-flight work live under `docs/superpowers/` (see [docs/README.md](docs/README.md)).
 
 ## License
 

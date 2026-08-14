@@ -11,6 +11,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Rewrite the root `CLAUDE.md` around marketplace governance, new-plugin scaffolding, and release process; replace the single changelog rule with routing (plugin-only changes update the plugin's changelog, other changes update the root changelog) and note the doc split in the root README.
 - Direct the OpenWiki brief to read the change digest first on an update run and to mine `docs/superpowers/` under an explicit budget (specs in full, plans by summary only), and drop its reference to a README status section that no longer exists.
 - Move governance, code review, status, and decisions sections from README.md to CLAUDE.md for better separation of concerns; README now focuses on what the project is and how to use it.
 - Stop treating `.github/` as a Directory Guide folder so it does not require a README that GitHub would promote to the repository homepage.
