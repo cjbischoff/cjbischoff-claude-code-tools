@@ -33,7 +33,7 @@ helpers/
 All commands run **from this `helpers/` directory**:
 
 ```bash
-uv run pytest -q                                 # full suite (2 env-only failures — see skill CLAUDE.md §2)
+uv run pytest -q                                 # full suite (2 env-only failures — see skill CLAUDE.md §1)
 uv run pytest tests/test_calibrate.py -q         # one file
 uv run pytest tests/test_x.py::test_name         # one test
 uv run ruff check sec_overlay/ bench/ tests/     # lint
@@ -286,9 +286,9 @@ flowchart LR
   agent prompt must parse against the real `models.py`), and `test_wiring.py` catches
   **silent-backend / clsmap / dead-link regressions**. Two failures on a clean checkout are
   *environmental* (gitignored bench corpus, excluded semgrep submodule) — see skill
-  [`CLAUDE.md`](../CLAUDE.md) §2, do not "fix" them by committing the missing data.
+  [`CLAUDE.md`](../CLAUDE.md) §1, do not "fix" them by committing the missing data.
 - **`bench/`** — the dev-only detection benchmark (precision/recall on a labelled corpus +
   regression lock). **Not part of an audit run.** Its own docs: [`bench/README.md`](bench/README.md).
 
 **When a module here changes, update this README's module map in the same commit** — enforced
-by the repo pre-commit hook (skill [`CLAUDE.md`](../CLAUDE.md) §8).
+by the repo pre-commit hook (plugin [`CLAUDE.md`](../../../CLAUDE.md), "Documentation" section).

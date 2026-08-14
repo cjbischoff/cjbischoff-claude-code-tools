@@ -15,7 +15,8 @@ the three folder READMEs and the operational playbook for detail.
 | To understand… | Read |
 |----------------|------|
 | The full phase-by-phase operating playbook | [`SKILL.md`](SKILL.md) |
-| Git protocol, environment setup, developing the skill | [`CLAUDE.md`](CLAUDE.md) |
+| Environment setup, how to run an audit | [`CLAUDE.md`](CLAUDE.md) |
+| Git protocol, developing the skill | [`../../CLAUDE.md`](../../CLAUDE.md) |
 | The LLM prompts that investigate/validate/patch | [`agents/README.md`](agents/README.md) |
 | The Python core that runs tools & enforces gates | [`helpers/README.md`](helpers/README.md) |
 | The rule book (severity, scope, schemas, crypto policy) | [`references/README.md`](references/README.md) |
@@ -111,7 +112,7 @@ flowchart TD
 ```
 
 The phase legend with exact commands is in [`SKILL.md`](SKILL.md); the hard operating rules
-(a partial scan is a coverage hole, not "clean") are in [`CLAUDE.md`](CLAUDE.md) §3.
+(a partial scan is a coverage hole, not "clean") are in [`CLAUDE.md`](CLAUDE.md) §2.
 
 ---
 
@@ -201,7 +202,7 @@ uv run python -m sec_overlay.selfscore     --workspace <WS>
 
 > **A scan is clean only if every planned backend actually ran.** If `preflight` shows a
 > missing CodeQL pack, that language has *zero dataflow coverage* — a partial scan is a
-> coverage hole, not "no findings." See [`CLAUDE.md`](CLAUDE.md) §3.
+> coverage hole, not "no findings." See [`CLAUDE.md`](CLAUDE.md) §2.
 
 ---
 
@@ -236,7 +237,7 @@ MEMORY.md, learnings/     durable per-repo memory across runs
 From `helpers/` (stdlib-only core; dev deps pytest/ruff/ty):
 
 ```bash
-uv run pytest -q          # 575 tests (2 env-only failures — see CLAUDE.md §2)
+uv run pytest -q          # 575 tests (2 env-only failures — see CLAUDE.md §1)
 uv run ruff check sec_overlay/ bench/ tests/
 uv run ty check
 ```
@@ -248,8 +249,8 @@ One coupling point to respect before editing:
   `helpers/tests/test_contracts.py` and `helpers/tests/test_finding_schema.py` green.
 - **Docs track code.** When you change anything in `agents/`, `helpers/`, or `references/`,
   update that folder's README in the **same commit**. A pre-commit hook enforces this — see
-  [`CLAUDE.md`](CLAUDE.md) §8.
+  [`../../CLAUDE.md`](../../CLAUDE.md).
 - **Version bumps are automatic.** A commit that changes a shipping file (`plugin.json`,
   `SKILL.md`, or anything under `skills/`, `agents/`, `helpers/`, `references/`, incl. their
-  READMEs) bumps `.claude-plugin/plugin.json` by Conventional-Commits semver — see
-  [`CLAUDE.md`](CLAUDE.md) §1.
+  READMEs) bumps `.claude-plugin/plugin.json` by Conventional-Commits semver — see the
+  marketplace root [`CLAUDE.md`](../../../../CLAUDE.md).

@@ -206,4 +206,4 @@ guarantees depend on them):
    misroutes or duplicates findings.
 
 **When a prompt here changes, this README must change in the same commit** — enforced by the
-repo pre-commit hook (skill [`CLAUDE.md`](../CLAUDE.md) §8).
+repo pre-commit hook (plugin [`CLAUDE.md`](../../../CLAUDE.md), "Documentation" section).

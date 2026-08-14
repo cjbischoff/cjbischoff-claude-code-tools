@@ -5,18 +5,28 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - One `## <version> - <YYYY-MM-DD>` section per release, newest first.
 - Entries are grouped under `### Changed`, `### Added`, `### Removed`, `### Fixed` — in that order.
 - Each entry is one sentence in the imperative mood, describing the change from the user's point of view.
-- Every commit that changes a tracked file adds an entry here in the same commit.
+- A repo-level or mixed-scope commit adds an entry here in the same commit.
+- A commit whose changes are all inside `plugins/<name>/` adds the entry to that plugin's `CHANGELOG.md` instead.
+- A commit that stages only a plugin's own `CHANGELOG.md` needs no entry here.
 
 ## Unreleased
 
 ### Changed
 
+- Rewrite the root `CLAUDE.md` around marketplace governance, new-plugin scaffolding, and release process; replace the single changelog rule with routing (plugin-only changes update the plugin's changelog, other changes update the root changelog), note the doc split in the root README, and keep the OpenWiki hand-edit rule's "unless explicitly asked" exception through the section merge.
+- Make `pre-commit-check.sh` enforce the changelog routing rule: a commit touching only one plugin's files requires that plugin's `CHANGELOG.md`, and a commit touching anything else requires the root `README.md` and `CHANGELOG.md`; drop `plugins` from the blanket Directory Guide check since the per-plugin routing and the existing immediate-folder README rule already cover it, and add invocation tests for the new routing.
 - Direct the OpenWiki brief to read the change digest first on an update run and to mine `docs/superpowers/` under an explicit budget (specs in full, plans by summary only), and drop its reference to a README status section that no longer exists.
 - Move governance, code review, status, and decisions sections from README.md to CLAUDE.md for better separation of concerns; README now focuses on what the project is and how to use it.
 - Stop treating `.github/` as a Directory Guide folder so it does not require a README that GitHub would promote to the repository homepage.
+- Exempt a plugin's own `CHANGELOG.md` from the general immediate-folder README rule in `pre-commit-check.sh`, so a changelog-only plugin commit can pass even when the plugin also has a tracked `README.md`, and restore two governance rules dropped from the root `CLAUDE.md` during the skill-`CLAUDE.md` condensation: stage explicit paths only (never `git add -A`/`-a` or `--no-verify`), and ship new or changed executable logic with a test in the same change.
+- Define the full changelog routing matrix here and in `plugins/README.md`, replacing the stale "every commit adds an entry" and "one entry per functionality commit" wording; scope the plugin-script path restriction in `CLAUDE.md` to `plugins/<name>/` scripts, excluding repository tooling under `scripts/`; state in `plugins/README.md` that a skill-level operational `CLAUDE.md` is an optional companion to `SKILL.md`, not a requirement of the five-file plugin template; and clarify in the root README that only a plugin's own `CHANGELOG.md` is exempt from the immediate-folder README rule, not its other staged files.
+- Make `pre-commit-check.sh`'s scope-classification `grep` calls fail closed: treat exit status 1 (no match) as empty and any other status as a real failure that stops the hook, and iterate plugin names with a quoted `while read` loop instead of unquoted word-splitting.
 
 ### Added
 
+- Add `docs/templates/plugin/`, a new-plugin skeleton (`plugin.json`, README, CLAUDE.md, CHANGELOG, sample `SKILL.md`) with `{{PLACEHOLDER}}` markers, matching the root `CLAUDE.md` "New plugin" checklist.
+- Add the four-commit implementation plan for the marketplace documentation split.
+- Add the marketplace documentation-structure design spec: root CLAUDE.md focuses on governance and new-plugin scaffolding, each plugin carries its own CLAUDE.md, README, and CHANGELOG, and hook changelog routing follows.
 - Add `scripts/openwiki-history-digest.sh` and run it from the OpenWiki Update workflow, so each update run reads a bounded `.openwiki-history.md` digest of commits and changed files; the agent cannot run `git log` itself while `.openwikiignore` restricts its shell to `pwd` and `git rev-parse HEAD`.
 - Add OpenWiki ignore rules, a durable `openwiki/INSTRUCTIONS.md` brief, local env sample with telemetry off, and a SHA-pinned weekly/manual update workflow that uses Anthropic Claude Sonnet 5 and opens a review PR instead of writing to main.
 - Add the generated OpenWiki pages covering marketplace contract, commit governance, the sec-overlay pipeline, and repository operations.
@@ -27,6 +37,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Track the CodeGuard secure-coding rules under `.cursor/rules/`, so the guidance applies to anyone working in a clone rather than only on the machine that happens to have them.
 - Extend the pre-commit Directory Guide special-case to `docs/` so that folder's README stays in lockstep with its files.
 - Reduce the commit-msg hook to the Conventional Commits format and summary length checks.
+- Split sec-overlay plugin docs by audience: a user-facing README and CHANGELOG at the plugin root, a maintainer CLAUDE.md that never loads for plugin installers, and a trimmed skill CLAUDE.md focused on running the harness. Point SKILL.md at the skill CLAUDE.md and fix the skill README's semver-bump link to the marketplace root CLAUDE.md.
 
 ### Removed
 

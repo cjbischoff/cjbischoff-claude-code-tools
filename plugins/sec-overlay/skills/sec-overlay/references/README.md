@@ -219,4 +219,4 @@ The agent does **not** get to argue md5 is fine "in this context" — the YAML s
   and (if a new domain) a `hunting/` companion. `test_wiring.py` guards the wiring.
 
 **When code here changes, this README must change in the same commit** — the repo's
-pre-commit hook (see the skill [`CLAUDE.md`](../CLAUDE.md) §8) enforces it.
+pre-commit hook (see the plugin [`CLAUDE.md`](../../../CLAUDE.md), "Documentation" section) enforces it.

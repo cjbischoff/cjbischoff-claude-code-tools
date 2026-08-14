@@ -43,7 +43,7 @@ An update run reads `.openwiki-history.md` to learn what changed since the last 
 
 ## Directory Guide
 
-Each folder below has its own README.md describing what it holds, its naming convention, and who writes to it. A commit that changes a tracked file inside a folder that has a README.md must update that folder's README.md in the same commit.
+Each folder below has its own README.md describing what it holds, its naming convention, and who writes to it. A commit that changes a tracked file inside a folder that has a README.md must update that folder's README.md in the same commit; inside `plugins/`, this applies per plugin. The only exemption is a commit that stages exclusively a plugin's own `CHANGELOG.md`; any other staged file under that plugin still requires the immediate-folder README.md (see [CLAUDE.md](CLAUDE.md) for the exact routing).
 
 | Folder | Purpose |
 |--------|---------|
@@ -57,14 +57,18 @@ Each folder below has its own README.md describing what it holds, its naming con
 |------|---------|
 | `.claude-plugin/marketplace.json` | Marketplace manifest; lists all plugins |
 | `plugins/sec-overlay/.claude-plugin/plugin.json` | sec-overlay plugin manifest |
-| `plugins/sec-overlay/skills/sec-overlay/SKILL.md` | Skill playbook: agentic security-audit harness |
+| `plugins/sec-overlay/README.md` | sec-overlay user-facing README: install, prerequisites, quick start |
+| `plugins/sec-overlay/CHANGELOG.md` | sec-overlay Common Changelog |
+| `plugins/sec-overlay/CLAUDE.md` | sec-overlay maintainer manual: development commands, folder-README rule, history |
+| `plugins/sec-overlay/skills/sec-overlay/SKILL.md` | Skill playbook: agentic security-audit harness; links to the skill's `CLAUDE.md` for prerequisites and operating rules |
 | `plugins/sec-overlay/skills/sec-overlay/helpers/` | Python core (`sec_overlay` package) that runs tools and enforces gates |
 | `plugins/sec-overlay/skills/sec-overlay/agents/` | LLM subagent prompts for the investigate/validate/patch phases |
 | `docs/` | Design specs and implementation plans (see `docs/README.md`) |
+| `docs/templates/plugin/` | New-plugin skeleton copied to `plugins/<name>/` and filled in per the root `CLAUDE.md` "New plugin" checklist |
 | `.pre-commit-config.yaml` | prek hook config: doc-update guard + commit message check |
 | `scripts/hooks/` | Hook scripts that enforce commit governance |
 | `scripts/openwiki-history-digest.sh` | Writes the bounded `.openwiki-history.md` change digest an OpenWiki update run reads in place of `git log` |
-| `CHANGELOG.md` | Common Changelog; one entry per functionality commit |
+| `CHANGELOG.md` | Common Changelog for repo-level changes; plugin changes live in `plugins/<name>/CHANGELOG.md` |
 | `SECURITY.md` | How to report vulnerabilities (GitHub private reporting) |
 | `.github/workflows/dependency-review.yml` | GitHub Dependency review on pull requests |
 | `.github/dependabot.yml` | Weekly Dependabot updates for Actions and pip |
@@ -81,7 +85,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 ## Contributing
 
-All changes go through feature branches with Conventional Commits. See [CLAUDE.md](CLAUDE.md) for detailed branching, commit, and code review processes.
+All changes go through feature branches with Conventional Commits. See [CLAUDE.md](CLAUDE.md) for detailed branching, commit, and code review processes. Root and plugin docs are split by audience: this README and the root `CHANGELOG.md` cover repo-level changes, while each plugin carries its own README, CHANGELOG, and maintainer CLAUDE.md under `plugins/<name>/`. Design specs and implementation plans for in-flight work live under `docs/superpowers/` (see [docs/README.md](docs/README.md)). CLAUDE.md's OpenWiki section covers when a generated page may be hand-edited.
 
 ## License
 

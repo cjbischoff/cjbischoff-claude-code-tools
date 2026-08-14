@@ -6,6 +6,8 @@ Holds one directory per Claude Code plugin distributed by this marketplace.
 
 **Writers:** Claude Code sessions in this workspace, on a branch, with user review before merge.
 
+**Plugin-root doc trio:** each plugin directory carries its own `README.md` (user-facing: what it does, how to install it, prerequisites, quick start), `CHANGELOG.md` (Common Changelog; a commit whose changes are all inside the plugin adds an entry here, and a commit that stages only this file needs no root entry — see the root `CLAUDE.md` for the full routing), and `CLAUDE.md` (maintainer manual: development commands, folder-README convention, project history). A plugin `CLAUDE.md` never loads into a user's session on install; only the root `CLAUDE.md` governs commit and branch rules for everyone working in this repository. A skill can also carry its own operational `CLAUDE.md` as an optional companion to `SKILL.md` — sec-overlay does this, and `SKILL.md` links to it when present — but the five-file plugin template does not require one. A link inside a skill README that names the marketplace's commit/versioning rules must point at the root `CLAUDE.md`, not the plugin one.
+
 ## Contents
 
 | Directory | Purpose |
