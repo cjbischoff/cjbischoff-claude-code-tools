@@ -40,6 +40,13 @@ CodeRabbit reviews every pull request against `main`, but a review takes a few m
 - Bump a plugin's `version` automatically, in the same commit that changes a **shipping file** in that plugin. A shipping file is any tracked file a user receives on install: `plugin.json`, `SKILL.md`, and everything under `skills/`, `agents/`, `helpers/`, and `references/`, including their folder `README.md` files. A plugin `CLAUDE.md` (operating manual) is **not** a shipping file; editing one alone does not bump.
 - Derive the increment from the commit's Conventional Commit type with semver: a breaking change (`!` or `BREAKING CHANGE:`) bumps major, `feat` bumps minor, and every other type (`fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`) bumps patch. Edit `version` in the plugin's `.claude-plugin/plugin.json` in the same commit. `marketplace.json` does not pin versions, so it needs no edit.
 
+## Decisions
+
+- `plugin.json` declares no components; the default `skills/` directory scan handles discovery, strict mode stays at its default (true).
+- Plugin versions bump automatically on shipping-file changes, using Conventional-Commits semver (breaking → major, `feat` → minor, other types → patch); a plugin `CLAUDE.md` edit alone does not bump. Replaces the prior manual-bump policy.
+- Governance is enforced with prek local hooks rather than convention only, per user request for forced updates.
+- Do not add `.github/README.md`; GitHub would show it as the repository homepage instead of the root marketplace README.
+
 ## OpenWiki
 
 The generated wiki lives under `openwiki/`. `openwiki/INSTRUCTIONS.md` is the user-authored brief for `--init` and `--update`; do not rewrite it. `.openwikiignore` is a read boundary separate from `.gitignore`. Do not hand-edit generated pages; change source and regenerate.

@@ -72,72 +72,9 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `openwiki/` | Generated marketplace wiki (quickstart, marketplace, governance, sec-overlay, operations); do not hand-edit except `INSTRUCTIONS.md` |
 | `AGENTS.md` | OpenWiki pointer block for coding agents; the generated `<!-- OPENWIKI:START -->` region only |
 
-## Governance
+## Contributing
 
-- Direct commits to `main` are blocked by a pre-commit hook and by a GitHub ruleset (pull requests required; force-push and deletion blocked). Work on a `<type>/<short-kebab-description>` branch.
-- Do not add `.github/README.md`; GitHub would show it as the repository homepage instead of this file.
-- Conventional Commits; summary under 50 chars; body wrapped at 72.
-- Every commit that changes tracked files updates `README.md` and `CHANGELOG.md` in the same commit, plus the affected folder's `README.md`. Hooks enforce this.
-- A commit that changes a plugin's shipping files bumps that plugin's `version` in the same commit: breaking → major, `feat` → minor, all other types → patch. Editing a plugin `CLAUDE.md` alone does not bump.
-- Run `prek install` once after cloning to activate the hooks.
-
-## Code review
-
-CodeRabbit reviews every pull request against `main`, configured by `.coderabbit.yaml`. Because this repository is public it qualifies for CodeRabbit's open-source plan, which grants Pro+ features without a subscription.
-
-- Wait for CodeRabbit's walkthrough comment before merging. A pull request merged within seconds of opening gets no findings.
-- The review comments but never blocks: the GitHub ruleset is the only required gate on `main`.
-- Pre-merge checks mirror the governance rules above in `warning` mode, so a violation shows up in the review as well as in the hooks: README and CHANGELOG updated, plugin version bumped, folder README updated, and no path escaping a plugin directory.
-- Intentionally vulnerable detector fixtures under `**/fixtures/` are excluded from review, so seeded findings do not bury real ones.
-- The open-source plan meters reviews per hour, so a burst of pull requests can exhaust the allowance and skip a review outright. Comment `@coderabbitai rate limit` to check remaining capacity, then `@coderabbitai review` to run the review once capacity returns.
-
-## Status
-
-sec-overlay is ported and green (593 pass, 2 env-only failures); plugin and marketplace manifests validate. The `feat/sec-overlay-review-improvements` branch is complete: all 12 planned tasks landed and passed final whole-branch review, and the branch-touched helpers are `ruff format`-clean. Plugin versions bump automatically on shipping-file changes (Conventional-Commits semver); this review-improvements release ships sec-overlay as 0.2.0, above the 0.1.1 governance release on `main`.
-
-Changed the default SARIF output to carry every reportable finding plus `needs-deployment-testing` findings marked with an `inSource` suppression, so downstream gates see them without failing; `--confirmed-only` restores the prior confirmed/fixed-only SARIF.
-
-Populated SARIF `driver.rules` from the finding set (de-duplicated by `rule_id`, `cls` as name, ASVS/CodeGuard ids as properties); `results` unchanged.
-
-Instructed the trace and validate agents to set `reachability.blocker = "external-boundary"` when a sink resolves into an un-ingested dependency, and to keep such findings as leads rather than promoting them to confirmed.
-
-Rendered external-unverifiable findings in their own report section, separate from the source-provable needs-runtime bucket.
-
-Capped calibrated risk for external-boundary findings so they can never present as a confirmed medium, regardless of claimed severity.
-
-Added an ingested-package scope check (`scope.is_external_package`) so a sink resolving into an un-ingested dependency can be flagged, without inventing a boundary when no manifest exists.
-
-Collapsed systemic clusters to one representative in the rendered report, with a per-representative affected-sites table.
-
-Added a systemic finding-clustering pass that groups related findings by class and sink before the critic/gate ladder.
-
-Wired token proxy fallback and self-score call into the sec-overlay SKILL orchestration documentation (cost recording for ambiguous harness token reporting; per-run self-score persisted to state).
-
-Added `cluster_id` and `affected_sites` fields to the `Finding` model and finding schema.
-
-Added a per-run self-score module that counts findings by status and persists them to state.
-
-Added the design spec and the task-by-task TDD implementation plan for four sec-overlay improvements from the lumedeodorant review (token accounting/self-score, systemic finding clustering, external-boundary disposition, SARIF completeness).
-
-Refocused the sec-overlay skill CLAUDE.md on repo mechanics (git/governance, testing, hook).
-
-Added an EXIT-trap cleanup to the pre-commit hook test so it leaves no temp directories behind.
-
-Added a "Run economics" report section (tokens by phase/model, USD estimate) via `cost.aggregate_by_model`.
-
-Renamed the sec-overlay overview diagram's subgraph id to `OVERLAY`.
-
-Corrected the sec-overlay README/helpers test counts and verified the diagrams and worked example.
-
-Added six per-folder READMEs under the sec-overlay skill.
-
-Generalized the pre-commit hook to enforce per-folder README freshness (with a Bash test).
-
-## Decisions
-
-- plugin.json declares no components; the default `skills/` directory scan handles discovery, strict mode stays at its default (true).
-- Plugin versions bump automatically on shipping-file changes, using Conventional-Commits semver (breaking → major, `feat` → minor, other types → patch); a plugin `CLAUDE.md` edit alone does not bump. Replaces the prior manual-bump policy.
-- Governance is enforced with prek local hooks rather than convention only, per user request for forced updates.
+All changes go through feature branches with Conventional Commits. See [CLAUDE.md](CLAUDE.md) for detailed branching, commit, and code review processes.
 
 ## License
 
