@@ -18,6 +18,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Added
 
+- Add `docs/templates/plugin/`, a new-plugin skeleton (`plugin.json`, README, CLAUDE.md, CHANGELOG, sample `SKILL.md`) with `{{PLACEHOLDER}}` markers, matching the root `CLAUDE.md` "New plugin" checklist.
 - Add the four-commit implementation plan for the marketplace documentation split.
 - Add the marketplace documentation-structure design spec: root CLAUDE.md focuses on governance and new-plugin scaffolding, each plugin carries its own CLAUDE.md, README, and CHANGELOG, and hook changelog routing follows.
 - Add `scripts/openwiki-history-digest.sh` and run it from the OpenWiki Update workflow, so each update run reads a bounded `.openwiki-history.md` digest of commits and changed files; the agent cannot run `git log` itself while `.openwikiignore` restricts its shell to `pwd` and `git rev-parse HEAD`.

@@ -64,6 +64,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `plugins/sec-overlay/skills/sec-overlay/helpers/` | Python core (`sec_overlay` package) that runs tools and enforces gates |
 | `plugins/sec-overlay/skills/sec-overlay/agents/` | LLM subagent prompts for the investigate/validate/patch phases |
 | `docs/` | Design specs and implementation plans (see `docs/README.md`) |
+| `docs/templates/plugin/` | New-plugin skeleton copied to `plugins/<name>/` and filled in per the root `CLAUDE.md` "New plugin" checklist |
 | `.pre-commit-config.yaml` | prek hook config: doc-update guard + commit message check |
 | `scripts/hooks/` | Hook scripts that enforce commit governance |
 | `scripts/openwiki-history-digest.sh` | Writes the bounded `.openwiki-history.md` change digest an OpenWiki update run reads in place of `git log` |

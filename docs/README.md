@@ -20,3 +20,4 @@ before merge.
 | `superpowers/plans/2026-08-12-sec-overlay-review-improvements.md` | Task-by-task TDD implementation plan for the four sec-overlay improvements (build order I3, I1, I2, I4) |
 | `superpowers/specs/2026-08-14-marketplace-doc-structure-design.md` | Design for the marketplace documentation split: root CLAUDE.md for governance and scaffolding, per-plugin CLAUDE.md/README/CHANGELOG, plugin template, hook routing |
 | `superpowers/plans/2026-08-14-marketplace-doc-structure.md` | Four-commit implementation plan for the marketplace documentation split (sec-overlay split, root rewrite, template, hook routing + test) |
+| `templates/plugin/` | New-plugin skeleton: `plugin.json`, README, CLAUDE.md, CHANGELOG, and a sample `SKILL.md`, each carrying `{{PLACEHOLDER}}` markers |

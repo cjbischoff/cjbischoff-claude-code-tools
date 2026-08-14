@@ -1,0 +1,6 @@
+{
+  "name": "{{plugin-name}}",
+  "description": "{{one-line description}}",
+  "version": "0.1.0",
+  "author": { "name": "Christopher Bischoff" }
+}
