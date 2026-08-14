@@ -4,7 +4,7 @@
 
 ## Install
 
-```
+```text
 /plugin marketplace add cjbischoff/cjbischoff-claude-code-tools
 /plugin install {{plugin-name}}@cjbischoff-claude-code-tools
 ```

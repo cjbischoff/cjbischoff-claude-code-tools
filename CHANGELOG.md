@@ -5,7 +5,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - One `## <version> - <YYYY-MM-DD>` section per release, newest first.
 - Entries are grouped under `### Changed`, `### Added`, `### Removed`, `### Fixed` — in that order.
 - Each entry is one sentence in the imperative mood, describing the change from the user's point of view.
-- Every commit that changes a tracked file adds an entry here in the same commit.
+- A repo-level or mixed-scope commit adds an entry here in the same commit.
+- A commit whose changes are all inside `plugins/<name>/` adds the entry to that plugin's `CHANGELOG.md` instead.
+- A commit that stages only a plugin's own `CHANGELOG.md` needs no entry here.
 
 ## Unreleased
 
@@ -17,6 +19,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Move governance, code review, status, and decisions sections from README.md to CLAUDE.md for better separation of concerns; README now focuses on what the project is and how to use it.
 - Stop treating `.github/` as a Directory Guide folder so it does not require a README that GitHub would promote to the repository homepage.
 - Exempt a plugin's own `CHANGELOG.md` from the general immediate-folder README rule in `pre-commit-check.sh`, so a changelog-only plugin commit can pass even when the plugin also has a tracked `README.md`, and restore two governance rules dropped from the root `CLAUDE.md` during the skill-`CLAUDE.md` condensation: stage explicit paths only (never `git add -A`/`-a` or `--no-verify`), and ship new or changed executable logic with a test in the same change.
+- Define the full changelog routing matrix here and in `plugins/README.md`, replacing the stale "every commit adds an entry" and "one entry per functionality commit" wording; scope the plugin-script path restriction in `CLAUDE.md` to `plugins/<name>/` scripts, excluding repository tooling under `scripts/`; state in `plugins/README.md` that a skill-level operational `CLAUDE.md` is an optional companion to `SKILL.md`, not a requirement of the five-file plugin template; and clarify in the root README that only a plugin's own `CHANGELOG.md` is exempt from the immediate-folder README rule, not its other staged files.
+- Make `pre-commit-check.sh`'s scope-classification `grep` calls fail closed: treat exit status 1 (no match) as empty and any other status as a real failure that stops the hook, and iterate plugin names with a quoted `while read` loop instead of unquoted word-splitting.
 
 ### Added
 

@@ -26,7 +26,7 @@ Every change to a tracked file goes through a branch and a Conventional Commits 
 - Derive the increment from the commit's Conventional Commit type with semver: a breaking change (`!` or `BREAKING CHANGE:`) bumps major, `feat` bumps minor, and every other type (`fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`) bumps patch. Edit `version` in the plugin's `.claude-plugin/plugin.json` in the same commit. `marketplace.json` does not pin versions, so it needs no edit.
 - Keep every CLAUDE.md under 200 lines.
 - Plugin skills keep all executable logic under `skills/<name>/scripts/`, not in SKILL.md.
-- Scripts must not reference paths outside their plugin directory. Only the plugin directory is copied to the plugin cache on install.
+- Plugin scripts (under `plugins/<name>/`) must not reference paths outside their plugin directory. Only the plugin directory is copied to the plugin cache on install; repo-level tooling under `scripts/` is not plugin payload and is exempt.
 - Stage explicit paths only; never `git add -A` / `git add .` / `git commit -a`, and never `--no-verify`.
 - New or changed executable logic ships with a test in the same change.
 

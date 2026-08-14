@@ -6,4 +6,4 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
-- Initial release: {{summary}}.
+- Add {{summary}}.
