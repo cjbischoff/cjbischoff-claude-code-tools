@@ -14,23 +14,38 @@ if [ -z "$staged" ]; then
   exit 0
 fi
 
-# Any commit that changes more than the doc files must update both doc files.
+# Split staged files: plugin-internal vs repo-level (root README/CHANGELOG exempt).
 nondoc=$(grep -vxE 'README\.md|CHANGELOG\.md' <<<"$staged" || true)
-if [ -n "$nondoc" ]; then
+repo_level=$(grep -vE '^plugins/[^/]+/' <<<"$nondoc" || true)
+plugin_names=$(grep -oE '^plugins/[^/]+/' <<<"$nondoc" | sort -u | cut -d/ -f2 || true)
+
+if [ -n "$repo_level" ]; then
   if ! grep -qx 'README.md' <<<"$staged"; then
-    echo "error: this commit changes tracked files but does not update README.md." >&2
+    echo "error: this commit changes repo-level files but does not update README.md." >&2
     echo "fix: update README.md in the same commit and stage it." >&2
     exit 1
   fi
   if ! grep -qx 'CHANGELOG.md' <<<"$staged"; then
-    echo "error: this commit changes tracked files but does not update CHANGELOG.md." >&2
+    echo "error: this commit changes repo-level files but does not update CHANGELOG.md." >&2
     echo "fix: add a Common Changelog entry in the same commit and stage it." >&2
     exit 1
   fi
 fi
 
+for name in $plugin_names; do
+  cl="plugins/${name}/CHANGELOG.md"
+  if ! grep -qx "$cl" <<<"$staged"; then
+    echo "error: this commit changes plugins/${name}/ but does not update ${cl}." >&2
+    echo "fix: add a Common Changelog entry to ${cl} and stage it." >&2
+    exit 1
+  fi
+done
+
 # Changes inside a Directory Guide folder require that folder's README.md.
-guide_dirs=(plugins scripts docs)
+# plugins/ is excluded: the plugin-changelog loop above and the general
+# immediate-folder loop below already gate it, per-plugin instead of one
+# root plugins/README.md trigger for every change anywhere in the tree.
+guide_dirs=(scripts docs)
 for dir in "${guide_dirs[@]}"; do
   others=$(grep -E "^${dir}/" <<<"$staged" | grep -vx "${dir}/README.md" || true)
   if [ -n "$others" ] && ! grep -qx "${dir}/README.md" <<<"$staged"; then

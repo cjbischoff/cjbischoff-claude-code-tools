@@ -92,6 +92,88 @@ run_case "blocks when folder README not restaged" setup_block 1
 run_case "passes when folder README restaged" setup_pass 0
 run_case "passes when folder has no README" setup_no_readme 0
 
+# Case D: plugin-only change without the plugin's own CHANGELOG.md -> block (exit 1).
+# plugins/README.md is tracked but NOT staged here: this proves plugin-internal
+# commits are exempt from the old blanket plugins/README.md trigger.
+setup_plugin_no_changelog() {
+  mkdir -p plugins/demo
+  printf '# r\n' >README.md
+  printf '# c\n' >CHANGELOG.md
+  printf '# plugins\n' >plugins/README.md
+  printf 'x\n' >plugins/demo/CHANGELOG.md
+  printf 'x\n' >plugins/demo/file.txt
+  git add README.md CHANGELOG.md plugins/README.md plugins/demo/CHANGELOG.md plugins/demo/file.txt
+  git commit -q -m "seed"
+  printf 'y\n' >>plugins/demo/file.txt
+  git add plugins/demo/file.txt
+}
+
+# Case E: plugin-only change with the plugin's own CHANGELOG.md staged, no
+# plugins/README.md, no root docs -> pass (exit 0). This is the exemption:
+# the old hook demanded root README/CHANGELOG here; the new one does not.
+setup_plugin_with_changelog() {
+  mkdir -p plugins/demo
+  printf '# r\n' >README.md
+  printf '# c\n' >CHANGELOG.md
+  printf '# plugins\n' >plugins/README.md
+  printf 'x\n' >plugins/demo/CHANGELOG.md
+  printf 'x\n' >plugins/demo/file.txt
+  git add README.md CHANGELOG.md plugins/README.md plugins/demo/CHANGELOG.md plugins/demo/file.txt
+  git commit -q -m "seed"
+  printf 'y\n' >>plugins/demo/file.txt
+  printf 'note\n' >>plugins/demo/CHANGELOG.md
+  git add plugins/demo/file.txt plugins/demo/CHANGELOG.md
+}
+
+# Case H: a file directly in plugins/demo/ with a tracked plugins/demo/README.md,
+# that README NOT restaged -> still blocked (exit 1). Proves the immediate-folder
+# loop still gates inside a plugin tree even though guide_dirs no longer does.
+setup_plugin_folder_readme_not_staged() {
+  mkdir -p plugins/demo
+  printf '# r\n' >README.md
+  printf '# c\n' >CHANGELOG.md
+  printf '# plugins\n' >plugins/README.md
+  printf '# demo\n' >plugins/demo/README.md
+  printf 'x\n' >plugins/demo/CHANGELOG.md
+  printf 'x\n' >plugins/demo/file.txt
+  git add README.md CHANGELOG.md plugins/README.md plugins/demo/README.md \
+    plugins/demo/CHANGELOG.md plugins/demo/file.txt
+  git commit -q -m "seed"
+  printf 'y\n' >>plugins/demo/file.txt
+  printf 'note\n' >>plugins/demo/CHANGELOG.md
+  git add plugins/demo/file.txt plugins/demo/CHANGELOG.md
+}
+
+# Case F: repo-level change without root README/CHANGELOG staged -> block (exit 1).
+setup_repo_level_no_docs() {
+  printf '# r\n' >README.md
+  printf '# c\n' >CHANGELOG.md
+  printf 'x\n' >file-at-root.txt
+  git add README.md CHANGELOG.md file-at-root.txt
+  git commit -q -m "seed"
+  printf 'y\n' >>file-at-root.txt
+  git add file-at-root.txt
+}
+
+# Case G: repo-level change with root README/CHANGELOG staged -> pass (exit 0).
+setup_repo_level_with_docs() {
+  printf '# r\n' >README.md
+  printf '# c\n' >CHANGELOG.md
+  printf 'x\n' >file-at-root.txt
+  git add README.md CHANGELOG.md file-at-root.txt
+  git commit -q -m "seed"
+  printf 'y\n' >>file-at-root.txt
+  printf 'changed\n' >>README.md
+  printf 'changed\n' >>CHANGELOG.md
+  git add file-at-root.txt README.md CHANGELOG.md
+}
+
+run_case "plugin change without plugin changelog" setup_plugin_no_changelog 1
+run_case "plugin change with plugin changelog" setup_plugin_with_changelog 0
+run_case "repo-level change without root docs" setup_repo_level_no_docs 1
+run_case "repo-level change with root docs" setup_repo_level_with_docs 0
+run_case "blocks when plugin folder README not restaged" setup_plugin_folder_readme_not_staged 1
+
 echo "----"
 echo "pass=$pass fail=$fail"
 [ "$fail" -eq 0 ]
