@@ -71,7 +71,7 @@ When improving an existing plugin, `plugins/<name>/CLAUDE.md` governs the specif
 
 ## OpenWiki
 
-The generated wiki lives under `openwiki/`. `openwiki/INSTRUCTIONS.md` is the user-authored brief for `--init` and `--update`; do not rewrite it. `.openwikiignore` is a read boundary separate from `.gitignore`. Do not hand-edit generated pages; change source and regenerate. It is optional just-in-time context, not required startup reading.
+The generated wiki lives under `openwiki/`. `openwiki/INSTRUCTIONS.md` is the user-authored brief for `--init` and `--update`; do not rewrite it. `.openwikiignore` is a read boundary separate from `.gitignore`. Do not hand-edit generated pages unless explicitly asked; prefer updating source code/docs and letting OpenWiki regenerate. It is optional just-in-time context, not required startup reading.
 
 First init is local: `openwiki code --init --print` with `OPENWIKI_PROVIDER=anthropic`, `OPENWIKI_MODEL_ID=claude-sonnet-5`, `OPENWIKI_TELEMETRY_DISABLED=1`, and `DO_NOT_TRACK=1`. Later refreshes use `.github/workflows/openwiki-update.yml` (needs the `ANTHROPIC_API_KEY` repository secret) or `openwiki code --update --print`. The scheduled workflow refreshes the wiki on its own schedule.
 

@@ -84,7 +84,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 
 ## Contributing
 
-All changes go through feature branches with Conventional Commits. See [CLAUDE.md](CLAUDE.md) for detailed branching, commit, and code review processes. Root and plugin docs are split by audience: this README and the root `CHANGELOG.md` cover repo-level changes, while each plugin carries its own README, CHANGELOG, and maintainer CLAUDE.md under `plugins/<name>/`. Design specs and implementation plans for in-flight work live under `docs/superpowers/` (see [docs/README.md](docs/README.md)).
+All changes go through feature branches with Conventional Commits. See [CLAUDE.md](CLAUDE.md) for detailed branching, commit, and code review processes. Root and plugin docs are split by audience: this README and the root `CHANGELOG.md` cover repo-level changes, while each plugin carries its own README, CHANGELOG, and maintainer CLAUDE.md under `plugins/<name>/`. Design specs and implementation plans for in-flight work live under `docs/superpowers/` (see [docs/README.md](docs/README.md)). CLAUDE.md's OpenWiki section covers when a generated page may be hand-edited.
 
 ## License
 
