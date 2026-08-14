@@ -2,6 +2,12 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 0.2.1 - 2026-08-14
+
+### Changed
+
+- Split the plugin documentation by audience: maintainer manual at the plugin root, trimmed skill CLAUDE.md focused on running the harness, and a SKILL.md pointer to it.
+
 ## 0.2.0 - 2026-08-12
 
 ### Changed
