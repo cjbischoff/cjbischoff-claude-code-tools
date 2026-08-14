@@ -11,7 +11,7 @@ confirm a finding — a mechanical tool receipt is always required.**
 
 ## Install
 
-```
+```text
 /plugin marketplace add cjbischoff/cjbischoff-claude-code-tools
 /plugin install sec-overlay@cjbischoff-claude-code-tools
 ```
@@ -27,13 +27,15 @@ confirm a finding — a mechanical tool receipt is always required.**
 Fastest way to see output — a deterministic smoke scan, no agents:
 
 ```bash
-cd helpers
+cd skills/sec-overlay/helpers
 uv run python -m sec_overlay.cli scan \
   --target <path-to-code> \
   --config rules/smoke.yaml \
   --sha "$(git -C <path-to-code> rev-parse HEAD)"
 # workspace defaults to <target>/.sec-overlay/<slug>/
 ```
+
+(For an installed plugin, the helpers live at `${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay/helpers`.)
 
 This runs semgrep → normalize → SARIF/Markdown only. It is the smoke path, **not** a real
 audit (no agents, no gate ladder). For a full agentic audit, see the skill playbook below.

@@ -7,6 +7,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 ### Changed
 
 - Split the plugin documentation by audience: maintainer manual at the plugin root, trimmed skill CLAUDE.md focused on running the harness, and a SKILL.md pointer to it.
+- Fix the README quick-start command to `cd` into `skills/sec-overlay/helpers` (the README sits at the plugin root, not inside `helpers`), and note the `${CLAUDE_PLUGIN_ROOT}` path for an installed plugin.
 
 ## 0.2.0 - 2026-08-12
 
