@@ -11,6 +11,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Move governance, code review, status, and decisions sections from README.md to CLAUDE.md for better separation of concerns; README now focuses on what the project is and how to use it.
 - Stop treating `.github/` as a Directory Guide folder so it does not require a README that GitHub would promote to the repository homepage.
 
 ### Added
