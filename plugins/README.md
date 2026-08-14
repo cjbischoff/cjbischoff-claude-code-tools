@@ -6,6 +6,8 @@ Holds one directory per Claude Code plugin distributed by this marketplace.
 
 **Writers:** Claude Code sessions in this workspace, on a branch, with user review before merge.
 
+**Plugin-root doc trio:** each plugin directory carries its own `README.md` (user-facing: what it does, how to install it, prerequisites, quick start), `CHANGELOG.md` (Common Changelog, one entry per functionality commit), and `CLAUDE.md` (maintainer manual: development commands, folder-README convention, project history). A plugin `CLAUDE.md` never loads into a user's session on install; only the root `CLAUDE.md` governs commit and branch rules for everyone working in this repository.
+
 ## Contents
 
 | Directory | Purpose |

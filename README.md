@@ -57,6 +57,9 @@ Each folder below has its own README.md describing what it holds, its naming con
 |------|---------|
 | `.claude-plugin/marketplace.json` | Marketplace manifest; lists all plugins |
 | `plugins/sec-overlay/.claude-plugin/plugin.json` | sec-overlay plugin manifest |
+| `plugins/sec-overlay/README.md` | sec-overlay user-facing README: install, prerequisites, quick start |
+| `plugins/sec-overlay/CHANGELOG.md` | sec-overlay Common Changelog |
+| `plugins/sec-overlay/CLAUDE.md` | sec-overlay maintainer manual: development commands, folder-README rule, history |
 | `plugins/sec-overlay/skills/sec-overlay/SKILL.md` | Skill playbook: agentic security-audit harness |
 | `plugins/sec-overlay/skills/sec-overlay/helpers/` | Python core (`sec_overlay` package) that runs tools and enforces gates |
 | `plugins/sec-overlay/skills/sec-overlay/agents/` | LLM subagent prompts for the investigate/validate/patch phases |

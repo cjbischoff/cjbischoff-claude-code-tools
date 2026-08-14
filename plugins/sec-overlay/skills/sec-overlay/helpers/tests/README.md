@@ -2,7 +2,7 @@
 
 81 pytest files, 595 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
-[`CLAUDE.md`](../../CLAUDE.md) §2.
+[`CLAUDE.md`](../../CLAUDE.md) §1.
 
 `test_sarif.py` gained `test_suppressed_findings_carry_insource_suppression`, covering
 `to_sarif`'s `suppressed` parameter. `test_report.py` gained
