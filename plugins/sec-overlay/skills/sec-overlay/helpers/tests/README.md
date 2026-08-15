@@ -100,3 +100,7 @@ is removed, and `test_lead_carrier_without_receipt_is_not_a_directive` is replac
 
 `test_phase_gate.py` gained five tests for `_parse_ref`'s trailing-hint stripping (plain
 path:line, range-anchor, trailing hint after line/range, bare path, unparseable line).
+
+`test_phase_gate.py` gained three tests for the new `attack_surface_gate`: a surface backed by a
+non-comment code line passes, a surface backed only by a comment line is rejected, and a surface
+with no evidence at all is rejected.

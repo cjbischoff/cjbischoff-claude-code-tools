@@ -332,6 +332,40 @@ def claims_from_markdown(text: str) -> list[dict]:
     return claims
 
 
+def attack_surface_gate(profile, target_root: str | Path) -> list[str]:
+    """Reject an attack-surface key not backed by a non-comment code reference.
+
+    A comment line is a claim about code, not proof the surface executes; a
+    ref that does not resolve is not evidence either. Each ``attack_surface``
+    key must have at least one evidence ref that resolves to a non-comment
+    line.
+
+    Args:
+        profile: A :class:`sec_overlay.profile.ScanProfile`.
+        target_root: The scanned repo root.
+
+    Returns:
+        One error string per unbacked attack-surface key; empty if all pass.
+    """
+    evidence = getattr(profile, "attack_surface_evidence", {}) or {}
+    errors: list[str] = []
+    for key in getattr(profile, "attack_surface", []) or []:
+        refs = evidence.get(key, []) or []
+        code_backed = False
+        for ref in refs:
+            resolved, _ = resolve_ref(target_root, ref)
+            if resolved and is_comment_line(target_root, ref) is False:
+                code_backed = True
+                break
+        if not code_backed:
+            errors.append(
+                f"attack_surface {key!r} has no non-comment code reference "
+                f"(evidence {refs or 'none'}) — a comment or unresolved ref does "
+                f"not prove the surface executes"
+            )
+    return errors
+
+
 def write_gate_record(ws, phase: str, record: dict) -> Path:
     """Persist a gate record to ``kb/gates/<phase>.json`` and return the path."""
     d = ws.kb / "gates"

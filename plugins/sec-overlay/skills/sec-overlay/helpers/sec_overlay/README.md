@@ -154,3 +154,8 @@ no colon-line, or a colon whose first tail token isn't numeric, still returns `(
 
 `profile.py`'s `_REQUIRED` (ISSUE-025) now includes `attack_surface_evidence`, matching
 `scan-profile.schema.json`'s `required` — `subsystems` stays optional in both.
+
+`phase_gate.py`'s new `attack_surface_gate` (ISSUE-026) rejects a recon `attack_surface` key
+whose evidence refs are absent, unresolved, or resolve only to comment lines — a comment is a
+claim about code, not proof it executes. Reuses `resolve_ref`/`is_comment_line`; kept separate
+from `run_phase_checks` so architecture/context claims citing a comment aren't over-rejected.

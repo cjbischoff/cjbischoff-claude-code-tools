@@ -254,3 +254,39 @@ def test_bare_path_returns_none_line():
 def test_unparseable_line_returns_none():
     from sec_overlay.phase_gate import _parse_ref
     assert _parse_ref("sec/foo.py:not-a-line") == ("sec/foo.py:not-a-line", None)
+
+
+def _surface_repo(tmp_path):
+    (tmp_path / "h.py").write_text("def handler(req):\n    # entry point here\n    return run(req)\n")
+    return tmp_path
+
+
+def test_surface_backed_by_code_line_passes(tmp_path):
+    from sec_overlay.phase_gate import attack_surface_gate
+    from sec_overlay.profile import ScanProfile
+
+    repo = _surface_repo(tmp_path)
+    prof = ScanProfile(attack_surface=["http"],
+                        attack_surface_evidence={"http": ["h.py:3"]})
+    assert attack_surface_gate(prof, repo) == []
+
+
+def test_surface_backed_only_by_comment_is_rejected(tmp_path):
+    from sec_overlay.phase_gate import attack_surface_gate
+    from sec_overlay.profile import ScanProfile
+
+    repo = _surface_repo(tmp_path)
+    prof = ScanProfile(attack_surface=["http"],
+                        attack_surface_evidence={"http": ["h.py:2"]})
+    errors = attack_surface_gate(prof, repo)
+    assert any("http" in e and "comment" in e.lower() for e in errors)
+
+
+def test_surface_with_no_evidence_is_rejected(tmp_path):
+    from sec_overlay.phase_gate import attack_surface_gate
+    from sec_overlay.profile import ScanProfile
+
+    repo = _surface_repo(tmp_path)
+    prof = ScanProfile(attack_surface=["http"], attack_surface_evidence={})
+    errors = attack_surface_gate(prof, repo)
+    assert any("http" in e for e in errors)

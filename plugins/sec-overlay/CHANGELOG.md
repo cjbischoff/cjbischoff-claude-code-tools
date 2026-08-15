@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.1.0 - 2026-08-15
+
+### Added
+
+- Recon gate: `phase_gate.attack_surface_gate` rejects an `attack_surface` key whose evidence
+  refs are absent, unresolved, or resolve only to comment lines — a comment is a claim about
+  code, not proof it executes (ISSUE-026).
+
 ## 1.0.4 - 2026-08-15
 
 ### Fixed
