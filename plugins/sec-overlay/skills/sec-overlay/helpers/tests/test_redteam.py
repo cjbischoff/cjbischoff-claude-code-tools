@@ -8,6 +8,7 @@ from sec_overlay.redteam import (
     _fixed_patch_statuses,
     build_redteam_gate_record,
     discriminate,
+    payload_runnable,
     render_plan,
     write_plan,
 )
@@ -41,12 +42,16 @@ def test_below_floor_without_receipt_is_below_bar():
 
 
 def test_discriminate_partitions():
+    plan_a = _f("A", disposition="needs-runtime", risk=9)                    # -> plan
+    plan_a.dataflow = ["src", "sink"]
+    plan_d = _f("D", status=FindingStatus.NEEDS_DEPLOYMENT_TESTING, risk=8)  # -> plan (ndt)
+    plan_d.dataflow = ["src", "sink"]
     findings = [
-        _f("A", disposition="needs-runtime", risk=9),                    # -> plan
+        plan_a,
         _f("B", disposition="static-settled", risk=9),                   # -> static
         # low severity + below-bar risk -> below_bar (high/medium/critical are always actionable)
         _f("C", disposition="needs-runtime", risk=3, severity=Severity.LOW),
-        _f("D", status=FindingStatus.NEEDS_DEPLOYMENT_TESTING, risk=8),  # -> plan (ndt)
+        plan_d,
         _f("E", status=FindingStatus.REJECTED, risk=9),                  # ignored
     ]
     d = discriminate(findings, min_risk=7)
@@ -66,7 +71,9 @@ def test_render_plan_sections_and_payload():
     rt = {"objective": "bypass authz", "preconditions": "valid low-priv token",
           "payloads": ["curl $HOST/admin -H \"Authorization: $TOKEN\""],
           "expected_signal": "200 instead of 403", "telemetry": "gateway access logs"}
-    d = discriminate([_f("A", disposition="needs-runtime", risk=9, runtime_test=rt)], min_risk=7)
+    f = _f("A", disposition="needs-runtime", risk=9, runtime_test=rt)
+    f.dataflow = ["src", "sink"]
+    d = discriminate([f], min_risk=7)
     md = render_plan(d, min_risk=7)
     for section in ("## Prioritization", "## Manual test directives",
                     "## Runtime-validation gaps", "## Static-settled"):
@@ -99,7 +106,9 @@ def test_static_settled_footer_counts_static_not_runtime_subset():
 def test_write_plan(tmp_path):
     ws = Workspace(tmp_path)
     ws.ensure()
-    write_findings(ws, [_f("A", disposition="needs-runtime", risk=9)])
+    f = _f("A", disposition="needs-runtime", risk=9)
+    f.dataflow = ["src", "sink"]
+    write_findings(ws, [f])
     result = write_plan(ws, min_risk=7)
     assert result["needs_runtime"] == 1
     assert (ws.reports / "redteam-plan.md").exists()
@@ -109,7 +118,9 @@ def test_write_plan_records_stage(tmp_path):
     from sec_overlay.state import load_state
 
     ws = Workspace(tmp_path); ws.ensure()
-    write_findings(ws, [_f("A", disposition="needs-runtime", risk=9)])
+    f = _f("A", disposition="needs-runtime", risk=9)
+    f.dataflow = ["src", "sink"]
+    write_findings(ws, [f])
     write_plan(ws, min_risk=7)
     assert "redteam" in load_state(ws).stages
 
@@ -137,6 +148,7 @@ def test_render_plan_shows_caution_for_not_applied_fixed_finding():
     f.runtime_test = rt
     f.risk_score = 9
     f.runtime_disposition = "needs-runtime"
+    f.dataflow = ["src", "sink"]
     d = discriminate([f], min_risk=7)
     md = render_plan(d, min_risk=7, patch_statuses={"D": PatchStatus.NOT_APPLIED})
     assert "Caution" in md and "NOT been confirmed applied" in md
@@ -161,6 +173,7 @@ def test_write_plan_with_target_annotates_caution(monkeypatch, tmp_path):
     f.runtime_test = {"objective": "confirm sqli patched"}
     f.risk_score = 9
     f.runtime_disposition = "needs-runtime"
+    f.dataflow = ["src", "sink"]
     write_findings(ws, [f])
     write_plan(ws, min_risk=7, target="/tgt")
     md = (ws.reports / "redteam-plan.md").read_text()
@@ -168,10 +181,12 @@ def test_write_plan_with_target_annotates_caution(monkeypatch, tmp_path):
 
 
 def _rt(id_, sev, risk, disp="needs-runtime", status=None, evidence_sources=None):
+    # dataflow defaults to a traceable source->sink pair: these fixtures test the
+    # severity/bar/sort logic, not payload traceability (see payload_runnable).
     return Finding(id=id_, rule_id="r", cls="authz",
                    status=status or FindingStatus.CONFIRMED, severity=sev,
                    file="a.py", line=1, message="m", risk_score=risk,
-                   runtime_disposition=disp,
+                   runtime_disposition=disp, dataflow=["src", "sink"],
                    evidence_sources=evidence_sources if evidence_sources is not None else [])
 
 
@@ -272,6 +287,34 @@ def test_render_plan_questions_section_says_none_when_empty():
     md = render_plan(disc)
     assert "## Questions to ask" in md
     assert "_none_" in md
+
+
+def _payload_f(fid, *, dataflow, reach):
+    return Finding(id=fid, rule_id="r", cls="sqli", status=FindingStatus.CONFIRMED,
+                   severity=Severity.HIGH, file="a.py", line=1, message="m",
+                   risk_score=8, dataflow=dataflow, reachability=reach,
+                   runtime_disposition="needs-runtime",
+                   evidence_sources=["codeql:dataflow"] if dataflow else ["ripgrep:x"])
+
+
+def test_untraceable_payload_is_unrunnable():
+    assert payload_runnable(_payload_f("F-1", dataflow=[], reach={})) is False
+
+
+def test_traced_payload_is_runnable():
+    assert payload_runnable(_payload_f("F-2", dataflow=["src", "sink"], reach={"reachable": True})) is True
+
+
+def test_reachable_dict_alone_is_runnable():
+    assert payload_runnable(_payload_f("F-3", dataflow=[], reach={"reachable": True})) is True
+
+
+def test_discriminate_buckets_unrunnable_separately():
+    out = discriminate([_payload_f("F-1", dataflow=[], reach={})], min_risk=7)
+    assert "unrunnable" in out
+    assert any(x.id == "F-1" for x in out["unrunnable"])
+    # existing buckets must survive
+    assert {"needs_runtime", "static_settled", "below_bar"} <= set(out)
 
 
 def test_directive_renders_string_typed_fields_verbatim():

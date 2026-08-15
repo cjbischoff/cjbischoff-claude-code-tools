@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-85 pytest files, 664 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+85 pytest files, 668 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -118,6 +118,13 @@ before committing edits.
 the floor earns a directive with no receipt required; the dead `prime-manual-test` history test
 is removed, and `test_lead_carrier_without_receipt_is_not_a_directive` is replaced with
 `test_lead_carrier_without_receipt_is_still_a_directive` reflecting the new bar.
+
+`test_redteam.py` gained four payload-reachability tests (ISSUE-056):
+`test_untraceable_payload_is_unrunnable`, `test_traced_payload_is_runnable`,
+`test_reachable_dict_alone_is_runnable`, and `test_discriminate_buckets_unrunnable_separately`,
+covering the new `payload_runnable` gate and the `discriminate` `"unrunnable"` bucket. Pre-existing
+`_rt`/`_f`-built fixtures that reach `needs_runtime` now set a `dataflow` trace so they exercise
+severity/bar/sort logic, not payload traceability.
 
 `test_phase_gate.py` gained five tests for `_parse_ref`'s trailing-hint stripping (plain
 path:line, range-anchor, trailing hint after line/range, bare path, unparseable line).

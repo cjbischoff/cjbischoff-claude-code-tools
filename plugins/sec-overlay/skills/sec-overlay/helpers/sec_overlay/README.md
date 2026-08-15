@@ -155,6 +155,12 @@ longer withholds the runtime test that would settle it (it still sorts later via
 rendering `_no tool receipt (verify carefully)_` in the directive block). The dead
 `redteam:prime-manual-test` history branch (no producer ever wrote that event) is removed.
 
+`redteam.py`'s `discriminate` now gates payloads on reachability (ISSUE-056): a new
+`payload_runnable(f)` returns `True` only when a finding carries a non-empty `dataflow` trace or a
+`reachability` dict with `reachable is True`; an above-bar needs-runtime finding that fails this
+check routes to a new `"unrunnable"` bucket instead of the manual plan — an untraceable payload is
+a precondition to test for, not a live directive.
+
 `redactor.py` and `factcheck.py` are now wired into the driver (ISSUE-047, ISSUE-051).
 `render_dispatch` passes its composed block through `redactor.safe_for_prompt` before returning —
 a security control that guarantees no dispatch block the orchestrator prints can carry a

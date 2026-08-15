@@ -136,6 +136,11 @@ the agent doesn't re-raise known false positives.
 The deterministic `helpers/…/redteam.py` then renders `redteam-plan.md` (only findings at/above
 the confidence bar). **The harness never executes the target** — it hands an operator a plan.
 
+`redteam.md` now requires the producer to trace each payload source→sink through the target's own
+input validation before shipping it as a live directive (ISSUE-056); an untraceable payload is an
+unrunnable precondition, not a live directive — enforced deterministically downstream by
+`redteam.py`'s `payload_runnable` gate, which routes such findings to a new `"unrunnable"` bucket.
+
 ### Postflight & optional extensions
 | Prompt | Role |
 |--------|------|

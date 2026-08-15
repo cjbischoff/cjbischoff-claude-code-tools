@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.8.0 - 2026-08-15
+
+### Added
+
+- `sec_overlay.redteam.payload_runnable(f)` gates red-team payloads on reachability: a needs-
+  runtime finding above the confidence bar now reaches the manual test plan only if it carries a
+  non-empty `dataflow` trace or a `reachability` dict with `reachable is True`; otherwise it
+  routes to a new `discriminate()` `"unrunnable"` bucket instead of a live directive (ISSUE-056).
+  `agents/redteam.md` now requires the producer to trace each payload source→sink through the
+  target's own input validation before shipping it as a live test.
+
 ## 1.7.3 - 2026-08-15
 
 ### Added

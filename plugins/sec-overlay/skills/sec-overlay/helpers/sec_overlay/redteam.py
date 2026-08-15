@@ -41,6 +41,19 @@ def wants_runtime(f: Finding) -> bool:
     return f.runtime_disposition == "needs-runtime" or f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING
 
 
+def payload_runnable(f: Finding) -> bool:
+    """True when a payload can be traced source->sink for a live test.
+
+    A finding with a Tier-1 dataflow receipt (non-empty ``dataflow``) or a
+    reachability verdict marking it reachable is runnable; otherwise it is an
+    unrunnable precondition (needs runtime), not a live directive.
+    """
+    if f.dataflow:
+        return True
+    reach = f.reachability
+    return isinstance(reach, dict) and reach.get("reachable") is True
+
+
 def _above_bar(f: Finding, min_risk: int) -> bool:
     """Return True if a finding earns a full manual test directive.
 
@@ -73,19 +86,27 @@ def discriminate(findings: list[Finding], min_risk: int = DEFAULT_MIN_RISK) -> d
         min_risk: Confidence/priority bar (1-10) a runtime candidate must meet to enter the plan.
 
     Returns:
-        ``{"needs_runtime": [...], "static_settled": [...], "below_bar": [...]}`` — each a list
-        of :class:`Finding`, sorted by descending risk then id.
+        ``{"needs_runtime": [...], "static_settled": [...], "below_bar": [...],
+        "unrunnable": [...]}`` — each a list of :class:`Finding`, sorted by descending risk
+        then id. ``unrunnable`` holds above-bar needs-runtime findings whose payload cannot
+        be traced source->sink (see :func:`payload_runnable`).
     """
     plan: list[Finding] = []
     static_settled: list[Finding] = []
     below_bar: list[Finding] = []
+    unrunnable: list[Finding] = []
     for f in findings:
         is_reportable = f.status in _REPORTABLE
         is_ndt = f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING
         if not (is_reportable or is_ndt):
             continue
         if wants_runtime(f):
-            (plan if _above_bar(f, min_risk) else below_bar).append(f)
+            if not _above_bar(f, min_risk):
+                below_bar.append(f)
+            elif payload_runnable(f):
+                plan.append(f)
+            else:
+                unrunnable.append(f)
         else:
             static_settled.append(f)
 
@@ -96,6 +117,7 @@ def discriminate(findings: list[Finding], min_risk: int = DEFAULT_MIN_RISK) -> d
         "needs_runtime": sorted(plan, key=key),
         "static_settled": sorted(static_settled, key=key),
         "below_bar": sorted(below_bar, key=key),
+        "unrunnable": sorted(unrunnable, key=key),
     }
 
 
