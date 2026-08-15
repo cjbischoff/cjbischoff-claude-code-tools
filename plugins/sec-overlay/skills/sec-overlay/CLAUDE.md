@@ -42,9 +42,10 @@ These two failures are **environmental** — never "fix" by committing submodule
 
 The **main agent orchestrates**; deterministic steps run via `uv run` from
 `skills/sec-overlay/helpers/`; agent steps spawn a subagent with the named `agents/*.md` prompt
-(tokens like `{{TARGET}}`/`{{WORKSPACE}}`/`{{ATTACK_CLASS}}` substituted). Record each phase with
-`record_stage(<WS>, "<phase>")` so passes advance. `SKILL.md` is the full operational playbook —
-read it before driving a run; this section is the map.
+(tokens like `{{TARGET}}`/`{{WORKSPACE}}`/`{{ATTACK_CLASS}}` substituted through
+`sec_overlay.prompts.render_prompt`, which fails loudly on any unfilled `{{token}}`). Record each
+phase with `record_stage(<WS>, "<phase>")` so passes advance. `SKILL.md` is the full operational
+playbook — read it before driving a run; this section is the map.
 
 Legend: `<T>` target repo, `<WS>` workspace, `<sha>` = `git -C <T> rev-parse HEAD`, `<rules>` a
 local semgrep ruleset.

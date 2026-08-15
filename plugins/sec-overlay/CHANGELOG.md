@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.2.0 - 2026-08-15
+
+### Added
+
+- `sec_overlay.prompts.render_prompt(template, subs)` substitutes `{{KEY}}` tokens and raises
+  `ValueError` naming every unfilled `{{TOKEN}}` — closes the class of bug where a hand-substituted
+  agent prompt shipped a literal `{{ATTACK_CLASS}}` to a model. `skills/sec-overlay/CLAUDE.md` §2
+  now instructs the orchestrator to render every agent dispatch prompt through it.
+
 ## 1.1.0 - 2026-08-15
 
 ### Added

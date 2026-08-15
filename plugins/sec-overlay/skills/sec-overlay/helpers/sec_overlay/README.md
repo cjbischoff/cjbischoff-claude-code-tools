@@ -159,3 +159,8 @@ no colon-line, or a colon whose first tail token isn't numeric, still returns `(
 whose evidence refs are absent, unresolved, or resolve only to comment lines — a comment is a
 claim about code, not proof it executes. Reuses `resolve_ref`/`is_comment_line`; kept separate
 from `run_phase_checks` so architecture/context claims citing a comment aren't over-rejected.
+
+`prompts.py` (new, ISSUE-040) adds `render_prompt(template, subs)`, substituting `{{KEY}}` tokens
+and raising `ValueError` naming every `{{TOKEN}}` left unfilled — the orchestrator renders each
+agent dispatch prompt through it so a hand-substitution gap (a literal `{{ATTACK_CLASS}}`)
+fails before the model runs instead of silently reaching it.

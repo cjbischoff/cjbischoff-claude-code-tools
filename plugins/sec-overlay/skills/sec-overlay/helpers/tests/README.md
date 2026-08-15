@@ -104,3 +104,6 @@ path:line, range-anchor, trailing hint after line/range, bare path, unparseable 
 `test_phase_gate.py` gained three tests for the new `attack_surface_gate`: a surface backed by a
 non-comment code line passes, a surface backed only by a comment line is rejected, and a surface
 with no evidence at all is rejected.
+
+`test_prompts.py` (new) covers `prompts.render_prompt`: all tokens filled, an unfilled token
+raising `ValueError` that names it, and extra unused `subs` keys being ignored.
