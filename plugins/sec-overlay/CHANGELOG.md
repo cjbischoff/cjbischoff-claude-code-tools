@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.0.3 - 2026-08-15
+
+### Fixed
+
+- `phase_gate._parse_ref` now anchors a citation with a leading-match regex instead of
+  `rsplit(":", 1)`, so a trailing human hint after the line or range (`foo.py:42 in the
+  handler`) is stripped instead of failing the ref to resolve (ISSUE-024/028).
+
 ## 1.0.2 - 2026-08-15
 
 ### Fixed

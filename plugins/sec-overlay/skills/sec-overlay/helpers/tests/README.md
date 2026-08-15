@@ -93,3 +93,6 @@ before committing edits.
 the floor earns a directive with no receipt required; the dead `prime-manual-test` history test
 is removed, and `test_lead_carrier_without_receipt_is_not_a_directive` is replaced with
 `test_lead_carrier_without_receipt_is_still_a_directive` reflecting the new bar.
+
+`test_phase_gate.py` gained five tests for `_parse_ref`'s trailing-hint stripping (plain
+path:line, range-anchor, trailing hint after line/range, bare path, unparseable line).

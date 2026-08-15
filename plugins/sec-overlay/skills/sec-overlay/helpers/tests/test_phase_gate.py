@@ -228,3 +228,29 @@ def test_still_extracts_go_citation():
     claims = claims_from_markdown("`internal/svc/events.go:39` reads Envelope.Source")
     refs = [r for c in claims for r in c["refs"]]
     assert "internal/svc/events.go:39" in refs
+
+
+def test_plain_path_and_line():
+    from sec_overlay.phase_gate import _parse_ref
+    assert _parse_ref("sec/foo.py:42") == ("sec/foo.py", 42)
+
+
+def test_range_anchors_on_start():
+    from sec_overlay.phase_gate import _parse_ref
+    assert _parse_ref("sec/foo.py:42-51") == ("sec/foo.py", 42)
+
+
+def test_trailing_hint_is_stripped():
+    from sec_overlay.phase_gate import _parse_ref
+    assert _parse_ref("sec/foo.py:42 in the request handler") == ("sec/foo.py", 42)
+    assert _parse_ref("sec/foo.py:42-51 (the taint sink)") == ("sec/foo.py", 42)
+
+
+def test_bare_path_returns_none_line():
+    from sec_overlay.phase_gate import _parse_ref
+    assert _parse_ref("sec/foo.py") == ("sec/foo.py", None)
+
+
+def test_unparseable_line_returns_none():
+    from sec_overlay.phase_gate import _parse_ref
+    assert _parse_ref("sec/foo.py:not-a-line") == ("sec/foo.py:not-a-line", None)

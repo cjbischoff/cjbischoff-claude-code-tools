@@ -146,3 +146,8 @@ declared with no inputs/outputs so a hard gate never halts the run before Plan B
 agent exists: `_act_factcheck` reads `kb/verdicts.json` if present, applies each entry via
 `factcheck.apply_verdict` (validated first with `factcheck.validate_verdict`), and no-ops silently
 when the file is absent.
+
+`phase_gate.py`'s `_parse_ref` (ISSUE-024/028) now anchors a citation with a leading-match regex
+(`_REF_ANCHOR`) instead of `rsplit(":", 1)`, so a trailing human hint after the line or range
+(`foo.py:42 in the handler`) is stripped instead of failing the ref to resolve. A bare path with
+no colon-line, or a colon whose first tail token isn't numeric, still returns `(ref, None)`.
