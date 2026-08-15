@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from sec_overlay.calibrate import calibrate_findings
 from sec_overlay.campaign import record_stage
 from sec_overlay.dedupe import dedupe_findings
+from sec_overlay.factcheck import apply_verdict, validate_verdict
 from sec_overlay.findings_gate import validate_findings
 from sec_overlay.partition import demote_noise, reconcile_plan, unrouted_candidate_classes
 from sec_overlay.phases import (
@@ -24,11 +25,12 @@ from sec_overlay.phases import (
 )
 from sec_overlay.prefilter import run_prefilter
 from sec_overlay.profile import ScanProfile, load_profile
+from sec_overlay.redactor import safe_for_prompt
 from sec_overlay.report import write_report
 from sec_overlay.selfscore import write_self_score
 from sec_overlay.state import load_state
 from sec_overlay.verify import verify_findings
-from sec_overlay.workspace import Workspace
+from sec_overlay.workspace import Workspace, read_findings, write_findings
 
 
 @dataclass
@@ -110,7 +112,7 @@ def render_dispatch(
     class_line = ""
     if classes:
         class_line = "\n  {{ATTACK_CLASS}}=" + ",".join(classes)
-    return (
+    block = (
         f"NEXT AGENT PHASE: {phase.name}\n"
         f"  prompt: agents/{phase.prompt}\n"
         f"  substitute: {{{{TARGET}}}}={ctx.target} "
@@ -118,6 +120,7 @@ def render_dispatch(
         f"{class_line}\n"
         f"  required outputs before advancing: {outputs}"
     )
+    return safe_for_prompt(block)
 
 
 def unrouted_triage_dispatch(ctx: AuditContext, agents_to_spawn: list[str]) -> str | None:
@@ -176,6 +179,31 @@ def _act_selfscore(ctx: AuditContext) -> None:
     write_self_score(ctx.ws)
 
 
+def _act_factcheck(ctx: AuditContext) -> None:
+    """Apply verdicts from ``kb/verdicts.json`` to their findings, if present.
+
+    ``verdicts.json`` is written by a fact-check agent (Plan B) re-verifying a
+    confirmed finding's citations/scope/severity against source. Until that
+    agent exists, the file is absent and this phase no-ops silently — the
+    input is deliberately not a hard gate (see phases.py), so a missing
+    verdict artifact never halts the run.
+
+    Args:
+        ctx: The audit context; reads/writes findings in ``ctx.ws``.
+    """
+    verdicts_path = ctx.ws.kb / "verdicts.json"
+    if not verdicts_path.exists():
+        return
+    verdicts = json.loads(verdicts_path.read_text())
+    findings = {f.id: f for f in read_findings(ctx.ws)}
+    changed = []
+    for fid, d in verdicts.items():
+        if fid in findings and not validate_verdict(d):
+            changed.append(apply_verdict(findings[fid], d))
+    if changed:
+        write_findings(ctx.ws, list(findings.values()))
+
+
 def _act_calibrate(ctx: AuditContext) -> None:
     calibrate_findings(ctx.ws)
 
@@ -189,6 +217,7 @@ DETERMINISTIC_ACTIONS.update(
         "prefilter": _act_prefilter,
         "findings-gate": _act_findings_gate,
         "dedupe": _act_dedupe,
+        "factcheck": _act_factcheck,
         "calibrate": _act_calibrate,
         "verify": _act_verify,
         "demote-noise": _act_demote_noise,

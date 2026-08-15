@@ -97,3 +97,12 @@ returns `render_dispatch(...)` and stops. Returns `"AUDIT COMPLETE"` once every 
 `cli.py` exposes this as its `audit` subcommand (`python -m sec_overlay.cli audit --target <T>
 --config <rules> [--workspace <WS>] [--sha <sha>]`): resolves the workspace the same way `scan`
 does, pins the pass with `state.begin_pass`, and prints `run_audit`'s return value.
+
+`redactor.py` and `factcheck.py` are now wired into the driver (ISSUE-047, ISSUE-051).
+`render_dispatch` passes its composed block through `redactor.safe_for_prompt` before returning —
+a security control that guarantees no dispatch block the orchestrator prints can carry a
+high-confidence secret. `factcheck` is a new deterministic phase between `trace` and `calibrate`,
+declared with no inputs/outputs so a hard gate never halts the run before Plan B's fact-check
+agent exists: `_act_factcheck` reads `kb/verdicts.json` if present, applies each entry via
+`factcheck.apply_verdict` (validated first with `factcheck.validate_verdict`), and no-ops silently
+when the file is absent.

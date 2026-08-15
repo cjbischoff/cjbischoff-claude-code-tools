@@ -214,3 +214,48 @@ def test_run_audit_does_not_skip_agent_phase_with_findings_dir_io(tmp_path):
     out = run_audit(ctx)
     assert "NEXT AGENT PHASE: critic" in out
     assert load_state(ws).stages.get("critic") != "done"
+
+
+def test_dispatch_is_secret_redacted(tmp_path, monkeypatch):
+    from sec_overlay import driver
+    from sec_overlay.driver import AuditContext, render_dispatch
+    from sec_overlay.phases import PhaseSpec
+
+    ctx = AuditContext(ws=Workspace(tmp_path / "w"), target="t", config="c", sha="s")
+    ctx.ws.ensure()
+    calls = []
+    monkeypatch.setattr(
+        driver, "safe_for_prompt", lambda text, findings=None: calls.append(text) or text
+    )
+    spec = PhaseSpec("recon", "agent", (), (), prompt="recon.md")
+    render_dispatch(spec, ctx)
+    assert calls, "render_dispatch must pass its output through safe_for_prompt"
+
+
+def test_factcheck_action_applies_verdicts(tmp_path):
+    import json
+
+    from sec_overlay.driver import DETERMINISTIC_ACTIONS, AuditContext
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.workspace import read_findings, write_findings
+
+    ws = Workspace(tmp_path / "w")
+    ws.ensure()
+    finding = Finding(
+        id="F-0001",
+        rule_id="r",
+        cls="sqli",
+        status=FindingStatus.CONFIRMED,
+        severity=Severity.HIGH,
+        file="app.py",
+        line=1,
+        message="m",
+    )
+    write_findings(ws, [finding])
+    (ws.kb / "verdicts.json").write_text(json.dumps({"F-0001": {"verdict": "VERIFIED"}}))
+
+    ctx = AuditContext(ws=ws, target="t", config="c", sha="s")
+    DETERMINISTIC_ACTIONS["factcheck"](ctx)
+
+    updated = {f.id: f for f in read_findings(ws)}["F-0001"]
+    assert updated.verification == "fact-checked"

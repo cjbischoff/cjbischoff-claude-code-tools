@@ -72,6 +72,10 @@ PHASE_TABLE: tuple[PhaseSpec, ...] = (
     PhaseSpec("judge", "agent", (_findings_dir,), (_findings_dir,), prompt="judge.md"),
     PhaseSpec("validate", "agent", (_findings_dir,), (_findings_dir,), prompt="validate.md"),
     PhaseSpec("trace", "agent", (_findings_dir,), (_findings_dir,), prompt="trace.md"),
+    # No inputs/outputs declared: kb/verdicts.json is optional (Plan B emits the
+    # fact-check agent that writes it) and a hard input gate would halt every run
+    # until then. _act_factcheck no-ops silently when the file is absent.
+    PhaseSpec("factcheck", "deterministic", (), ()),
     PhaseSpec("calibrate", "deterministic", (_findings_dir,), (_findings_dir,)),
     PhaseSpec("patch", "agent", (_findings_dir,), (_findings_dir,), prompt="patch.md"),
     PhaseSpec("verify", "deterministic", (_findings_dir,), (_findings_dir,)),

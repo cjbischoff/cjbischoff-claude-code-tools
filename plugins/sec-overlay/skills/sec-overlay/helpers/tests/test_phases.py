@@ -55,3 +55,5 @@ def test_first_phase_is_prefilter_and_investigate_precedes_findings_gate():
     assert names.index("demote-noise") < names.index("report")
     # ISSUE-045: trace is a required phase.
     assert "trace" in names
+    # ISSUE-047: factcheck applies the validate phase's verdict artifact.
+    assert names.index("trace") < names.index("factcheck") < names.index("calibrate")
