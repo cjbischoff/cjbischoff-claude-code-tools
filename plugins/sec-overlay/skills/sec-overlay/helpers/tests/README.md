@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-83 pytest files, 636 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+84 pytest files, 640 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -115,3 +115,9 @@ with no evidence at all is rejected.
 
 `test_prompts.py` (new) covers `prompts.render_prompt`: all tokens filled, an unfilled token
 raising `ValueError` that names it, and extra unused `subs` keys being ignored.
+
+`test_route_control.py` (new, ISSUE-027/029/036) covers `route_control.py`: a table control the
+architecture markdown omits is a `needs_follow_up` gap, a table entrypoint the threat model drops
+is a gap, no gap when everything is present, and `record_route_gaps` round-trips a gap's
+`reason`/`next_step` through `kb/coverage-ledger.json` while `validate_coverage_ledger` still
+returns no errors.

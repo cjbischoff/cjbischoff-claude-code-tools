@@ -175,3 +175,11 @@ from `run_phase_checks` so architecture/context claims citing a comment aren't o
 and raising `ValueError` naming every `{{TOKEN}}` left unfilled — the orchestrator renders each
 agent dispatch prompt through it so a hand-substitution gap (a literal `{{ATTACK_CLASS}}`)
 fails before the model runs instead of silently reaching it.
+
+`route_control.py` (new, ISSUE-027/029/036) derives one route-to-control table from
+`kb/scan-profile.json` (`build_route_control_table`) and checks recon, architecture, and threat-
+model output against it (`check_recon_routes`, `check_architecture_controls`,
+`check_threat_entrypoints`). A missing route, control, or entrypoint is never dropped: each check
+returns a `needs_follow_up` gap dict with `reason`/`next_step`, and `record_route_gaps` appends
+those gaps into `kb/coverage-ledger.json`'s `surfaces`, demoting `completeness` to `partial` so the
+ledger's own "complete forbids needs_follow_up" invariant still holds after the append.

@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.5.0 - 2026-08-15
+
+### Added
+
+- `sec_overlay.route_control`: derives one route-to-control table from `kb/scan-profile.json`
+  and checks recon, architecture, and threat-model output against it. A missing route, control,
+  or entrypoint is logged as a `needs_follow_up` gap (`reason` + `next_step`), never dropped;
+  `record_route_gaps` appends gaps into `kb/coverage-ledger.json` (ISSUE-027, ISSUE-029,
+  ISSUE-036).
+
 ## 1.4.0 - 2026-08-15
 
 ### Added
