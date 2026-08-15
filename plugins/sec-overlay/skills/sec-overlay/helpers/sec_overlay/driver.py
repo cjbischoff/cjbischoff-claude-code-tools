@@ -14,7 +14,7 @@ from sec_overlay.calibrate import calibrate_findings
 from sec_overlay.campaign import record_stage
 from sec_overlay.dedupe import dedupe_findings
 from sec_overlay.factcheck import apply_verdict, validate_verdict
-from sec_overlay.findings_gate import validate_findings
+from sec_overlay.findings_gate import validate_citations, validate_findings
 from sec_overlay.partition import demote_noise, reconcile_plan, unrouted_candidate_classes
 from sec_overlay.phases import (
     PHASE_TABLE,
@@ -161,6 +161,7 @@ def _act_prefilter(ctx: AuditContext) -> None:
 
 def _act_findings_gate(ctx: AuditContext) -> None:
     errors = validate_findings(ctx.ws)  # records its own stage too
+    errors += validate_citations(ctx.ws, ctx.target)
     if errors:
         raise PhaseHalt(
             f"findings-gate rejected {len(errors)} finding(s): " + "; ".join(errors)

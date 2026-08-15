@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.4.0 - 2026-08-15
+
+### Added
+
+- `validate_citations()` in `sec_overlay.findings_gate` to reject any shipping finding whose
+  `file:line` citation does not resolve against the target source, reusing
+  `phase_gate.resolve_ref`; wired into the driver's findings-gate phase alongside
+  `validate_findings` (ISSUE-018, ISSUE-019, ISSUE-023). Control findings from
+  `context.control_findings` inherit the check since they flow through the same gate.
+
 ## 1.3.0 - 2026-08-15
 
 ### Added

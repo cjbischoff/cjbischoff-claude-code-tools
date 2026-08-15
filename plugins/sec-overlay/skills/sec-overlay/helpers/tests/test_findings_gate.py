@@ -2,7 +2,7 @@
 
 import json
 
-from sec_overlay.findings_gate import validate_findings
+from sec_overlay.findings_gate import validate_citations, validate_findings
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.workspace import Workspace, write_findings
 
@@ -166,3 +166,64 @@ def test_receipt_tier_is_stamped(tmp_path):
     validate_findings(ws)
     stamped = json.loads((ws.findings_dir / "F-4.json").read_text())
     assert stamped["receipt_tier"] == 1
+
+
+def _shipping(fid: str, file: str, line: int) -> Finding:
+    return Finding(
+        id=fid, rule_id="r", cls="authz", status=FindingStatus.CONFIRMED,
+        severity=Severity.MEDIUM, file=file, line=line, message="m",
+        evidence_sources=["semgrep:r"],
+    )
+
+
+def test_unresolved_citation_rejected(tmp_path):
+    root = tmp_path / "target"
+    root.mkdir()
+    (root / "app.py").write_text("import os\nx = 1\n")
+    ws = Workspace(tmp_path / "ws")
+    write_findings(ws, [_shipping("F-1", "app.py", 999)])  # line 999 does not exist
+    errs = validate_citations(ws, root)
+    assert any("F-1" in e for e in errs)
+
+
+def test_resolvable_line_one_survives(tmp_path):
+    root = tmp_path / "target"
+    root.mkdir()
+    (root / "app.py").write_text("import os\n")  # line 1 is real code
+    ws = Workspace(tmp_path / "ws")
+    write_findings(ws, [_shipping("F-2", "app.py", 1)])
+    assert validate_citations(ws, root) == []
+
+
+def test_placeholder_line_one_unresolved_rejected(tmp_path):
+    root = tmp_path / "target"
+    root.mkdir()  # no app.py at all → line 1 does not resolve
+    ws = Workspace(tmp_path / "ws")
+    write_findings(ws, [_shipping("F-3", "app.py", 1)])
+    assert any("F-3" in e for e in validate_citations(ws, root))
+
+
+def test_candidate_not_gated(tmp_path):
+    root = tmp_path / "target"
+    root.mkdir()
+    ws = Workspace(tmp_path / "ws")
+    f = _shipping("F-4", "missing.py", 1)
+    f.status = FindingStatus.CANDIDATE
+    write_findings(ws, [f])
+    assert validate_citations(ws, root) == []  # only shipping statuses gated
+
+
+def test_control_finding_placeholder_anchor_rejected(tmp_path):
+    from sec_overlay.context import Context, ContextItem, control_findings
+
+    root = tmp_path / "target"
+    root.mkdir()  # no doc-cited file exists → bare-path anchor resolves to line 1, unresolved
+    ws = Workspace(tmp_path / "ws")
+    ctx = Context(items=[ContextItem(
+        kind="claimed_control", text="auth required", cls="authz",
+        where="docs/SECURITY.md", verify_status="MISSING")])
+    cf = control_findings(ctx)
+    for f in cf:
+        f.status = FindingStatus.CONFIRMED  # force shipping status to exercise the gate
+    write_findings(ws, cf)
+    assert validate_citations(ws, root)  # non-empty: the placeholder anchor is rejected

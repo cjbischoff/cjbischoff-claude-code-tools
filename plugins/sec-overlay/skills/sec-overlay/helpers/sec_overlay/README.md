@@ -18,6 +18,15 @@ pointer if the package layout changed — in the same commit (enforced by the pr
 
 `context.py` gained `doc_coverage()` to compare documents discovered vs read and flag a low read ratio. The `load()` function now accepts optional `repo_root` and `scan_scope` parameters to populate `provenance["docs_discovered"]` at load time (wiring by downstream caller) — see the module map entry.
 
+`findings_gate.py` gained `validate_citations(ws, root, *, statuses=None)`, a resolver-backed
+citation/anchor check: it rejects any finding at a gated status (default
+`evidence.SHIPPING_STATUSES`) whose `file:line` does not resolve against `root`, reusing
+`phase_gate.resolve_ref`. A `line: 1` anchor is rejected only when it fails to resolve, so a real
+top-of-file finding survives while a placeholder anchor on a missing file does not. Control
+findings from `context.control_findings` inherit the check since they land in the same finding
+files. `driver._act_findings_gate` calls it alongside `validate_findings` and folds both error
+lists into the same `PhaseHalt`.
+
 `cost.py` gained `aggregate_by_model` (per-model token totals, alongside the existing
 `aggregate_by_phase`), feeding `report.py`'s "Run economics" section — see the module map entry.
 

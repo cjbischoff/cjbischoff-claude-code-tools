@@ -85,6 +85,12 @@ effect of `validate_findings`. `test_driver.py` gained
 `test_findings_gate_action_halts_on_error`, confirming `_act_findings_gate` now raises
 `PhaseHalt` (previously validated silently) when the gate reports any error.
 
+`test_findings_gate.py` also gained coverage for `validate_citations`: an unresolved `file:line`
+citation is rejected, a genuine `line: 1` anchor on real code survives, a placeholder `line: 1`
+anchor on a missing file is rejected, a `candidate`-status finding is not gated, and a control
+finding (`context.control_findings`) forced to `confirmed` status is rejected the same way once
+its doc-cited file doesn't exist under the target root.
+
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 
