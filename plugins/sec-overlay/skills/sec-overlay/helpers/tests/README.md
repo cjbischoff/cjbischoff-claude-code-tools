@@ -16,7 +16,8 @@ helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`).
 
 `test_driver.py` (new) covers `sec_overlay/driver.py`'s `run_deterministic_phase`: raises
 `PhaseHalt` on a missing input, raises `PhaseHalt` when the action ran but a declared output is
-still absent, and records the stage `"done"` on success.
+still absent, and records the stage `"done"` on success. Also covers `render_dispatch`: the
+returned block names the `agents/<prompt>` file and the substituted target/workspace/SHA.
 
 ## Structural guards (know these)
 

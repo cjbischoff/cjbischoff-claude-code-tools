@@ -2,6 +2,12 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 0.5.0 - 2026-08-15
+
+### Added
+
+- Add `sec_overlay.driver.render_dispatch`: a deterministic, side-effect-free printer that names an agent phase's `agents/<prompt>` file and the `{{TARGET}}`/`{{WORKSPACE}}`/`{{SHA}}` substitutions the orchestrator must apply.
+
 ## 0.4.0 - 2026-08-15
 
 ### Added

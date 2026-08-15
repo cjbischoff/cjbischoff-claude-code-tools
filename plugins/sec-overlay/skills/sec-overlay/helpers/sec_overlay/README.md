@@ -72,4 +72,6 @@ see the module map entry.
 printer. `run_deterministic_phase` checks a `PhaseSpec`'s inputs, runs its registered
 `DETERMINISTIC_ACTIONS` entry, checks its outputs, then calls `record_stage` — raising
 `PhaseHalt` if an input or output artifact is missing. `AuditContext` carries the workspace,
-target, config, pinned SHA, and lazily-loaded `ScanProfile` an action needs.
+target, config, pinned SHA, and lazily-loaded `ScanProfile` an action needs. `render_dispatch`
+returns the printable block for an agent phase — prompt file plus `{{TARGET}}`/`{{WORKSPACE}}`/
+`{{SHA}}` substitutions — with no side effects; the orchestrator runs the model.

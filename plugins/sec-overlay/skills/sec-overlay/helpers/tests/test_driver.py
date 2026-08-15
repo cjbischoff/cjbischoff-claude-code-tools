@@ -63,3 +63,22 @@ def test_run_deterministic_records_stage_on_success(tmp_path):
     )
     run_deterministic_phase(spec, ctx)
     assert load_state(ctx.ws).stages.get("make-report") == "done"
+
+
+def test_render_dispatch_names_prompt_and_tokens(tmp_path):
+    from sec_overlay.driver import render_dispatch
+    from sec_overlay.phases import PhaseSpec
+
+    ctx = _ctx(tmp_path)
+    spec = PhaseSpec(
+        name="recon",
+        kind="agent",
+        inputs=(),
+        outputs=(lambda w: w.kb / "scan-profile.json",),
+        prompt="recon.md",
+    )
+    out = render_dispatch(spec, ctx)
+    assert "agents/recon.md" in out
+    assert ctx.target in out
+    assert str(ctx.ws.root) in out
+    assert "deadbeef" in out

@@ -67,3 +67,20 @@ def run_deterministic_phase(phase: PhaseSpec, ctx: AuditContext) -> None:
         missing = [str(p(ctx.ws)) for p in phase.outputs if not p(ctx.ws).exists()]
         raise PhaseHalt(f"phase {phase.name!r} did not produce: " + ", ".join(missing))
     record_stage(ctx.ws, phase.name)
+
+
+def render_dispatch(phase: PhaseSpec, ctx: AuditContext) -> str:
+    """Return the dispatch block for an agent phase.
+
+    The orchestrator runs the model; this only tells it which prompt to run and
+    what to substitute. Advancement happens later, when the phase's declared
+    outputs exist.
+    """
+    outputs = ", ".join(str(p(ctx.ws)) for p in phase.outputs) or "(none)"
+    return (
+        f"NEXT AGENT PHASE: {phase.name}\n"
+        f"  prompt: agents/{phase.prompt}\n"
+        f"  substitute: {{{{TARGET}}}}={ctx.target} "
+        f"{{{{WORKSPACE}}}}={ctx.ws.root} {{{{SHA}}}}={ctx.sha}\n"
+        f"  required outputs before advancing: {outputs}"
+    )
