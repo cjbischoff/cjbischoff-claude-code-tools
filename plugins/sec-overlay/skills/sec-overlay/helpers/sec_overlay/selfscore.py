@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from sec_overlay.evidence import SHIPPING_STATUSES
 from sec_overlay.models import FindingStatus
 from sec_overlay.state import load_state, save_state
 from sec_overlay.workspace import Workspace, read_findings
@@ -25,7 +26,7 @@ def build_self_score(ws: Workspace) -> dict:
 
     Returns:
         ``{reported, confirmed, needs_runtime, rejected, clusters,
-        external_boundary}`` — all ints.
+        external_boundary, shipping}`` — all ints.
     """
     findings = read_findings(ws)
     clusters = {f.cluster_id for f in findings if getattr(f, "cluster_id", None)}
@@ -41,6 +42,7 @@ def build_self_score(ws: Workspace) -> dict:
         "rejected": sum(1 for f in findings if f.status is FindingStatus.REJECTED),
         "clusters": len(clusters),
         "external_boundary": external,
+        "shipping": sum(1 for f in findings if f.status.value in SHIPPING_STATUSES),
     }
 
 

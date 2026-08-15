@@ -24,7 +24,9 @@ sites on a cluster primary) — additive, nullable fields that round-trip throug
 `from_dict`.
 
 `selfscore.py` (new) computes the per-run self-score from workspace findings and persists it to
-`CampaignState.budget["self_score"]` — see the module map entry.
+`CampaignState.budget["self_score"]` — see the module map entry. `build_self_score` now also
+returns a `shipping` count over the full `evidence.SHIPPING_STATUSES` set, alongside the
+narrower `reported` count (`confirmed`/`fixed` only) it retains for backward continuity.
 
 `evidence.py` gained a shared tier/status vocabulary: `TIER1_RECEIPTS`/`TIER2_RECEIPTS` (partition
 `_MECHANICAL`), `SHIPPING_STATUSES`, `RUNTIME_DISPOSITIONS`, and the `receipt_tier()`/

@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.0.1 - 2026-08-15
+
+### Fixed
+
+- `selfscore.build_self_score` gained a `shipping` count over the full `evidence.SHIPPING_STATUSES`
+  set (`confirmed`/`fixed`/`needs-deployment-testing`), alongside the existing narrower `reported`
+  count. `factcheck.md` now targets ONE shipping-status finding rather than narrowly `confirmed`.
+
 ## 1.0.0 - 2026-08-15
 
 ### Changed

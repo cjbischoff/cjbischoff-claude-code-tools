@@ -85,3 +85,6 @@ When you add or change a test file, update this README's counts and guard list i
 The review-improvements test files (`test_cluster.py`, `test_scope.py`, `test_selfscore.py`,
 `test_sarif.py`, `test_calibrate.py`, `test_report.py`) are `ruff format`-clean; run `ruff format`
 before committing edits.
+
+`test_selfscore.py` gained `test_shipping_counts_full_set`, covering `build_self_score`'s new
+`shipping` count over `evidence.SHIPPING_STATUSES`.

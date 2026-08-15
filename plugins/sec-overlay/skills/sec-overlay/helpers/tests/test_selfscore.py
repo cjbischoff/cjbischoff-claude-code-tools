@@ -1,5 +1,8 @@
+import json
+
 from sec_overlay import selfscore
 from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.selfscore import build_self_score
 from sec_overlay.state import load_state
 from sec_overlay.workspace import Workspace, write_findings
 
@@ -45,5 +48,35 @@ def test_self_score_counts_by_status_and_persists(tmp_path):
         "rejected": 1,
         "clusters": 1,
         "external_boundary": 1,
+        "shipping": 5,
     }
     assert load_state(ws).budget["self_score"] == score
+
+
+def _write_finding_json(ws, fid, status):
+    (ws.findings_dir / f"{fid}.json").write_text(
+        json.dumps(
+            {
+                "id": fid,
+                "rule_id": "r",
+                "cls": "c",
+                "status": status,
+                "severity": "low",
+                "file": "a.py",
+                "line": 1,
+                "message": "m",
+                "dataflow": [],
+            }
+        )
+    )
+
+
+def test_shipping_counts_full_set(tmp_path):
+    ws = Workspace(tmp_path)
+    ws.findings_dir.mkdir(parents=True, exist_ok=True)
+    _write_finding_json(ws, "F-1", "confirmed")
+    _write_finding_json(ws, "F-2", "fixed")
+    _write_finding_json(ws, "F-3", "needs-deployment-testing")
+    _write_finding_json(ws, "F-4", "rejected")
+    score = build_self_score(ws)
+    assert score["shipping"] == 3
