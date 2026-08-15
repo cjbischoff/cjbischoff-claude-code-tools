@@ -9,9 +9,24 @@ calls a model: agents stay external and independent.
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from sec_overlay.calibrate import calibrate_findings
 from sec_overlay.campaign import record_stage
-from sec_overlay.phases import PhaseSpec, missing_inputs, outputs_present
-from sec_overlay.profile import ScanProfile
+from sec_overlay.dedupe import dedupe_findings
+from sec_overlay.findings_gate import validate_findings
+from sec_overlay.partition import demote_noise
+from sec_overlay.phases import (
+    PHASE_TABLE,
+    PhaseSpec,
+    missing_inputs,
+    next_actionable_phase,
+    outputs_present,
+)
+from sec_overlay.prefilter import run_prefilter
+from sec_overlay.profile import ScanProfile, load_profile
+from sec_overlay.report import write_report
+from sec_overlay.selfscore import write_self_score
+from sec_overlay.state import load_state
+from sec_overlay.verify import verify_findings
 from sec_overlay.workspace import Workspace
 
 
@@ -84,3 +99,88 @@ def render_dispatch(phase: PhaseSpec, ctx: AuditContext) -> str:
         f"{{{{WORKSPACE}}}}={ctx.ws.root} {{{{SHA}}}}={ctx.sha}\n"
         f"  required outputs before advancing: {outputs}"
     )
+
+
+def _load_profile(ctx: AuditContext) -> ScanProfile:
+    """Return the recon-produced scan profile, caching it on the context."""
+    if ctx.profile is None:
+        ctx.profile = load_profile(ctx.ws.kb / "scan-profile.json")
+    return ctx.profile
+
+
+def _act_prefilter(ctx: AuditContext) -> None:
+    run_prefilter(ctx.ws, ctx.target, _load_profile(ctx))
+
+
+def _act_findings_gate(ctx: AuditContext) -> None:
+    validate_findings(ctx.ws)  # records its own stage too; harmless
+
+
+def _act_dedupe(ctx: AuditContext) -> None:
+    dedupe_findings(ctx.ws)
+
+
+def _act_demote_noise(ctx: AuditContext) -> None:
+    demote_noise(ctx.ws)
+
+
+def _act_verify(ctx: AuditContext) -> None:
+    verify_findings(ctx.ws, ctx.target, ctx.config)
+
+
+def _act_selfscore(ctx: AuditContext) -> None:
+    write_self_score(ctx.ws)
+
+
+def _act_calibrate(ctx: AuditContext) -> None:
+    calibrate_findings(ctx.ws)
+
+
+def _act_report(ctx: AuditContext) -> None:
+    write_report(ctx.ws, target=ctx.target)
+
+
+DETERMINISTIC_ACTIONS.update(
+    {
+        "prefilter": _act_prefilter,
+        "findings-gate": _act_findings_gate,
+        "dedupe": _act_dedupe,
+        "calibrate": _act_calibrate,
+        "verify": _act_verify,
+        "demote-noise": _act_demote_noise,
+        "report": _act_report,
+        "selfscore": _act_selfscore,
+    }
+)
+
+
+def run_audit(ctx: AuditContext, *, table: tuple[PhaseSpec, ...] = PHASE_TABLE) -> str:
+    """Walk the phase table from the first phase not yet recorded ``done``.
+
+    Runs each deterministic phase in place. On an agent phase, auto-advances
+    only when the phase has at least one output path that is not also one of
+    its input paths (an output-only artifact proves the agent actually ran;
+    several agent phases share ``findings_dir`` as both input and output, and
+    the dir's mere presence there proves nothing about that specific phase).
+    Otherwise returns the phase's dispatch block and stops.
+
+    Args:
+        ctx: The audit context threaded through every phase action.
+        table: The phase table to walk (defaults to ``PHASE_TABLE``).
+
+    Returns:
+        ``"AUDIT COMPLETE"`` once every phase is recorded ``done``, or the
+        dispatch block for the next agent phase awaiting a model run.
+    """
+    while True:
+        phase = next_actionable_phase(table, load_state(ctx.ws))
+        if phase is None:
+            return "AUDIT COMPLETE"
+        if phase.kind == "deterministic":
+            run_deterministic_phase(phase, ctx)
+            continue
+        distinct_outputs = tuple(p for p in phase.outputs if p not in phase.inputs)
+        if distinct_outputs and all(p(ctx.ws).exists() for p in distinct_outputs):
+            record_stage(ctx.ws, phase.name)
+            continue
+        return render_dispatch(phase, ctx)

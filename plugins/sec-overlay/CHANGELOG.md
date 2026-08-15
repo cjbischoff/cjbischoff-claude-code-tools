@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 0.6.0 - 2026-08-15
+
+### Added
+
+- Add `sec_overlay.driver.run_audit`: the resumable table-walker that runs deterministic phases in place, auto-advances agent phases only on a distinct (non-shared) output, and returns the next dispatch or `"AUDIT COMPLETE"`.
+- Register `DETERMINISTIC_ACTIONS` for `prefilter`, `findings-gate`, `dedupe`, `calibrate`, `verify`, `demote-noise`, `report`, and `selfscore`.
+- Add the `audit` CLI subcommand (`python -m sec_overlay.cli audit --target <T> --config <rules>`).
+
 ## 0.5.0 - 2026-08-15
 
 ### Added

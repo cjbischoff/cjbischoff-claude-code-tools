@@ -75,3 +75,17 @@ printer. `run_deterministic_phase` checks a `PhaseSpec`'s inputs, runs its regis
 target, config, pinned SHA, and lazily-loaded `ScanProfile` an action needs. `render_dispatch`
 returns the printable block for an agent phase — prompt file plus `{{TARGET}}`/`{{WORKSPACE}}`/
 `{{SHA}}` substitutions — with no side effects; the orchestrator runs the model.
+
+`DETERMINISTIC_ACTIONS` is now fully populated: `prefilter` → `prefilter.run_prefilter`,
+`findings-gate` → `findings_gate.validate_findings`, `dedupe` → `dedupe.dedupe_findings`,
+`calibrate` → `calibrate.calibrate_findings`, `verify` → `verify.verify_findings`,
+`demote-noise` → `partition.demote_noise`, `report` → `report.write_report`, `selfscore` →
+`selfscore.write_self_score`. `run_audit(ctx)` walks `PHASE_TABLE` from the first phase not yet
+`done`: runs deterministic phases in place, and for an agent phase auto-advances only when it has
+an output path that is *not also* one of its inputs (several agent phases — `investigate`,
+`critic`, `judge`, `validate`, `trace`, `patch` — declare the same `findings_dir` callable as both
+input and output, so the dir's mere presence never counts as "this phase ran"); otherwise it
+returns `render_dispatch(...)` and stops. Returns `"AUDIT COMPLETE"` once every phase is `done`.
+`cli.py` exposes this as its `audit` subcommand (`python -m sec_overlay.cli audit --target <T>
+--config <rules> [--workspace <WS>] [--sha <sha>]`): resolves the workspace the same way `scan`
+does, pins the pass with `state.begin_pass`, and prints `run_audit`'s return value.

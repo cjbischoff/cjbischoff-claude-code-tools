@@ -14,10 +14,14 @@ suppressed-full default and the `confirmed_only` restore path.
 after investigate, dedupe/demote-noise before report, trace present) and the pure sequencer
 helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`).
 
-`test_driver.py` (new) covers `sec_overlay/driver.py`'s `run_deterministic_phase`: raises
+`test_driver.py` covers `sec_overlay/driver.py`'s `run_deterministic_phase`: raises
 `PhaseHalt` on a missing input, raises `PhaseHalt` when the action ran but a declared output is
 still absent, and records the stage `"done"` on success. Also covers `render_dispatch`: the
-returned block names the `agents/<prompt>` file and the substituted target/workspace/SHA.
+returned block names the `agents/<prompt>` file and the substituted target/workspace/SHA. Three
+`run_audit` tests (new) cover the resumable table-walker: halts at `recon` with no scan-profile
+yet, auto-advances past `recon` once its output exists and halts at `architecture`, and — the
+regression guard — does NOT auto-skip `critic` just because `findings_dir` (its shared
+input/output path) already exists from earlier phases.
 
 ## Structural guards (know these)
 
