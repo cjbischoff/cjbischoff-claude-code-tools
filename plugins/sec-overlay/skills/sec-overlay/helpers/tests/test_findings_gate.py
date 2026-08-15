@@ -68,13 +68,16 @@ def test_confirmed_requires_tool_receipt(tmp_path):
     assert any("tool receipt" in e for e in errs)
 
 
-def test_confirmed_with_ripgrep_receipt_passes(tmp_path):
+def test_confirmed_with_ripgrep_only_receipt_is_rejected(tmp_path):
+    # Tier-2 (ripgrep/ast-grep/structural-index/tree-sitter) locates code but does not
+    # prove reachability; a Tier-1 receipt is required to reach confirmed/fixed.
     ws = Workspace(tmp_path / "workspace"); ws.ensure()
     f = _good()
     f.status = FindingStatus.CONFIRMED
     f.evidence_sources = ["ripgrep:unescaped {{x}} @ a.liquid:5", "llm-claimed:no-autoescape"]
     write_findings(ws, [f])
-    assert validate_findings(ws) == []
+    errs = validate_findings(ws)
+    assert any("Tier-1" in e for e in errs)
 
 
 def test_raw_without_receipt_still_allowed(tmp_path):
@@ -118,3 +121,48 @@ def test_validate_findings_records_stage(tmp_path):
     write_findings(ws, [_good()])
     validate_findings(ws)
     assert "findings-gate" in load_state(ws).stages
+
+
+def _write_raw(ws: Workspace, fid: str, **over) -> None:
+    data = {"id": fid, "rule_id": "r", "cls": "injection", "status": "confirmed",
+            "severity": "high", "file": "a.py", "line": 3, "message": "m",
+            "dataflow": [], "evidence_sources": ["ripgrep"]}
+    data.update(over)
+    (ws.findings_dir / f"{fid}.json").write_text(json.dumps(data))
+
+
+def _ws_raw(tmp_path):
+    ws = Workspace(tmp_path / "workspace")
+    ws.findings_dir.mkdir(parents=True, exist_ok=True)
+    (ws.root / "a.py").write_text("x = 1\ny = 2\nz = 3\n")
+    return ws
+
+
+def test_tier2_only_confirmed_is_rejected(tmp_path):
+    ws = _ws_raw(tmp_path)
+    _write_raw(ws, "F-1", evidence_sources=["ripgrep", "structural-index"])
+    errors = validate_findings(ws)
+    assert any("F-1" in e and "confirm" in e.lower() for e in errors)
+
+
+def test_tier1_confirmed_passes(tmp_path):
+    ws = _ws_raw(tmp_path)
+    _write_raw(ws, "F-2", evidence_sources=["codeql:dataflow"])
+    errors = validate_findings(ws)
+    assert not any("F-2" in e for e in errors)
+
+
+def test_out_of_vocab_disposition_rejected(tmp_path):
+    ws = _ws_raw(tmp_path)
+    _write_raw(ws, "F-3", evidence_sources=["codeql:dataflow"],
+               runtime_disposition="neither")
+    errors = validate_findings(ws)
+    assert any("F-3" in e and "runtime_disposition" in e for e in errors)
+
+
+def test_receipt_tier_is_stamped(tmp_path):
+    ws = _ws_raw(tmp_path)
+    _write_raw(ws, "F-4", evidence_sources=["codeql:dataflow"])
+    validate_findings(ws)
+    stamped = json.loads((ws.findings_dir / "F-4.json").read_text())
+    assert stamped["receipt_tier"] == 1

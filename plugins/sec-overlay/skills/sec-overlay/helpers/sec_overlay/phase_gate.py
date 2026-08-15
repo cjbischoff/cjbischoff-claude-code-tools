@@ -18,26 +18,24 @@ import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+_REF_ANCHOR = re.compile(r"^(?P<path>.+?):(?P<start>\d+)(?:-\d+)?(?:\s.*)?$")
+
 
 def _parse_ref(ref: str) -> tuple[str, int | None]:
-    """Split ``ref`` into ``(path, line)``, accepting a single line or an ``N-M`` range.
+    """Split ``ref`` into ``(path, line)``, accepting a single line, an ``N-M`` range, and a
+    trailing human hint.
 
     A range citation (``path:43-53``) is anchored on its start line ``N`` — that is the line
     the writer actually pointed at; the range is prose, not something ``ref_resolves`` needs to
-    fully bound. Without this, ``rsplit(":", 1)``'s ``tail.isdigit()`` check fails on ``"43-53"``,
-    the whole ``:43-53`` suffix is treated as part of the path, and the ref never resolves (the
-    "range-ref bug").
+    fully bound. A trailing hint after the line/range (``path:42 in the handler``) is stripped —
+    it is prose the writer added for a human reader, not part of the citation. A bare path with
+    no colon-line, or a colon whose first tail token isn't numeric (e.g. a Windows-style
+    ``C:\\x``), returns ``(ref, None)`` since there is no line to anchor.
     """
     ref = (ref or "").strip()
-    if ":" not in ref:
-        return ref, None
-    head, tail = ref.rsplit(":", 1)
-    if tail.isdigit():
-        return head, int(tail)
-    if "-" in tail:
-        start, _, end = tail.partition("-")
-        if start.isdigit() and end.isdigit():
-            return head, int(start)
+    m = _REF_ANCHOR.match(ref)
+    if m:
+        return m.group("path"), int(m.group("start"))
     return ref, None
 
 
@@ -332,6 +330,40 @@ def claims_from_markdown(text: str) -> list[dict]:
             claims.append({"id": f"md-{len(claims)}", "text": line.strip(),
                            "refs": [f"{path}:{start}"]})
     return claims
+
+
+def attack_surface_gate(profile, target_root: str | Path) -> list[str]:
+    """Reject an attack-surface key not backed by a non-comment code reference.
+
+    A comment line is a claim about code, not proof the surface executes; a
+    ref that does not resolve is not evidence either. Each ``attack_surface``
+    key must have at least one evidence ref that resolves to a non-comment
+    line.
+
+    Args:
+        profile: A :class:`sec_overlay.profile.ScanProfile`.
+        target_root: The scanned repo root.
+
+    Returns:
+        One error string per unbacked attack-surface key; empty if all pass.
+    """
+    evidence = getattr(profile, "attack_surface_evidence", {}) or {}
+    errors: list[str] = []
+    for key in getattr(profile, "attack_surface", []) or []:
+        refs = evidence.get(key, []) or []
+        code_backed = False
+        for ref in refs:
+            resolved, _ = resolve_ref(target_root, ref)
+            if resolved and is_comment_line(target_root, ref) is False:
+                code_backed = True
+                break
+        if not code_backed:
+            errors.append(
+                f"attack_surface {key!r} has no non-comment code reference "
+                f"(evidence {refs or 'none'}) — a comment or unresolved ref does "
+                f"not prove the surface executes"
+            )
+    return errors
 
 
 def write_gate_record(ws, phase: str, record: dict) -> Path:

@@ -42,16 +42,21 @@ def wants_runtime(f: Finding) -> bool:
 
 
 def _above_bar(f: Finding, min_risk: int) -> bool:
-    """A needs-runtime finding is actionable if its severity is >= medium, else gated by min_risk.
+    """Return True if a finding earns a full manual test directive.
 
-    Fixes O-016/O-031: min_risk can no longer hide a confirmed critical/high whose deterministic
-    risk_score sits low. Fixes the LEAD/doc-lead flood: the severity pass also requires a tool
-    receipt, so an llm-claimed-only carrier can't bypass min_risk on severity alone.
+    Coverage-first: a high/critical finding above the risk floor earns a
+    directive regardless of receipt strength — a missing receipt sorts the
+    directive later, it never withholds the test that would settle the
+    finding.
+
+    Args:
+        f: The finding under consideration.
+        min_risk: The risk-score floor (default from ``DEFAULT_MIN_RISK``).
+
+    Returns:
+        True when the finding is above the bar.
     """
-    has_receipt = any(is_tool_receipt(s) for s in f.evidence_sources)
-    if f.severity in _ACTIONABLE_SEVERITIES and has_receipt:
-        return True
-    if any(h.get("event") == "redteam:prime-manual-test" for h in f.history):
+    if f.severity in _ACTIONABLE_SEVERITIES:
         return True
     return (f.risk_score or 0) >= min_risk
 

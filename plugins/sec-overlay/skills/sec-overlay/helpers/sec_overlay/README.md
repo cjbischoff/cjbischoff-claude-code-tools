@@ -24,7 +24,18 @@ sites on a cluster primary) — additive, nullable fields that round-trip throug
 `from_dict`.
 
 `selfscore.py` (new) computes the per-run self-score from workspace findings and persists it to
-`CampaignState.budget["self_score"]` — see the module map entry.
+`CampaignState.budget["self_score"]` — see the module map entry. `build_self_score` now also
+returns a `shipping` count over the full `evidence.SHIPPING_STATUSES` set, alongside the
+narrower `reported` count (`confirmed`/`fixed` only) it retains for backward continuity.
+
+`evidence.py` gained a shared tier/status vocabulary: `TIER1_RECEIPTS`/`TIER2_RECEIPTS` (partition
+`_MECHANICAL`), `SHIPPING_STATUSES`, `RUNTIME_DISPOSITIONS`, and the `receipt_tier()`/
+`confirms_alone()` predicates — a single source of truth for later modules that need to know
+whether a source can confirm a finding alone.
+
+`models.py`'s `Finding` gained `receipt_tier: int | None` — an additive, nullable field that
+round-trips through `to_dict`/`from_dict`. It holds the value `evidence.receipt_tier()` derives
+once a gate stamps it; `None` before that.
 
 `cluster.py` (new) groups ≥3 same-class, same-sink `raw` findings into one systemic cluster,
 run after dedupe and before the critic/gate ladder — see the module map entry.
@@ -33,6 +44,16 @@ run after dedupe and before the critic/gate ladder — see the module map entry.
 finding (highest-risk member, or the elected primary if present) before the confirmed and
 needs-runtime buckets are counted and rendered; `render_ndt` renders an affected-sites table when
 the finding carries `affected_sites`.
+
+**Breaking:** `findings_gate.validate_findings` now enforces the tier model instead of the
+old "any mechanical receipt confirms" rule. It stamps `Finding.receipt_tier` (the lowest —
+strongest — tier among `evidence_sources`, via `evidence.receipt_tier`), rejects a
+`confirmed`/`fixed` finding unless `evidence.confirms_alone` is true (a Tier-1 receipt), and
+rejects any `runtime_disposition` outside `evidence.RUNTIME_DISPOSITIONS`. A ripgrep-only
+receipt — previously sufficient for SAST-unsupported languages — now fails the gate; route
+that finding to `needs-deployment-testing` instead. `driver._act_findings_gate` raises
+`PhaseHalt` when the gate returns any error, so a rejected finding now halts the phase
+instead of passing through silently.
 
 `scope.py` (new) checks `is_external_package(pkg, ws)` against `kb/scan-scope.json`'s
 `ingested_packages` list, so a sink that resolves into an un-ingested dependency can be flagged as
@@ -111,6 +132,12 @@ investigate/patch branch (M1, 0.10.1): an absent or malformed file raises `Phase
 an unhandled `FileNotFoundError`/`JSONDecodeError`, matching the "loud halt" contract every other
 phase gate honors.
 
+`redteam.py`'s `_above_bar` is now coverage-first: a critical/high/medium finding above the risk
+floor earns a manual test directive regardless of receipt strength — a missing tool receipt no
+longer withholds the runtime test that would settle it (it still sorts later via `receipts`
+rendering `_no tool receipt (verify carefully)_` in the directive block). The dead
+`redteam:prime-manual-test` history branch (no producer ever wrote that event) is removed.
+
 `redactor.py` and `factcheck.py` are now wired into the driver (ISSUE-047, ISSUE-051).
 `render_dispatch` passes its composed block through `redactor.safe_for_prompt` before returning —
 a security control that guarantees no dispatch block the orchestrator prints can carry a
@@ -119,3 +146,21 @@ declared with no inputs/outputs so a hard gate never halts the run before Plan B
 agent exists: `_act_factcheck` reads `kb/verdicts.json` if present, applies each entry via
 `factcheck.apply_verdict` (validated first with `factcheck.validate_verdict`), and no-ops silently
 when the file is absent.
+
+`phase_gate.py`'s `_parse_ref` (ISSUE-024/028) now anchors a citation with a leading-match regex
+(`_REF_ANCHOR`) instead of `rsplit(":", 1)`, so a trailing human hint after the line or range
+(`foo.py:42 in the handler`) is stripped instead of failing the ref to resolve. A bare path with
+no colon-line, or a colon whose first tail token isn't numeric, still returns `(ref, None)`.
+
+`profile.py`'s `_REQUIRED` (ISSUE-025) now includes `attack_surface_evidence`, matching
+`scan-profile.schema.json`'s `required` — `subsystems` stays optional in both.
+
+`phase_gate.py`'s new `attack_surface_gate` (ISSUE-026) rejects a recon `attack_surface` key
+whose evidence refs are absent, unresolved, or resolve only to comment lines — a comment is a
+claim about code, not proof it executes. Reuses `resolve_ref`/`is_comment_line`; kept separate
+from `run_phase_checks` so architecture/context claims citing a comment aren't over-rejected.
+
+`prompts.py` (new, ISSUE-040) adds `render_prompt(template, subs)`, substituting `{{KEY}}` tokens
+and raising `ValueError` naming every `{{TOKEN}}` left unfilled — the orchestrator renders each
+agent dispatch prompt through it so a hand-substitution gap (a literal `{{ATTACK_CLASS}}`)
+fails before the model runs instead of silently reaching it.

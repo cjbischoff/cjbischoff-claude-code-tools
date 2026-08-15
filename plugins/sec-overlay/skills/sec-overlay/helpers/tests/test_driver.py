@@ -298,3 +298,20 @@ def test_factcheck_action_applies_verdicts(tmp_path):
 
     updated = {f.id: f for f in read_findings(ws)}["F-0001"]
     assert updated.verification == "fact-checked"
+
+
+def test_findings_gate_action_halts_on_error(tmp_path):
+    import json
+
+    from sec_overlay.driver import DETERMINISTIC_ACTIONS, AuditContext, PhaseHalt
+
+    ws = Workspace(tmp_path / "w")
+    ws.ensure()
+    (ws.root / "a.py").write_text("x = 1\n")
+    (ws.findings_dir / "F-1.json").write_text(json.dumps({
+        "id": "F-1", "rule_id": "r", "cls": "injection", "status": "confirmed",
+        "severity": "high", "file": "a.py", "line": 1, "message": "m",
+        "dataflow": [], "evidence_sources": ["ripgrep"]}))
+    ctx = AuditContext(ws=ws, target=str(tmp_path), config="", sha="s")
+    with pytest.raises(PhaseHalt):
+        DETERMINISTIC_ACTIONS["findings-gate"](ctx)

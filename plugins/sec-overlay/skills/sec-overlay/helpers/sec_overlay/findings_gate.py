@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 from sec_overlay.campaign import record_stage
-from sec_overlay.evidence import is_tool_receipt
+from sec_overlay.evidence import RUNTIME_DISPOSITIONS, confirms_alone, receipt_tier
 from sec_overlay.models import Finding
 from sec_overlay.schema import validate as _schema_validate
 from sec_overlay.workspace import Workspace
@@ -57,18 +57,28 @@ def validate_findings(ws: Workspace) -> list[str]:
                 f"(set status=duplicate instead)"
             )
         # Safety contract, now enforced (was prose-only): a confirmed/fixed finding
-        # must rest on at least one mechanical tool receipt. LLM reasoning alone
-        # (only ``llm-claimed:*`` sources) cannot suppress hallucination risk, so it
-        # cannot carry a finding to confirmed. For SAST-unsupported languages a
-        # ``ripgrep:`` receipt proving the sink exists is a valid mechanical ground.
-        if f.status.value in ("confirmed", "fixed") and not any(
-            is_tool_receipt(s) for s in f.evidence_sources
-        ):
+        # must rest on at least one Tier-1 tool receipt (codeql/semgrep/sca/secrets).
+        # A Tier-2 receipt (ripgrep/ast-grep/structural-index/tree-sitter) only locates
+        # code — it does not prove reachability — so it routes to
+        # needs-deployment-testing instead of confirming alone.
+        tiers = [t for t in (receipt_tier(s) for s in f.evidence_sources) if t is not None]
+        stamped_tier = min(tiers) if tiers else None  # 1 outranks 2
+        if data.get("receipt_tier") != stamped_tier:
+            data["receipt_tier"] = stamped_tier
+            p.write_text(json.dumps(data))
+
+        if f.status.value in ("confirmed", "fixed") and not confirms_alone(f.evidence_sources):
             errors.append(
-                f"{f.id}: {f.status.value} finding has no mechanical tool receipt "
-                f"(only {f.evidence_sources or 'no'} sources) — cannot confirm on "
-                f"llm-claimed evidence alone; ground the sink with semgrep/codeql/"
-                f"ast-grep/ripgrep"
+                f"{f.id}: {f.status.value} finding has no Tier-1 tool receipt "
+                f"(sources {f.evidence_sources or 'none'}) — a Tier-2-only match "
+                f"(ripgrep/ast-grep/structural-index/tree-sitter) locates code but does "
+                f"not prove reachability; route to needs-deployment-testing"
+            )
+
+        if f.runtime_disposition is not None and f.runtime_disposition not in RUNTIME_DISPOSITIONS:
+            errors.append(
+                f"{f.id}: runtime_disposition {f.runtime_disposition!r} is not one of "
+                f"{sorted(RUNTIME_DISPOSITIONS)}"
             )
     record_stage(ws, "findings-gate")
     return errors

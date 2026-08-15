@@ -254,3 +254,6 @@ One coupling point to respect before editing:
   `SKILL.md`, or anything under `skills/`, `agents/`, `helpers/`, `references/`, incl. their
   READMEs) bumps `.claude-plugin/plugin.json` by Conventional-Commits semver — see the
   marketplace root [`CLAUDE.md`](../../../../CLAUDE.md).
+- **Prompt rendering is loud.** `helpers/sec_overlay/prompts.py`'s `render_prompt` substitutes
+  `{{KEY}}` tokens and raises if any remain — CLAUDE.md §2 has the orchestrator render every
+  dispatched agent prompt through it instead of hand-substituting tokens.

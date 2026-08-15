@@ -11,5 +11,6 @@
     "secrets": {"run": true}
   },
   "agents_to_spawn": ["sqli", "secrets"],
-  "budget_hint": {"max_candidates": 50, "max_investigate_agents": 4}
+  "budget_hint": {"max_candidates": 50, "max_investigate_agents": 4},
+  "attack_surface_evidence": {}
 }

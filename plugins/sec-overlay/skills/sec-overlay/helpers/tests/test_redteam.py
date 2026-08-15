@@ -24,10 +24,20 @@ def _f(fid, status=FindingStatus.CONFIRMED, risk=8, disposition=None, runtime_te
     )
 
 
-def test_above_bar_clears_prime_manual_test_regardless_of_risk():
-    f = _f("P", risk=None, severity=Severity.LOW)
-    f.history = [{"event": "redteam:prime-manual-test"}]
+def test_high_severity_without_receipt_is_above_bar():
+    # No receipt and risk_score below the floor, but high severity must still yield a
+    # directive — the risk_score fallback alone would return False here.
+    f = Finding(id="F", rule_id="r", cls="c", status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
+                severity=Severity.HIGH, file="a.py", line=1, message="m",
+                evidence_sources=[], risk_score=3)
     assert _above_bar(f, min_risk=7) is True
+
+
+def test_below_floor_without_receipt_is_below_bar():
+    f = Finding(id="F", rule_id="r", cls="c", status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
+                severity=Severity.LOW, file="a.py", line=1, message="m",
+                evidence_sources=[], risk_score=2)
+    assert _above_bar(f, min_risk=7) is False
 
 
 def test_discriminate_partitions():
@@ -181,17 +191,18 @@ def test_low_severity_needs_runtime_gated_by_min_risk():
     assert disc["needs_runtime"] == []
 
 
-def test_lead_carrier_without_receipt_is_not_a_directive():
-    # LEAD/doc-lead carriers (llm-claimed-only, no tool receipt) must not bypass min_risk via
-    # the severity gate, even at MEDIUM+needs-deployment-testing.
+def test_lead_carrier_without_receipt_is_still_a_directive():
+    # Coverage-first (Task 5 ruling): a LEAD/doc-lead carrier (llm-claimed-only, no tool
+    # receipt) at MEDIUM+needs-deployment-testing now earns a directive too — a missing
+    # receipt never withholds the test that would settle the finding.
     lead = _rt(
         "A-3", Severity.MEDIUM, None,
         status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
         evidence_sources=["llm-claimed:doc-lead"],
     )
     disc = discriminate([lead], min_risk=7)
-    assert [f.id for f in disc["below_bar"]] == ["A-3"]
-    assert disc["needs_runtime"] == []
+    assert [f.id for f in disc["needs_runtime"]] == ["A-3"]
+    assert disc["below_bar"] == []
 
 
 def test_build_redteam_gate_record_from_needs_runtime_finding(tmp_path):

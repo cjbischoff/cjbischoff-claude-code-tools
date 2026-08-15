@@ -34,7 +34,7 @@ answers. `references/` kills that drift two ways:
 ```mermaid
 flowchart LR
     subgraph REF["references/"]
-        PC["prompt-constants.md<br/>(12 verbatim blocks)"]
+        PC["prompt-constants.md<br/>(13 verbatim blocks)"]
         AC["attack-classes.md"]
         FT["finding-template.md"]
         HUNT["hunting/*.md"]
@@ -81,8 +81,8 @@ flowchart LR
 
 ### Prompt text — injected into agents
 
-#### `prompt-constants.md` — the constitution (12 blocks, pasted into every agent)
-The single most load-bearing file here. Twelve named blocks are copied **verbatim** into the
+#### `prompt-constants.md` — the constitution (13 blocks, pasted into every agent)
+The single most load-bearing file here. Thirteen named blocks are copied **verbatim** into the
 top of every agent prompt (agents reference it via the `{{OVERLAY_ROOT}}` path token). If
 you change a word here, every agent's behaviour changes.
 
@@ -100,6 +100,7 @@ you change a word here, every agent's behaviour changes.
 | `DIAGRAM_STYLE` | When emitting a mermaid diagram, enforce the 10-entity hard cap per diagram, one diagram per job. Short node IDs with detail in legend/edges. Diagrams are navigational; `file:line` claims live in prose, not diagram nodes. |
 | `FIELD_OWNERSHIP` | Each `Finding` field is owned by exactly one phase. Only populate your phase's Output fields; never overwrite downstream phase fields (e.g. `risk_score`, `patch_diff`). |
 | `QUALIFIER_PROOF` | A blanket security claim ("mitigated", "sanitized", "handled elsewhere") is a claim about *every* code path. Enumerate all reachable paths and confirm the qualifier on each, or state which specific paths you verified. |
+| `EVIDENCE_VOCABULARY` | The receipt tiers, shipping statuses, and `runtime_disposition` enum are closed sets — Tier-1 (`codeql`/`semgrep`/`sca`/`secrets`) confirms alone, Tier-2 (`ripgrep`/`structural-index`/`ast-grep`/`tree-sitter`) only corroborates. Bound to `sec_overlay.evidence`'s constants by a drift test. |
 
 > **Note:** the table above is authoritative. If you add or remove a block, update the count
 > in the Mermaid diagram, the section header, and this table.
@@ -173,8 +174,8 @@ they never confirm a finding.
 
 | File | Read by | What it decides |
 |------|---------|-----------------|
-| `finding.schema.json` | `findings_gate.py` | Every `findings/*.json` must validate: required fields, `status`/`severity` enums, the hard rule that `confirmed`/`fixed` findings carry ≥1 tool receipt, the inner shape of `runtime_test` (its `expected_signal` may be object, string, or null — the renderers tolerate all three), `open_questions` (array of `{question, why_it_matters, who_to_ask_or_check}` objects — human-answerable unknowns a live-exploit test can't settle, populated by `trace`/`redteam`), and `cluster_id`/`affected_sites` (systemic-cluster id and, on a cluster primary, the member sites `{id, file, line}` — set by the cluster pass). |
-| `scan-profile.schema.json` | `profile.py` | `kb/scan-profile.json` shape (languages, frameworks, attack_surface, sast_plan, agents_to_spawn, budget_hint, optional scan_options). |
+| `finding.schema.json` | `findings_gate.py` | Every `findings/*.json` must validate: required fields, `status`/`severity` enums, the hard rule that `confirmed`/`fixed` findings carry ≥1 tool receipt, the inner shape of `runtime_test` (its `expected_signal` may be object, string, or null — the renderers tolerate all three), `open_questions` (array of `{question, why_it_matters, who_to_ask_or_check}` objects — human-answerable unknowns a live-exploit test can't settle, populated by `trace`/`redteam`), `cluster_id`/`affected_sites` (systemic-cluster id and, on a cluster primary, the member sites `{id, file, line}` — set by the cluster pass), and `receipt_tier` (optional integer or null — the derived tool-receipt strength, absent until a gate stamps it). |
+| `scan-profile.schema.json` | `profile.py` | `kb/scan-profile.json` shape (languages, frameworks, attack_surface, sast_plan, agents_to_spawn, budget_hint, attack_surface_evidence — required, matches `profile._REQUIRED`; optional subsystems, scan_options). |
 | `fix-disposition.schema.json` | `fix_disposition.py` | Fix-completeness records (FULL/MITIGATION/WORKAROUND + gates/evidence/rationale). |
 | `coverage-ledger.schema.json` | `coverage_ledger.py` | The surface-completeness ledger (`completeness`, `surfaces`, `deferred`, `open_questions`). |
 | `approved-crypto-algorithms.yaml` | `crypto_policy.py` | Approved algos (aes-256-gcm, chacha20-poly1305, sha256+, argon2/bcrypt/scrypt/pbkdf2); denied (md5, sha1, des, 3des, rc4, ecb …); floors (rsa≥3072, pbkdf2≥600000, ecc≥256, aes≥128). |

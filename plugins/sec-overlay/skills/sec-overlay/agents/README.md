@@ -140,7 +140,7 @@ the confidence bar). **The harness never executes the target** — it hands an o
 | Prompt | Role |
 |--------|------|
 | `postflight.md` | sonnet; adds durable security-profile notes to `kb/prior_context.json` for the next scan. |
-| `factcheck.md` | fresh-context re-verification of a finding's citations/scope/severity against source (catches drift). |
+| `factcheck.md` | fresh-context re-verification of a finding's citations/scope/severity against source (catches drift); targets ONE shipping-status (`confirmed`/`fixed`/`needs-deployment-testing`) finding, not narrowly `confirmed`. |
 | `variant-hunt.md` | amplify one confirmed finding into its family: enqueue sibling call sites as new `candidate`s for the gate ladder. |
 | `bugchain.md` | look across the confirmed set for **chains** — individually low findings that compose into a critical (auth-bypass → IDOR → RCE). |
 | `tune-config.md` | optional ratcheted loop (≤3 rounds): author targeted semgrep rules for uncovered classes, test-fire them, add noise-floor exclusions. |

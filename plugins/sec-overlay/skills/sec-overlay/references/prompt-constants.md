@@ -135,3 +135,18 @@ EVERY code path, not the first one you checked. Before writing one:
 A qualifier that turns out to cover only one of several paths is the single
 most common error this harness's adversarial review layer has caught — avoid
 manufacturing work for the adversary that a wider check up front would prevent.
+
+## EVIDENCE_VOCABULARY
+
+The evidence, status, and disposition vocabularies are closed sets. Use only these values.
+
+- **Tier-1 receipts (confirm a finding alone):** `codeql`, `semgrep`, `sca`, `secrets`.
+  Each is proof-complete for its shape (a dataflow path, a vulnerable version, a live secret).
+- **Tier-2 receipts (corroborate only, never confirm):** `ripgrep`, `structural-index`,
+  `ast-grep`, `tree-sitter`. These locate code; they do not prove reachability. A finding
+  whose only receipts are Tier-2 cannot reach `confirmed` — route it to
+  `needs-deployment-testing`.
+- **Shipping statuses (a reader acts on these):** `confirmed`, `fixed`,
+  `needs-deployment-testing`.
+- **`runtime_disposition` (closed enum):** `needs-runtime`, `static-settled`, `unassessed`.
+  Any other value (e.g. `neither`) is rejected at the findings gate.

@@ -2,6 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from sec_overlay.evidence import (
+    RUNTIME_DISPOSITIONS,
+    SHIPPING_STATUSES,
+    TIER1_RECEIPTS,
+    TIER2_RECEIPTS,
+)
+
 _SKILL = Path(__file__).resolve().parents[2] / "SKILL.md"
 _CONSTS = Path(__file__).resolve().parents[2] / "references" / "prompt-constants.md"
 
@@ -55,3 +62,11 @@ def test_finding_template_documents_triage_ndt_dep_views():
     assert "dep-view" in txt or "dependency view" in txt
     assert "reachability" in txt                       # dep-view binding
     assert "renumber" in txt                           # condensed tier no-gap note
+
+
+def test_evidence_vocabulary_block_lists_all_values():
+    text = _CONSTS.read_text()
+    assert "## EVIDENCE_VOCABULARY" in text
+    block = text.split("## EVIDENCE_VOCABULARY", 1)[1].split("\n## ", 1)[0]
+    for value in TIER1_RECEIPTS | TIER2_RECEIPTS | SHIPPING_STATUSES | RUNTIME_DISPOSITIONS:
+        assert value in block, f"{value} missing from EVIDENCE_VOCABULARY block"

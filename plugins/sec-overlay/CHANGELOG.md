@@ -2,6 +2,101 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.2.1 - 2026-08-15
+
+### Added
+
+- `EVIDENCE_VOCABULARY` block in `references/prompt-constants.md`: the closed set of receipt
+  tiers, shipping statuses, and `runtime_disposition` values, pasted into every agent prompt like
+  the other twelve blocks. A drift test in `test_docs_invariants.py` binds the block's listed
+  values to `sec_overlay.evidence`'s `TIER1_RECEIPTS`/`TIER2_RECEIPTS`/`SHIPPING_STATUSES`/
+  `RUNTIME_DISPOSITIONS` constants so the two cannot drift apart.
+
+## 1.2.0 - 2026-08-15
+
+### Added
+
+- `sec_overlay.prompts.render_prompt(template, subs)` substitutes `{{KEY}}` tokens and raises
+  `ValueError` naming every unfilled `{{TOKEN}}` — closes the class of bug where a hand-substituted
+  agent prompt shipped a literal `{{ATTACK_CLASS}}` to a model. `skills/sec-overlay/CLAUDE.md` §2
+  now instructs the orchestrator to render every agent dispatch prompt through it.
+
+## 1.1.0 - 2026-08-15
+
+### Added
+
+- Recon gate: `phase_gate.attack_surface_gate` rejects an `attack_surface` key whose evidence
+  refs are absent, unresolved, or resolve only to comment lines — a comment is a claim about
+  code, not proof it executes (ISSUE-026).
+
+## 1.0.4 - 2026-08-15
+
+### Fixed
+
+- `scan-profile.schema.json` gains `attack_surface_evidence` (required) and `subsystems`
+  (optional), matching the two `ScanProfile` fields recon already writes.
+
+## 1.0.3 - 2026-08-15
+
+### Fixed
+
+- `phase_gate._parse_ref` now anchors a citation with a leading-match regex instead of
+  `rsplit(":", 1)`, so a trailing human hint after the line or range (`foo.py:42 in the
+  handler`) is stripped instead of failing the ref to resolve (ISSUE-024/028).
+
+## 1.0.2 - 2026-08-15
+
+### Fixed
+
+- `redteam._above_bar` is now coverage-first: a critical/high/medium finding above the risk
+  floor earns a manual test directive regardless of receipt strength — a missing tool
+  receipt no longer withholds the test that would settle it. The dead
+  `redteam:prime-manual-test` history branch (no producer wrote that event) is removed.
+
+## 1.0.1 - 2026-08-15
+
+### Fixed
+
+- `selfscore.build_self_score` gained a `shipping` count over the full `evidence.SHIPPING_STATUSES`
+  set (`confirmed`/`fixed`/`needs-deployment-testing`), alongside the existing narrower `reported`
+  count. `factcheck.md` now targets ONE shipping-status finding rather than narrowly `confirmed`.
+
+## 1.0.0 - 2026-08-15
+
+### Changed
+
+- **Breaking:** the findings gate now requires a Tier-1 tool receipt (codeql/semgrep/sca/
+  secrets) for any `confirmed`/`fixed` finding. A Tier-2-only receipt (ripgrep/ast-grep/
+  structural-index/tree-sitter) — previously enough to confirm a finding on
+  SAST-unsupported languages — now fails the gate and must route to
+  `needs-deployment-testing` instead. The gate also stamps `Finding.receipt_tier` and
+  rejects any `runtime_disposition` value outside the shared enum. `_act_findings_gate`
+  now raises `PhaseHalt` when the gate reports errors, instead of validating silently.
+
+### BREAKING CHANGE
+
+Any pipeline consumer treating `confirmed`/`fixed` as ground truth for a ripgrep-only
+finding must re-triage it as `needs-deployment-testing` — a manual test directive, not
+an automatic confirmation.
+
+## 0.12.0 - 2026-08-15
+
+### Added
+
+- `Finding` gains a derived `receipt_tier: int | None` field, round-tripped by `to_dict`/
+  `from_dict` and declared in `finding.schema.json` (optional, not required). Task 3 stamps
+  the value; this task only adds it to the shared vocabulary.
+
+## 0.11.0 - 2026-08-15
+
+### Added
+
+- `evidence.py` exports a shared receipt-tier and status vocabulary: `TIER1_RECEIPTS`/
+  `TIER2_RECEIPTS` (partitioning `_MECHANICAL` into confirms-alone vs locates-only sources),
+  `SHIPPING_STATUSES`, `RUNTIME_DISPOSITIONS`, and the `receipt_tier()`/`confirms_alone()`
+  predicates, giving later modules one source of truth for whether a source can confirm a finding
+  alone.
+
 ## 0.10.1 - 2026-08-15
 
 ### Fixed

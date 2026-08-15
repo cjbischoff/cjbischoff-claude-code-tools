@@ -1,8 +1,12 @@
 # `tests/` — the deterministic test suite
 
-83 pytest files, 615 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+83 pytest files, 636 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+`test_profile.py` gained `test_schema_declares_evidence_and_subsystems` and
+`test_profile_required_includes_attack_surface_evidence` (ISSUE-025): the schema and
+`profile._REQUIRED` now agree that `attack_surface_evidence` is required, `subsystems` optional.
 
 `test_sarif.py` gained `test_suppressed_findings_carry_insource_suppression`, covering
 `to_sarif`'s `suppressed` parameter. `test_report.py` gained
@@ -51,7 +55,7 @@ the regression guard for the CLI no longer calling `state.begin_pass` on every i
 | `test_contracts.py` | Prompt↔schema drift: a `Finding` JSON example in an agent prompt must parse against the real `models.py`. |
 | `test_finding_schema.py` | The `Finding` record stays consistent with `references/finding.schema.json`. |
 | `test_wiring.py` | Silent-backend / clsmap / dead-link regressions and attack-class routing. |
-| `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules. |
+| `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules, and (new) the `EVIDENCE_VOCABULARY` block listing every `sec_overlay.evidence` tier/status/disposition value verbatim. |
 
 ## The rest
 
@@ -63,9 +67,43 @@ bench/citation tests (`test_bench.py`, `test_citations.py`) that need local seed
 ISSUE-053: a `static-only` re-verify routes the finding to `needs-deployment-testing`, not
 `confirmed` — only `verified-static` promotes to `fixed`.
 
+`test_evidence.py` gained coverage for the shared tier/status vocab: `TIER1_RECEIPTS |
+TIER2_RECEIPTS` partitions `_MECHANICAL` exactly, `receipt_tier()` grades colon-form sources,
+`confirms_alone()` requires a Tier-1 receipt, and `SHIPPING_STATUSES`/`RUNTIME_DISPOSITIONS` match
+their fixed literal sets.
+
+`test_models.py` gained coverage for `Finding.receipt_tier` — defaults to `None`, round-trips a
+set value through `to_dict`/`from_dict`, and an absent key loads as `None`.
+
+`test_findings_gate.py` gained coverage for the tier-model gate (breaking): a `confirmed` finding
+with only Tier-2 receipts (`ripgrep`, `ast-grep`, `structural-index`, `tree-sitter`) is now
+rejected, a Tier-1 receipt (e.g. `codeql:dataflow`) still passes, an out-of-vocabulary
+`runtime_disposition` is rejected, and `receipt_tier` is stamped onto the finding file as a side
+effect of `validate_findings`. `test_driver.py` gained
+`test_findings_gate_action_halts_on_error`, confirming `_act_findings_gate` now raises
+`PhaseHalt` (previously validated silently) when the gate reports any error.
+
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 
 The review-improvements test files (`test_cluster.py`, `test_scope.py`, `test_selfscore.py`,
 `test_sarif.py`, `test_calibrate.py`, `test_report.py`) are `ruff format`-clean; run `ruff format`
 before committing edits.
+
+`test_selfscore.py` gained `test_shipping_counts_full_set`, covering `build_self_score`'s new
+`shipping` count over `evidence.SHIPPING_STATUSES`.
+
+`test_redteam.py`'s red-team bar tests now cover the coverage-first `_above_bar`: severity above
+the floor earns a directive with no receipt required; the dead `prime-manual-test` history test
+is removed, and `test_lead_carrier_without_receipt_is_not_a_directive` is replaced with
+`test_lead_carrier_without_receipt_is_still_a_directive` reflecting the new bar.
+
+`test_phase_gate.py` gained five tests for `_parse_ref`'s trailing-hint stripping (plain
+path:line, range-anchor, trailing hint after line/range, bare path, unparseable line).
+
+`test_phase_gate.py` gained three tests for the new `attack_surface_gate`: a surface backed by a
+non-comment code line passes, a surface backed only by a comment line is rejected, and a surface
+with no evidence at all is rejected.
+
+`test_prompts.py` (new) covers `prompts.render_prompt`: all tokens filled, an unfilled token
+raising `ValueError` that names it, and extra unused `subs` keys being ignored.

@@ -1,6 +1,6 @@
 # Fact-Check Agent (Phase 4.5, F8)
 
-You independently re-verify ONE already-confirmed finding's WRITTEN claims against the
+You independently re-verify ONE shipping-status finding (`confirmed`, `fixed`, or `needs-deployment-testing`)'s WRITTEN claims against the
 source — a fresh context, different from the finder and the adversarial validator. You
 catch citation drift and confidence inflation that tool receipts cannot. READ-ONLY.
 

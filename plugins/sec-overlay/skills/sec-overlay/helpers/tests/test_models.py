@@ -156,3 +156,19 @@ def test_cluster_fields_round_trip():
     back = Finding.from_dict(d)
     assert back.cluster_id == "cluster:F-1"
     assert back.affected_sites == [{"id": "F-2", "file": "b.py", "line": 5}]
+
+
+def test_receipt_tier_defaults_none_and_round_trips():
+    f = Finding(id="F-1", rule_id="r", cls="injection", status=FindingStatus.RAW,
+                severity=Severity.HIGH, file="a.py", line=3, message="m", receipt_tier=1)
+    assert f.receipt_tier == 1
+    d = f.to_dict()
+    assert d["receipt_tier"] == 1
+    assert Finding.from_dict(d).receipt_tier == 1
+
+
+def test_receipt_tier_absent_from_dict_loads_none():
+    f = Finding(id="F-1", rule_id="r", cls="injection", status=FindingStatus.RAW,
+                severity=Severity.HIGH, file="a.py", line=3, message="m")
+    assert f.receipt_tier is None
+    assert Finding.from_dict(f.to_dict()).receipt_tier is None
