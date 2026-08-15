@@ -2,6 +2,12 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 0.4.0 - 2026-08-15
+
+### Added
+
+- Add `sec_overlay.driver`: `run_deterministic_phase` gates a `PhaseSpec` on inputs/outputs, runs its registered `DETERMINISTIC_ACTIONS` entry, and records the stage — raising `PhaseHalt` when an input or output artifact is missing.
+
 ## 0.3.0 - 2026-08-15
 
 ### Added

@@ -67,3 +67,9 @@ review-improvements branch; keep them that way (run `ruff format` before committ
 `phases.py` (new) is the ordered phase table (`PhaseSpec`, `PHASE_TABLE`) plus pure sequencer
 helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit driver walks —
 see the module map entry.
+
+`driver.py` (new) is the audit sequencer: deterministic-phase runner, loud halt, agent-dispatch
+printer. `run_deterministic_phase` checks a `PhaseSpec`'s inputs, runs its registered
+`DETERMINISTIC_ACTIONS` entry, checks its outputs, then calls `record_stage` — raising
+`PhaseHalt` if an input or output artifact is missing. `AuditContext` carries the workspace,
+target, config, pinned SHA, and lazily-loaded `ScanProfile` an action needs.

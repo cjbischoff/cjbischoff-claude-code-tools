@@ -14,6 +14,10 @@ suppressed-full default and the `confirmed_only` restore path.
 after investigate, dedupe/demote-noise before report, trace present) and the pure sequencer
 helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`).
 
+`test_driver.py` (new) covers `sec_overlay/driver.py`'s `run_deterministic_phase`: raises
+`PhaseHalt` on a missing input, raises `PhaseHalt` when the action ran but a declared output is
+still absent, and records the stage `"done"` on success.
+
 ## Structural guards (know these)
 
 | Test | Guards |
