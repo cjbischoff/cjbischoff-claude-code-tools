@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.7.3 - 2026-08-15
+
+### Added
+
+- `test_every_codeql_finding_carries_receipt` regression test in `sec_overlay.codeql` to pin that
+  every parsed CodeQL finding carries a `codeql:<rule_id>` evidence source at parse time. Confirms
+  the receipt mechanism is working (ISSUE-004).
+
 ## 1.7.2 - 2026-08-15
 
 ### Fixed

@@ -121,3 +121,26 @@ def test_cls_from_tags_falls_back_to_rule_id():
     assert cls_from_tags("js/whatever", ["external/cwe/cwe-089"]) == "sqli"
     # neither maps -> unknown
     assert cls_from_tags("js/regex/missing-regexp-anchor", []) == "unknown"
+
+
+def test_every_codeql_finding_carries_receipt():
+    """Regression: every CodeQL finding must have a codeql:<rule_id> receipt (ISSUE-004)."""
+    payload = {
+        "version": "2.1.0",
+        "runs": [{
+            "tool": {"driver": {"rules": [{"id": "py/sql-injection"}]}},
+            "results": [{
+                "ruleId": "py/sql-injection",
+                "message": {"text": "SQL injection vulnerability"},
+                "locations": [{"physicalLocation": {
+                    "artifactLocation": {"uri": "app.py"},
+                    "region": {"startLine": 5}
+                }}],
+            }],
+        }]
+    }
+    findings = parse_codeql_sarif(payload)
+    assert findings, "parser produced no findings"
+    for f in findings:
+        assert any(s.startswith("codeql:") for s in f.evidence_sources), \
+            f"finding {f.id} missing codeql: evidence source"

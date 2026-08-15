@@ -1,8 +1,10 @@
 # `tests/` — the deterministic test suite
 
-85 pytest files, 663 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+85 pytest files, 664 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+`test_codeql.py` gained `test_every_codeql_finding_carries_receipt` (ISSUE-004): regression pin for codeql receipt attachment — every parsed finding must carry at least one `codeql:<rule_id>` evidence source.
 
 `test_dedupe.py` gained `test_dedupe_same_line_same_class_dedupes_without_dataflow` (ISSUE-042):
 two `RAW` findings sharing `(file, line, cls)` with empty `dataflow` and differing message

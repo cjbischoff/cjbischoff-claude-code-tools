@@ -106,7 +106,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | Module | Purpose |
 |--------|---------|
 | `sast.py` | Run semgrep; map its JSON to `Finding`s. |
-| `codeql.py` | Build/analyze a CodeQL DB; parse SARIF; **trust-gate** dangerous extractor/build-hook configs (`codeql_config_trusted`). |
+| `codeql.py` | Build/analyze a CodeQL DB; parse SARIF; **trust-gate** dangerous extractor/build-hook configs (`codeql_config_trusted`). A missing query pack silently drops that language's dataflow coverage (run `preflight` to verify all packs are installed). |
 | `sca.py` | Software-composition analysis via `osv-scanner` on lockfiles. |
 | `secrets.py` | Offline distinctive-token secret patterns (github/slack/aws/…); one finding per hit. Also backs the redactor. |
 | `prefilter.py` | Orchestrates the above **concurrently**, merges deterministically (sorted, `C-####` ids), applies exclusions, and is **never-silent**: every planned backend ends up in `backends_run` / `skipped` / `failed` with a reason. |
