@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-83 pytest files, 635 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+83 pytest files, 636 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -55,7 +55,7 @@ the regression guard for the CLI no longer calling `state.begin_pass` on every i
 | `test_contracts.py` | Prompt↔schema drift: a `Finding` JSON example in an agent prompt must parse against the real `models.py`. |
 | `test_finding_schema.py` | The `Finding` record stays consistent with `references/finding.schema.json`. |
 | `test_wiring.py` | Silent-backend / clsmap / dead-link regressions and attack-class routing. |
-| `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules. |
+| `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules, and (new) the `EVIDENCE_VOCABULARY` block listing every `sec_overlay.evidence` tier/status/disposition value verbatim. |
 
 ## The rest
 

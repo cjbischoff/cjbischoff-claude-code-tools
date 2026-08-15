@@ -34,7 +34,7 @@ answers. `references/` kills that drift two ways:
 ```mermaid
 flowchart LR
     subgraph REF["references/"]
-        PC["prompt-constants.md<br/>(12 verbatim blocks)"]
+        PC["prompt-constants.md<br/>(13 verbatim blocks)"]
         AC["attack-classes.md"]
         FT["finding-template.md"]
         HUNT["hunting/*.md"]
@@ -81,8 +81,8 @@ flowchart LR
 
 ### Prompt text — injected into agents
 
-#### `prompt-constants.md` — the constitution (12 blocks, pasted into every agent)
-The single most load-bearing file here. Twelve named blocks are copied **verbatim** into the
+#### `prompt-constants.md` — the constitution (13 blocks, pasted into every agent)
+The single most load-bearing file here. Thirteen named blocks are copied **verbatim** into the
 top of every agent prompt (agents reference it via the `{{OVERLAY_ROOT}}` path token). If
 you change a word here, every agent's behaviour changes.
 
@@ -100,6 +100,7 @@ you change a word here, every agent's behaviour changes.
 | `DIAGRAM_STYLE` | When emitting a mermaid diagram, enforce the 10-entity hard cap per diagram, one diagram per job. Short node IDs with detail in legend/edges. Diagrams are navigational; `file:line` claims live in prose, not diagram nodes. |
 | `FIELD_OWNERSHIP` | Each `Finding` field is owned by exactly one phase. Only populate your phase's Output fields; never overwrite downstream phase fields (e.g. `risk_score`, `patch_diff`). |
 | `QUALIFIER_PROOF` | A blanket security claim ("mitigated", "sanitized", "handled elsewhere") is a claim about *every* code path. Enumerate all reachable paths and confirm the qualifier on each, or state which specific paths you verified. |
+| `EVIDENCE_VOCABULARY` | The receipt tiers, shipping statuses, and `runtime_disposition` enum are closed sets — Tier-1 (`codeql`/`semgrep`/`sca`/`secrets`) confirms alone, Tier-2 (`ripgrep`/`structural-index`/`ast-grep`/`tree-sitter`) only corroborates. Bound to `sec_overlay.evidence`'s constants by a drift test. |
 
 > **Note:** the table above is authoritative. If you add or remove a block, update the count
 > in the Mermaid diagram, the section header, and this table.

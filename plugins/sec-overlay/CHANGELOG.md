@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.2.1 - 2026-08-15
+
+### Added
+
+- `EVIDENCE_VOCABULARY` block in `references/prompt-constants.md`: the closed set of receipt
+  tiers, shipping statuses, and `runtime_disposition` values, pasted into every agent prompt like
+  the other twelve blocks. A drift test in `test_docs_invariants.py` binds the block's listed
+  values to `sec_overlay.evidence`'s `TIER1_RECEIPTS`/`TIER2_RECEIPTS`/`SHIPPING_STATUSES`/
+  `RUNTIME_DISPOSITIONS` constants so the two cannot drift apart.
+
 ## 1.2.0 - 2026-08-15
 
 ### Added
