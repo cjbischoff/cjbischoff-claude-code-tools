@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.7.2 - 2026-08-15
+
+### Fixed
+
+- `dedupe_findings()` now collapses two active findings sharing `(file, line, cls)` even when
+  both have empty `dataflow` and differ only in message wording (ISSUE-042).
+- `correlate/edges.py`'s `_RECURRENCE_STATUSES` is now `evidence.SHIPPING_STATUSES` instead of a
+  separate literal, so the shipping-status set is defined once (ISSUE-005).
+
 ## 1.7.1 - 2026-08-15
 
 ### Fixed

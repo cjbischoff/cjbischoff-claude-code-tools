@@ -1,8 +1,14 @@
 # `tests/` — the deterministic test suite
 
-85 pytest files, 644 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+85 pytest files, 663 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+`test_dedupe.py` gained `test_dedupe_same_line_same_class_dedupes_without_dataflow` (ISSUE-042):
+two `RAW` findings sharing `(file, line, cls)` with empty `dataflow` and differing message
+collapse to one duplicate. `test_correlate_edges.py` gained
+`test_recurrence_uses_shared_shipping_set` (ISSUE-005), asserting `edges._RECURRENCE_STATUSES ==
+evidence.SHIPPING_STATUSES`.
 
 `test_contracts.py` gained three prompt-text assertions (ISSUE-027, ISSUE-029, ISSUE-036):
 `test_recon_prompt_requires_route_summary`, `test_architecture_prompt_requires_all_controls`,

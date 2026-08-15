@@ -75,6 +75,19 @@ def test_dedupe_ignores_non_active_statuses(tmp_path):
     assert dedupe_findings(ws) == 0  # rejected one not considered
 
 
+def test_dedupe_same_line_same_class_dedupes_without_dataflow(tmp_path):
+    """Same (file, line, cls) with empty dataflow collapses even if message differs."""
+    ws = Workspace(tmp_path / "workspace"); ws.ensure()
+    a = Finding(id="F-1", rule_id="r", cls="authz", status=FindingStatus.RAW,
+                severity=Severity.MEDIUM, file="a.py", line=10, message="one wording")
+    b = Finding(id="F-2", rule_id="r", cls="authz", status=FindingStatus.RAW,
+                severity=Severity.MEDIUM, file="a.py", line=10, message="different wording")
+    write_findings(ws, [a, b])
+    assert dedupe_findings(ws) == 1
+    statuses = {f.id: f.status for f in read_findings(ws)}
+    assert FindingStatus.DUPLICATE in statuses.values()
+
+
 def test_dedupe_stamps_fingerprint(tmp_path):
     """Test that dedupe stamps a stable fingerprint on every active finding."""
     ws = Workspace(tmp_path / "workspace"); ws.ensure()

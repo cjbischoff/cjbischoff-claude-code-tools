@@ -51,6 +51,12 @@ once a gate stamps it; `None` before that.
 `cluster.py` (new) groups ≥3 same-class, same-sink `raw` findings into one systemic cluster,
 run after dedupe and before the critic/gate ladder — see the module map entry.
 
+`dedupe.py`'s same-line pass now keys on `(file, line, cls)` alone when `dataflow` is empty,
+so two dataflow-less findings at the same site collapse regardless of message wording
+(ISSUE-042); a non-empty `dataflow` still extends the key. `correlate/edges.py`'s
+`_RECURRENCE_STATUSES` is now `evidence.SHIPPING_STATUSES` rather than a separate literal
+(ISSUE-005).
+
 `report.py` gained `collapse_clusters`, which reduces each systemic cluster to one representative
 finding (highest-risk member, or the elected primary if present) before the confirmed and
 needs-runtime buckets are counted and rendered; `render_ndt` renders an affected-sites table when
