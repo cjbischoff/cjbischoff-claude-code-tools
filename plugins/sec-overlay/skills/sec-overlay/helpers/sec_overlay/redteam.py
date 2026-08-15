@@ -41,6 +41,19 @@ def wants_runtime(f: Finding) -> bool:
     return f.runtime_disposition == "needs-runtime" or f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING
 
 
+def payload_runnable(f: Finding) -> bool:
+    """True when a payload can be traced source->sink for a live test.
+
+    A finding with a Tier-1 dataflow receipt (non-empty ``dataflow``) or a
+    reachability verdict marking it reachable is runnable; otherwise it is an
+    unrunnable precondition (needs runtime), not a live directive.
+    """
+    if f.dataflow:
+        return True
+    reach = f.reachability
+    return isinstance(reach, dict) and reach.get("reachable") is True
+
+
 def _above_bar(f: Finding, min_risk: int) -> bool:
     """Return True if a finding earns a full manual test directive.
 
@@ -73,19 +86,27 @@ def discriminate(findings: list[Finding], min_risk: int = DEFAULT_MIN_RISK) -> d
         min_risk: Confidence/priority bar (1-10) a runtime candidate must meet to enter the plan.
 
     Returns:
-        ``{"needs_runtime": [...], "static_settled": [...], "below_bar": [...]}`` — each a list
-        of :class:`Finding`, sorted by descending risk then id.
+        ``{"needs_runtime": [...], "static_settled": [...], "below_bar": [...],
+        "unrunnable": [...]}`` — each a list of :class:`Finding`, sorted by descending risk
+        then id. ``unrunnable`` holds above-bar needs-runtime findings whose payload cannot
+        be traced source->sink (see :func:`payload_runnable`).
     """
     plan: list[Finding] = []
     static_settled: list[Finding] = []
     below_bar: list[Finding] = []
+    unrunnable: list[Finding] = []
     for f in findings:
         is_reportable = f.status in _REPORTABLE
         is_ndt = f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING
         if not (is_reportable or is_ndt):
             continue
         if wants_runtime(f):
-            (plan if _above_bar(f, min_risk) else below_bar).append(f)
+            if not _above_bar(f, min_risk):
+                below_bar.append(f)
+            elif payload_runnable(f):
+                plan.append(f)
+            else:
+                unrunnable.append(f)
         else:
             static_settled.append(f)
 
@@ -96,6 +117,7 @@ def discriminate(findings: list[Finding], min_risk: int = DEFAULT_MIN_RISK) -> d
         "needs_runtime": sorted(plan, key=key),
         "static_settled": sorted(static_settled, key=key),
         "below_bar": sorted(below_bar, key=key),
+        "unrunnable": sorted(unrunnable, key=key),
     }
 
 
@@ -205,6 +227,7 @@ def render_plan(
     plan = disc["needs_runtime"]
     below = disc["below_bar"]
     settled = disc["static_settled"]
+    unrunnable = disc["unrunnable"]
     out = [
         "# sec-overlay — Red Team Runtime Test Plan",
         "",
@@ -235,7 +258,17 @@ def render_plan(
                     for f in group] if group else ["_none_", ""]
     else:
         out += ["_No confirmed finding requires runtime validation at or above the bar._", ""]
-    out += ["## Runtime-validation gaps", "",
+    out += ["## Unrunnable preconditions (payload not traceable)", "",
+            ("_Above-bar needs-runtime findings whose payload could not be traced source->sink. "
+             "These are NOT dropped — a human must first establish reachability before a live "
+             "test can be written._"), ""]
+    if unrunnable:
+        for f in unrunnable:
+            out.append(f"- `{f.id}` ({f.cls}, risk "
+                       f"{f.risk_score if f.risk_score is not None else '-'}): {f.message}")
+    else:
+        out.append("- _none_")
+    out += ["", "## Runtime-validation gaps", "",
             ("_What static analysis could not settle — worth a look with live access, but below "
              "the action bar or not yet finding-grade._"), ""]
     if below:
@@ -247,7 +280,7 @@ def render_plan(
     out += ["", "## Static-settled (no runtime test needed)", "",
             (f"{len(settled)} confirmed finding(s) are source-provable and need no live test; "
              "see the main report.")]
-    all_findings = plan + below + settled
+    all_findings = plan + below + settled + unrunnable
     questions = [f for f in all_findings if f.open_questions]
     out += ["", "## Questions to ask", "",
             ("_Unknowns a live-exploit test can't settle — org policy, external config, "
@@ -312,7 +345,8 @@ def write_plan(ws: Workspace, min_risk: int = DEFAULT_MIN_RISK, *, target: str |
             directive never gets framed as if a still-vulnerable fix were deployed.
 
     Returns:
-        ``{"plan": <path>, "needs_runtime": n, "below_bar": m, "static_settled": k}``.
+        ``{"plan": <path>, "needs_runtime": n, "below_bar": m, "static_settled": k,
+        "unrunnable": u}``.
     """
     findings = read_findings(ws)
     disc = discriminate(findings, min_risk)
@@ -327,6 +361,7 @@ def write_plan(ws: Workspace, min_risk: int = DEFAULT_MIN_RISK, *, target: str |
         "needs_runtime": len(disc["needs_runtime"]),
         "below_bar": len(disc["below_bar"]),
         "static_settled": len(disc["static_settled"]),
+        "unrunnable": len(disc["unrunnable"]),
     }
 
 

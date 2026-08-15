@@ -9,6 +9,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from sec_overlay.correlate.ingest import IngestedFinding
+from sec_overlay.evidence import SHIPPING_STATUSES
 
 
 @dataclass
@@ -86,7 +87,7 @@ def shared_dependency_edges(ings: list[IngestedFinding]) -> list[Edge]:
     return sorted(edges, key=lambda e: e.key)
 
 
-_RECURRENCE_STATUSES = {"confirmed", "needs-deployment-testing", "fixed"}
+_RECURRENCE_STATUSES = SHIPPING_STATUSES
 
 
 def same_class_recurrence_edges(ings: list[IngestedFinding]) -> list[Edge]:

@@ -1,8 +1,31 @@
 # `tests/` — the deterministic test suite
 
-83 pytest files, 636 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+85 pytest files, 677 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+`test_wiring.py` gained four regression pins (ISSUE-017, ISSUE-020, ISSUE-031, ISSUE-033) for
+already-wired items: `reconcile_plan(` and `unrouted_candidate_classes(`/`unrouted_triage_dispatch(`
+appear in `driver.py`, `render_fp_feedback` keys on `fingerprint`, and `run_deterministic_phase`
+halts with `"did not produce"` when a declared output artifact is absent. `test_fp_feedback.py`
+gained `test_feedback_survives_workspace_rename` (ISSUE-033), pinning that the fingerprint-keyed
+feedback body is identical across a workspace rename (nonce excluded from the comparison, since
+`wrap_untrusted` mints a fresh one per call).
+
+`test_codeql.py` gained `test_every_codeql_finding_carries_receipt` (ISSUE-004): regression pin for codeql receipt attachment — every parsed finding must carry at least one `codeql:<rule_id>` evidence source.
+
+`test_dedupe.py` gained `test_dedupe_same_line_same_class_dedupes_without_dataflow` (ISSUE-042):
+two `RAW` findings sharing `(file, line, cls)` with empty `dataflow` and differing message
+collapse to one duplicate. `test_correlate_edges.py` gained
+`test_recurrence_uses_shared_shipping_set` (ISSUE-005), asserting `edges._RECURRENCE_STATUSES ==
+evidence.SHIPPING_STATUSES`.
+
+`test_contracts.py` gained three prompt-text assertions (ISSUE-027, ISSUE-029, ISSUE-036):
+`test_recon_prompt_requires_route_summary`, `test_architecture_prompt_requires_all_controls`,
+and `test_threat_model_retains_every_entrypoint` check that `recon.md`, `architecture.md`, and
+`threat-model.md` each emit what `sec_overlay.route_control`'s checks look for.
+
+`test_context.py` gained three tests for `doc_coverage()`: `test_doc_coverage_warns_when_few_docs_read`, `test_doc_coverage_warns_below_ratio`, and `test_doc_coverage_no_docs_no_warning` (ISSUE-016) — validate doc coverage ratio computation and warning thresholds.
 
 `test_profile.py` gained `test_schema_declares_evidence_and_subsystems` and
 `test_profile_required_includes_attack_surface_evidence` (ISSUE-025): the schema and
@@ -83,6 +106,12 @@ effect of `validate_findings`. `test_driver.py` gained
 `test_findings_gate_action_halts_on_error`, confirming `_act_findings_gate` now raises
 `PhaseHalt` (previously validated silently) when the gate reports any error.
 
+`test_findings_gate.py` also gained coverage for `validate_citations`: an unresolved `file:line`
+citation is rejected, a genuine `line: 1` anchor on real code survives, a placeholder `line: 1`
+anchor on a missing file is rejected, a `candidate`-status finding is not gated, and a control
+finding (`context.control_findings`) forced to `confirmed` status is rejected the same way once
+its doc-cited file doesn't exist under the target root.
+
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 
@@ -98,6 +127,18 @@ the floor earns a directive with no receipt required; the dead `prime-manual-tes
 is removed, and `test_lead_carrier_without_receipt_is_not_a_directive` is replaced with
 `test_lead_carrier_without_receipt_is_still_a_directive` reflecting the new bar.
 
+`test_redteam.py` gained four payload-reachability tests (ISSUE-056):
+`test_untraceable_payload_is_unrunnable`, `test_traced_payload_is_runnable`,
+`test_reachable_dict_alone_is_runnable`, and `test_discriminate_buckets_unrunnable_separately`,
+covering the new `payload_runnable` gate and the `discriminate` `"unrunnable"` bucket. Pre-existing
+`_rt`/`_f`-built fixtures that reach `needs_runtime` now set a `dataflow` trace so they exercise
+severity/bar/sort logic, not payload traceability.
+
+`test_redteam.py` gained `test_render_plan_surfaces_unrunnable_findings_not_dropped` (ISSUE-056
+fix round 1): asserts an unrunnable finding's id appears in `render_plan`'s new "Unrunnable
+preconditions" section — a recall regression guard proving these findings are surfaced, not
+silently dropped from the plan.
+
 `test_phase_gate.py` gained five tests for `_parse_ref`'s trailing-hint stripping (plain
 path:line, range-anchor, trailing hint after line/range, bare path, unparseable line).
 
@@ -107,3 +148,20 @@ with no evidence at all is rejected.
 
 `test_prompts.py` (new) covers `prompts.render_prompt`: all tokens filled, an unfilled token
 raising `ValueError` that names it, and extra unused `subs` keys being ignored.
+
+`test_route_control.py` (new, ISSUE-027/029/036) covers `route_control.py`: a table control the
+architecture markdown omits is a `needs_follow_up` gap, a table entrypoint the threat model drops
+is a gap, no gap when everything is present, and `record_route_gaps` round-trips a gap's
+`reason`/`next_step` through `kb/coverage-ledger.json` while `validate_coverage_ledger` still
+returns no errors. Word-boundary gap tests pin the fix for substring false-negatives: a control
+that is a substring of a longer word (`auth` inside `authorization`) is still a gap, the same
+control as a standalone token is covered, and an entrypoint carrying path punctuation (`/login`)
+still matches as a standalone mention.
+
+`test_class_ext.py` (new) covers `class_ext.py`: an alias map (sqli/cmdi/xss → injection.md)
+counts coarse extension files, direct files count by name, and uncovered classes log gaps so
+coverage is never silent.
+
+`test_sast.py` gained `test_semgrep_excludes_sidecar` to verify `run_semgrep` includes
+`--exclude` flags for `.sec-overlay`, `.git`, `.venv`, and `node_modules` directories via
+the `_SKIP_DIRS` tuple.

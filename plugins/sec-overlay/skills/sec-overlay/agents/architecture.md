@@ -64,3 +64,8 @@ Keep each file focused and short — later agents read these instead of the whol
 - Ground every claim in a file (`path` or `path:line`). No speculation.
 - Prefer breadth (all components named) over depth (don't inline large code).
 - Focus on components implicated by the profile's attack surface.
+- **Enumerate all controls.** Under "Trust boundaries", name every control the profile's
+  `attack_surface` implies (auth, authz, rate-limit, csrf, input-validation, output-encoding,
+  etc.) that this codebase actually applies — one bullet per control, naming the component
+  that enforces it. A single worked example is not enough; every control the profile surfaces
+  must appear by name, even if only to note "not found" for one that's absent.

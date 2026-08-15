@@ -58,3 +58,7 @@ as text in place of the on-disk file.
 - Everything traces back to a KB entry — no new claims about code you haven't seen
   in the KB. If the KB is thin, say so and scope accordingly.
 - The hunt list is the deliverable that matters most: make it specific and ordered.
+- **Keep every entrypoint before prioritizing.** In "Attack surface by entrypoint", list
+  every entrypoint the scan profile named, one line each (entrypoint → reachable classes →
+  target components), even ones you judge low-priority — dropping an entrypoint here is a
+  coverage gap, not a simplification. Prioritization happens only in the hunt list below it.

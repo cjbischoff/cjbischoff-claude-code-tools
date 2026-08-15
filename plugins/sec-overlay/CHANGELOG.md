@@ -2,6 +2,113 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.8.3 - 2026-08-15
+
+### Fixed
+
+- `route_control.py`'s control and entrypoint coverage-gap matching is word-bounded (alphanumeric-
+  neighbor guard), not substring, so a token that is part of a longer word (`auth` inside
+  `authorization`) is no longer treated as covered and the gap is no longer suppressed.
+
+## 1.8.2 - 2026-08-15
+
+### Added
+
+- Regression pins in `test_wiring.py` for four already-wired items: `reconcile_plan(` and
+  `unrouted_candidate_classes(`/`unrouted_triage_dispatch(` in `driver.py`, `render_fp_feedback`
+  keying on `fingerprint`, and `run_deterministic_phase` halting on a missing output artifact
+  (ISSUE-017, ISSUE-020, ISSUE-031, ISSUE-033).
+- `test_feedback_survives_workspace_rename` in `test_fp_feedback.py`: pins that the fingerprint-
+  keyed false-positive feedback body is identical across a workspace rename (ISSUE-033).
+
+## 1.8.1 - 2026-08-15
+
+### Fixed
+
+- `render_plan` now renders `discriminate`'s `"unrunnable"` bucket as its own plan section
+  (`## Unrunnable preconditions (payload not traceable)`), and folds its `open_questions` into
+  "Questions to ask"; `write_plan`'s returned summary carries an `"unrunnable"` count. Previously
+  these above-bar needs-runtime findings vanished from `redteam-plan.md` and the summary entirely
+  once `payload_runnable` routed them out of `needs_runtime` (ISSUE-056).
+
+## 1.8.0 - 2026-08-15
+
+### Added
+
+- `sec_overlay.redteam.payload_runnable(f)` gates red-team payloads on reachability: a needs-
+  runtime finding above the confidence bar now reaches the manual test plan only if it carries a
+  non-empty `dataflow` trace or a `reachability` dict with `reachable is True`; otherwise it
+  routes to a new `discriminate()` `"unrunnable"` bucket instead of a live directive (ISSUE-056).
+  `agents/redteam.md` now requires the producer to trace each payload source→sink through the
+  target's own input validation before shipping it as a live test.
+
+## 1.7.3 - 2026-08-15
+
+### Added
+
+- `test_every_codeql_finding_carries_receipt` regression test in `sec_overlay.codeql` to pin that
+  every parsed CodeQL finding carries a `codeql:<rule_id>` evidence source at parse time. Confirms
+  the receipt mechanism is working (ISSUE-004).
+
+## 1.7.2 - 2026-08-15
+
+### Fixed
+
+- `dedupe_findings()` now collapses two active findings sharing `(file, line, cls)` even when
+  both have empty `dataflow` and differ only in message wording (ISSUE-042).
+- `correlate/edges.py`'s `_RECURRENCE_STATUSES` is now `evidence.SHIPPING_STATUSES` instead of a
+  separate literal, so the shipping-status set is defined once (ISSUE-005).
+
+## 1.7.1 - 2026-08-15
+
+### Fixed
+
+- `run_semgrep()` excludes `.sec-overlay`, `.git`, `.venv`, and `node_modules` directories from scans via `--no-git-ignore` flag. Prevents audit sidecar findings on the harness's own output (ISSUE-032).
+
+## 1.7.0 - 2026-08-15
+
+### Added
+
+- `sec_overlay.class_ext`: `class_extension_status()` checks which investigate/patch extension
+  files exist; absent classes are logged as gaps so coverage is never silent. Uses an alias map
+  (e.g., sqli/cmdi/xss → injection.md) to count coarse files (ISSUE-037, ISSUE-049).
+
+## 1.6.0 - 2026-08-15
+
+### Added
+
+- `recon.md`, `architecture.md`, and `threat-model.md` each gained one additive instruction so
+  their output matches `sec_overlay.route_control`'s checks: recon emits a `route_summary`
+  field, architecture names every control by key, and threat-model keeps every entrypoint
+  listed before its hunt-list prioritization (ISSUE-027, ISSUE-029, ISSUE-036).
+
+## 1.5.0 - 2026-08-15
+
+### Added
+
+- `sec_overlay.route_control`: derives one route-to-control table from `kb/scan-profile.json`
+  and checks recon, architecture, and threat-model output against it. A missing route, control,
+  or entrypoint is logged as a `needs_follow_up` gap (`reason` + `next_step`), never dropped;
+  `record_route_gaps` appends gaps into `kb/coverage-ledger.json` (ISSUE-027, ISSUE-029,
+  ISSUE-036).
+
+## 1.4.0 - 2026-08-15
+
+### Added
+
+- `validate_citations()` in `sec_overlay.findings_gate` to reject any shipping finding whose
+  `file:line` citation does not resolve against the target source, reusing
+  `phase_gate.resolve_ref`; wired into the driver's findings-gate phase alongside
+  `validate_findings` (ISSUE-018, ISSUE-019, ISSUE-023). Control findings from
+  `context.control_findings` inherit the check since they flow through the same gate.
+
+## 1.3.0 - 2026-08-15
+
+### Added
+
+- `doc_coverage()` in `sec_overlay.context` to compute read/discovered ratio with low-coverage warnings (ISSUE-016).
+- `load()` now accepts optional `repo_root` and `scan_scope` parameters to populate `provenance["docs_discovered"]` — wiring is handled by downstream caller (driver/orchestration).
+
 ## 1.2.1 - 2026-08-15
 
 ### Added

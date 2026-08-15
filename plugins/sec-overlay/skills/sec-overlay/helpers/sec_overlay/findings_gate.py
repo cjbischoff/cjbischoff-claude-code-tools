@@ -7,10 +7,16 @@ import json
 from pathlib import Path
 
 from sec_overlay.campaign import record_stage
-from sec_overlay.evidence import RUNTIME_DISPOSITIONS, confirms_alone, receipt_tier
+from sec_overlay.evidence import (
+    RUNTIME_DISPOSITIONS,
+    SHIPPING_STATUSES,
+    confirms_alone,
+    receipt_tier,
+)
 from sec_overlay.models import Finding
+from sec_overlay.phase_gate import resolve_ref
 from sec_overlay.schema import validate as _schema_validate
-from sec_overlay.workspace import Workspace
+from sec_overlay.workspace import Workspace, read_findings
 
 _FINDING_SCHEMA_PATH = Path(__file__).resolve().parents[2] / "references" / "finding.schema.json"
 
@@ -81,6 +87,36 @@ def validate_findings(ws: Workspace) -> list[str]:
                 f"{sorted(RUNTIME_DISPOSITIONS)}"
             )
     record_stage(ws, "findings-gate")
+    return errors
+
+
+def validate_citations(
+    ws: Workspace, root: str | Path, *, statuses: set[str] | None = None
+) -> list[str]:
+    """Reject shipping findings whose ``file:line`` citation does not resolve in ``root``.
+
+    A ``line: 1`` anchor is rejected only when the reference does not resolve, so a
+    genuine top-of-file finding survives while a placeholder anchor on a missing or
+    short file does not. Control findings (``context.control_findings``) inherit the
+    check because they flow through the same finding files.
+
+    Args:
+        ws: Workspace holding the findings to check.
+        root: Target source root the citations point into.
+        statuses: Finding statuses to gate; defaults to ``evidence.SHIPPING_STATUSES``.
+
+    Returns:
+        One error string per finding whose citation does not resolve; empty if all
+        gated findings resolve.
+    """
+    gated = statuses if statuses is not None else SHIPPING_STATUSES
+    errors: list[str] = []
+    for f in read_findings(ws):
+        if f.status.value not in gated:
+            continue
+        ok, _ = resolve_ref(root, f"{f.file}:{f.line}")
+        if not ok:
+            errors.append(f"{f.id}: citation {f.file}:{f.line} does not resolve")
     return errors
 
 

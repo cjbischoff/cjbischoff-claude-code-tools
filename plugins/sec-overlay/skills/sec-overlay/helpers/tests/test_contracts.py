@@ -68,3 +68,17 @@ def test_golden_raw_finding_matches_model():
         pytest.skip("no golden fixture")
     f = Finding.from_dict(json.loads(golden.read_text()))
     assert f.id and f.cls and f.status
+
+
+def test_recon_prompt_requires_route_summary():
+    assert "route" in (AGENTS / "recon.md").read_text().lower()
+
+
+def test_architecture_prompt_requires_all_controls():
+    txt = (AGENTS / "architecture.md").read_text().lower()
+    assert "all controls" in txt or "every control" in txt
+
+
+def test_threat_model_retains_every_entrypoint():
+    txt = (AGENTS / "threat-model.md").read_text().lower()
+    assert "every entrypoint" in txt or "each entrypoint" in txt

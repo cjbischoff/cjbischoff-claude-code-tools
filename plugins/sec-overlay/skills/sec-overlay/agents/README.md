@@ -136,6 +136,11 @@ the agent doesn't re-raise known false positives.
 The deterministic `helpers/…/redteam.py` then renders `redteam-plan.md` (only findings at/above
 the confidence bar). **The harness never executes the target** — it hands an operator a plan.
 
+`redteam.md` now requires the producer to trace each payload source→sink through the target's own
+input validation before shipping it as a live directive (ISSUE-056); an untraceable payload is an
+unrunnable precondition, not a live directive — enforced deterministically downstream by
+`redteam.py`'s `payload_runnable` gate, which routes such findings to a new `"unrunnable"` bucket.
+
 ### Postflight & optional extensions
 | Prompt | Role |
 |--------|------|
@@ -207,3 +212,8 @@ guarantees depend on them):
 
 **When a prompt here changes, this README must change in the same commit** — enforced by the
 repo pre-commit hook (plugin [`CLAUDE.md`](../../../CLAUDE.md), "Documentation" section).
+
+`recon.md`, `architecture.md`, and `threat-model.md` each gained one additive instruction so
+their output matches `sec_overlay.route_control`'s checks (ISSUE-027, ISSUE-029, ISSUE-036):
+recon emits a `route_summary` field, architecture names every control by key, and threat-model
+keeps every entrypoint listed before its hunt-list prioritization.

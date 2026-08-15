@@ -48,7 +48,9 @@ repo text.
    MUST be an object `{"secure": "<observed when the control holds>", "insecure": "<observed when
    it fails>"}` — not a bare string; the deterministic renderer reads both keys. Payloads use
    shell variables only (`$HOST`, `$TOKEN`, `$TARGET_ID`, …) — never literal secrets/hosts, and
-   aligned to the real code path from the finding's dataflow.
+   aligned to the real code path from the finding's dataflow. Before shipping a payload as a live
+   directive, trace it source→sink through the target's own input validation; a payload you
+   cannot trace this way is an unrunnable precondition, not a live directive.
 
 ## Output
 Update each finding file in place with `runtime_disposition` and (for `needs-runtime`) a

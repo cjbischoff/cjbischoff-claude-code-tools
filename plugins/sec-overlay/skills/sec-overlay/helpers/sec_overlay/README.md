@@ -16,6 +16,17 @@ entry point; read the parent map for the full inventory.
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
 
+`context.py` gained `doc_coverage()` to compare documents discovered vs read and flag a low read ratio. The `load()` function now accepts optional `repo_root` and `scan_scope` parameters to populate `provenance["docs_discovered"]` at load time (wiring by downstream caller) — see the module map entry.
+
+`findings_gate.py` gained `validate_citations(ws, root, *, statuses=None)`, a resolver-backed
+citation/anchor check: it rejects any finding at a gated status (default
+`evidence.SHIPPING_STATUSES`) whose `file:line` does not resolve against `root`, reusing
+`phase_gate.resolve_ref`. A `line: 1` anchor is rejected only when it fails to resolve, so a real
+top-of-file finding survives while a placeholder anchor on a missing file does not. Control
+findings from `context.control_findings` inherit the check since they land in the same finding
+files. `driver._act_findings_gate` calls it alongside `validate_findings` and folds both error
+lists into the same `PhaseHalt`.
+
 `cost.py` gained `aggregate_by_model` (per-model token totals, alongside the existing
 `aggregate_by_phase`), feeding `report.py`'s "Run economics" section — see the module map entry.
 
@@ -39,6 +50,12 @@ once a gate stamps it; `None` before that.
 
 `cluster.py` (new) groups ≥3 same-class, same-sink `raw` findings into one systemic cluster,
 run after dedupe and before the critic/gate ladder — see the module map entry.
+
+`dedupe.py`'s same-line pass now keys on `(file, line, cls)` alone when `dataflow` is empty,
+so two dataflow-less findings at the same site collapse regardless of message wording
+(ISSUE-042); a non-empty `dataflow` still extends the key. `correlate/edges.py`'s
+`_RECURRENCE_STATUSES` is now `evidence.SHIPPING_STATUSES` rather than a separate literal
+(ISSUE-005).
 
 `report.py` gained `collapse_clusters`, which reduces each systemic cluster to one representative
 finding (highest-risk member, or the elected primary if present) before the confirmed and
@@ -138,6 +155,15 @@ longer withholds the runtime test that would settle it (it still sorts later via
 rendering `_no tool receipt (verify carefully)_` in the directive block). The dead
 `redteam:prime-manual-test` history branch (no producer ever wrote that event) is removed.
 
+`redteam.py`'s `discriminate` now gates payloads on reachability (ISSUE-056): a new
+`payload_runnable(f)` returns `True` only when a finding carries a non-empty `dataflow` trace or a
+`reachability` dict with `reachable is True`; an above-bar needs-runtime finding that fails this
+check routes to a new `"unrunnable"` bucket instead of the manual plan — an untraceable payload is
+a precondition to test for, not a live directive. `render_plan` renders this bucket as its own
+`## Unrunnable preconditions (payload not traceable)` plan section (and folds its `open_questions`
+into "Questions to ask") so these findings are surfaced, never silently dropped; `write_plan`'s
+returned summary carries an `"unrunnable"` count alongside the other buckets.
+
 `redactor.py` and `factcheck.py` are now wired into the driver (ISSUE-047, ISSUE-051).
 `render_dispatch` passes its composed block through `redactor.safe_for_prompt` before returning —
 a security control that guarantees no dispatch block the orchestrator prints can carry a
@@ -164,3 +190,22 @@ from `run_phase_checks` so architecture/context claims citing a comment aren't o
 and raising `ValueError` naming every `{{TOKEN}}` left unfilled — the orchestrator renders each
 agent dispatch prompt through it so a hand-substitution gap (a literal `{{ATTACK_CLASS}}`)
 fails before the model runs instead of silently reaching it.
+
+`route_control.py` (new, ISSUE-027/029/036) derives one route-to-control table from
+`kb/scan-profile.json` (`build_route_control_table`) and checks recon, architecture, and threat-
+model output against it (`check_recon_routes`, `check_architecture_controls`,
+`check_threat_entrypoints`). A missing route, control, or entrypoint is never dropped: each check
+returns a `needs_follow_up` gap dict with `reason`/`next_step`, and `record_route_gaps` appends
+those gaps into `kb/coverage-ledger.json`'s `surfaces`, demoting `completeness` to `partial` so the
+ledger's own "complete forbids needs_follow_up" invariant still holds after the append.
+`check_architecture_controls`/`check_threat_entrypoints` match a control or entrypoint via
+`_mentions`, a word-bounded (alphanumeric-neighbor guard) check, not substring — so a token that is
+part of a longer word (`auth` inside `authorization`) is still flagged as a gap.
+
+`class_ext.py` (new) provides `class_extension_status(classes, classes_dir)` to check which
+investigate/patch extension files exist; absent classes are logged as gaps so coverage is never
+silently lost. Uses an alias map (e.g., sqli/cmdi/xss → injection.md) to count coarse files.
+
+`sast.py` now excludes `.sec-overlay`, `.git`, `.venv`, and `node_modules` directories from
+semgrep scans via `_SKIP_DIRS` tuple and `--exclude` flags, preventing audit findings on the
+harness's own sidecar output.

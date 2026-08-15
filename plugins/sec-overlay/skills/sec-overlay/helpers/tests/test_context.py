@@ -9,6 +9,7 @@ from sec_overlay.context import (
     control_findings,
     control_worklist,
     discover_context_files,
+    doc_coverage,
     hunt_rows,
     load,
     manual_review_findings,
@@ -174,6 +175,27 @@ def test_deployment_config_kind_is_valid_and_has_deployed_in_field():
 
 
 _DIAGRAM = "```mermaid\nflowchart LR\n  A[public ingress] --> B[authz: PRESENT]\n```"
+
+
+def test_doc_coverage_warns_when_few_docs_read():
+    prov = {"docs_discovered": ["a", "b", "c", "d"], "docs_read": ["a"]}
+    cov = doc_coverage(prov)
+    assert cov["discovered"] == 4
+    assert cov["read"] == 1
+    assert cov["ratio"] == 0.25
+    assert cov["warning"] is None  # 0.25 is not < 0.25
+
+
+def test_doc_coverage_warns_below_ratio():
+    prov = {"docs_discovered": ["a", "b", "c", "d", "e"], "docs_read": ["a"]}
+    cov = doc_coverage(prov)
+    assert cov["ratio"] == 0.2
+    assert cov["warning"] and "1" in cov["warning"] and "5" in cov["warning"]
+
+
+def test_doc_coverage_no_docs_no_warning():
+    cov = doc_coverage({"docs_discovered": [], "docs_read": []})
+    assert cov == {"discovered": 0, "read": 0, "ratio": 0.0, "warning": None}
 
 
 def test_render_markdown_includes_diagram_when_set():

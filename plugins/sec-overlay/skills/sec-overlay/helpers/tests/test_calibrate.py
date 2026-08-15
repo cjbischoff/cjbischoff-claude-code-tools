@@ -235,6 +235,7 @@ def test_cluster_a_acceptance_ordering(tmp_path):
         cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:H/A:H",
         preconditions=["unauthenticated", "knows order id"],
         runtime_disposition="needs-runtime",
+        dataflow=["src", "sink"],
     )
     med = Finding(
         id="SECRETS-0002",

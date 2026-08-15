@@ -4,10 +4,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from sec_overlay.correlate import edges
 from sec_overlay.correlate.edges import shared_dependency_edges
 from sec_overlay.correlate.ingest import ingest
 from sec_overlay.correlate.manifest import Manifest, Member
+from sec_overlay.evidence import SHIPPING_STATUSES
 from tests.correlate_fixtures import build_member
+
+
+def test_recurrence_uses_shared_shipping_set():
+    assert edges._RECURRENCE_STATUSES == SHIPPING_STATUSES
 
 
 def _dep(fid, osv, sev="low"):
