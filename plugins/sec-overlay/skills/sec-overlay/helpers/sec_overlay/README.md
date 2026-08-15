@@ -63,3 +63,59 @@ confirmed/fixed-only SARIF with no suppressions.
 
 `calibrate.py`, `selfscore.py`, `sarif.py`, and `report.py` are `ruff format`-clean as of the
 review-improvements branch; keep them that way (run `ruff format` before committing edits here).
+
+`phases.py` (new) is the ordered phase table (`PhaseSpec`, `PHASE_TABLE`) plus pure sequencer
+helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit driver walks —
+see the module map entry.
+
+`driver.py` (new) is the audit sequencer: deterministic-phase runner, loud halt, agent-dispatch
+printer. `run_deterministic_phase` checks a `PhaseSpec`'s inputs, runs its registered
+`DETERMINISTIC_ACTIONS` entry, checks its outputs, then calls `record_stage` — raising
+`PhaseHalt` if an input or output artifact is missing. `AuditContext` carries the workspace,
+target, config, pinned SHA, and lazily-loaded `ScanProfile` an action needs. `render_dispatch`
+returns the printable block for an agent phase — prompt file plus `{{TARGET}}`/`{{WORKSPACE}}`/
+`{{SHA}}` substitutions, plus an optional `{{ATTACK_CLASS}}` line when called with `classes=` —
+with no side effects; the orchestrator runs the model. It raises if called on a deterministic
+phase (`prompt is None`). At the `investigate` phase, `run_audit` reads `agents_to_spawn` from
+`kb/scan-profile.json`, widens it with `partition.reconcile_plan` (recon-omitted classes), passes
+the reconciled list to `render_dispatch(classes=...)`, and appends `unrouted_triage_dispatch`'s
+block — naming any candidate class still unrouted after reconciliation, with its count — so a
+`security-other`/`unknown` leftover never silently drops out of triage. `patch` gets the same
+reconciled class list passed to `render_dispatch(classes=...)` (no triage block, unlike
+`investigate`) — a multi-class run's fixes are no longer dispatched with one class token.
+
+`DETERMINISTIC_ACTIONS` is now fully populated: `prefilter` → `prefilter.run_prefilter`,
+`findings-gate` → `findings_gate.validate_findings`, `dedupe` → `dedupe.dedupe_findings`,
+`calibrate` → `calibrate.calibrate_findings`, `verify` → `verify.verify_findings`
+(a `static-only` re-verify routes the finding to `needs-deployment-testing`, never leaves it
+`confirmed` implying a dynamic check passed; only `verified-static` promotes to `fixed`),
+`demote-noise` → `partition.demote_noise`, `report` → `report.write_report`, `selfscore` →
+`selfscore.write_self_score`. `run_audit(ctx)` walks `PHASE_TABLE` from the first phase not yet
+`done`: runs deterministic phases in place, and for an agent phase auto-advances only when it has
+an output path that is *not also* one of its inputs (several agent phases — `investigate`,
+`critic`, `judge`, `validate`, `trace`, `patch` — declare the same `findings_dir` callable as both
+input and output, so the dir's mere presence never counts as "this phase ran"); otherwise it
+returns `render_dispatch(...)` and stops. Returns `"AUDIT COMPLETE"` once every phase is `done`.
+`cli.py` exposes this as its `audit` subcommand (`python -m sec_overlay.cli audit --target <T>
+--config <rules> [--workspace <WS>] [--sha <sha>]`): resolves the workspace the same way `scan`
+does and prints `run_audit`'s return value. It does **not** call `state.begin_pass` (C1 fix,
+0.10.1) — `audit` is re-invoked repeatedly across a single pass (the orchestrator runs an agent
+phase, then calls `audit` again to advance), and `begin_pass` wipes `state.stages` and bumps
+`pass_number` whenever any stage is recorded, which would livelock the six `findings_dir`-in/out
+agent phases and inflate `pass_number` by one per call. Pass lifecycle is owned solely by the
+campaign supervisor, which calls `begin_pass` once before the first `audit` invocation, mirroring
+the `scan` path (`scan` has never called `begin_pass`).
+
+`driver.py`'s `run_audit` also now guards its direct `scan-profile.json` read at the
+investigate/patch branch (M1, 0.10.1): an absent or malformed file raises `PhaseHalt` instead of
+an unhandled `FileNotFoundError`/`JSONDecodeError`, matching the "loud halt" contract every other
+phase gate honors.
+
+`redactor.py` and `factcheck.py` are now wired into the driver (ISSUE-047, ISSUE-051).
+`render_dispatch` passes its composed block through `redactor.safe_for_prompt` before returning —
+a security control that guarantees no dispatch block the orchestrator prints can carry a
+high-confidence secret. `factcheck` is a new deterministic phase between `trace` and `calibrate`,
+declared with no inputs/outputs so a hard gate never halts the run before Plan B's fact-check
+agent exists: `_act_factcheck` reads `kb/verdicts.json` if present, applies each entry via
+`factcheck.apply_verdict` (validated first with `factcheck.validate_verdict`), and no-ops silently
+when the file is absent.

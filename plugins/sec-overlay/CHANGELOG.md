@@ -2,6 +2,78 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 0.10.1 - 2026-08-15
+
+### Fixed
+
+- The `audit` CLI no longer calls `begin_pass` on every invocation (C1). It was wiping
+  `state.stages` and bumping `pass_number` on each re-invocation, livelocking the six
+  `findings_dir`-in/out agent phases (investigate, critic, judge, validate, trace, patch) that
+  rely on the orchestrator's manual `record_stage` between calls. Pass lifecycle is now owned
+  solely by the campaign supervisor, matching the `scan` path.
+- `run_audit`'s investigate/patch branch now raises `PhaseHalt` instead of crashing with
+  `FileNotFoundError`/`JSONDecodeError` when `kb/scan-profile.json` is absent or malformed.
+
+## 0.10.0 - 2026-08-15
+
+### Added
+
+- `run_audit` passes the reconciled attack-class set to the `patch` phase's dispatch, matching `investigate` (ISSUE-050). A multi-class run's patch dispatch previously fell through to the classless `render_dispatch(phase, ctx)` call and carried no `{{ATTACK_CLASS}}` line at all.
+
+### Fixed
+
+- Corrected the `begin_pass` signature and increment condition in `SKILL.md` and `CLAUDE.md` (ISSUE-002): `begin_pass(ws: Workspace, sha: str | None) -> CampaignState`, incrementing the pass counter only after a prior pass recorded a stage.
+
+## 0.9.0 - 2026-08-15
+
+### Added
+
+- Wire `redactor.safe_for_prompt` and `factcheck.apply_verdict` into the driver (ISSUE-047, ISSUE-051). `render_dispatch` now passes its composed block through `safe_for_prompt` before returning, so no agent dispatch can carry a high-confidence secret. A new deterministic `factcheck` phase between `trace` and `calibrate` applies verdicts from an optional `kb/verdicts.json`, no-oping silently until Plan B's fact-check agent writes one.
+
+## 0.8.0 - 2026-08-15
+
+### Added
+
+- `verify_findings` now routes a `static-only` re-verify to `needs-deployment-testing` instead of leaving the finding `confirmed` (ISSUE-053) — a finding `verify` cannot dynamically confirm no longer implies a dynamic check passed. `verified-static` still promotes to `fixed`; `not-fixed`/`verify-error` are unchanged.
+
+## 0.7.0 - 2026-08-15
+
+### Added
+
+- Add `sec_overlay.driver.unrouted_triage_dispatch`: a general-triage dispatch block naming any candidate class `agents_to_spawn` doesn't route (e.g. `security-other`), with its candidate count, or `None` when every class is routed.
+- Widen `render_dispatch` with an optional `classes=` kwarg, emitting a `{{ATTACK_CLASS}}` line for the investigate phase's reconciled attack-class list.
+- `run_audit`'s `investigate`-phase dispatch now reconciles `agents_to_spawn` via `partition.reconcile_plan` (recon-omitted classes) and appends `unrouted_triage_dispatch`'s block after the investigate dispatch when a class remains unrouted.
+
+### Fixed
+
+- `render_dispatch` now raises `ValueError` when called on a deterministic phase (`prompt is None`) instead of printing `agents/None.md`.
+
+## 0.6.0 - 2026-08-15
+
+### Added
+
+- Add `sec_overlay.driver.run_audit`: the resumable table-walker that runs deterministic phases in place, auto-advances agent phases only on a distinct (non-shared) output, and returns the next dispatch or `"AUDIT COMPLETE"`.
+- Register `DETERMINISTIC_ACTIONS` for `prefilter`, `findings-gate`, `dedupe`, `calibrate`, `verify`, `demote-noise`, `report`, and `selfscore`.
+- Add the `audit` CLI subcommand (`python -m sec_overlay.cli audit --target <T> --config <rules>`).
+
+## 0.5.0 - 2026-08-15
+
+### Added
+
+- Add `sec_overlay.driver.render_dispatch`: a deterministic, side-effect-free printer that names an agent phase's `agents/<prompt>` file and the `{{TARGET}}`/`{{WORKSPACE}}`/`{{SHA}}` substitutions the orchestrator must apply.
+
+## 0.4.0 - 2026-08-15
+
+### Added
+
+- Add `sec_overlay.driver`: `run_deterministic_phase` gates a `PhaseSpec` on inputs/outputs, runs its registered `DETERMINISTIC_ACTIONS` entry, and records the stage — raising `PhaseHalt` when an input or output artifact is missing.
+
+## 0.3.0 - 2026-08-15
+
+### Added
+
+- Add `sec_overlay.phases`: a frozen, ordered `PhaseSpec` table (`PHASE_TABLE`) and pure sequencer helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) for the audit driver.
+
 ## 0.2.1 - 2026-08-14
 
 ### Changed

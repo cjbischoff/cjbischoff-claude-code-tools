@@ -334,6 +334,9 @@ def verify_findings(
             f.status = FindingStatus.FIXED
             f.history.append({"event": "verify:fixed"})
             fixed += 1
+        elif result == "static-only":
+            f.status = FindingStatus.NEEDS_DEPLOYMENT_TESTING
+            f.history.append({"event": "verify:needs-deployment-testing"})
     if changed:
         write_findings(ws, findings)
     record_stage(ws, "verify")

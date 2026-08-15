@@ -104,6 +104,12 @@ def main(argv: list[str] | None = None) -> int:
     mem.add_argument("--target", required=True)
     mem.add_argument("--learn", default=None, help="Append a dated learning.")
     mem.add_argument("--tag", default="", help="Optional tag for the learning.")
+
+    audit = sub.add_parser("audit", help="run the deterministic audit driver")
+    audit.add_argument("--target", required=True)
+    audit.add_argument("--workspace")
+    audit.add_argument("--config", required=True)
+    audit.add_argument("--sha")
     args = parser.parse_args(argv)
 
     if args.cmd == "scan":
@@ -138,6 +144,23 @@ def main(argv: list[str] | None = None) -> int:
         print(f"memory: {memory.root}")
         print(f"status: {state} (pass {st['pass_number']} @ {st['active_sha']})")
         print(f"stages done: {', '.join(st['stages_done']) or '(none)'}")
+        return 0
+
+    if args.cmd == "audit":
+        from sec_overlay.driver import AuditContext, run_audit
+
+        if args.workspace:
+            ws = load_paths(workspace=args.workspace)
+        else:
+            memory = RepoMemory.for_target(args.target)
+            memory.ensure(target=args.target)
+            ws = memory.workspace
+        sha = args.sha or ""
+        # Pass lifecycle (begin_pass) is owned by the campaign supervisor, called
+        # once before the first `audit` invocation — not here, since `audit` is
+        # re-invoked repeatedly across a pass and must not wipe recorded stages.
+        ctx = AuditContext(ws=ws, target=args.target, config=args.config, sha=sha)
+        print(run_audit(ctx))
         return 0
     return 1
 

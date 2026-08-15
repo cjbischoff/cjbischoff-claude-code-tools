@@ -180,7 +180,7 @@ Driven by the main agent following [`SKILL.md`](SKILL.md). The short version:
 ```bash
 cd helpers
 uv run python -m sec_overlay.preflight        # 0 — verify semgrep/codeql/ast-grep + CodeQL packs
-# 1  begin_pass(WS, sha)
+# 1  begin_pass(ws: Workspace, sha: str | None) -> CampaignState
 # C1 spawn agents/context-ingest.md → context-adversary.md
 uv run python -m sec_overlay.graph build --target <T> --workspace <WS> --sha <sha>   # T1
 # 2-4 spawn recon → architecture → threat-model (+ phase-adversary each)
