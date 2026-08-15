@@ -95,6 +95,8 @@ class Finding:
             pass).
         affected_sites: On a cluster primary only, the list of member sites
             ``{"id", "file", "line"}``.
+        receipt_tier: Derived tool-receipt strength (see the gate that stamps it), or
+            ``None`` before that gate runs.
     """
 
     id: str
@@ -129,6 +131,7 @@ class Finding:
     open_questions: list[dict] = field(default_factory=list)
     cluster_id: str | None = None
     affected_sites: list[dict] = field(default_factory=list)
+    receipt_tier: int | None = None
 
     def to_dict(self) -> dict:
         """Serialize to a JSON-safe dict (enums become their string values)."""

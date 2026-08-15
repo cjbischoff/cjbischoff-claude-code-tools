@@ -48,6 +48,7 @@
     "runtime_dependent": {"type": "boolean"},
     "open_questions": {"type": "array", "items": {"type": "object"}},
     "cluster_id": {"type": ["string", "null"]},
-    "affected_sites": {"type": "array", "items": {"type": "object"}}
+    "affected_sites": {"type": "array", "items": {"type": "object"}},
+    "receipt_tier": {"type": ["integer", "null"]}
   }
 }

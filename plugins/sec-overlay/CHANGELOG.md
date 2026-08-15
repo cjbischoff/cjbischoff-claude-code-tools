@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 0.12.0 - 2026-08-15
+
+### Added
+
+- `Finding` gains a derived `receipt_tier: int | None` field, round-tripped by `to_dict`/
+  `from_dict` and declared in `finding.schema.json` (optional, not required). Task 3 stamps
+  the value; this task only adds it to the shared vocabulary.
+
 ## 0.11.0 - 2026-08-15
 
 ### Added

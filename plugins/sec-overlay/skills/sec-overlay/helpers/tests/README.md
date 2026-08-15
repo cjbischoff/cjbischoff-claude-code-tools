@@ -68,6 +68,9 @@ TIER2_RECEIPTS` partitions `_MECHANICAL` exactly, `receipt_tier()` grades colon-
 `confirms_alone()` requires a Tier-1 receipt, and `SHIPPING_STATUSES`/`RUNTIME_DISPOSITIONS` match
 their fixed literal sets.
 
+`test_models.py` gained coverage for `Finding.receipt_tier` — defaults to `None`, round-trips a
+set value through `to_dict`/`from_dict`, and an absent key loads as `None`.
+
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 

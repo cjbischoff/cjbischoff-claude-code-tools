@@ -31,6 +31,10 @@ sites on a cluster primary) — additive, nullable fields that round-trip throug
 `confirms_alone()` predicates — a single source of truth for later modules that need to know
 whether a source can confirm a finding alone.
 
+`models.py`'s `Finding` gained `receipt_tier: int | None` — an additive, nullable field that
+round-trips through `to_dict`/`from_dict`. It holds the value `evidence.receipt_tier()` derives
+once a gate stamps it; `None` before that.
+
 `cluster.py` (new) groups ≥3 same-class, same-sink `raw` findings into one systemic cluster,
 run after dedupe and before the critic/gate ladder — see the module map entry.
 
