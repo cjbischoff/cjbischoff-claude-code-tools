@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.8.2 - 2026-08-15
+
+### Added
+
+- Regression pins in `test_wiring.py` for four already-wired items: `reconcile_plan(` and
+  `unrouted_candidate_classes(`/`unrouted_triage_dispatch(` in `driver.py`, `render_fp_feedback`
+  keying on `fingerprint`, and `run_deterministic_phase` halting on a missing output artifact
+  (ISSUE-017, ISSUE-020, ISSUE-031, ISSUE-033).
+- `test_feedback_survives_workspace_rename` in `test_fp_feedback.py`: pins that the fingerprint-
+  keyed false-positive feedback body is identical across a workspace rename (ISSUE-033).
+
 ## 1.8.1 - 2026-08-15
 
 ### Fixed

@@ -3,6 +3,9 @@
 Regression tests for the 'silent no-op' bug class (sca/secrets declared in the
 profile but never run and never recorded) and clsmap/routing drift.
 """
+import inspect
+
+from sec_overlay import driver, fp_feedback
 from sec_overlay.clsmap import _RULE_ID_CLS, CWE_CLS
 from sec_overlay.evidence import _MECHANICAL, is_tool_receipt
 from sec_overlay.exclusions import Exclusions
@@ -100,3 +103,23 @@ def test_class_prompts_carry_proof_tuple_and_anti_collapse():
         text = (root / "agents" / "classes" / f"{name}.md").read_text().lower()
         assert "proof tuple" in text, f"{name}.md missing proof tuple"
         assert "instance" in text and "collapse" in text, f"{name}.md missing anti-collapse rule"
+
+
+def test_reconcile_runs_in_driver():  # ISSUE-020 (reconcile after context rewrite)
+    src = inspect.getsource(driver)
+    assert "reconcile_plan(" in src
+
+
+def test_unrouted_triage_wired():  # ISSUE-031
+    src = inspect.getsource(driver)
+    assert "unrouted_candidate_classes(" in src or "unrouted_triage_dispatch(" in src
+
+
+def test_fp_feedback_keys_on_fingerprint():  # ISSUE-033 (survives workspace rename)
+    src = inspect.getsource(fp_feedback.render_fp_feedback)
+    assert "fingerprint" in src
+
+
+def test_missing_output_halts_phase():  # ISSUE-017 (finding cannot live only in chat)
+    src = inspect.getsource(driver.run_deterministic_phase)
+    assert "did not produce" in src  # PhaseHalt on absent output artifact

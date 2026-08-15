@@ -1,8 +1,16 @@
 # `tests/` — the deterministic test suite
 
-85 pytest files, 669 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+85 pytest files, 674 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+`test_wiring.py` gained four regression pins (ISSUE-017, ISSUE-020, ISSUE-031, ISSUE-033) for
+already-wired items: `reconcile_plan(` and `unrouted_candidate_classes(`/`unrouted_triage_dispatch(`
+appear in `driver.py`, `render_fp_feedback` keys on `fingerprint`, and `run_deterministic_phase`
+halts with `"did not produce"` when a declared output artifact is absent. `test_fp_feedback.py`
+gained `test_feedback_survives_workspace_rename` (ISSUE-033), pinning that the fingerprint-keyed
+feedback body is identical across a workspace rename (nonce excluded from the comparison, since
+`wrap_untrusted` mints a fresh one per call).
 
 `test_codeql.py` gained `test_every_codeql_finding_carries_receipt` (ISSUE-004): regression pin for codeql receipt attachment — every parsed finding must carry at least one `codeql:<rule_id>` evidence source.
 
