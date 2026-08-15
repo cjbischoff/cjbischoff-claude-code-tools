@@ -156,10 +156,22 @@ def save(ws, ctx: Context) -> None:
     (ws.kb / "CONTEXT.md").write_text(render_markdown(ctx))
 
 
-def load(ws) -> Context:
-    """Load context.json (empty Context if absent)."""
+def load(ws, *, repo_root: str | Path | None = None, scan_scope: str = ".") -> Context:
+    """Load context.json and optionally augment with docs_discovered (empty Context if absent).
+
+    Args:
+        ws: The workspace.
+        repo_root: If provided, compute docs_discovered from this root; stores in provenance.
+        scan_scope: Target scope for discovering docs (default ".").
+
+    Returns:
+        The loaded Context, with docs_discovered added to provenance if repo_root is given.
+    """
     p = context_path(ws)
-    return Context.from_dict(json.loads(p.read_text())) if p.exists() else Context()
+    ctx = Context.from_dict(json.loads(p.read_text())) if p.exists() else Context()
+    if repo_root:
+        ctx.provenance["docs_discovered"] = discover_context_files(repo_root, scan_scope)
+    return ctx
 
 
 def render_markdown(ctx: Context) -> str:
@@ -295,3 +307,29 @@ def manual_review_findings(ctx: Context, discovery_sha: str | None = None) -> li
             history=[{"event": "context:attack-lead", "source_doc": i.source_doc}],
         ))
     return out
+
+
+def doc_coverage(provenance: dict, *, low_ratio: float = 0.25) -> dict:
+    """Compare documents discovered vs read and flag a low read ratio.
+
+    Args:
+        provenance: A ``Context.provenance`` dict; reads ``docs_discovered``
+            and ``docs_read`` (each a list; missing keys count as empty).
+        low_ratio: Warn when ``read / discovered`` is strictly below this.
+
+    Returns:
+        ``{"discovered": int, "read": int, "ratio": float, "warning": str | None}``.
+        ``warning`` is ``None`` when nothing was discovered or the ratio is
+        at or above ``low_ratio``.
+
+    Example:
+        >>> doc_coverage({"docs_discovered": ["a", "b"], "docs_read": ["a"]})["ratio"]
+        0.5
+    """
+    discovered = len(provenance.get("docs_discovered", []) or [])
+    read = len(provenance.get("docs_read", []) or [])
+    ratio = (read / discovered) if discovered else 0.0
+    warning = None
+    if discovered and ratio < low_ratio:
+        warning = f"low doc coverage: read {read} of {discovered} discovered documents"
+    return {"discovered": discovered, "read": read, "ratio": ratio, "warning": warning}

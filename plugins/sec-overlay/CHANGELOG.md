@@ -2,6 +2,13 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.3.0 - 2026-08-15
+
+### Added
+
+- `doc_coverage()` in `sec_overlay.context` to compute read/discovered ratio with low-coverage warnings (ISSUE-016).
+- `load()` now accepts optional `repo_root` and `scan_scope` parameters to populate `provenance["docs_discovered"]` — wiring is handled by downstream caller (driver/orchestration).
+
 ## 1.2.1 - 2026-08-15
 
 ### Added

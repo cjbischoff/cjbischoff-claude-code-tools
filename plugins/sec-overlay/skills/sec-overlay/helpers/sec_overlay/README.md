@@ -16,6 +16,8 @@ entry point; read the parent map for the full inventory.
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
 
+`context.py` gained `doc_coverage()` to compare documents discovered vs read and flag a low read ratio. The `load()` function now accepts optional `repo_root` and `scan_scope` parameters to populate `provenance["docs_discovered"]` at load time (wiring by downstream caller) — see the module map entry.
+
 `cost.py` gained `aggregate_by_model` (per-model token totals, alongside the existing
 `aggregate_by_phase`), feeding `report.py`'s "Run economics" section — see the module map entry.
 
