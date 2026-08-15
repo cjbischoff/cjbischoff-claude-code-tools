@@ -187,3 +187,7 @@ ledger's own "complete forbids needs_follow_up" invariant still holds after the 
 `class_ext.py` (new) provides `class_extension_status(classes, classes_dir)` to check which
 investigate/patch extension files exist; absent classes are logged as gaps so coverage is never
 silently lost. Uses an alias map (e.g., sqli/cmdi/xss → injection.md) to count coarse files.
+
+`sast.py` now excludes `.sec-overlay`, `.git`, `.venv`, and `node_modules` directories from
+semgrep scans via `_SKIP_DIRS` tuple and `--exclude` flags, preventing audit findings on the
+harness's own sidecar output.

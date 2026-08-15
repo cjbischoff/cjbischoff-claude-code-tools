@@ -2,6 +2,12 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.7.1 - 2026-08-15
+
+### Fixed
+
+- `run_semgrep()` excludes `.sec-overlay`, `.git`, `.venv`, and `node_modules` directories from scans via `--no-git-ignore` flag. Prevents audit sidecar findings on the harness's own output (ISSUE-032).
+
 ## 1.7.0 - 2026-08-15
 
 ### Added

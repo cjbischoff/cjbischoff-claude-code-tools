@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-85 pytest files, 643 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+85 pytest files, 644 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -130,3 +130,7 @@ returns no errors.
 `test_class_ext.py` (new) covers `class_ext.py`: an alias map (sqli/cmdi/xss → injection.md)
 counts coarse extension files, direct files count by name, and uncovered classes log gaps so
 coverage is never silent.
+
+`test_sast.py` gained `test_semgrep_excludes_sidecar` to verify `run_semgrep` includes
+`--exclude` flags for `.sec-overlay`, `.git`, `.venv`, and `node_modules` directories via
+the `_SKIP_DIRS` tuple.

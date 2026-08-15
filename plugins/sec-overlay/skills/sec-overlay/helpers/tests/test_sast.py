@@ -1,8 +1,10 @@
 """Tests for semgrep parsing + running."""
 
+import json
+
 from sec_overlay.evidence import is_tool_receipt
 from sec_overlay.models import FindingStatus, Severity
-from sec_overlay.sast import parse_semgrep_json, run_semgrep
+from sec_overlay.sast import _SKIP_DIRS, parse_semgrep_json, run_semgrep
 
 SAMPLE = {
     "results": [
@@ -84,3 +86,20 @@ def test_parse_semgrep_stamps_tool_receipt():
     assert f.evidence_sources == ["semgrep:rules.python-sqli-string-format"]
     # Verify it is recognized as a genuine tool receipt
     assert is_tool_receipt(f.evidence_sources[0]) is True
+
+
+def test_semgrep_excludes_sidecar():
+    captured = {}
+
+    def fake_runner(cmd, **kw):
+        captured["cmd"] = cmd
+        class R:
+            stdout = json.dumps({"results": []})
+        return R()
+
+    run_semgrep("/repo", "rules.yaml", runner=fake_runner)
+    cmd = captured["cmd"]
+    for d in _SKIP_DIRS:
+        i = cmd.index(d)
+        assert cmd[i - 1] == "--exclude"
+    assert ".sec-overlay" in _SKIP_DIRS

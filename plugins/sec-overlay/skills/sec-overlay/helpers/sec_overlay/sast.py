@@ -12,6 +12,7 @@ import subprocess
 from sec_overlay.clsmap import cls_from_semgrep_meta
 from sec_overlay.models import Finding, FindingStatus, Severity
 
+_SKIP_DIRS: tuple[str, ...] = (".sec-overlay", ".git", ".venv", "node_modules")
 _SEMGREP_SEVERITY = {"ERROR": Severity.HIGH, "WARNING": Severity.MEDIUM, "INFO": Severity.LOW}
 
 
@@ -57,6 +58,9 @@ def run_semgrep(target: str, config: str, *, runner=subprocess.run) -> list[Find
     Returns:
         Candidate findings parsed from semgrep JSON output.
     """
-    cmd = ["semgrep", "--config", config, "--json", "--no-git-ignore", target]
+    cmd = ["semgrep", "--config", config, "--json", "--no-git-ignore"]
+    for d in _SKIP_DIRS:
+        cmd += ["--exclude", d]
+    cmd.append(target)
     completed = runner(cmd, capture_output=True, text=True, check=False)
     return parse_semgrep_json(json.loads(completed.stdout))
