@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.6.0 - 2026-08-15
+
+### Added
+
+- `recon.md`, `architecture.md`, and `threat-model.md` each gained one additive instruction so
+  their output matches `sec_overlay.route_control`'s checks: recon emits a `route_summary`
+  field, architecture names every control by key, and threat-model keeps every entrypoint
+  listed before its hunt-list prioritization (ISSUE-027, ISSUE-029, ISSUE-036).
+
 ## 1.5.0 - 2026-08-15
 
 ### Added

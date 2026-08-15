@@ -4,6 +4,11 @@
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+`test_contracts.py` gained three prompt-text assertions (ISSUE-027, ISSUE-029, ISSUE-036):
+`test_recon_prompt_requires_route_summary`, `test_architecture_prompt_requires_all_controls`,
+and `test_threat_model_retains_every_entrypoint` check that `recon.md`, `architecture.md`, and
+`threat-model.md` each emit what `sec_overlay.route_control`'s checks look for.
+
 `test_context.py` gained three tests for `doc_coverage()`: `test_doc_coverage_warns_when_few_docs_read`, `test_doc_coverage_warns_below_ratio`, and `test_doc_coverage_no_docs_no_warning` (ISSUE-016) — validate doc coverage ratio computation and warning thresholds.
 
 `test_profile.py` gained `test_schema_declares_evidence_and_subsystems` and
