@@ -66,13 +66,13 @@ def test_verify_findings_promotes_verified_to_fixed(tmp_path):
     assert f.verification == "verified-static"
 
 
-def test_verify_findings_static_only_stays_confirmed(tmp_path):
+def test_verify_findings_static_only_routes_to_needs_deployment_testing(tmp_path):
     ws = Workspace(tmp_path / "workspace"); ws.ensure()
     write_findings(ws, [_confirmed("F-0001", "secrets")])
     n = verify_findings(ws, "t", "c", verifier=lambda *a, **k: "static-only")
     assert n == 0
     f = read_findings(ws)[0]
-    assert f.status is FindingStatus.CONFIRMED
+    assert f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING
     assert f.verification == "static-only"
 
 

@@ -84,7 +84,9 @@ block — naming any candidate class still unrouted after reconciliation, with i
 
 `DETERMINISTIC_ACTIONS` is now fully populated: `prefilter` → `prefilter.run_prefilter`,
 `findings-gate` → `findings_gate.validate_findings`, `dedupe` → `dedupe.dedupe_findings`,
-`calibrate` → `calibrate.calibrate_findings`, `verify` → `verify.verify_findings`,
+`calibrate` → `calibrate.calibrate_findings`, `verify` → `verify.verify_findings`
+(a `static-only` re-verify routes the finding to `needs-deployment-testing`, never leaves it
+`confirmed` implying a dynamic check passed; only `verified-static` promotes to `fixed`),
 `demote-noise` → `partition.demote_noise`, `report` → `report.write_report`, `selfscore` →
 `selfscore.write_self_score`. `run_audit(ctx)` walks `PHASE_TABLE` from the first phase not yet
 `done`: runs deterministic phases in place, and for an agent phase auto-advances only when it has

@@ -42,6 +42,10 @@ The remaining files are per-module unit tests named `test_<module>.py` mirroring
 `sec_overlay/<module>.py` (e.g. `test_calibrate.py`, `test_verify.py`, `test_dedupe.py`), plus
 bench/citation tests (`test_bench.py`, `test_citations.py`) that need local seed data.
 
+`test_verify.py`'s `test_verify_findings_static_only_routes_to_needs_deployment_testing` covers
+ISSUE-053: a `static-only` re-verify routes the finding to `needs-deployment-testing`, not
+`confirmed` — only `verified-static` promotes to `fixed`.
+
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 
