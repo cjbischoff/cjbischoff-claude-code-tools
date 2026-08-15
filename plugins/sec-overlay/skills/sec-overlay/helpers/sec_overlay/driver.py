@@ -6,6 +6,7 @@ stops until the orchestrator produces the phase's declared outputs. It never
 calls a model: agents stay external and independent.
 """
 
+import json
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -13,7 +14,7 @@ from sec_overlay.calibrate import calibrate_findings
 from sec_overlay.campaign import record_stage
 from sec_overlay.dedupe import dedupe_findings
 from sec_overlay.findings_gate import validate_findings
-from sec_overlay.partition import demote_noise
+from sec_overlay.partition import demote_noise, reconcile_plan, unrouted_candidate_classes
 from sec_overlay.phases import (
     PHASE_TABLE,
     PhaseSpec,
@@ -84,20 +85,63 @@ def run_deterministic_phase(phase: PhaseSpec, ctx: AuditContext) -> None:
     record_stage(ctx.ws, phase.name)
 
 
-def render_dispatch(phase: PhaseSpec, ctx: AuditContext) -> str:
+def render_dispatch(
+    phase: PhaseSpec, ctx: AuditContext, *, classes: list[str] | None = None
+) -> str:
     """Return the dispatch block for an agent phase.
 
     The orchestrator runs the model; this only tells it which prompt to run and
     what to substitute. Advancement happens later, when the phase's declared
     outputs exist.
+
+    Args:
+        phase: The agent phase to dispatch.
+        ctx: The audit context threaded through the run.
+        classes: Attack classes to fan out to (e.g. investigate's reconciled
+            plan). Omitted from the block when ``None``.
+
+    Raises:
+        ValueError: ``phase`` has no prompt (it is a deterministic phase, not
+            an agent phase — ``render_dispatch`` only ever applies to agents).
     """
+    if phase.prompt is None:
+        raise ValueError(f"render_dispatch requires an agent phase; {phase.name!r} has no prompt")
     outputs = ", ".join(str(p(ctx.ws)) for p in phase.outputs) or "(none)"
+    class_line = ""
+    if classes:
+        class_line = "\n  {{ATTACK_CLASS}}=" + ",".join(classes)
     return (
         f"NEXT AGENT PHASE: {phase.name}\n"
         f"  prompt: agents/{phase.prompt}\n"
         f"  substitute: {{{{TARGET}}}}={ctx.target} "
-        f"{{{{WORKSPACE}}}}={ctx.ws.root} {{{{SHA}}}}={ctx.sha}\n"
+        f"{{{{WORKSPACE}}}}={ctx.ws.root} {{{{SHA}}}}={ctx.sha}"
+        f"{class_line}\n"
         f"  required outputs before advancing: {outputs}"
+    )
+
+
+def unrouted_triage_dispatch(ctx: AuditContext, agents_to_spawn: list[str]) -> str | None:
+    """Return a general-triage dispatch for candidate classes not in the plan.
+
+    Returns None when every candidate class is already routed to an agent.
+
+    Args:
+        ctx: The audit context threaded through the run.
+        agents_to_spawn: The reconciled ``agents_to_spawn`` list.
+
+    Returns:
+        A dispatch block naming each unrouted class and its candidate count,
+        or ``None`` when nothing is unrouted.
+    """
+    unrouted = unrouted_candidate_classes(ctx.ws, agents_to_spawn)
+    if not unrouted:
+        return None
+    rows = ", ".join(f"{cls}={n}" for cls, n in sorted(unrouted.items()))
+    return (
+        "UNROUTED CANDIDATE CLASSES — spawn general triage\n"
+        "  prompt: agents/investigate.md (general-triage)\n"
+        f"  classes: {rows}\n"
+        f"  substitute: {{{{TARGET}}}}={ctx.target} {{{{WORKSPACE}}}}={ctx.ws.root}"
     )
 
 
@@ -183,4 +227,11 @@ def run_audit(ctx: AuditContext, *, table: tuple[PhaseSpec, ...] = PHASE_TABLE) 
         if distinct_outputs and all(p(ctx.ws).exists() for p in distinct_outputs):
             record_stage(ctx.ws, phase.name)
             continue
+        if phase.name == "investigate":
+            profile = json.loads((ctx.ws.kb / "scan-profile.json").read_text())
+            planned = list(profile.get("agents_to_spawn", []))
+            reconciled = reconcile_plan(ctx.ws, planned)  # ISSUE-006: recon-omitted classes
+            block = render_dispatch(phase, ctx, classes=reconciled)
+            triage = unrouted_triage_dispatch(ctx, reconciled)
+            return block if triage is None else block + "\n" + triage
         return render_dispatch(phase, ctx)

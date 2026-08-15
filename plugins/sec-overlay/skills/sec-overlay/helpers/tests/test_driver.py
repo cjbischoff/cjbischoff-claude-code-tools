@@ -120,6 +120,74 @@ def test_run_audit_advances_past_completed_agent_phase(tmp_path):
     assert "NEXT AGENT PHASE: architecture" in out
 
 
+def test_unrouted_triage_dispatch_lists_unrouted_classes(tmp_path, monkeypatch):
+    from sec_overlay import driver
+    from sec_overlay.driver import AuditContext, unrouted_triage_dispatch
+
+    ctx = AuditContext(ws=Workspace(tmp_path / "w"), target="t", config="c", sha="s")
+    ctx.ws.ensure()
+    monkeypatch.setattr(
+        driver, "unrouted_candidate_classes", lambda ws, plan: {"security-other": 3}
+    )
+    out = unrouted_triage_dispatch(ctx, ["sqli"])
+    assert out is not None and "security-other" in out and "3" in out
+
+
+def test_unrouted_triage_dispatch_none_when_all_routed(tmp_path, monkeypatch):
+    from sec_overlay import driver
+    from sec_overlay.driver import AuditContext, unrouted_triage_dispatch
+
+    ctx = AuditContext(ws=Workspace(tmp_path / "w"), target="t", config="c", sha="s")
+    ctx.ws.ensure()
+    monkeypatch.setattr(driver, "unrouted_candidate_classes", lambda ws, plan: {})
+    assert unrouted_triage_dispatch(ctx, ["sqli"]) is None
+
+
+def _stage_to_investigate(ws):
+    from sec_overlay.state import begin_pass
+
+    begin_pass(ws, "sha1")
+    for stage in ("recon", "architecture", "threat_model", "prefilter"):
+        record_stage(ws, stage)
+
+
+def test_run_audit_appends_triage_block_at_investigate(tmp_path, monkeypatch):
+    from sec_overlay import driver
+    from sec_overlay.driver import AuditContext, run_audit
+
+    ws = Workspace(tmp_path / "w")
+    ws.ensure()
+    _stage_to_investigate(ws)
+    (ws.kb / "scan-profile.json").write_text('{"agents_to_spawn": ["sqli"]}')
+    ctx = AuditContext(ws=ws, target=str(tmp_path / "t"), config="cfg", sha="sha1")
+
+    monkeypatch.setattr(driver, "reconcile_plan", lambda ws, plan: list(plan))
+    monkeypatch.setattr(
+        driver, "unrouted_candidate_classes", lambda ws, plan: {"security-other": 2}
+    )
+    out = run_audit(ctx)
+    assert "NEXT AGENT PHASE: investigate" in out
+    assert "UNROUTED CANDIDATE CLASSES" in out
+    assert "security-other" in out and "2" in out
+
+
+def test_run_audit_investigate_dispatch_includes_reconciled_class(tmp_path, monkeypatch):
+    from sec_overlay import driver
+    from sec_overlay.driver import AuditContext, run_audit
+
+    ws = Workspace(tmp_path / "w")
+    ws.ensure()
+    _stage_to_investigate(ws)
+    (ws.kb / "scan-profile.json").write_text('{"agents_to_spawn": ["sqli"]}')
+    ctx = AuditContext(ws=ws, target=str(tmp_path / "t"), config="cfg", sha="sha1")
+
+    monkeypatch.setattr(driver, "reconcile_plan", lambda ws, plan: [*plan, "idor"])
+    monkeypatch.setattr(driver, "unrouted_candidate_classes", lambda ws, plan: {})
+    out = run_audit(ctx)
+    assert "NEXT AGENT PHASE: investigate" in out
+    assert "idor" in out
+
+
 def test_run_audit_does_not_skip_agent_phase_with_findings_dir_io(tmp_path):
     """critic shares its findings_dir path as both input and output with its
     siblings — auto-advance must not mistake the dir's mere presence for

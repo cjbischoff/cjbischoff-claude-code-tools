@@ -74,7 +74,13 @@ printer. `run_deterministic_phase` checks a `PhaseSpec`'s inputs, runs its regis
 `PhaseHalt` if an input or output artifact is missing. `AuditContext` carries the workspace,
 target, config, pinned SHA, and lazily-loaded `ScanProfile` an action needs. `render_dispatch`
 returns the printable block for an agent phase — prompt file plus `{{TARGET}}`/`{{WORKSPACE}}`/
-`{{SHA}}` substitutions — with no side effects; the orchestrator runs the model.
+`{{SHA}}` substitutions, plus an optional `{{ATTACK_CLASS}}` line when called with `classes=` —
+with no side effects; the orchestrator runs the model. It raises if called on a deterministic
+phase (`prompt is None`). At the `investigate` phase, `run_audit` reads `agents_to_spawn` from
+`kb/scan-profile.json`, widens it with `partition.reconcile_plan` (recon-omitted classes), passes
+the reconciled list to `render_dispatch(classes=...)`, and appends `unrouted_triage_dispatch`'s
+block — naming any candidate class still unrouted after reconciliation, with its count — so a
+`security-other`/`unknown` leftover never silently drops out of triage.
 
 `DETERMINISTIC_ACTIONS` is now fully populated: `prefilter` → `prefilter.run_prefilter`,
 `findings-gate` → `findings_gate.validate_findings`, `dedupe` → `dedupe.dedupe_findings`,

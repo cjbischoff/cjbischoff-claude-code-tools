@@ -21,7 +21,11 @@ returned block names the `agents/<prompt>` file and the substituted target/works
 `run_audit` tests (new) cover the resumable table-walker: halts at `recon` with no scan-profile
 yet, auto-advances past `recon` once its output exists and halts at `architecture`, and — the
 regression guard — does NOT auto-skip `critic` just because `findings_dir` (its shared
-input/output path) already exists from earlier phases.
+input/output path) already exists from earlier phases. Also covers `unrouted_triage_dispatch`
+(names an unrouted class and its count; `None` when `unrouted_candidate_classes` is empty) and
+the `investigate`-phase wiring in `run_audit`: the dispatch carries `render_dispatch`'s reconciled
+`{{ATTACK_CLASS}}` list (including a class `reconcile_plan` added that recon omitted), and the
+triage block is appended after it when a class stays unrouted.
 
 ## Structural guards (know these)
 
