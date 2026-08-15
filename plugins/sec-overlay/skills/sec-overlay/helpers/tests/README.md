@@ -28,8 +28,11 @@ halts at `architecture`, and — the regression guard — does NOT auto-skip `cr
 `unrouted_candidate_classes` is empty), the `investigate`-phase wiring in `run_audit` (the dispatch
 carries `render_dispatch`'s reconciled `{{ATTACK_CLASS}}` list, including a class `reconcile_plan`
 added that recon omitted, and the triage block is appended after it when a class stays unrouted),
-and `test_factcheck_action_applies_verdicts` — writes a `kb/verdicts.json` VERIFIED verdict for
-one finding, runs `DETERMINISTIC_ACTIONS["factcheck"]`, and asserts the finding is stamped
+`test_run_audit_passes_full_class_set_to_patch_dispatch` — drives `run_audit` up through
+`calibrate` so `patch` is the actionable phase and asserts its dispatch carries every class from
+`agents_to_spawn`, not one token (ISSUE-050), and `test_factcheck_action_applies_verdicts` —
+writes a `kb/verdicts.json` VERIFIED verdict for one finding, runs
+`DETERMINISTIC_ACTIONS["factcheck"]`, and asserts the finding is stamped
 `verification="fact-checked"` (ISSUE-047).
 
 ## Structural guards (know these)

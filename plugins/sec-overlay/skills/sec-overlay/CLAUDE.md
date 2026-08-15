@@ -53,7 +53,7 @@ local semgrep ruleset.
 
 ```
 0  Preflight        python -m sec_overlay.preflight        # verify semgrep/codeql/ast-grep + CodeQL packs
-1  Begin pass       sec_overlay.state.begin_pass(WS, sha)  # pins SHA, increments pass counter
+1  Begin pass       sec_overlay.state.begin_pass(ws: Workspace, sha: str | None) -> CampaignState  # pins SHA, increments only after a prior pass recorded a stage
 C1 Context-ingest   agents/context-ingest.md (sonnet) → context-adversary.md (opus)   # repo docs as UNTRUSTED
 T1 Tier-1 substrate  python -m sec_overlay.graph build --target <T> --workspace <WS> --sha <sha>
                      # LLM-free: structural_index + regex call-edges + osv/secrets/crypto → kb/graph.json v1

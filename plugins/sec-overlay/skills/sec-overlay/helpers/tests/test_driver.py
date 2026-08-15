@@ -216,6 +216,28 @@ def test_run_audit_does_not_skip_agent_phase_with_findings_dir_io(tmp_path):
     assert load_state(ws).stages.get("critic") != "done"
 
 
+def test_run_audit_passes_full_class_set_to_patch_dispatch(tmp_path):
+    """The patch phase's dispatch must list every attack class in play
+    (ISSUE-050) — not fall through to the classless ``render_dispatch(phase,
+    ctx)`` call that every non-investigate agent phase used to get."""
+    from sec_overlay.driver import AuditContext, run_audit
+    from sec_overlay.phases import PHASE_TABLE
+    from sec_overlay.state import begin_pass
+
+    ws = Workspace(tmp_path / "w")
+    ws.ensure()
+    begin_pass(ws, "sha1")
+    patch_index = next(i for i, p in enumerate(PHASE_TABLE) if p.name == "patch")
+    for phase in PHASE_TABLE[:patch_index]:
+        record_stage(ws, phase.name)
+    (ws.kb / "scan-profile.json").write_text('{"agents_to_spawn": ["sqli", "xss", "ssrf"]}')
+    ctx = AuditContext(ws=ws, target=str(tmp_path / "t"), config="cfg", sha="sha1")
+
+    out = run_audit(ctx)
+    assert "NEXT AGENT PHASE: patch" in out
+    assert "sqli" in out and "xss" in out and "ssrf" in out
+
+
 def test_dispatch_is_secret_redacted(tmp_path, monkeypatch):
     from sec_overlay import driver
     from sec_overlay.driver import AuditContext, render_dispatch

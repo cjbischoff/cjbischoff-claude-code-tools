@@ -80,7 +80,9 @@ phase (`prompt is None`). At the `investigate` phase, `run_audit` reads `agents_
 `kb/scan-profile.json`, widens it with `partition.reconcile_plan` (recon-omitted classes), passes
 the reconciled list to `render_dispatch(classes=...)`, and appends `unrouted_triage_dispatch`'s
 block — naming any candidate class still unrouted after reconciliation, with its count — so a
-`security-other`/`unknown` leftover never silently drops out of triage.
+`security-other`/`unknown` leftover never silently drops out of triage. `patch` gets the same
+reconciled class list passed to `render_dispatch(classes=...)` (no triage block, unlike
+`investigate`) — a multi-class run's fixes are no longer dispatched with one class token.
 
 `DETERMINISTIC_ACTIONS` is now fully populated: `prefilter` → `prefilter.run_prefilter`,
 `findings-gate` → `findings_gate.validate_findings`, `dedupe` → `dedupe.dedupe_findings`,

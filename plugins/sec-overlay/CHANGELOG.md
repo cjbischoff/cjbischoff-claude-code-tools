@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 0.10.0 - 2026-08-15
+
+### Added
+
+- `run_audit` passes the reconciled attack-class set to the `patch` phase's dispatch, matching `investigate` (ISSUE-050). A multi-class run's patch dispatch previously fell through to the classless `render_dispatch(phase, ctx)` call and carried no `{{ATTACK_CLASS}}` line at all.
+
+### Fixed
+
+- Corrected the `begin_pass` signature and increment condition in `SKILL.md` and `CLAUDE.md` (ISSUE-002): `begin_pass(ws: Workspace, sha: str | None) -> CampaignState`, incrementing the pass counter only after a prior pass recorded a stage.
+
 ## 0.9.0 - 2026-08-15
 
 ### Added

@@ -256,11 +256,13 @@ def run_audit(ctx: AuditContext, *, table: tuple[PhaseSpec, ...] = PHASE_TABLE) 
         if distinct_outputs and all(p(ctx.ws).exists() for p in distinct_outputs):
             record_stage(ctx.ws, phase.name)
             continue
-        if phase.name == "investigate":
+        if phase.name in ("investigate", "patch"):
             profile = json.loads((ctx.ws.kb / "scan-profile.json").read_text())
             planned = list(profile.get("agents_to_spawn", []))
             reconciled = reconcile_plan(ctx.ws, planned)  # ISSUE-006: recon-omitted classes
             block = render_dispatch(phase, ctx, classes=reconciled)
+            if phase.name != "investigate":
+                return block
             triage = unrouted_triage_dispatch(ctx, reconciled)
             return block if triage is None else block + "\n" + triage
         return render_dispatch(phase, ctx)
