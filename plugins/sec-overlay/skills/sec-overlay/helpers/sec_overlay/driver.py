@@ -160,7 +160,11 @@ def _act_prefilter(ctx: AuditContext) -> None:
 
 
 def _act_findings_gate(ctx: AuditContext) -> None:
-    validate_findings(ctx.ws)  # records its own stage too; harmless
+    errors = validate_findings(ctx.ws)  # records its own stage too
+    if errors:
+        raise PhaseHalt(
+            f"findings-gate rejected {len(errors)} finding(s): " + "; ".join(errors)
+        )
 
 
 def _act_dedupe(ctx: AuditContext) -> None:

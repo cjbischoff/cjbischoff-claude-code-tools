@@ -43,6 +43,16 @@ finding (highest-risk member, or the elected primary if present) before the conf
 needs-runtime buckets are counted and rendered; `render_ndt` renders an affected-sites table when
 the finding carries `affected_sites`.
 
+**Breaking:** `findings_gate.validate_findings` now enforces the tier model instead of the
+old "any mechanical receipt confirms" rule. It stamps `Finding.receipt_tier` (the lowest —
+strongest — tier among `evidence_sources`, via `evidence.receipt_tier`), rejects a
+`confirmed`/`fixed` finding unless `evidence.confirms_alone` is true (a Tier-1 receipt), and
+rejects any `runtime_disposition` outside `evidence.RUNTIME_DISPOSITIONS`. A ripgrep-only
+receipt — previously sufficient for SAST-unsupported languages — now fails the gate; route
+that finding to `needs-deployment-testing` instead. `driver._act_findings_gate` raises
+`PhaseHalt` when the gate returns any error, so a rejected finding now halts the phase
+instead of passing through silently.
+
 `scope.py` (new) checks `is_external_package(pkg, ws)` against `kb/scan-scope.json`'s
 `ingested_packages` list, so a sink that resolves into an un-ingested dependency can be flagged as
 outside the scanned source — returns `False` (not external) when no manifest exists, so the check

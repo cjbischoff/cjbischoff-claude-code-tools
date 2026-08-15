@@ -2,6 +2,24 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.0.0 - 2026-08-15
+
+### Changed
+
+- **Breaking:** the findings gate now requires a Tier-1 tool receipt (codeql/semgrep/sca/
+  secrets) for any `confirmed`/`fixed` finding. A Tier-2-only receipt (ripgrep/ast-grep/
+  structural-index/tree-sitter) — previously enough to confirm a finding on
+  SAST-unsupported languages — now fails the gate and must route to
+  `needs-deployment-testing` instead. The gate also stamps `Finding.receipt_tier` and
+  rejects any `runtime_disposition` value outside the shared enum. `_act_findings_gate`
+  now raises `PhaseHalt` when the gate reports errors, instead of validating silently.
+
+### BREAKING CHANGE
+
+Any pipeline consumer treating `confirmed`/`fixed` as ground truth for a ripgrep-only
+finding must re-triage it as `needs-deployment-testing` — a manual test directive, not
+an automatic confirmation.
+
 ## 0.12.0 - 2026-08-15
 
 ### Added

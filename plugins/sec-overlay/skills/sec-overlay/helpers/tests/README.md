@@ -71,6 +71,14 @@ their fixed literal sets.
 `test_models.py` gained coverage for `Finding.receipt_tier` — defaults to `None`, round-trips a
 set value through `to_dict`/`from_dict`, and an absent key loads as `None`.
 
+`test_findings_gate.py` gained coverage for the tier-model gate (breaking): a `confirmed` finding
+with only Tier-2 receipts (`ripgrep`, `ast-grep`, `structural-index`, `tree-sitter`) is now
+rejected, a Tier-1 receipt (e.g. `codeql:dataflow`) still passes, an out-of-vocabulary
+`runtime_disposition` is rejected, and `receipt_tier` is stamped onto the finding file as a side
+effect of `validate_findings`. `test_driver.py` gained
+`test_findings_gate_action_halts_on_error`, confirming `_act_findings_gate` now raises
+`PhaseHalt` (previously validated silently) when the gate reports any error.
+
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 
