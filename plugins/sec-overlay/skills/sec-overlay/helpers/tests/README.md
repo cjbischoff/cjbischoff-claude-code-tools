@@ -88,3 +88,8 @@ before committing edits.
 
 `test_selfscore.py` gained `test_shipping_counts_full_set`, covering `build_self_score`'s new
 `shipping` count over `evidence.SHIPPING_STATUSES`.
+
+`test_redteam.py`'s red-team bar tests now cover the coverage-first `_above_bar`: severity above
+the floor earns a directive with no receipt required; the dead `prime-manual-test` history test
+is removed, and `test_lead_carrier_without_receipt_is_not_a_directive` is replaced with
+`test_lead_carrier_without_receipt_is_still_a_directive` reflecting the new bar.

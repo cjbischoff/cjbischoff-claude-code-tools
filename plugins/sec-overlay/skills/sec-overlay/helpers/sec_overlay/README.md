@@ -132,6 +132,12 @@ investigate/patch branch (M1, 0.10.1): an absent or malformed file raises `Phase
 an unhandled `FileNotFoundError`/`JSONDecodeError`, matching the "loud halt" contract every other
 phase gate honors.
 
+`redteam.py`'s `_above_bar` is now coverage-first: a critical/high/medium finding above the risk
+floor earns a manual test directive regardless of receipt strength — a missing tool receipt no
+longer withholds the runtime test that would settle it (it still sorts later via `receipts`
+rendering `_no tool receipt (verify carefully)_` in the directive block). The dead
+`redteam:prime-manual-test` history branch (no producer ever wrote that event) is removed.
+
 `redactor.py` and `factcheck.py` are now wired into the driver (ISSUE-047, ISSUE-051).
 `render_dispatch` passes its composed block through `redactor.safe_for_prompt` before returning —
 a security control that guarantees no dispatch block the orchestrator prints can carry a

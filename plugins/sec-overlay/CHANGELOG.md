@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.0.2 - 2026-08-15
+
+### Fixed
+
+- `redteam._above_bar` is now coverage-first: a critical/high/medium finding above the risk
+  floor earns a manual test directive regardless of receipt strength — a missing tool
+  receipt no longer withholds the test that would settle it. The dead
+  `redteam:prime-manual-test` history branch (no producer wrote that event) is removed.
+
 ## 1.0.1 - 2026-08-15
 
 ### Fixed
