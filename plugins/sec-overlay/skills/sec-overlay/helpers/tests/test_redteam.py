@@ -317,6 +317,14 @@ def test_discriminate_buckets_unrunnable_separately():
     assert {"needs_runtime", "static_settled", "below_bar"} <= set(out)
 
 
+def test_render_plan_surfaces_unrunnable_findings_not_dropped():
+    f = _payload_f("F-1", dataflow=[], reach={})
+    disc = discriminate([f], min_risk=7)
+    md = render_plan(disc, min_risk=7)
+    assert "## Unrunnable preconditions (payload not traceable)" in md
+    assert "F-1" in md.split("## Unrunnable preconditions")[1].split("## Runtime-validation gaps")[0]
+
+
 def test_directive_renders_string_typed_fields_verbatim():
     # runtime_test fields aren't schema-forced to lists/dicts; a plain string must render,
     # not collapse to "_not specified_" (regression guard for the str branch).

@@ -159,7 +159,10 @@ rendering `_no tool receipt (verify carefully)_` in the directive block). The de
 `payload_runnable(f)` returns `True` only when a finding carries a non-empty `dataflow` trace or a
 `reachability` dict with `reachable is True`; an above-bar needs-runtime finding that fails this
 check routes to a new `"unrunnable"` bucket instead of the manual plan — an untraceable payload is
-a precondition to test for, not a live directive.
+a precondition to test for, not a live directive. `render_plan` renders this bucket as its own
+`## Unrunnable preconditions (payload not traceable)` plan section (and folds its `open_questions`
+into "Questions to ask") so these findings are surfaced, never silently dropped; `write_plan`'s
+returned summary carries an `"unrunnable"` count alongside the other buckets.
 
 `redactor.py` and `factcheck.py` are now wired into the driver (ISSUE-047, ISSUE-051).
 `render_dispatch` passes its composed block through `redactor.safe_for_prompt` before returning —

@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.8.1 - 2026-08-15
+
+### Fixed
+
+- `render_plan` now renders `discriminate`'s `"unrunnable"` bucket as its own plan section
+  (`## Unrunnable preconditions (payload not traceable)`), and folds its `open_questions` into
+  "Questions to ask"; `write_plan`'s returned summary carries an `"unrunnable"` count. Previously
+  these above-bar needs-runtime findings vanished from `redteam-plan.md` and the summary entirely
+  once `payload_runnable` routed them out of `needs_runtime` (ISSUE-056).
+
 ## 1.8.0 - 2026-08-15
 
 ### Added

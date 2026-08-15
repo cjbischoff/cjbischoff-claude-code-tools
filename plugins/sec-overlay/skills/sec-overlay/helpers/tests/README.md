@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-85 pytest files, 668 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+85 pytest files, 669 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -125,6 +125,11 @@ is removed, and `test_lead_carrier_without_receipt_is_not_a_directive` is replac
 covering the new `payload_runnable` gate and the `discriminate` `"unrunnable"` bucket. Pre-existing
 `_rt`/`_f`-built fixtures that reach `needs_runtime` now set a `dataflow` trace so they exercise
 severity/bar/sort logic, not payload traceability.
+
+`test_redteam.py` gained `test_render_plan_surfaces_unrunnable_findings_not_dropped` (ISSUE-056
+fix round 1): asserts an unrunnable finding's id appears in `render_plan`'s new "Unrunnable
+preconditions" section — a recall regression guard proving these findings are surfaced, not
+silently dropped from the plan.
 
 `test_phase_gate.py` gained five tests for `_parse_ref`'s trailing-hint stripping (plain
 path:line, range-anchor, trailing hint after line/range, bare path, unparseable line).
