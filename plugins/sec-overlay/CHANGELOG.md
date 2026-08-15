@@ -2,6 +2,13 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.0.4 - 2026-08-15
+
+### Fixed
+
+- `scan-profile.schema.json` gains `attack_surface_evidence` (required) and `subsystems`
+  (optional), matching the two `ScanProfile` fields recon already writes.
+
 ## 1.0.3 - 2026-08-15
 
 ### Fixed

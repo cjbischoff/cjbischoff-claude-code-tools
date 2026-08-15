@@ -1,8 +1,12 @@
 # `tests/` — the deterministic test suite
 
-83 pytest files, 615 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+83 pytest files, 635 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+`test_profile.py` gained `test_schema_declares_evidence_and_subsystems` and
+`test_profile_required_includes_attack_surface_evidence` (ISSUE-025): the schema and
+`profile._REQUIRED` now agree that `attack_surface_evidence` is required, `subsystems` optional.
 
 `test_sarif.py` gained `test_suppressed_findings_carry_insource_suppression`, covering
 `to_sarif`'s `suppressed` parameter. `test_report.py` gained

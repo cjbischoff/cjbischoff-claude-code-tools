@@ -151,3 +151,6 @@ when the file is absent.
 (`_REF_ANCHOR`) instead of `rsplit(":", 1)`, so a trailing human hint after the line or range
 (`foo.py:42 in the handler`) is stripped instead of failing the ref to resolve. A bare path with
 no colon-line, or a colon whose first tail token isn't numeric, still returns `(ref, None)`.
+
+`profile.py`'s `_REQUIRED` (ISSUE-025) now includes `attack_surface_evidence`, matching
+`scan-profile.schema.json`'s `required` — `subsystems` stays optional in both.

@@ -7,6 +7,8 @@ import pytest
 
 from sec_overlay.profile import ScanProfile, load_profile, save_profile, validate_profile
 
+_SCHEMA = Path(__file__).resolve().parents[2] / "references" / "scan-profile.schema.json"
+
 
 def _valid_dict():
     return {
@@ -79,7 +81,8 @@ def test_golden_profile_validates():
 
 def _base(**kw) -> dict:
     d = {"languages": [], "frameworks": [], "entrypoints": [], "runnable": False,
-         "attack_surface": [], "sast_plan": {}, "agents_to_spawn": [], "budget_hint": {}}
+         "attack_surface": [], "sast_plan": {}, "agents_to_spawn": [], "budget_hint": {},
+         "attack_surface_evidence": {}}
     d.update(kw)
     return d
 
@@ -109,9 +112,23 @@ def test_profile_notes_roundtrip_and_optional(tmp_path):
     # notes optional: a profile without it still loads
     base = {"languages": ["php"], "frameworks": ["Zend Framework 1"], "entrypoints": [],
             "runnable": True, "attack_surface": ["crypto"], "sast_plan": {"semgrep": {"run": True}},
-            "agents_to_spawn": ["crypto"], "budget_hint": {}}
+            "agents_to_spawn": ["crypto"], "budget_hint": {}, "attack_surface_evidence": {}}
     p = tmp_path / "p.json"; p.write_text(_json.dumps(base))
     assert load_profile(str(p)).notes == {}
     # notes carried through round-trip
     prof = ScanProfile(**base, notes={"eol_frameworks": ["Zend Framework 1"]})
     assert ScanProfile.from_dict(prof.to_dict()).notes == {"eol_frameworks": ["Zend Framework 1"]}
+
+
+def test_schema_declares_evidence_and_subsystems():
+    schema = json.loads(_SCHEMA.read_text())
+    props = schema["properties"]
+    assert "attack_surface_evidence" in props
+    assert "subsystems" in props
+    assert "attack_surface_evidence" in schema["required"]
+
+
+def test_profile_required_includes_attack_surface_evidence():
+    from sec_overlay.profile import _REQUIRED
+    assert "attack_surface_evidence" in _REQUIRED
+    assert "subsystems" not in _REQUIRED

@@ -67,7 +67,7 @@ class ScanProfile:
 
 
 _LIST_STR_FIELDS = ("languages", "frameworks", "entrypoints", "attack_surface", "agents_to_spawn")
-_DICT_FIELDS = ("sast_plan", "budget_hint")
+_DICT_FIELDS = ("sast_plan", "budget_hint", "attack_surface_evidence")
 _OPTIONAL_DICT_FIELDS = ("scan_options",)
 _REQUIRED = (*_LIST_STR_FIELDS, "runnable", *_DICT_FIELDS)
 
