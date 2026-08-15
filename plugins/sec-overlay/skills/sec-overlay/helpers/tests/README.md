@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-84 pytest files, 640 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+85 pytest files, 643 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -126,3 +126,7 @@ architecture markdown omits is a `needs_follow_up` gap, a table entrypoint the t
 is a gap, no gap when everything is present, and `record_route_gaps` round-trips a gap's
 `reason`/`next_step` through `kb/coverage-ledger.json` while `validate_coverage_ledger` still
 returns no errors.
+
+`test_class_ext.py` (new) covers `class_ext.py`: an alias map (sqli/cmdi/xss → injection.md)
+counts coarse extension files, direct files count by name, and uncovered classes log gaps so
+coverage is never silent.

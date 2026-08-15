@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.7.0 - 2026-08-15
+
+### Added
+
+- `sec_overlay.class_ext`: `class_extension_status()` checks which investigate/patch extension
+  files exist; absent classes are logged as gaps so coverage is never silent. Uses an alias map
+  (e.g., sqli/cmdi/xss → injection.md) to count coarse files (ISSUE-037, ISSUE-049).
+
 ## 1.6.0 - 2026-08-15
 
 ### Added

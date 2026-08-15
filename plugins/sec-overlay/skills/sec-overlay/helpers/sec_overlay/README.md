@@ -183,3 +183,7 @@ model output against it (`check_recon_routes`, `check_architecture_controls`,
 returns a `needs_follow_up` gap dict with `reason`/`next_step`, and `record_route_gaps` appends
 those gaps into `kb/coverage-ledger.json`'s `surfaces`, demoting `completeness` to `partial` so the
 ledger's own "complete forbids needs_follow_up" invariant still holds after the append.
+
+`class_ext.py` (new) provides `class_extension_status(classes, classes_dir)` to check which
+investigate/patch extension files exist; absent classes are logged as gaps so coverage is never
+silently lost. Uses an alias map (e.g., sqli/cmdi/xss → injection.md) to count coarse files.
