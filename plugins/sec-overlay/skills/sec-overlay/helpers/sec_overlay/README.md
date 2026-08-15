@@ -26,6 +26,11 @@ sites on a cluster primary) — additive, nullable fields that round-trip throug
 `selfscore.py` (new) computes the per-run self-score from workspace findings and persists it to
 `CampaignState.budget["self_score"]` — see the module map entry.
 
+`evidence.py` gained a shared tier/status vocabulary: `TIER1_RECEIPTS`/`TIER2_RECEIPTS` (partition
+`_MECHANICAL`), `SHIPPING_STATUSES`, `RUNTIME_DISPOSITIONS`, and the `receipt_tier()`/
+`confirms_alone()` predicates — a single source of truth for later modules that need to know
+whether a source can confirm a finding alone.
+
 `cluster.py` (new) groups ≥3 same-class, same-sink `raw` findings into one systemic cluster,
 run after dedupe and before the critic/gate ladder — see the module map entry.
 

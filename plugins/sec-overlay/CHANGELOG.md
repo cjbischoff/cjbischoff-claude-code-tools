@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 0.11.0 - 2026-08-15
+
+### Added
+
+- `evidence.py` exports a shared receipt-tier and status vocabulary: `TIER1_RECEIPTS`/
+  `TIER2_RECEIPTS` (partitioning `_MECHANICAL` into confirms-alone vs locates-only sources),
+  `SHIPPING_STATUSES`, `RUNTIME_DISPOSITIONS`, and the `receipt_tier()`/`confirms_alone()`
+  predicates, giving later modules one source of truth for whether a source can confirm a finding
+  alone.
+
 ## 0.10.1 - 2026-08-15
 
 ### Fixed

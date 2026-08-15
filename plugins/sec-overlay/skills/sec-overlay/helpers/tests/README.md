@@ -63,6 +63,11 @@ bench/citation tests (`test_bench.py`, `test_citations.py`) that need local seed
 ISSUE-053: a `static-only` re-verify routes the finding to `needs-deployment-testing`, not
 `confirmed` — only `verified-static` promotes to `fixed`.
 
+`test_evidence.py` gained coverage for the shared tier/status vocab: `TIER1_RECEIPTS |
+TIER2_RECEIPTS` partitions `_MECHANICAL` exactly, `receipt_tier()` grades colon-form sources,
+`confirms_alone()` requires a Tier-1 receipt, and `SHIPPING_STATUSES`/`RUNTIME_DISPOSITIONS` match
+their fixed literal sets.
+
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 

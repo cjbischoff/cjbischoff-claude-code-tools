@@ -14,6 +14,13 @@ from enum import Enum
 _MECHANICAL = {"semgrep", "codeql", "ast-grep", "tree-sitter", "ripgrep",
                "structural-index", "secrets", "sca"}
 
+TIER1_RECEIPTS = frozenset({"codeql", "semgrep", "sca", "secrets"})
+TIER2_RECEIPTS = frozenset({"ripgrep", "structural-index", "ast-grep", "tree-sitter"})
+SHIPPING_STATUSES = frozenset({"confirmed", "fixed", "needs-deployment-testing"})
+RUNTIME_DISPOSITIONS = frozenset({"needs-runtime", "static-settled", "unassessed"})
+
+assert TIER1_RECEIPTS | TIER2_RECEIPTS == _MECHANICAL, "receipt tiers must partition _MECHANICAL"
+
 
 class Confidence(str, Enum):
     """Confidence tier for a finding, from its strongest evidence."""
@@ -47,6 +54,41 @@ def as_llm_claim(source: str) -> str:
         The source unchanged if already ``llm``-prefixed, else ``llm-claimed:<source>``.
     """
     return source if source.startswith("llm") else f"llm-claimed:{source}"
+
+
+def receipt_tier(source: str) -> int | None:
+    """Return the receipt tier (1 or 2) of an evidence source, or None.
+
+    Tier 1 sources confirm a finding alone (a dataflow path, a vulnerable
+    version, a live secret). Tier 2 sources only locate code. An LLM-claimed
+    or unknown source has no tier.
+
+    Args:
+        source: An evidence source string (e.g. ``codeql:dataflow``).
+
+    Returns:
+        ``1`` for a Tier-1 receipt, ``2`` for a Tier-2 receipt, ``None`` for
+        an ``llm-claimed:*`` or non-mechanical source.
+    """
+    if not is_tool_receipt(source):
+        return None
+    head = source.split(":", 1)[0]
+    if head in TIER1_RECEIPTS:
+        return 1
+    return 2
+
+
+def confirms_alone(sources: list[str]) -> bool:
+    """Return True iff at least one source is a Tier-1 receipt.
+
+    Args:
+        sources: Evidence source strings.
+
+    Returns:
+        True when a Tier-1 receipt is present — the only ground on which a
+        finding may reach ``confirmed``/``fixed``.
+    """
+    return any(receipt_tier(s) == 1 for s in sources)
 
 
 def confidence_for(sources: list[str]) -> Confidence:
