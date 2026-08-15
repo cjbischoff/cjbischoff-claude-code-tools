@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-81 pytest files, 595 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+82 pytest files, 599 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -9,6 +9,10 @@ checkout are environmental (gitignored bench corpus, excluded semgrep submodule)
 `test_write_report_defaults_to_suppressed_full_sarif` and
 `test_write_report_confirmed_only_flag_restores_prior_output`, covering `write_report`'s new
 suppressed-full default and the `confirmed_only` restore path.
+
+`test_phases.py` (new) covers `sec_overlay/phases.py`'s `PHASE_TABLE` order (findings-gate right
+after investigate, dedupe/demote-noise before report, trace present) and the pure sequencer
+helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`).
 
 ## Structural guards (know these)
 

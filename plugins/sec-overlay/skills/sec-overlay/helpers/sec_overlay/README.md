@@ -63,3 +63,7 @@ confirmed/fixed-only SARIF with no suppressions.
 
 `calibrate.py`, `selfscore.py`, `sarif.py`, and `report.py` are `ruff format`-clean as of the
 review-improvements branch; keep them that way (run `ruff format` before committing edits here).
+
+`phases.py` (new) is the ordered phase table (`PhaseSpec`, `PHASE_TABLE`) plus pure sequencer
+helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit driver walks —
+see the module map entry.
