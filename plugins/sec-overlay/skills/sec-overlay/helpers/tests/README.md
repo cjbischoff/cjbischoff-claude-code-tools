@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-85 pytest files, 674 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+85 pytest files, 677 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -153,7 +153,10 @@ raising `ValueError` that names it, and extra unused `subs` keys being ignored.
 architecture markdown omits is a `needs_follow_up` gap, a table entrypoint the threat model drops
 is a gap, no gap when everything is present, and `record_route_gaps` round-trips a gap's
 `reason`/`next_step` through `kb/coverage-ledger.json` while `validate_coverage_ledger` still
-returns no errors.
+returns no errors. Word-boundary gap tests pin the fix for substring false-negatives: a control
+that is a substring of a longer word (`auth` inside `authorization`) is still a gap, the same
+control as a standalone token is covered, and an entrypoint carrying path punctuation (`/login`)
+still matches as a standalone mention.
 
 `test_class_ext.py` (new) covers `class_ext.py`: an alias map (sqli/cmdi/xss → injection.md)
 counts coarse extension files, direct files count by name, and uncovered classes log gaps so

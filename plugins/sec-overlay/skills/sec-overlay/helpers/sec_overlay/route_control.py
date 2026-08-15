@@ -7,6 +7,7 @@ A missing route, control, or entrypoint is a logged gap (never dropped), carryin
 from __future__ import annotations
 
 import json
+import re
 
 from sec_overlay.coverage_ledger import build_coverage_ledger
 from sec_overlay.workspace import Workspace
@@ -55,16 +56,25 @@ def check_recon_routes(table: dict, profile: dict) -> list[dict]:
     ]
 
 
+def _mentions(token: str, text: str) -> bool:
+    """True when ``token`` appears in ``text`` (both lowercased) not as part of a longer alphanumeric word.
+
+    Guards only alphanumeric neighbours, so a token carrying path punctuation
+    (``/login``) still matches while ``auth`` no longer matches inside ``authorization``.
+    """
+    return re.search(rf"(?<![a-z0-9]){re.escape(token.lower())}(?![a-z0-9])", text) is not None
+
+
 def check_architecture_controls(table: dict, architecture_md: str) -> list[dict]:
     """Gap for any table control the architecture markdown does not mention."""
     text = architecture_md.lower()
-    return [_gap(c, "control") for c in table.get("controls", []) if c.lower() not in text]
+    return [_gap(c, "control") for c in table.get("controls", []) if not _mentions(c, text)]
 
 
 def check_threat_entrypoints(table: dict, threat_model_md: str) -> list[dict]:
     """Gap for any table entrypoint the threat model drops."""
     text = threat_model_md.lower()
-    return [_gap(e, "entrypoint") for e in table.get("entrypoints", []) if e.lower() not in text]
+    return [_gap(e, "entrypoint") for e in table.get("entrypoints", []) if not _mentions(e, text)]
 
 
 def record_route_gaps(ws: Workspace, gaps: list[dict]) -> None:

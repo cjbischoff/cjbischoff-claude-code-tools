@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.8.3 - 2026-08-15
+
+### Fixed
+
+- `route_control.py`'s control and entrypoint coverage-gap matching is word-bounded (alphanumeric-
+  neighbor guard), not substring, so a token that is part of a longer word (`auth` inside
+  `authorization`) is no longer treated as covered and the gap is no longer suppressed.
+
 ## 1.8.2 - 2026-08-15
 
 ### Added
