@@ -98,7 +98,18 @@ input and output, so the dir's mere presence never counts as "this phase ran"); 
 returns `render_dispatch(...)` and stops. Returns `"AUDIT COMPLETE"` once every phase is `done`.
 `cli.py` exposes this as its `audit` subcommand (`python -m sec_overlay.cli audit --target <T>
 --config <rules> [--workspace <WS>] [--sha <sha>]`): resolves the workspace the same way `scan`
-does, pins the pass with `state.begin_pass`, and prints `run_audit`'s return value.
+does and prints `run_audit`'s return value. It does **not** call `state.begin_pass` (C1 fix,
+0.10.1) — `audit` is re-invoked repeatedly across a single pass (the orchestrator runs an agent
+phase, then calls `audit` again to advance), and `begin_pass` wipes `state.stages` and bumps
+`pass_number` whenever any stage is recorded, which would livelock the six `findings_dir`-in/out
+agent phases and inflate `pass_number` by one per call. Pass lifecycle is owned solely by the
+campaign supervisor, which calls `begin_pass` once before the first `audit` invocation, mirroring
+the `scan` path (`scan` has never called `begin_pass`).
+
+`driver.py`'s `run_audit` also now guards its direct `scan-profile.json` read at the
+investigate/patch branch (M1, 0.10.1): an absent or malformed file raises `PhaseHalt` instead of
+an unhandled `FileNotFoundError`/`JSONDecodeError`, matching the "loud halt" contract every other
+phase gate honors.
 
 `redactor.py` and `factcheck.py` are now wired into the driver (ISSUE-047, ISSUE-051).
 `render_dispatch` passes its composed block through `redactor.safe_for_prompt` before returning —

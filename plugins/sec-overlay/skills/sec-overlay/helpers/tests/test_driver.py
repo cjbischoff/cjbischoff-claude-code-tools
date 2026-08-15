@@ -254,6 +254,23 @@ def test_dispatch_is_secret_redacted(tmp_path, monkeypatch):
     assert calls, "render_dispatch must pass its output through safe_for_prompt"
 
 
+def test_run_audit_halts_when_scan_profile_missing_at_investigate(tmp_path):
+    """M1: run_audit's investigate/patch branch reads scan-profile.json directly
+    (not through the missing_inputs gate); an absent/malformed file must raise
+    PhaseHalt, not FileNotFoundError/JSONDecodeError."""
+    from sec_overlay.driver import AuditContext, PhaseHalt, run_audit
+
+    ws = Workspace(tmp_path / "w")
+    ws.ensure()
+    _stage_to_investigate(ws)
+    # scan-profile.json deliberately absent
+    ctx = AuditContext(ws=ws, target=str(tmp_path / "t"), config="cfg", sha="sha1")
+
+    with pytest.raises(PhaseHalt) as exc:
+        run_audit(ctx)
+    assert "scan-profile.json" in str(exc.value)
+
+
 def test_factcheck_action_applies_verdicts(tmp_path):
     import json
 

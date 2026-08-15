@@ -148,7 +148,6 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "audit":
         from sec_overlay.driver import AuditContext, run_audit
-        from sec_overlay.state import begin_pass
 
         if args.workspace:
             ws = load_paths(workspace=args.workspace)
@@ -157,7 +156,9 @@ def main(argv: list[str] | None = None) -> int:
             memory.ensure(target=args.target)
             ws = memory.workspace
         sha = args.sha or ""
-        begin_pass(ws, sha)
+        # Pass lifecycle (begin_pass) is owned by the campaign supervisor, called
+        # once before the first `audit` invocation — not here, since `audit` is
+        # re-invoked repeatedly across a pass and must not wipe recorded stages.
         ctx = AuditContext(ws=ws, target=args.target, config=args.config, sha=sha)
         print(run_audit(ctx))
         return 0

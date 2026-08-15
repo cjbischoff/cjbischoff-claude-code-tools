@@ -235,7 +235,15 @@ def run_audit(ctx: AuditContext, *, table: tuple[PhaseSpec, ...] = PHASE_TABLE) 
     its input paths (an output-only artifact proves the agent actually ran;
     several agent phases share ``findings_dir`` as both input and output, and
     the dir's mere presence there proves nothing about that specific phase).
-    Otherwise returns the phase's dispatch block and stops.
+    Otherwise returns the phase's dispatch block and stops. The output-exists
+    gate in ``run_deterministic_phase`` only ever fires for ``report`` — the
+    other deterministic phases' declared output is ``findings_dir``, which is
+    already present by the time they run, so a missing finding file is not,
+    by design, treated as that phase's failure. ``recon``/``architecture``/
+    ``threat_model`` auto-record via their own distinct output file; the six
+    ``findings_dir``-in/out agent phases (investigate, critic, judge,
+    validate, trace, patch) never auto-advance and require the orchestrator
+    to call ``record_stage`` manually once its output is ready.
 
     Args:
         ctx: The audit context threaded through every phase action.
@@ -257,7 +265,13 @@ def run_audit(ctx: AuditContext, *, table: tuple[PhaseSpec, ...] = PHASE_TABLE) 
             record_stage(ctx.ws, phase.name)
             continue
         if phase.name in ("investigate", "patch"):
-            profile = json.loads((ctx.ws.kb / "scan-profile.json").read_text())
+            try:
+                profile = json.loads((ctx.ws.kb / "scan-profile.json").read_text())
+            except (FileNotFoundError, json.JSONDecodeError):
+                raise PhaseHalt(
+                    f"phase {phase.name!r} cannot start: missing or malformed "
+                    "scan-profile.json"
+                ) from None
             planned = list(profile.get("agents_to_spawn", []))
             reconciled = reconcile_plan(ctx.ws, planned)  # ISSUE-006: recon-omitted classes
             block = render_dispatch(phase, ctx, classes=reconciled)

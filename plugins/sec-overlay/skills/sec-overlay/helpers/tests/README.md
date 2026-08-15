@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-82 pytest files, 599 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+83 pytest files, 615 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -34,6 +34,15 @@ added that recon omitted, and the triage block is appended after it when a class
 writes a `kb/verdicts.json` VERIFIED verdict for one finding, runs
 `DETERMINISTIC_ACTIONS["factcheck"]`, and asserts the finding is stamped
 `verification="fact-checked"` (ISSUE-047).
+`test_run_audit_halts_when_scan_profile_missing_at_investigate` (new, M1, 0.10.1) stages state up
+to `investigate` with no `scan-profile.json` and asserts `run_audit` raises `PhaseHalt` (not
+`FileNotFoundError`) naming the missing file.
+
+`test_cli_e2e.py` gained `test_audit_cli_resumable_across_invocations` (new, C1, 0.10.1): drives
+`cli.main(["audit", ...])` twice with `driver.run_audit` stubbed and `record_stage(ws,
+"investigate")` called between the two invocations (simulating the orchestrator's manual record),
+and asserts the second `audit` invocation leaves that stage recorded and `pass_number` unchanged —
+the regression guard for the CLI no longer calling `state.begin_pass` on every invocation.
 
 ## Structural guards (know these)
 

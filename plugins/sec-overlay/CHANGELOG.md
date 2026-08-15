@@ -2,6 +2,18 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 0.10.1 - 2026-08-15
+
+### Fixed
+
+- The `audit` CLI no longer calls `begin_pass` on every invocation (C1). It was wiping
+  `state.stages` and bumping `pass_number` on each re-invocation, livelocking the six
+  `findings_dir`-in/out agent phases (investigate, critic, judge, validate, trace, patch) that
+  rely on the orchestrator's manual `record_stage` between calls. Pass lifecycle is now owned
+  solely by the campaign supervisor, matching the `scan` path.
+- `run_audit`'s investigate/patch branch now raises `PhaseHalt` instead of crashing with
+  `FileNotFoundError`/`JSONDecodeError` when `kb/scan-profile.json` is absent or malformed.
+
 ## 0.10.0 - 2026-08-15
 
 ### Added
