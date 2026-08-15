@@ -25,6 +25,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 ### Added
 
 - Add the sec-overlay defect-remediation design spec covering all 57 issues from the agent-gateway run across seven fix themes plus a new independent artifact-review phase.
+- Add Plan A (theme T1) of the sec-overlay defect-remediation spec: TDD implementation tasks for the deterministic `audit` phase-driver, wiring the six unwired modules and the findings-gate, unrouted-class, and verify-honesty fixes.
 - Add `docs/templates/plugin/`, a new-plugin skeleton (`plugin.json`, README, CLAUDE.md, CHANGELOG, sample `SKILL.md`) with `{{PLACEHOLDER}}` markers, matching the root `CLAUDE.md` "New plugin" checklist.
 - Add the four-commit implementation plan for the marketplace documentation split.
 - Add the marketplace documentation-structure design spec: root CLAUDE.md focuses on governance and new-plugin scaffolding, each plugin carries its own CLAUDE.md, README, and CHANGELOG, and hook changelog routing follows.
