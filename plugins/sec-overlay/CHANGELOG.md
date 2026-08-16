@@ -2,6 +2,12 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.31.1 - 2026-08-16
+
+### Fixed
+
+- Remove unused `pathlib.Path` import from `helpers/tests/test_run.py` (ruff F401).
+
 ## 1.31.0 - 2026-08-16
 
 ### Added

@@ -337,3 +337,6 @@ the new `require_threat_model` gate flag, and `test_node_label_over_four_words_f
 New `test_run.py` covers `sec_overlay.run.fence`: passes when the current `git status --porcelain`
 output matches the captured baseline, raises `WorkingTreeFenceError` naming the delta lines
 otherwise.
+
+`test_run.py`'s unused `pathlib.Path` import (leftover from the initial draft) was removed to
+satisfy ruff F401; `tmp_path` already provides a `Path` instance via the pytest fixture.
