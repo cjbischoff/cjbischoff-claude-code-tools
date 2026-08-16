@@ -1,6 +1,6 @@
 import json
 
-from sec_overlay.artifact_gate import run_artifact_gate
+from sec_overlay.artifact_gate import check_duplication, run_artifact_gate
 from sec_overlay.workspace import Workspace
 
 
@@ -60,3 +60,26 @@ def test_writes_audit_trail(tmp_path):
     ws = _good_ws(tmp_path)
     run_artifact_gate(ws)
     assert (ws.kb / "gates" / "artifact-gate.json").exists()
+
+
+def test_duplicated_heading_fails():
+    arc = "## Building Block View\n\nContent.\n"
+    tm = "## Building Block View\n\nRestated content.\n"
+    errs = check_duplication(arc, tm)
+    assert any("building block view" in e.lower() for e in errs)
+
+
+def test_banned_structure_heading_in_threat_model_fails():
+    errs = check_duplication("## Something\n", "## Deployment View\n")
+    assert any("deployment view" in e.lower() for e in errs)
+
+
+def test_distinct_headings_pass():
+    arc = "## Building Block View\n## Runtime View\n"
+    tm = "## Trust Boundaries\n## Findings\n## Glossary\n"
+    assert check_duplication(arc, tm) == []
+
+
+def test_gate_skips_when_trees_absent(tmp_path):
+    ws = _good_ws(tmp_path)
+    assert run_artifact_gate(ws) == []

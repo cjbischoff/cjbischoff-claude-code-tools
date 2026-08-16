@@ -29,7 +29,10 @@ real `cvss40_base` engine, not guessed); it now collects and passes against the 
 
 New `test_artifact_gate.py` (§4.8) covers `run_artifact_gate`: a clean run passes; a stale constant
 section, a missing detail file, a missing red-team directive, and a triage ID with no matching
-finding each produce an error string; the gate always writes `kb/gates/artifact-gate.json`.
+finding each produce an error string; the gate always writes `kb/gates/artifact-gate.json`. Also
+covers `check_duplication`: a duplicated heading and a threat-model-owned structure heading each
+fail, distinct headings pass, and the gate skips the check silently when the arc42/threat-model
+trees are absent.
 
 `test_stage_validate.py` gained `test_unknown_stage_raises` (ISSUE-034): `validate_stage` now
 raises `ValueError` for an unregistered stage instead of silently passing. `test_bucket_c.py`'s

@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.24.0 - 2026-08-16
+
+### Added
+
+- `sec_overlay/artifact_gate.py` gains `check_duplication(arc42_text, tm_text)`: flags a
+  threat-model heading that restates an `architecture/arc42.md` heading, and flags a
+  structure heading (e.g. "Building Block View", "Deployment View") appearing in the
+  threat-model doc at all. `run_artifact_gate` calls it only when both
+  `architecture/arc42.md` and `threat-model/threat-model.md` exist; older workspaces and
+  the existing tests are unaffected.
+
 ## 1.23.1 - 2026-08-16
 
 ### Fixed

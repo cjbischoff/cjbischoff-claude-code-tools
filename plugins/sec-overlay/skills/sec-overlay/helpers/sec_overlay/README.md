@@ -39,7 +39,10 @@ artifacts — report.md free of stale constant sections and over-long triage cel
 finding has a `findings/<ID>.md` detail file and a red-team directive, every triage-table ID
 resolves to a finding, and `CONTEXT.md`'s mermaid diagram stays at ≤10 nodes (ISSUE-022). Writes
 `kb/gates/artifact-gate.json`; runs before the opus artifact-review adversary, never deletes
-findings.
+findings. `check_duplication(arc42_text, tm_text)` flags a threat-model heading that restates an
+arc42 heading, or a structure heading (e.g. "Building Block View") appearing in the threat-model
+doc at all; `run_artifact_gate` calls it only when both `architecture/arc42.md` and
+`threat-model/threat-model.md` exist.
 
 `context.py` gained `doc_coverage()` to compare documents discovered vs read and flag a low read ratio. The `load()` function now accepts optional `repo_root` and `scan_scope` parameters to populate `provenance["docs_discovered"]` at load time (wiring by downstream caller) — see the module map entry.
 
