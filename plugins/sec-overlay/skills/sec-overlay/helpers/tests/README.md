@@ -181,3 +181,9 @@ digit ratio (`"1/1/2/1"`); the pre-existing NDT-separation test was updated to t
 `test_report.py` gained `test_short_title_cuts_on_word_boundary` and
 `test_short_title_no_cut_when_short` (ISSUE-011): `_short_title` trims a triage title to a word
 boundary with a trailing `…`, never cutting mid-word, and leaves short titles untouched.
+
+`test_prefilter.py` gained `test_candidate_ids_are_class_prefixed_and_per_class_numbered`
+(ISSUE-013): `_assign_candidate_ids` now numbers candidates per attack class
+(`C-SQLI-0001`, `C-XSS-0001`, ...) instead of one global `C-0001..` sequence, so ids carry the
+class and never collide across rulesets; `test_serial_and_concurrent_identical` was updated to
+the new scheme.

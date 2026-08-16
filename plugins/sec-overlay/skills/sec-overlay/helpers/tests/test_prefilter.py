@@ -6,6 +6,11 @@ from sec_overlay.profile import ScanProfile
 from sec_overlay.workspace import Workspace, read_findings
 
 
+def _f(cls, file, line):
+    return Finding(id="", rule_id="r", cls=cls, status=FindingStatus.CANDIDATE,
+                   severity=Severity.LOW, file=file, line=line, message="m")
+
+
 def _cand(cls, file, line):
     return Finding(id="X", rule_id="r", cls=cls, status=FindingStatus.CANDIDATE,
                    severity=Severity.HIGH, file=file, line=line, message="m")
@@ -183,8 +188,8 @@ def test_serial_and_concurrent_identical(tmp_path):
     serial = run(1)
     concurrent = run(4)
     assert serial == concurrent
-    # ids are contiguous C-0001.. in sorted (file,line) order
-    assert [i for i, *_ in serial] == [f"C-{n:04d}" for n in range(1, len(serial) + 1)]
+    # ids are class-prefixed and numbered per class in sorted (file,line) order
+    assert [i for i, *_ in serial] == ["C-SQLI-0001", "C-SSRF-0001", "C-XSS-0001"]
 
 
 def test_codeql_disabled_recorded(tmp_path):
@@ -277,3 +282,16 @@ def test_codeql_db_not_left_in_workspace(tmp_path):
                   has_tool=lambda n: "/x", qlpack_fn=lambda lang: True)
     assert "codeql-db" not in "".join(p.name for p in ws.root.iterdir())
     assert str(ws.root) not in seen["db_dir"]   # db built under a temp dir, not memory
+
+
+def test_candidate_ids_are_class_prefixed_and_per_class_numbered():
+    from sec_overlay.prefilter import _assign_candidate_ids
+
+    kept = [_f("sqli", "b.py", 2), _f("sqli", "a.py", 1), _f("security-other", "a.py", 1)]
+    _assign_candidate_ids(kept)
+    ids = {f.id for f in kept}
+    assert "C-SQLI-0001" in ids and "C-SQLI-0002" in ids
+    assert "C-SECURITY-OTHER-0001" in ids
+    # per-class numbering follows the canonical (file,line,rule,cls) sort
+    sqli = sorted([f for f in kept if f.cls == "sqli"], key=lambda f: f.id)
+    assert sqli[0].file == "a.py"  # a.py sorts before b.py

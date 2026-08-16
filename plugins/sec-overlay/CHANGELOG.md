@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.9.4 - 2026-08-15
+
+### Fixed
+
+- Prefilter candidate ids are now class-prefixed and numbered per class
+  (`C-SQLI-0001`, `C-XSS-0001`, ...) instead of one global `C-0001..` sequence, so ids carry
+  the attack class and never collide across rulesets (ISSUE-013).
+
 ## 1.9.3 - 2026-08-15
 
 ### Fixed

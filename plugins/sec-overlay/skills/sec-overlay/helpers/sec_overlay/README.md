@@ -226,3 +226,7 @@ silently lost. Uses an alias map (e.g., sqli/cmdi/xss → injection.md) to count
 `sast.py` now excludes `.sec-overlay`, `.git`, `.venv`, and `node_modules` directories from
 semgrep scans via `_SKIP_DIRS` tuple and `--exclude` flags, preventing audit findings on the
 harness's own sidecar output.
+
+`prefilter.py`'s candidate-id assignment moved into `_assign_candidate_ids`, which now numbers
+ids per attack class (`C-SQLI-0001`, `C-XSS-0001`, ...) instead of one global `C-0001..`
+sequence, so ids carry the class and never collide across rulesets (ISSUE-013).
