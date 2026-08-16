@@ -30,7 +30,7 @@ def test_factcheck_validation():
 
 # F10
 def test_baseline_cap():
-    hi = _f(cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N")
+    hi = _f(cvss_vector="CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N")
     base = calibrate_score(hi)
     hi.history.append({"event": "baseline:industry-standard"})
     assert calibrate_score(hi) <= 4 < base       # capped below its uncapped score

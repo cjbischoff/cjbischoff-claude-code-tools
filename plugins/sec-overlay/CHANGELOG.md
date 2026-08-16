@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.20.1 - 2026-08-16
+
+### Fixed
+
+- Migrated the last `CVSS:3.1` fixture vectors in `test_report.py`, `test_models.py`,
+  `test_citations.py`, and `test_factcheck_baseline_envelope.py` to `CVSS:4.0` vectors of
+  equivalent meaning, so the repo has zero v3.1 vectors outside `sec_overlay/cvss.py`'s
+  rejection-path test and its own error message.
+
 ## 1.20.0 - 2026-08-16
 
 ### Changed

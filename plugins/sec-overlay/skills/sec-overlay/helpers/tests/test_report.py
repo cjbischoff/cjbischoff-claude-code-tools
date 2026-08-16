@@ -210,7 +210,7 @@ def _tf(id_, sev, **kw):
         "dataflow": ["src @ a.js:1", "-> sink @ a.js:5"],
         "evidence": "innerHTML=x",
         "evidence_sources": ["ast-grep:sink", "llm-claimed:reach"],
-        "cvss_vector": "CVSS:3.1/AV:N",
+        "cvss_vector": "CVSS:4.0/AV:N",
         "risk_score": 7,
     }
     d.update(kw)

@@ -58,7 +58,7 @@ def test_campaign_state_roundtrip():
 def test_finding_new_fields_roundtrip_and_backcompat():
     f = Finding(id="F-1", rule_id="r", cls="sqli", status=FindingStatus.RAW,
                 severity=Severity.HIGH, file="a.py", line=1, message="m",
-                fingerprint="abc123", priority="P1", cvss_vector="CVSS:3.1/AV:N/...",
+                fingerprint="abc123", priority="P1", cvss_vector="CVSS:4.0/AV:N/...",
                 evidence="snippet", evidence_sources=["codeql:dataflow", "llm-claimed:reachable"])
     assert Finding.from_dict(f.to_dict()) == f
     # backward-compat: old dict without the new keys still loads with defaults

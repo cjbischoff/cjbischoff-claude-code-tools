@@ -253,3 +253,8 @@ The `_full` helper in `test_report.py` builds its `Finding` kwargs as a dict lit
 
 `test_cvss.py`'s `sec_overlay.cvss` import is wrapped across multiple lines to satisfy ruff
 `I001` (the single-line form exceeded the 100-char limit).
+
+`test_report.py`, `test_models.py`, `test_citations.py`, and `test_factcheck_baseline_envelope.py`
+had their fixture `cvss_vector` strings swapped from `CVSS:3.1` to `CVSS:4.0` vectors of
+equivalent meaning, matching the v4.0-only parser (`sec_overlay/cvss.py`). `test_cvss.py`'s own
+`CVSS:3.1` fixture is untouched — it exercises the parser's rejection path.
