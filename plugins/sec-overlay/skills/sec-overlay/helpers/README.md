@@ -162,6 +162,12 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `sarif.py` | Emit valid SARIF 2.1.0; map severity → SARIF level. `_rules()` builds a de-duplicated `driver.rules` array (one entry per `rule_id`, first occurrence wins) carrying `cls` as `name` and `asvs_ids`/`codeguard_ids` as `properties` — additive to `driver.rules`, `results` unchanged. |
 | `render_util.py` | Shared markdown fragments for the two finding renderers. `signal_lines()` is the single source of truth for rendering an agent-authored `expected_signal` (dict `{secure, insecure}`, bare string, or None) into labeled bullet lines; a bare string is treated as the insecure signal everywhere it is rendered. |
 
+### Diagram generation & gate
+| Module | Purpose |
+|--------|---------|
+| `mermaid_index.py` | Line-oriented Mermaid structure extraction (not a grammar): `index_mermaid(text) -> DiagramIndex` pulls node ids/labels, edges + edge labels, subgraph membership, sequence participants/message count, and C4 element macros out of a flowchart/sequence/C4 diagram. `store_ids` marks orphan-exempt required shapes (data-stores, queues, `Person`/`*_Ext` actors); unrecognizable input raises `ValueError`. |
+| `diagram_gate.py` | Deterministic hard gate over generated diagrams: `CAPS`/`SEQ_CAPS` node/participant/message ceilings, ≤4-word edge labels, DFD trust-boundary-subgraph requirement, derivation provenance (`%% derived-from: <file> sha256:<hash>` — a derived diagram introduces no element/participant absent from its source, and the hash must match the current source), legend-required styling, and orphan-detail nodes (a node that only ever receives, never sends, and isn't a store/actor). The orphan check applies only to `container`/`component`/`dfd` — never `context` (context actors are by definition often degree-1) or `sequence`. `run_diagram_gate(arch_dir, tm_dir)` walks an architecture/threat-model tree end to end. CLI-callable. |
+
 ### Campaign, state & per-repo memory
 | Module | Purpose |
 |--------|---------|
@@ -257,6 +263,7 @@ steps the orchestrator calls between agent phases:
 | `rule_gaps` | Flag hunting-only findings. |
 | `verify` | Apply a patch to a copy + re-scan. |
 | `redteam` | Render `redteam-plan.md`. |
+| `diagram_gate` | Hard-check generated Mermaid diagrams against caps, provenance, and orphan-detail rules. |
 | `report` | Assemble final SARIF + Markdown. |
 | `redactor` | Mask/verify secrets in a text blob. |
 | `postflight` | Write durable `kb/prior_context.json`. |

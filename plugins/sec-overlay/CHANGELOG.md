@@ -2,6 +2,27 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.22.0 - 2026-08-16
+
+### Added
+
+- `sec_overlay/diagram_gate.py`: deterministic hard gate over generated Mermaid diagrams —
+  per-type node/participant/message caps (`CAPS`, `SEQ_CAPS`), ≤4-word edge labels, DFD
+  trust-boundary-subgraph requirement, derivation provenance (`%% derived-from: <file>
+  sha256:<hash>`, rejecting a stale hash or a new element/participant absent from the source),
+  legend-required styling, and orphan-detail nodes (a node that only ever receives and isn't a
+  store/actor) scoped to `container`/`component`/`dfd` diagrams only. `run_diagram_gate(arch_dir,
+  tm_dir)` walks a full architecture/threat-model tree. CLI-callable
+  (`python -m sec_overlay.diagram_gate --architecture DIR --threat-model DIR`).
+
+### Fixed
+
+- `sec_overlay/mermaid_index.py`'s edge regexes no longer drop an edge whose source node carries
+  an inline bracket label on the same line (`web[Web] --> api[API]`) — previously produced zero
+  edges for that shape.
+- `sec_overlay/mermaid_index.py`'s C4 parser now also adds `Person(...)` and `*_Ext(...)` element
+  ids to `store_ids`, marking them orphan-exempt alongside `ContainerDb`/`SystemDb`/`*Queue`.
+
 ## 1.21.1 - 2026-08-16
 
 ### Fixed

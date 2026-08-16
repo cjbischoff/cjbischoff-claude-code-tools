@@ -263,3 +263,19 @@ message count, `has_style` detection, and a `ValueError` on an unrecognized diag
 
 `test_flowchart_mid_label_edge` added to `test_mermaid_index.py`: covers the `a -- label --> b`
 mid-arrow-label form, asserting the edge triple and that the label text never appears as a node.
+
+`test_c4_index` widened to expect `store_ids == {"user", "db"}`: `Person(...)` and `*_Ext(...)`
+element ids are orphan-exempt required shapes, same as `ContainerDb`/`SystemDb`/`*Queue`.
+`test_flowchart_edge_with_inline_source_label` (new) pins a fix to `mermaid_index.py`'s edge
+regexes: an edge whose source node carries its own inline bracket label on the same line
+(`web[Web] --> api[API]`) now parses — it previously produced zero edges, silently dropping
+every such edge.
+
+New `test_diagram_gate.py` covers `sec_overlay.diagram_gate`: node/participant/message caps
+(`CAPS`, `SEQ_CAPS`), the ≤4-word edge-label rule, DFD trust-boundary-subgraph requirement,
+derivation provenance (`%% derived-from: <file> sha256:<hash>` — missing header, stale hash, and
+an element/participant absent from the named source all fail), legend-required styling, and the
+orphan-detail check (a node that only ever receives — never a source — and isn't a store/actor
+is flagged; a chain's entry node, which is naturally out-degree-only, is not). Per design spec §6
+(R4), the orphan check runs only for `container`/`component`/`dfd` — never `context` or
+`sequence`, since context actors are by definition often degree-1.

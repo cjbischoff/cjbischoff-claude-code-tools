@@ -18,13 +18,16 @@ _C4_HEAD = re.compile(r"^\s*C4(Context|Container|Component|Dynamic|Deployment)\b
 _FLOW_NODE = re.compile(
     r"(?<![\w])([A-Za-z][\w-]*)(\[\(|\(\[|\[\[|\{\{|\[|\(|\{)([^\]\)\}]*)"
 )
+# A node id on the edge's source side may carry its own inline bracket label
+# (`web[Web] --> api`) — skip it before matching the arrow.
+_INLINE_LABEL_SKIP = r"(?:\[[^\]]*\]|\([^)]*\)|\{[^}]*\})?"
 _FLOW_EDGE = re.compile(
-    r"([A-Za-z][\w-]*)\s*[-.=]+>{1,2}\s*(?:\|([^|]*)\|\s*)?([A-Za-z][\w-]*)"
+    r"([A-Za-z][\w-]*)" + _INLINE_LABEL_SKIP + r"\s*[-.=]+>{1,2}\s*(?:\|([^|]*)\|\s*)?([A-Za-z][\w-]*)"
 )
 # mid-arrow label form: `a -- some label --> b` (as opposed to `a -->|label| b`).
 # Tried before _FLOW_EDGE, or the label text itself gets misread as a source node.
 _FLOW_EDGE_MID = re.compile(
-    r"([A-Za-z][\w-]*)\s*--\s*([^->][^-]*?)\s*-->\s*([A-Za-z][\w-]*)"
+    r"([A-Za-z][\w-]*)" + _INLINE_LABEL_SKIP + r"\s*--\s*([^->][^-]*?)\s*-->\s*([A-Za-z][\w-]*)"
 )
 _SUBGRAPH = re.compile(r"^\s*subgraph\s+([A-Za-z][\w-]*)")
 _PARTICIPANT = re.compile(r"^\s*(?:participant|actor)\s+(\w+)")
@@ -36,6 +39,10 @@ _C4_ELEM = re.compile(
     r"\(\s*([\w-]+)\s*,\s*\"([^\"]*)\""
 )
 _C4_STORE = re.compile(r"^\s*(?:Container|System)(?:Db|Queue)\s*\(\s*([\w-]+)")
+# Person and any `*_Ext` element are orphan-exempt required shapes (design spec §6, R5):
+# actors/external systems are legitimately degree-1 in container/component diagrams.
+_C4_EXEMPT = re.compile(r"^\s*(?:Person|System|Container|Component)(?:Db|Queue)?_Ext\s*\(\s*([\w-]+)")
+_C4_PERSON = re.compile(r"^\s*Person\s*\(\s*([\w-]+)")
 _C4_REL = re.compile(r"^\s*(?:Bi)?Rel(?:_\w+)?\s*\(\s*([\w-]+)\s*,\s*([\w-]+)\s*,\s*\"([^\"]*)\"")
 _STYLE = re.compile(r"^\s*(style|classDef|linkStyle)\b")
 
@@ -156,7 +163,7 @@ def _index_c4(lines: list[str]) -> DiagramIndex:
         m = _C4_ELEM.match(ln)
         if m:
             idx.nodes[m.group(2)] = m.group(3)
-        s = _C4_STORE.match(ln)
+        s = _C4_STORE.match(ln) or _C4_EXEMPT.match(ln) or _C4_PERSON.match(ln)
         if s:
             idx.store_ids.add(s.group(1))
         r = _C4_REL.match(ln)

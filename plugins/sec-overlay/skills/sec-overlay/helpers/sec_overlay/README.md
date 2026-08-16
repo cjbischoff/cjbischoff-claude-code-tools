@@ -299,6 +299,19 @@ sequence, and C4 diagrams, returning a `DiagramIndex` (nodes, edges, subgraphs, 
 messages, store_ids, has_style). Not a grammar: extracts only what the diagram gate checks;
 raises `ValueError` on an unrecognized diagram header. Feeds the upcoming diagram gate (Task 2).
 
+New module `diagram_gate.py` — deterministic hard gate over generated Mermaid diagrams
+(`check_diagram`, `run_diagram_gate`, `CAPS`, `SEQ_CAPS`): per-type node/participant/message
+caps, ≤4-word edge labels, DFD trust-boundary-subgraph requirement, derivation provenance
+(`%% derived-from:` header + sha256 freshness, no element/participant absent from the source),
+legend-required styling, and orphan-detail nodes — scoped to `container`/`component`/`dfd` only,
+never `context` or `sequence` (context actors are by design often degree-1). CLI-callable —
+see the module map entry.
+
+`mermaid_index.py` also gained a fix for an edge whose source node carries its own inline
+bracket label on the same line (`web[Web] --> api[API]`) — previously produced zero edges for
+that shape — and its C4 parser now adds `Person(...)`/`*_Ext(...)` ids to `store_ids` too,
+orphan-exempt alongside `ContainerDb`/`SystemDb`/`*Queue`.
+
 `mermaid_index.py`'s flowchart edge scan now tries `_FLOW_EDGE_MID` (`a -- some label --> b`)
 before the piped-label `_FLOW_EDGE` regex, fixing a defect where the label text itself was
 misread as a phantom source node and `a`/`b` were silently dropped from `nodes`.

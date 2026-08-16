@@ -61,7 +61,7 @@ def test_c4_index():
     assert idx.kind == "c4"
     assert set(idx.nodes) == {"user", "gw", "db"}
     assert ("gw", "db", "reads session") in idx.edges
-    assert idx.store_ids == {"db"}
+    assert idx.store_ids == {"user", "db"}
 
 
 def test_flowchart_mid_label_edge():
@@ -74,6 +74,12 @@ def test_flowchart_mid_label_edge():
 def test_style_detected():
     idx = index_mermaid(FLOWCHART + "    style gw fill:#f00\n")
     assert idx.has_style is True
+
+
+def test_flowchart_edge_with_inline_source_label():
+    idx = index_mermaid("flowchart LR\n    web[Web] -->|calls| api[API]\n")
+    assert ("web", "api", "calls") in idx.edges
+    assert idx.nodes == {"web": "Web", "api": "API"}
 
 
 def test_unrecognizable_raises():
