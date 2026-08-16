@@ -22,7 +22,13 @@ BSD-2-Clause, files ``cvss_score.js`` / ``cvss_lookup.js`` / ``max_composed.js``
 
 import pytest
 
-from sec_overlay.cvss import MACROVECTOR_LOOKUP, _macrovector, _parse, cvss40_base, offensive_priority
+from sec_overlay.cvss import (
+    MACROVECTOR_LOOKUP,
+    _macrovector,
+    _parse,
+    cvss40_base,
+    offensive_priority,
+)
 
 # (CVE ID, vector, expected_score) — scores copied verbatim from NVD's cvssMetricV40 baseScore.
 REFERENCE = [

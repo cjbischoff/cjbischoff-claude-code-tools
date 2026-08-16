@@ -246,3 +246,6 @@ list instead.
 
 The `_full` helper in `test_report.py` builds its `Finding` kwargs as a dict literal (not a
 `dict()` call) to satisfy ruff `C408`.
+
+`test_cvss.py`'s `sec_overlay.cvss` import is wrapped across multiple lines to satisfy ruff
+`I001` (the single-line form exceeded the 100-char limit).

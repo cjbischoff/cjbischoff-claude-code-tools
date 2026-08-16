@@ -2,6 +2,13 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.18.1 - 2026-08-16
+
+### Fixed
+
+- Wrap `tests/test_cvss.py`'s `sec_overlay.cvss` import across multiple lines to clear a ruff
+  `I001` warning introduced by the CVSS v4.0 scoring-engine rewrite.
+
 ## 1.18.0 - 2026-08-16
 
 ### Changed
