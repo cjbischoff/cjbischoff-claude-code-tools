@@ -3,8 +3,16 @@ import subprocess
 
 import pytest
 
+from sec_overlay.correlate.manifest import validate_manifest
 from sec_overlay.profile import ScanProfile
-from sec_overlay.run import WorkingTreeFenceError, fence, infer_role, receipt, write_env
+from sec_overlay.run import (
+    WorkingTreeFenceError,
+    fence,
+    infer_role,
+    receipt,
+    synthesize_manifest,
+    write_env,
+)
 from sec_overlay.workspace import Workspace
 
 
@@ -92,3 +100,21 @@ def test_write_env_writes_all_tokens(tmp_path):
     assert lines["SHA"] == "abc123"
     assert lines["SCAN_SCOPE"] == "."
     assert lines["REPO_ROOT"] == "/repos/app"
+
+
+def test_synthesize_manifest_is_valid_and_keys_distinct():
+    members = [
+        {"slug": "app", "repo_root": "/repos/app", "scan_scope": "svc-a", "role": "service-enforcer"},
+        {"slug": "app", "repo_root": "/repos/app", "scan_scope": "svc-b", "role": "infra"},
+    ]
+    manifest = synthesize_manifest("product-x", members)
+    assert validate_manifest(manifest) == []
+    keys = {f'{m["slug"]}#{m["scan_scope"]}' for m in manifest["members"]}
+    assert keys == {"app#svc-a", "app#svc-b"}
+
+
+def test_synthesize_manifest_rejects_bad_role():
+    with pytest.raises(ValueError):
+        synthesize_manifest(
+            "p", [{"slug": "a", "repo_root": "/a", "scan_scope": ".", "role": "nonsense"}]
+        )

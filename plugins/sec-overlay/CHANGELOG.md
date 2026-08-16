@@ -2,6 +2,12 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.35.0 - 2026-08-16
+
+### Added
+
+- Add manifest synthesis for correlation.
+
 ## 1.34.0 - 2026-08-16
 
 ### Added

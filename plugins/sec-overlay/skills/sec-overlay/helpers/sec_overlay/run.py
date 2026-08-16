@@ -9,7 +9,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from sec_overlay.correlate.manifest import ROLES
+from sec_overlay.correlate.manifest import ROLES, validate_manifest
 from sec_overlay.profile import ScanProfile
 from sec_overlay.workspace import Workspace
 
@@ -71,6 +71,27 @@ def infer_role(profile: ScanProfile) -> str:
         return "service-enforcer"
     assert "infra" in ROLES  # invariant: the default is a valid role
     return "infra"
+
+
+def synthesize_manifest(product: str, members: list[dict]) -> dict:
+    """Build a correlation manifest from per-repo members.
+
+    Args:
+        product: The product identifier the correlation groups under.
+        members: One dict per repo/sub-service with keys ``slug``,
+            ``repo_root``, ``scan_scope``, ``role``.
+
+    Returns:
+        A manifest dict ready for ``python -m sec_overlay.correlate``.
+
+    Raises:
+        ValueError: The synthesized manifest fails ``validate_manifest``.
+    """
+    manifest = {"product": product, "members": members}
+    errs = validate_manifest(manifest)
+    if errs:
+        raise ValueError("synthesized invalid manifest: " + "; ".join(errs))
+    return manifest
 
 
 def receipt(

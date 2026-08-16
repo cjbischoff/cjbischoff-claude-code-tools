@@ -396,3 +396,7 @@ tokens from this file instead of the orchestrator re-substituting them by hand o
 `run.py` gained `infer_role(profile: ScanProfile) -> str`, which maps a `ScanProfile`'s
 `subsystems`/`frameworks`/`attack_surface` to one of `sec_overlay.correlate.manifest.ROLES`
 (`rbac-source` → `service-enforcer` → `infra` default) for correlation-manifest synthesis.
+
+`run.py` gained `synthesize_manifest(product, members) -> dict`, which wraps `members` under
+`product` and raises `ValueError` when `sec_overlay.correlate.manifest.validate_manifest` rejects
+the result — building the `product.json`-shaped dict `python -m sec_overlay.correlate` consumes.

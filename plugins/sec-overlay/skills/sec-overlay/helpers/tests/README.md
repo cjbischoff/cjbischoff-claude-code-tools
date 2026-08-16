@@ -352,3 +352,7 @@ and returns that path.
 `test_run.py` gained three `infer_role` tests, covering `sec_overlay.run.infer_role`: a dict-form
 `subsystems` entry named `rbac-policy`/`identity` returns `rbac-source`, a network `attack_surface`
 returns `service-enforcer`, and an ambiguous profile defaults to `infra`.
+
+`test_run.py` gained two `synthesize_manifest` tests, covering `sec_overlay.run.synthesize_manifest`:
+a valid two-member call passes `validate_manifest` with distinct `slug#scan_scope` keys, and a
+member with a role outside `ROLES` raises `ValueError`.
