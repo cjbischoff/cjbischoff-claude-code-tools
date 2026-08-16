@@ -148,7 +148,7 @@ Write each finding as JSON to `{{WORKSPACE}}/findings/<id>.json` matching this s
   "dataflow": ["source_expr @ file:line", "-> sink_expr @ file:line"],
   "evidence": "the sink line or minimal snippet",
   "evidence_sources": ["ast-grep:sanity", "structural-index:callers", "llm-claimed:sanitizer-scope"],
-  "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+  "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N",
   "risk_score": null,
   "verification": null,
   "patch_diff": null,
@@ -173,7 +173,7 @@ Write each finding as JSON to `{{WORKSPACE}}/findings/<id>.json` matching this s
 - **Write each finding to disk as you finish it**, not batched at the end, so a
   mid-run interruption preserves the items already triaged.
 - Populate `evidence_sources` (list of namespaced sources) on every finding.
-- Propose a CVSS 3.1 `cvss_vector` — the harness computes the score
+- Propose a CVSS v4.0 `cvss_vector` — the harness computes the score
   deterministically; do not assert a numeric score yourself.
 - `status` is one of `raw` (confirmed) or `rejected` (refuted candidate).
   Hallucinated candidates (failed Gate −1) are not written at all.

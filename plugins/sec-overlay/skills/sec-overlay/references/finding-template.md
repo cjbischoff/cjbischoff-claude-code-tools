@@ -101,7 +101,7 @@ user, single tenant, cross-tenant, catalog-wide, unbounded); CIA assessment
 one-shot.
 
 ## 5. Severity Rationale
-- Propose a **CVSS 3.1 vector**; the harness computes the numeric **score**
+- Propose a **CVSS v4.0 vector**; the harness computes the numeric **score**
   deterministically — never assert a score by hand.
 - Justify each metric choice (AV, AC, PR, UI, S, C, I, A).
 - Justify the band (Critical/High/Medium/Low).

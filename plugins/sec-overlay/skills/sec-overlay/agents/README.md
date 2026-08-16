@@ -115,7 +115,7 @@ the agent doesn't re-raise known false positives.
 |--------|-------|-----|
 | `critic.md` | sonnet | production-viability filter: reject debug-only/dead/test-fixture/vendored/fully-mitigated code. **Demote on doubt, don't hard-reject.** |
 | `judge.md` | cheap, **no tools** | reads only the finding + critic verdict; asks "is the severity inflated?" Uphold / downgrade / flag. |
-| `validate.md` | opus (different family) | **assumes every finding is wrong** and tries to refute it independently. Survival = confirmation. A `false-positive` verdict *requires* a `file:line` cite of the defeating control. Never confirms a finding whose `reachability.blocker == "external-boundary"` — it stays a lead for calibrate/report to handle. A `confirmed` finding now also requires a real (derived, not placeholder) `cvss_vector` and a non-empty `preconditions` list, or it routes to `needs-deployment-testing` instead (ISSUE-008) — calibrate scores off this vector verbatim. |
+| `validate.md` | opus (different family) | **assumes every finding is wrong** and tries to refute it independently. Survival = confirmation. A `false-positive` verdict *requires* a `file:line` cite of the defeating control. Never confirms a finding whose `reachability.blocker == "external-boundary"` — it stays a lead for calibrate/report to handle. A `confirmed` finding now also requires a real (derived, not placeholder) CVSS v4.0 `cvss_vector` and a non-empty `preconditions` list, or it routes to `needs-deployment-testing` instead (ISSUE-008) — calibrate scores off this vector verbatim. |
 
 > `judge` and `validate` must **never** run concurrently against the same finding file — the
 > last writer silently drops the other's field. (Enforced by orchestration order, not code.)

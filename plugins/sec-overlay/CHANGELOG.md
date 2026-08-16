@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.20.0 - 2026-08-16
+
+### Changed
+
+- `agents/validate.md`'s confirmed-finding contract and `agents/investigate.md`'s example
+  finding now specify a CVSS v4.0 vector (`CVSS:4.0/AV:_/AC:_/AT:_/PR:_/UI:_/VC:_/VI:_/VA:_/
+  SC:_/SI:_/SA:_`) instead of v3.1, matching the v4.0-only parser (`sec_overlay/cvss.py`).
+  `references/prompt-constants.md`'s `SEVERITY_GUIDANCE` block, `references/finding-template.md`,
+  and `references/README.md` updated to the same legal v4.0 base-metric values so every prompt
+  that imports the shared block proposes a vector the engine accepts.
+
 ## 1.19.0 - 2026-08-16
 
 ### Changed
