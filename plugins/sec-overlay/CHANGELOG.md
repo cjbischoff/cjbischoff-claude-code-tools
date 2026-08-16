@@ -2,6 +2,20 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.23.1 - 2026-08-16
+
+### Fixed
+
+- `sec_overlay/ste_lint.py`'s `_prose_blocks` no longer silently drops every line after an
+  unterminated code fence — an unclosed ` ``` ` now yields an `"unbalanced code fence"` error
+  instead of a false-clean result.
+- `sec_overlay/ste_lint.py`'s sentence splitter no longer fractures a paragraph or sentence at
+  an abbreviation (`e.g.`, `i.e.`, `etc.`, `vs.`, `cf.`, `approx.`, `viz.`, `al.`) — it now
+  splits only at sentence-ending punctuation followed by a capitalized word and folds an
+  abbreviation-preceded split back onto its clause, so an abbreviation-heavy paragraph no
+  longer produces a false "over 6 sentences" error and a genuinely over-length sentence
+  containing an abbreviation is still flagged.
+
 ## 1.23.0 - 2026-08-16
 
 ### Added

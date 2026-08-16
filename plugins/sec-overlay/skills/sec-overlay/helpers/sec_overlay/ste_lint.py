@@ -17,13 +17,38 @@ _SENTENCE_MAX = 25
 _PARA_MAX_SENTENCES = 6
 _CODE_SPAN = re.compile(r"`[^`]*`")
 _URL = re.compile(r"https?://\S+")
-_SENT_SPLIT = re.compile(r"(?<=[.!?])\s+")
+# Only split at sentence-ending punctuation followed by whitespace and a capital
+# letter — an abbreviation ("e.g.", "etc.") followed by a lowercase continuation
+# never triggers a split; the abbreviation check below catches a capitalized
+# word right after one anyway.
+_SENT_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z])")
+_ABBREV = re.compile(r"(?i:\b(?:e\.g|i\.e|etc|vs|cf|approx|viz|al)\.)$")
 _CAP_RUN = re.compile(r"\b(?:[A-Z][a-z]+\s+){3,}[A-Z][a-z]+\b")
+_UNBALANCED_FENCE = "unbalanced code fence — prose after it was not linted"
 
 
-def _prose_blocks(text: str) -> list[str]:
-    """Split markdown into linted prose blocks, dropping exempt regions."""
+def _split_sentences(cleaned: str) -> list[str]:
+    """Split prose into sentences, folding an abbreviation back onto its clause."""
+    parts = [p for p in _SENT_SPLIT.split(cleaned) if p.strip()]
+    sentences: list[str] = []
+    for part in parts:
+        if sentences and _ABBREV.search(sentences[-1].strip()):
+            sentences[-1] = f"{sentences[-1]} {part}"
+        else:
+            sentences.append(part)
+    return sentences
+
+
+def _prose_blocks(text: str) -> tuple[list[str], list[str]]:
+    """Split markdown into linted prose blocks, dropping exempt regions.
+
+    Returns:
+        ``(blocks, errors)`` — an unterminated code fence yields no blocks for
+        the remainder of the file and reports an error instead of linting
+        nothing silently.
+    """
     blocks: list[str] = []
+    errors: list[str] = []
     in_fence = False
     current: list[str] = []
     for ln in text.splitlines():
@@ -52,7 +77,9 @@ def _prose_blocks(text: str) -> list[str]:
         current.append(stripped)
     if current:
         blocks.append(" ".join(current))
-    return blocks
+    if in_fence:
+        errors.append(_UNBALANCED_FENCE)
+    return blocks, errors
 
 
 def _clean(block: str) -> str:
@@ -68,11 +95,11 @@ def lint_prose(text: str) -> tuple[list[str], list[str]]:
     Returns:
         ``(errors, warnings)`` — human-readable rule violations.
     """
-    errors: list[str] = []
+    blocks, errors = _prose_blocks(text)
     warnings: list[str] = []
-    for block in _prose_blocks(text):
+    for block in blocks:
         cleaned = _clean(block)
-        sentences = [s for s in _SENT_SPLIT.split(cleaned) if s.strip()]
+        sentences = _split_sentences(cleaned)
         if len(sentences) > _PARA_MAX_SENTENCES:
             errors.append(f"paragraph over {_PARA_MAX_SENTENCES} sentences: {cleaned[:60]!r}…")
         for s in sentences:

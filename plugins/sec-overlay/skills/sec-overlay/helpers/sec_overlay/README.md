@@ -334,3 +334,12 @@ spans, and URLs are exempt; table free-text cells are linted. `lint_prose(text) 
 warnings)` is the entry point; the CLI (`python -m sec_overlay.ste_lint <files...>
 [--require-frontmatter]`) exits 1 on any error and additionally requires the literal
 `ASD-STE100` string somewhere in the file when `--require-frontmatter` is passed.
+
+`ste_lint.py` fix round: an unterminated code fence used to silently drop every line after it
+from linting with no signal at all — `_prose_blocks` now returns `(blocks, errors)` and reports
+an `"unbalanced code fence"` error when the file ends still inside a fence, so a real violation
+hidden behind a stray opening fence no longer passes clean. Sentence splitting (`_split_sentences`)
+now only breaks at `[.!?]` followed by a capitalized word, and folds the split back onto its
+clause when the preceding token is a known abbreviation (`e.g.`, `i.e.`, `etc.`, `vs.`, `cf.`,
+`approx.`, `viz.`, `al.`) — an abbreviation no longer fractures a paragraph into a false
+"over 6 sentences" or hides a genuinely over-length sentence by chopping it in two.

@@ -51,3 +51,26 @@ def test_noun_cluster_warns():
 def test_buried_sequence_warns():
     _, warns = lint_prose("Open the file then read the header then check the version.\n")
     assert any("sequence" in w for w in warns)
+
+
+def test_unbalanced_fence_reported():
+    text = "```python\nx = 1\nOpen the file; check the header.\n"
+    errs, _ = lint_prose(text)
+    assert any("unbalanced" in e for e in errs)
+
+
+def test_abbreviation_does_not_split_paragraph():
+    para = (
+        "Use the flag for a common case, e.g. formatting or linting, and check the output. "
+        "It runs the same tool twice, e.g. once for lint and once for format. "
+        "Save the file when it is clean."
+    )
+    errs, _ = lint_prose(para + "\n")
+    assert not any("6 sentences" in e for e in errs)
+
+
+def test_abbreviation_does_not_hide_long_sentence():
+    words = ["word"] * 15
+    text = " ".join(words) + " e.g. " + " ".join(words) + ".\n"
+    errs, _ = lint_prose(text)
+    assert any("25 words" in e for e in errs)

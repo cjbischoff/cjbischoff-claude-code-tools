@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-90 pytest files, 782 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+90 pytest files, 785 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -9,6 +9,12 @@ sentence, a semicolon in prose, and a >6-sentence paragraph each produce an erro
 inside a code span or fenced code block is exempt; a heading and a table separator row are
 exempt but a semicolon inside a table cell is still flagged; a 4-word capitalized run and a
 sentence repeating " then " each produce a warning, not an error.
+
+`test_ste_lint.py` gained three fix-round regression tests: an unterminated code fence with a
+real semicolon violation after it reports an `"unbalanced"` error instead of silently linting
+nothing; a paragraph using "e.g." twice across three real sentences produces no false
+"over 6 sentences" error; and a 30-word sentence containing "e.g." mid-sentence is still
+flagged as over 25 words rather than being fractured into two short sentences.
 
 New `test_cvss4_data.py` covers the vendored CVSS v4.0 data: `MACROVECTOR_LOOKUP` has >250
 six-digit-key entries with scores in `[0, 10]`, and `MAX_COMPOSED`/`MAX_SEVERITY` are nonempty.
