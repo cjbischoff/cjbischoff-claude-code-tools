@@ -42,8 +42,8 @@ fail, distinct headings pass, and the gate skips the check silently when the arc
 trees are absent.
 
 New `test_redteam_gate_paths.py` verifies the red-team gate path split (O-65): `redteam-adversary.md`
-line 38 declares `kb/gates/redteam-adversary.json`, avoiding collision with `redteam.py:357`'s
-`kb/gates/redteam.json`.
+declares `kb/gates/redteam-adversary.json` and does not contain the old `kb/gates/redteam.json`,
+avoiding collision with `redteam.py:357`'s gate path.
 
 `test_stage_validate.py` gained `test_unknown_stage_raises` (ISSUE-034): `validate_stage` now
 raises `ValueError` for an unregistered stage instead of silently passing. `test_bucket_c.py`'s
