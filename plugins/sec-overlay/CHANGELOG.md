@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.23.0 - 2026-08-16
+
+### Added
+
+- `sec_overlay/ste_lint.py`: a deterministic linter for the checkable structural subset of
+  ASD-STE100 — sentence >25 words, semicolon in prose, and paragraph >6 sentences are errors;
+  a 4+ word capitalized run mid-sentence and a sentence repeating " then " are warnings. Fenced
+  code, mermaid blocks, headings, table separator rows, inline code spans, and URLs are exempt;
+  table free-text cells are linted. `lint_prose(text)` is the entry point; the CLI
+  (`python -m sec_overlay.ste_lint <files...> [--require-frontmatter]`) exits 1 on any error.
+
 ## 1.22.1 - 2026-08-16
 
 ### Fixed

@@ -325,3 +325,12 @@ diagram (for element/participant-diff checks) is now wrapped in `try/except Valu
 `mermaid_index.py`'s flowchart edge scan now tries `_FLOW_EDGE_MID` (`a -- some label --> b`)
 before the piped-label `_FLOW_EDGE` regex, fixing a defect where the label text itself was
 misread as a phantom source node and `a`/`b` were silently dropped from `nodes`.
+
+New module `ste_lint.py` — a deterministic linter for the checkable structural subset of
+ASD-STE100: sentence >25 words, semicolon in prose, and paragraph >6 sentences are errors; a
+4+ word capitalized run mid-sentence (noun-cluster suspicion) and a sentence repeating " then "
+are warnings. Fenced code blocks, mermaid blocks, headings, table separator rows, inline code
+spans, and URLs are exempt; table free-text cells are linted. `lint_prose(text) -> (errors,
+warnings)` is the entry point; the CLI (`python -m sec_overlay.ste_lint <files...>
+[--require-frontmatter]`) exits 1 on any error and additionally requires the literal
+`ASD-STE100` string somewhere in the file when `--require-frontmatter` is passed.
