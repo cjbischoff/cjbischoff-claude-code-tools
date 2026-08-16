@@ -333,3 +333,7 @@ existing unhyphenated forms (`a->>b`, `a--)b`, `a-xb`). `test_diagram_gate.py` g
 `test_empty_threat_model_passes_by_default` / `test_empty_threat_model_fails_when_required` for
 the new `require_threat_model` gate flag, and `test_node_label_over_four_words_fails` /
 `test_bare_id_node_label_not_flagged` for the new node-label word-count check.
+
+New `test_run.py` covers `sec_overlay.run.fence`: passes when the current `git status --porcelain`
+output matches the captured baseline, raises `WorkingTreeFenceError` naming the delta lines
+otherwise.

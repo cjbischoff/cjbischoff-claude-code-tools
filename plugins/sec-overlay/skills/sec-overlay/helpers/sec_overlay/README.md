@@ -380,3 +380,7 @@ bracket label over 4 words is now an error (bare-id nodes with no bracket label 
 `run_diagram_gate` takes a keyword-only `require_threat_model` flag — when set, a missing
 `dfd.mmd` becomes a gate error instead of a silently-skipped optional diagram (CLI:
 `--require-threat-model`).
+
+New module `run.py` — driver helpers for a sec-overlay audit run; first addition is `fence(target,
+baseline, *, runner=subprocess.run)`, which raises `WorkingTreeFenceError` naming the delta lines
+when `git status --porcelain` output differs from the captured baseline.

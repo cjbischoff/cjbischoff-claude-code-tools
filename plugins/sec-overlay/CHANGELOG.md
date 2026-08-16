@@ -2,6 +2,12 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.31.0 - 2026-08-16
+
+### Added
+
+- Add run.py driver working-tree fence.
+
 ## 1.30.3 - 2026-08-16
 
 ### Changed
