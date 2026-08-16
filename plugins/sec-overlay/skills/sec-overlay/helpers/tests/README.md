@@ -4,6 +4,9 @@
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+`test_cost.py` gained `test_record_and_aggregate_timings` (ISSUE-014), covering the new
+`cost.record_timing`/`cost.aggregate_timings_by_phase` per-phase wall-clock accounting.
+
 `test_wiring.py` gained four regression pins (ISSUE-017, ISSUE-020, ISSUE-031, ISSUE-033) for
 already-wired items: `reconcile_plan(` and `unrouted_candidate_classes(`/`unrouted_triage_dispatch(`
 appear in `driver.py`, `render_fp_feedback` keys on `fingerprint`, and `run_deterministic_phase`

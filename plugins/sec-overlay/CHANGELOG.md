@@ -2,6 +2,13 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.11.0 - 2026-08-15
+
+### Added
+
+- Per-phase wall-clock timing accounting: `cost.record_timing` and
+  `cost.aggregate_timings_by_phase` sum recorded seconds by phase (ISSUE-014).
+
 ## 1.10.0 - 2026-08-15
 
 ### Added

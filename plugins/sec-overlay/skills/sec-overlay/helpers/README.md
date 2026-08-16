@@ -216,7 +216,7 @@ The `tests/` folder houses 81 files, 589 tests. Key structural guards:
 | `redteam.py` | Render `redteam-plan.md` from findings marked `needs-runtime`, filtered by risk bar; includes markdown renderers `_bullets()` and `_signal()` for runtime directives (both accept list/dict *or* plain-string `runtime_test` values); `_signal()` delegates to the shared `render_util.signal_lines`, so a bare-string `expected_signal` renders as an `**insecure:**` bullet — the same shape `report.py` uses; `_question_block()` renders `open_questions` from all statuses (plan + below-bar + static-settled) into a "Questions to ask" section. The "static-settled" footer counts `disc["static_settled"]` (not the needs-runtime code-settled subset). CLI-callable. |
 | `parse.py` | Fail-open JSON extraction from LLM prose/fences (largest balanced substring); returns None, never a silent empty. |
 | `gates.py` | Fail-closed gate orchestrator: a `GATE_ROUTING` table + `REQUIRED_GATES`; a missing gate result hard-fails. |
-| `cost.py` | Per-phase and per-model token accounting into `CampaignState.budget` (`aggregate_by_phase`, `aggregate_by_model`); USD is an opt-in estimate (`estimate_cost_usd`), never rendered as measured. Feeds `report.py`'s "Run economics" section. |
+| `cost.py` | Per-phase and per-model token accounting into `CampaignState.budget` (`aggregate_by_phase`, `aggregate_by_model`); USD is an opt-in estimate (`estimate_cost_usd`), never rendered as measured. Also records per-phase wall-clock duration (`record_timing`, `aggregate_timings_by_phase`). Feeds `report.py`'s "Run economics" section. |
 | `scanscope.py` / `normalize.py` | (listed above) |
 
 ### `sec_overlay/correlate/` — cross-repo correlation (a product spans many repos)
