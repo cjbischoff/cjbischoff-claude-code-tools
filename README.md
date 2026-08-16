@@ -63,7 +63,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `plugins/sec-overlay/skills/sec-overlay/SKILL.md` | Skill playbook: agentic security-audit harness; links to the skill's `CLAUDE.md` for prerequisites and operating rules |
 | `plugins/sec-overlay/skills/sec-overlay/helpers/` | Python core (`sec_overlay` package) that runs tools and enforces gates |
 | `plugins/sec-overlay/skills/sec-overlay/agents/` | LLM subagent prompts for the investigate/validate/patch phases |
-| `docs/` | Design specs and implementation plans (see `docs/README.md`), including the sec-overlay defect-remediation design and its Plan A audit-driver, Plan C coverage/accuracy, and Plan D report/telemetry/artifact-review implementation plans |
+| `docs/` | Design specs and implementation plans (see `docs/README.md`), including the sec-overlay defect-remediation design and its Plan A audit-driver, Plan C coverage/accuracy, and Plan D report/telemetry/artifact-review implementation plans, and the architecture/threat-model standards design (C4/arc42 + derived DFD/STRIDE, CVSS v4.0, Mermaid caps, STE prose) |
 | `docs/templates/plugin/` | New-plugin skeleton copied to `plugins/<name>/` and filled in per the root `CLAUDE.md` "New plugin" checklist |
 | `.pre-commit-config.yaml` | prek hook config: doc-update guard + commit message check |
 | `scripts/hooks/` | Hook scripts that enforce commit governance |
