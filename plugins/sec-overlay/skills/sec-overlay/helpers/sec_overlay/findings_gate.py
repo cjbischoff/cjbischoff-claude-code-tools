@@ -86,6 +86,12 @@ def validate_findings(ws: Workspace) -> list[str]:
                 f"{f.id}: runtime_disposition {f.runtime_disposition!r} is not one of "
                 f"{sorted(RUNTIME_DISPOSITIONS)}"
             )
+
+        if f.status.value in SHIPPING_STATUSES and not (f.impact or "").strip():
+            errors.append(
+                f"{f.id}: impact must be non-empty for a shipping finding "
+                f"(status {f.status.value})"
+            )
     record_stage(ws, "findings-gate")
     return errors
 

@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.9.0 - 2026-08-15
+
+### Added
+
+- `Finding.impact: str = ""` — the concrete consequence of exploitation, rendered as the
+  report's Impact section. `findings_gate.validate_findings` now rejects a `SHIPPING_STATUSES`
+  finding (`confirmed`/`fixed`/`needs-deployment-testing`) whose `impact` is blank; non-shipping
+  findings may stay blank. `references/finding.schema.json` gained the matching `impact` property
+  (not in `required`).
+
 ## 1.8.3 - 2026-08-15
 
 ### Fixed

@@ -48,6 +48,10 @@ whether a source can confirm a finding alone.
 round-trips through `to_dict`/`from_dict`. It holds the value `evidence.receipt_tier()` derives
 once a gate stamps it; `None` before that.
 
+`models.py`'s `Finding` also gained `impact: str = ""` — the concrete consequence of exploitation,
+rendered as the report's Impact section. `findings_gate.validate_findings` rejects a
+`SHIPPING_STATUSES` finding whose `impact` is blank; non-shipping findings may stay blank.
+
 `cluster.py` (new) groups ≥3 same-class, same-sink `raw` findings into one systemic cluster,
 run after dedupe and before the critic/gate ladder — see the module map entry.
 

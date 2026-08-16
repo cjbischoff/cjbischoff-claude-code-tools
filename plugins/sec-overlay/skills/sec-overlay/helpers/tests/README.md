@@ -112,6 +112,11 @@ anchor on a missing file is rejected, a `candidate`-status finding is not gated,
 finding (`context.control_findings`) forced to `confirmed` status is rejected the same way once
 its doc-cited file doesn't exist under the target root.
 
+`test_models.py` gained coverage for `Finding.impact` — defaults to `""` and round-trips a set
+value through `to_dict`/`from_dict`; an old finding dict with no `impact` key loads blank.
+`test_findings_gate.py` gained coverage for the new gate rule: a `SHIPPING_STATUSES` finding with
+blank `impact` is rejected, a non-shipping finding with blank `impact` is not.
+
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 

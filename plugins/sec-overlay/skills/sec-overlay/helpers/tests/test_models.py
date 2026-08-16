@@ -172,3 +172,16 @@ def test_receipt_tier_absent_from_dict_loads_none():
                 severity=Severity.HIGH, file="a.py", line=3, message="m")
     assert f.receipt_tier is None
     assert Finding.from_dict(f.to_dict()).receipt_tier is None
+
+
+def test_impact_defaults_empty_and_roundtrips():
+    f = Finding(id="F-1", rule_id="r", cls="sqli", status=FindingStatus.RAW,
+                severity=Severity.HIGH, file="a.py", line=3, message="m", impact="db read")
+    assert f.impact == "db read"
+    assert Finding.from_dict(f.to_dict()).impact == "db read"
+
+
+def test_old_finding_without_impact_loads_blank():
+    d = {"id": "F-2", "rule_id": "r", "cls": "sqli", "status": "confirmed",
+         "severity": "high", "file": "a.py", "line": 1, "message": "m"}
+    assert Finding.from_dict(d).impact == ""
