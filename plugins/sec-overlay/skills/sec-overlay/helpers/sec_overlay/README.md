@@ -298,3 +298,7 @@ sequence, so ids carry the class and never collide across rulesets (ISSUE-013).
 sequence, and C4 diagrams, returning a `DiagramIndex` (nodes, edges, subgraphs, participants,
 messages, store_ids, has_style). Not a grammar: extracts only what the diagram gate checks;
 raises `ValueError` on an unrecognized diagram header. Feeds the upcoming diagram gate (Task 2).
+
+`mermaid_index.py`'s flowchart edge scan now tries `_FLOW_EDGE_MID` (`a -- some label --> b`)
+before the piped-label `_FLOW_EDGE` regex, fixing a defect where the label text itself was
+misread as a phantom source node and `a`/`b` were silently dropped from `nodes`.

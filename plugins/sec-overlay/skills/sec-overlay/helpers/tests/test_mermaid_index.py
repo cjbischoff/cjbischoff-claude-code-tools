@@ -33,6 +33,11 @@ C4Container
     Rel(gw, db, "reads session")
 """
 
+MID_LABEL_FLOWCHART = """\
+flowchart LR
+    a -- some label --> b
+"""
+
 
 def test_flowchart_index():
     idx = index_mermaid(FLOWCHART)
@@ -57,6 +62,13 @@ def test_c4_index():
     assert set(idx.nodes) == {"user", "gw", "db"}
     assert ("gw", "db", "reads session") in idx.edges
     assert idx.store_ids == {"db"}
+
+
+def test_flowchart_mid_label_edge():
+    idx = index_mermaid(MID_LABEL_FLOWCHART)
+    assert ("a", "b", "some label") in idx.edges
+    assert {"a", "b"} <= set(idx.nodes)
+    assert "label" not in idx.nodes
 
 
 def test_style_detected():

@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.21.1 - 2026-08-16
+
+### Fixed
+
+- `sec_overlay/mermaid_index.py`'s flowchart edge scan no longer misreads a mid-arrow label
+  (`a -- some label --> b`) as a phantom source node — `_FLOW_EDGE_MID` now runs first, so the
+  real node ids and the label are captured instead of silently dropped.
+
 ## 1.21.0 - 2026-08-16
 
 ### Added

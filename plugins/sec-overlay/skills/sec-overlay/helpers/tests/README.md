@@ -260,3 +260,6 @@ equivalent meaning, matching the v4.0-only parser (`sec_overlay/cvss.py`). `test
 `test_mermaid_index.py` (new) covers `sec_overlay.mermaid_index.index_mermaid` against flowchart,
 sequence, and C4 fixtures: node/edge/subgraph/store-id extraction, sequence participant order and
 message count, `has_style` detection, and a `ValueError` on an unrecognized diagram header.
+
+`test_flowchart_mid_label_edge` added to `test_mermaid_index.py`: covers the `a -- label --> b`
+mid-arrow-label form, asserting the edge triple and that the label text never appears as a node.

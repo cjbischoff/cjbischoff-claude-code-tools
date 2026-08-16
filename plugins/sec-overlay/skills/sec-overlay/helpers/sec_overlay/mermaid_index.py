@@ -21,6 +21,11 @@ _FLOW_NODE = re.compile(
 _FLOW_EDGE = re.compile(
     r"([A-Za-z][\w-]*)\s*[-.=]+>{1,2}\s*(?:\|([^|]*)\|\s*)?([A-Za-z][\w-]*)"
 )
+# mid-arrow label form: `a -- some label --> b` (as opposed to `a -->|label| b`).
+# Tried before _FLOW_EDGE, or the label text itself gets misread as a source node.
+_FLOW_EDGE_MID = re.compile(
+    r"([A-Za-z][\w-]*)\s*--\s*([^->][^-]*?)\s*-->\s*([A-Za-z][\w-]*)"
+)
 _SUBGRAPH = re.compile(r"^\s*subgraph\s+([A-Za-z][\w-]*)")
 _PARTICIPANT = re.compile(r"^\s*(?:participant|actor)\s+(\w+)")
 # Sequence ids never carry hyphens in this notation, so the id class excludes
@@ -112,9 +117,12 @@ def _index_flowchart(lines: list[str]) -> DiagramIndex:
                 idx.store_ids.add(nid)
             if stack:
                 idx.subgraphs[stack[-1]].add(nid)
-        em = _FLOW_EDGE.search(ln)
+        em = _FLOW_EDGE_MID.search(ln) or _FLOW_EDGE.search(ln)
         if em:
-            src, label, dst = em.group(1), (em.group(2) or "").strip(), em.group(3)
+            if em.re is _FLOW_EDGE_MID:
+                src, label, dst = em.group(1), em.group(2).strip(), em.group(3)
+            else:
+                src, label, dst = em.group(1), (em.group(2) or "").strip(), em.group(3)
             idx.edges.append((src, dst, label))
             for nid in (src, dst):
                 idx.nodes.setdefault(nid, nid)
