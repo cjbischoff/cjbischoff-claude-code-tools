@@ -309,6 +309,27 @@ def manual_review_findings(ctx: Context, discovery_sha: str | None = None) -> li
     return out
 
 
+def cited_source_docs(obj: dict) -> set[str]:
+    """Collect every ``source_doc`` a context object's items or history cite.
+
+    Args:
+        obj: A serialized ``Context`` dict (``items``/``provenance``).
+
+    Returns:
+        The set of non-empty ``source_doc`` strings referenced anywhere in ``items``
+        (item field or any history entry).
+    """
+    docs: set[str] = set()
+    for item in obj.get("items", []) or []:
+        sd = item.get("source_doc")
+        if sd:
+            docs.add(sd)
+        for h in item.get("history", []) or []:
+            if isinstance(h, dict) and h.get("source_doc"):
+                docs.add(h["source_doc"])
+    return docs
+
+
 def doc_coverage(provenance: dict, *, low_ratio: float = 0.25) -> dict:
     """Compare documents discovered vs read and flag a low read ratio.
 

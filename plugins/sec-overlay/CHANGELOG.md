@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.12.1 - 2026-08-15
+
+### Fixed
+
+- `context-ingest` now has a real check on `docs_read`: `cited_source_docs` collects
+  every `source_doc` an item or its history cites, and the `context` stage-validator
+  rejects a citation to a doc absent from `provenance.docs_read` — `docs_read` can no
+  longer be a placeholder count.
+
 ## 1.12.0 - 2026-08-15
 
 ### Added

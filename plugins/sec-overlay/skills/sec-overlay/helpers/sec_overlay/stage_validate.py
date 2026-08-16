@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 
-from sec_overlay.context import Context
+from sec_overlay.context import Context, cited_source_docs
 from sec_overlay.coverage_ledger import validate_coverage_ledger
 from sec_overlay.discovery_ledger import validate_discovery_ledger
 from sec_overlay.profile import validate_profile
@@ -34,9 +34,14 @@ def _validate_runtime_test(obj: object) -> list[str]:
 
 def _validate_context(obj: dict) -> list[str]:
     try:
-        return Context.from_dict(obj).validate()
+        errors = Context.from_dict(obj).validate()
     except (TypeError, KeyError, AttributeError) as e:
         return [f"context is not a valid Context document: {e}"]
+    prov = obj.get("provenance", {}) if isinstance(obj, dict) else {}
+    read = set(prov.get("docs_read", []) or [])
+    for doc in sorted(cited_source_docs(obj) - read):
+        errors.append(f"context: source_doc {doc!r} cited but absent from provenance.docs_read")
+    return errors
 
 
 # stage name -> validator(obj) -> error list. Unknown stages have no schema (pass).

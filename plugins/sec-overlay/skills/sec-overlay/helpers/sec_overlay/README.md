@@ -18,6 +18,8 @@ pointer if the package layout changed — in the same commit (enforced by the pr
 
 `context.py` gained `doc_coverage()` to compare documents discovered vs read and flag a low read ratio. The `load()` function now accepts optional `repo_root` and `scan_scope` parameters to populate `provenance["docs_discovered"]` at load time (wiring by downstream caller) — see the module map entry.
 
+`context.py` also gained `cited_source_docs()` (every `source_doc` an item or its history cites); `stage_validate.py`'s `_validate_context` now appends an error when a cited doc is absent from `provenance["docs_read"]` (ISSUE-021).
+
 `findings_gate.py` gained `validate_citations(ws, root, *, statuses=None)`, a resolver-backed
 citation/anchor check: it rejects any finding at a gated status (default
 `evidence.SHIPPING_STATUSES`) whose `file:line` does not resolve against `root`, reusing

@@ -78,6 +78,10 @@ structurally (components, data flow, call paths — `architecture.md`'s job).
 Write `{{WORKSPACE}}/kb/context.json` via the schema (build a `Context` of `ContextItem`s
 with `verify_status` and `deployed_in` set on claimed_controls, and `save` it), populate
 `provenance` (docs_read, prior_scans_read, sha), and write the `CTL-*` candidate findings.
+`docs_read` MUST be the literal list of document paths you actually opened this
+run — not a count, not an estimate. Every `source_doc` you cite on any item MUST
+appear in `docs_read`; the context stage-validator rejects a citation to a doc you
+did not record as read.
 **Diagram (one):** a claimed-control status map — one small diagram (follow
 DIAGRAM_STYLE's 10-entity cap) showing each `claimed_control`'s `verify_status`
 (PRESENT/MISSING/BYPASSABLE) grouped by the `trust_boundary` it relates to. This is a
