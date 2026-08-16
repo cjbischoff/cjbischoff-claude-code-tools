@@ -82,6 +82,11 @@ def test_flowchart_edge_with_inline_source_label():
     assert idx.nodes == {"web": "Web", "api": "API"}
 
 
+def test_flowchart_edge_with_double_brace_source_label():
+    idx = index_mermaid("flowchart LR\n    q{{Queue}} -->|feeds| w[Worker]\n")
+    assert ("q", "w", "feeds") in idx.edges
+
+
 def test_unrecognizable_raises():
     with pytest.raises(ValueError):
         index_mermaid("this is not mermaid\n")

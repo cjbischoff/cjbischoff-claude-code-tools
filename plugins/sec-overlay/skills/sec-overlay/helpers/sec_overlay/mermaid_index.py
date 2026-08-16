@@ -20,9 +20,11 @@ _FLOW_NODE = re.compile(
 )
 # A node id on the edge's source side may carry its own inline bracket label
 # (`web[Web] --> api`) — skip it before matching the arrow.
-_INLINE_LABEL_SKIP = r"(?:\[[^\]]*\]|\([^)]*\)|\{[^}]*\})?"
+_INLINE_LABEL_SKIP = r"(?:[\[({]+[^\]\)\}]*[\]\)\}]+)?"
 _FLOW_EDGE = re.compile(
-    r"([A-Za-z][\w-]*)" + _INLINE_LABEL_SKIP + r"\s*[-.=]+>{1,2}\s*(?:\|([^|]*)\|\s*)?([A-Za-z][\w-]*)"
+    r"([A-Za-z][\w-]*)"
+    + _INLINE_LABEL_SKIP
+    + r"\s*[-.=]+>{1,2}\s*(?:\|([^|]*)\|\s*)?([A-Za-z][\w-]*)"
 )
 # mid-arrow label form: `a -- some label --> b` (as opposed to `a -->|label| b`).
 # Tried before _FLOW_EDGE, or the label text itself gets misread as a source node.
@@ -41,7 +43,9 @@ _C4_ELEM = re.compile(
 _C4_STORE = re.compile(r"^\s*(?:Container|System)(?:Db|Queue)\s*\(\s*([\w-]+)")
 # Person and any `*_Ext` element are orphan-exempt required shapes (design spec §6, R5):
 # actors/external systems are legitimately degree-1 in container/component diagrams.
-_C4_EXEMPT = re.compile(r"^\s*(?:Person|System|Container|Component)(?:Db|Queue)?_Ext\s*\(\s*([\w-]+)")
+_C4_EXEMPT = re.compile(
+    r"^\s*(?:Person|System|Container|Component)(?:Db|Queue)?_Ext\s*\(\s*([\w-]+)"
+)
 _C4_PERSON = re.compile(r"^\s*Person\s*\(\s*([\w-]+)")
 _C4_REL = re.compile(r"^\s*(?:Bi)?Rel(?:_\w+)?\s*\(\s*([\w-]+)\s*,\s*([\w-]+)\s*,\s*\"([^\"]*)\"")
 _STYLE = re.compile(r"^\s*(style|classDef|linkStyle)\b")

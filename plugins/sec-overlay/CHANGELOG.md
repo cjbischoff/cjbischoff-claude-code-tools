@@ -2,6 +2,22 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.22.1 - 2026-08-16
+
+### Fixed
+
+- `sec_overlay/diagram_gate.py`'s `_provenance` no longer crashes with `FileNotFoundError` when
+  the derived-from source file doesn't exist — a missing `container-diagram.mmd`, or an attack
+  sequence whose header names an unknown parent — it now returns a `"derived-from source ... not
+  found"` error string.
+- `sec_overlay/diagram_gate.py`'s `check_diagram` no longer crashes with an uncaught `ValueError`
+  when the source diagram (for element/participant-diff checks) is unparseable — it now returns a
+  `"source ... unparseable: ..."` error string.
+- `sec_overlay/mermaid_index.py`'s `_INLINE_LABEL_SKIP` only spanned single-char bracket pairs and
+  missed multi-char forms like `q{{Queue}}`, dropping the edge entirely and false-flagging the
+  source node as an orphan-detail node — widened to one bracket-class alternation covering all
+  Mermaid node shapes.
+
 ## 1.22.0 - 2026-08-16
 
 ### Added

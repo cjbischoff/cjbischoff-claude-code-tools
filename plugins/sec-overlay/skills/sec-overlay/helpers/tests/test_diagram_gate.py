@@ -54,7 +54,8 @@ def test_dfd_without_subgraph_fails(tmp_path):
     sha = __import__("hashlib").sha256(c.read_bytes()).hexdigest()
     p = _write(
         tmp_path / "dfd.mmd",
-        f"flowchart LR\n    %% derived-from: {c.name} sha256:{sha}\n    web[Web] -->|calls| api[API]\n",
+        f"flowchart LR\n    %% derived-from: {c.name} sha256:{sha}\n"
+        "    web[Web] -->|calls| api[API]\n",
     )
     assert any("subgraph" in e or "boundary" in e for e in check_diagram(p, "dfd", source=c))
 
@@ -103,10 +104,85 @@ def test_source_only_node_is_not_orphan(tmp_path):
     assert check_diagram(p, "container") == []
 
 
+def test_double_brace_source_not_orphan(tmp_path):
+    # 'q' feeds two downstream nodes — a real edge source, not an orphan.
+    # Pre-fix, the source-side {{...}} label broke edge parsing entirely,
+    # leaving 'q' with zero recorded edges and falsely flagged as an orphan.
+    p = _write(
+        tmp_path / "container-diagram.mmd",
+        CONTAINER + "    q{{Queue}} -->|feeds| api\n    q -->|feeds| db\n",
+    )
+    errs = check_diagram(p, "container")
+    assert not any("'q'" in e for e in errs)
+
+
 def test_sequence_participant_cap(tmp_path):
     parts = "".join(f"    participant P{i}\n" for i in range(7))
     p = _write(tmp_path / "sequence-x.mmd", "sequenceDiagram\n" + parts + "    P0->>P1: hi\n")
     assert any("participant" in e for e in check_diagram(p, "sequence"))
+
+
+def test_sequence_message_cap(tmp_path):
+    msgs = "".join(f"    A->>B: m{i}\n" for i in range(16))
+    p = _write(
+        tmp_path / "sequence-x.mmd",
+        "sequenceDiagram\n    participant A\n    participant B\n" + msgs,
+    )
+    errs = check_diagram(p, "sequence")
+    assert any("message cap 15 exceeded (16)" in e for e in errs)
+
+
+def test_target_diagram_unparseable_returns_error(tmp_path):
+    p = _write(tmp_path / "container-diagram.mmd", "garbage not mermaid\n")
+    errs = check_diagram(p, "container")
+    assert any("unparseable" in e for e in errs)
+
+
+def test_style_with_legend_passes(tmp_path):
+    p = _write(
+        tmp_path / "context-diagram.mmd",
+        "flowchart LR\n    a[A] -->|uses| b[B]\n    style a fill:#f00\n    %% Legend: red = risk\n",
+    )
+    assert not any("legend" in e for e in check_diagram(p, "context"))
+
+
+def test_provenance_missing_source_reports_error_not_crash(tmp_path):
+    c = tmp_path / "container-diagram.mmd"  # intentionally absent
+    fake_sha = "0" * 64
+    dfd = _write(
+        tmp_path / "dfd.mmd",
+        f"flowchart LR\n    %% derived-from: {c.name} sha256:{fake_sha}\n"
+        "    subgraph z[Z]\n        web[Web]\n    end\n",
+    )
+    errs = check_diagram(dfd, "dfd", source=c)
+    assert any("not found" in e for e in errs)
+
+
+def test_attack_sequence_missing_parent_does_not_crash(tmp_path):
+    arch = tmp_path / "architecture"
+    tm = tmp_path / "threat-model"
+    _write(arch / "container-diagram.mmd", CONTAINER)
+    _write(arch / "context-diagram.mmd", "flowchart LR\n    u[User] -->|uses| sys[System]\n")
+    fake_sha = "0" * 64
+    _write(
+        tm / "attack-sequences" / "sequence-replay.mmd",
+        f"sequenceDiagram\n    %% derived-from: unknown-parent.mmd sha256:{fake_sha}\n"
+        "    participant M\n    M->>M: replay\n",
+    )
+    errs = run_diagram_gate(arch, tm)
+    assert any("not found" in e for e in errs)
+
+
+def test_source_diagram_unparseable_does_not_crash(tmp_path):
+    c = _write(tmp_path / "container-diagram.mmd", "not mermaid at all\n")
+    sha = hashlib.sha256(c.read_bytes()).hexdigest()
+    p = _write(
+        tmp_path / "dfd.mmd",
+        f"flowchart LR\n    %% derived-from: {c.name} sha256:{sha}\n"
+        "    subgraph z[Z]\n        web[Web]\n    end\n",
+    )
+    errs = check_diagram(p, "dfd", source=c)
+    assert any("unparseable" in e for e in errs)
 
 
 def test_attack_sequence_new_participant_fails(tmp_path):
@@ -120,4 +196,5 @@ def test_attack_sequence_new_participant_fails(tmp_path):
         f"sequenceDiagram\n    %% derived-from: {parent.name} sha256:{sha}\n"
         "    participant U\n    participant G\n    participant M\n    M->>G: replay\n",
     )
-    assert any("participant" in e and "M" in e for e in check_diagram(atk, "sequence", source=parent))
+    errs = check_diagram(atk, "sequence", source=parent)
+    assert any("participant" in e and "M" in e for e in errs)

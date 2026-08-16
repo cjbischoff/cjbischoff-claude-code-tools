@@ -279,3 +279,18 @@ orphan-detail check (a node that only ever receives — never a source — and i
 is flagged; a chain's entry node, which is naturally out-degree-only, is not). Per design spec §6
 (R4), the orphan check runs only for `container`/`component`/`dfd` — never `context` or
 `sequence`, since context actors are by definition often degree-1.
+
+Crash-path hardening round (fix review findings F1–F4): `test_provenance_missing_source_reports_error_not_crash`
+and `test_attack_sequence_missing_parent_does_not_crash` pin `_provenance`'s guard against a
+missing derived-from source (both the direct-missing-file case and `_attack_parent`'s
+`MISSING-PARENT` placeholder) — an error string, not a `FileNotFoundError`.
+`test_source_diagram_unparseable_does_not_crash` pins the same treatment for a garbage source
+diagram (`ValueError` from `index_mermaid` now becomes an `"unparseable"` error string, not an
+uncaught traceback). `test_double_brace_source_not_orphan` (plus
+`test_flowchart_edge_with_double_brace_source_label` in `test_mermaid_index.py`) pins the fix to
+`_INLINE_LABEL_SKIP`: it only spanned single-char bracket pairs and missed multi-char forms like
+`q{{Queue}}`, silently dropping the edge and false-flagging the source node as an orphan. Three
+previously-untested branches are now pinned directly: `test_sequence_message_cap` (the message
+half of `SEQ_CAPS`), `test_target_diagram_unparseable_returns_error` (the top-level `check_diagram`
+parse-failure branch), and `test_style_with_legend_passes` (a styled diagram with a legend present
+passes clean).

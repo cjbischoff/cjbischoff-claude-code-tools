@@ -32,6 +32,9 @@ def _provenance(text: str, source: Path) -> list[str]:
     errs = []
     if m.group(1) != source.name:
         errs.append(f"derived-from names {m.group(1)}, expected {source.name}")
+    if not source.exists():
+        errs.append(f"derived-from source {source.name} not found")
+        return errs
     actual = hashlib.sha256(source.read_bytes()).hexdigest()
     if m.group(2) != actual:
         errs.append(f"derived-from sha stale for {source.name} (source changed)")
@@ -92,7 +95,9 @@ def check_diagram(path: Path, kind: str, *, source: Path | None = None) -> list[
     else:
         cap = CAPS[kind]
         if len(idx.nodes) > cap:
-            errs.append(f"{name}: node cap {cap} exceeded ({len(idx.nodes)}) — group/split/promote")
+            errs.append(
+                f"{name}: node cap {cap} exceeded ({len(idx.nodes)}) — group/split/promote"
+            )
         if kind in _ORPHAN_CHECKED_KINDS:
             errs.extend(_orphan_errors(idx, name))
     errs.extend(_label_errors(idx, name))
@@ -103,7 +108,11 @@ def check_diagram(path: Path, kind: str, *, source: Path | None = None) -> list[
     if source is not None:
         errs.extend(f"{name}: {e}" for e in _provenance(text, source))
         if source.exists():
-            src_idx = index_mermaid(source.read_text())
+            try:
+                src_idx = index_mermaid(source.read_text())
+            except ValueError as e:
+                errs.append(f"{name}: source {source.name} unparseable: {e}")
+                return errs
             if kind == "sequence":
                 extra = set(idx.participants) - set(src_idx.participants)
                 errs.extend(

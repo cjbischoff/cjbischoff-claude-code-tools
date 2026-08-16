@@ -312,6 +312,16 @@ bracket label on the same line (`web[Web] --> api[API]`) — previously produced
 that shape — and its C4 parser now adds `Person(...)`/`*_Ext(...)` ids to `store_ids` too,
 orphan-exempt alongside `ContainerDb`/`SystemDb`/`*Queue`.
 
+Crash-path hardening round: `_INLINE_LABEL_SKIP` in `mermaid_index.py` only spanned single-bracket
+shapes and missed multi-char forms like `q{{Queue}}` — widened to one bracket-class alternation
+covering `[[`, `((`, `{{`, `[(`, `([`, and bare `[`/`(`/`{`. In `diagram_gate.py`, `_provenance`
+crashed with `FileNotFoundError` when the derived-from source file didn't exist (a missing
+`container-diagram.mmd`, or an attack sequence whose header names an unknown parent, hitting
+`_attack_parent`'s `MISSING-PARENT` placeholder); it now reports `"derived-from source ... not
+found"` and returns instead of calling `read_bytes()`. `check_diagram`'s parse of the source
+diagram (for element/participant-diff checks) is now wrapped in `try/except ValueError`, reporting
+`"source ... unparseable: ..."` instead of an uncaught traceback.
+
 `mermaid_index.py`'s flowchart edge scan now tries `_FLOW_EDGE_MID` (`a -- some label --> b`)
 before the piped-label `_FLOW_EDGE` regex, fixing a defect where the label text itself was
 misread as a phantom source node and `a`/`b` were silently dropped from `nodes`.
