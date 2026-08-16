@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.15.0 - 2026-08-15
+
+### Added
+
+- New `agents/artifact-review.md` (§4.8): the opus adversary that runs after the deterministic
+  `artifact_gate` passes, checking that `report.md`, `report.sarif`, and `redteam-plan.md` tell
+  the truth about what the run found — claim-to-evidence against each finding's tool receipt,
+  impact honesty, and red-team coverage. Reasoning alone may demote severity, force a re-render
+  via `render_stale`, or add an `open_questions` entry, but never delete or reject a tool-receipt-
+  backed finding. Writes `kb/gates/artifact-review.json`.
+
 ## 1.14.0 - 2026-08-15
 
 ### Added

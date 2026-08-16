@@ -141,6 +141,11 @@ input validation before shipping it as a live directive (ISSUE-056); an untracea
 unrunnable precondition, not a live directive — enforced deterministically downstream by
 `redteam.py`'s `payload_runnable` gate, which routes such findings to a new `"unrunnable"` bucket.
 
+### Phase 6 — Artifact review (§4.8)
+| Prompt | Model | Reads | Writes / does |
+|--------|-------|-------|---------------|
+| `artifact-review.md` | opus | `report.md`, `report.sarif`, `redteam-plan.md`, `findings/*.json`, plus the deterministic `kb/gates/artifact-gate.json` (already passed) | the final adversary — checks the *rendered* output tells the truth about what the run found: claim-to-evidence (does the report's severity/impact/status match the finding's tool receipt?), impact honesty (a real consequence, not a restated attack class), and red-team coverage (every `needs-runtime` finding has a matching `redteam-plan.md` directive). Same safety contract as everywhere else: reasoning alone may demote severity (with a `file:line` cite), mark a finding `render_stale: true` to force a re-render, or add an `open_questions` entry — never delete or reject a tool-receipt-backed finding. Verdict → `kb/gates/artifact-review.json`. It runs after the deterministic `artifact_gate.py` (helpers) and never writes `report.md` itself. |
+
 ### Postflight & optional extensions
 | Prompt | Role |
 |--------|------|
