@@ -16,12 +16,41 @@ entry point; read the parent map for the full inventory.
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
 
+`kb.py` gained the arc42/threat-model tree path helpers (`arch_dir`/`arc42_path`/
+`container_diagram_path`, `threat_dir`/`threat_model_path`/`dfd_path`), replacing the old
+`kb/architecture.md` and `kb/THREAT_MODEL.md` single-file paths; `kb_status` now reports
+`arc42_path`/`threat_model_path` existence. `workspace.py`'s `Workspace.ensure()` now also
+creates `architecture/runtime-view/` and `threat-model/attack-sequences/` under the workspace
+root. `kb.py`'s now-dead `entities_dir` (no remaining callers once the prompts stopped reading
+`kb/entities/`) was removed.
+
+New module `cvss4_data.py`: CVSS v4.0 MacroVector lookup table (270 entries) and interpolation
+tables (`MAX_COMPOSED`, `MAX_SEVERITY`), vendored verbatim from FIRST's official calculator
+(BSD-2-Clause). Data only, no logic — Task 2 builds the v4.0 scoring engine on it.
+
+`cvss.py` rewritten to CVSS v4.0: `cvss40_base(vector)` ports the MacroVector/interpolation
+algorithm from `cvss_score.js` against `cvss4_data.py`'s tables (base metrics only — E/CR/IR/AR
+fixed at their spec worst-case defaults, no environmental/threat support); `offensive_priority`
+keeps its 3.1 branch order verbatim. `CVSS:3.x` input now raises `ValueError`.
+
+`calibrate.py` re-pointed to `cvss40_base` (was `cvss31_base`, removed in the v4.0 migration) at
+its import and both call sites; `risk_score`/`priority` derivation shape is unchanged. The
+`Finding.cvss_vector` docstring in `models.py` now says "CVSS v4.0" to match.
+
+`cvss.py`'s `_parse` now raises `ValueError` when a Threat (`E`) or Environmental (`CR`/`IR`/`AR`/
+`M*`) metric is present with a value other than `X` (Not Defined) — this engine scores base
+metrics only; `calibrate.py` records a `calibrate:cvss-unparseable` history event before falling
+back to the heuristic score on any unparseable vector.
+
 New module `artifact_gate.py` (§4.8): `run_artifact_gate(ws)` checks a finished run's own
 artifacts — report.md free of stale constant sections and over-long triage cells, every shipping
 finding has a `findings/<ID>.md` detail file and a red-team directive, every triage-table ID
 resolves to a finding, and `CONTEXT.md`'s mermaid diagram stays at ≤10 nodes (ISSUE-022). Writes
 `kb/gates/artifact-gate.json`; runs before the opus artifact-review adversary, never deletes
-findings.
+findings. `check_duplication(arc42_text, tm_text)` flags a threat-model heading that restates an
+arc42 heading, or a structure heading (e.g. "Building Block View") appearing in the threat-model
+doc at all; `run_artifact_gate` calls it only when both `architecture/arc42.md` and
+`threat-model/threat-model.md` exist.
 
 `context.py` gained `doc_coverage()` to compare documents discovered vs read and flag a low read ratio. The `load()` function now accepts optional `repo_root` and `scan_scope` parameters to populate `provenance["docs_discovered"]` at load time (wiring by downstream caller) — see the module map entry.
 
@@ -156,7 +185,15 @@ helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit
 see the module map entry. `PHASE_TABLE` now ends with `artifact-gate` (deterministic, input
 `_report`/`_sarif`, output `_artifact_gate_json`) then `artifact-review` (agent,
 `agents/artifact-review.md`, input `_artifact_gate_json`, output `_artifact_review_json`), both
-after `selfscore`.
+after `selfscore`. `architecture` now outputs `_arc42`/`_container` (`kb.arc42_path` /
+`kb.container_diagram_path`, i.e. `architecture/arc42.md` + `architecture/container-diagram.mmd`,
+not the old `kb/architecture.md`), immediately followed by the deterministic `arch-gate` row
+(input those same two paths, output `_arch_gate_json` — `kb/gates/arch-gate.json`). `threat_model`
+now outputs `_tm_doc`/`_dfd` (`kb.threat_model_path` / `kb.dfd_path`, i.e.
+`threat-model/threat-model.md` + `threat-model/dfd.mmd`, not the old `kb/THREAT_MODEL.md`) and
+takes `_arch_gate_json` as its input — the threat model cannot start until the architecture gate
+passed — followed by the deterministic `tm-gate` row (output `_tm_gate_json` —
+`kb/gates/tm-gate.json`).
 
 `driver.py` (new) is the audit sequencer: deterministic-phase runner, loud halt, agent-dispatch
 printer. `run_deterministic_phase` checks a `PhaseSpec`'s inputs, runs its registered
@@ -184,7 +221,13 @@ reconciled class list passed to `render_dispatch(classes=...)` (no triage block,
 `demote-noise` → `partition.demote_noise`, `report` → `report.write_report`, `selfscore` →
 `selfscore.write_self_score`, `artifact-gate` → `_act_artifact_gate` (calls
 `artifact_gate.run_artifact_gate`, raising `PhaseHalt` naming every error when the gate rejects the
-run's own artifacts). `artifact-review` is an agent phase with no registered action — it
+run's own artifacts), `arch-gate` → `_act_arch_gate`, `tm-gate` → `_act_tm_gate`. Both new actions
+run `diagram_gate.run_diagram_gate` over `architecture/` (and `threat-model/` where present) plus
+`ste_lint.lint_prose` over their doc, write `{"passed", "errors", "warnings"}` to
+`kb/gates/<name>.json` via the shared `_write_gate` helper, and raise `PhaseHalt` naming every
+error; `_act_tm_gate` additionally runs `artifact_gate.check_duplication` against `arc42.md` and
+calls `run_diagram_gate(..., require_threat_model=True)` so a missing `dfd.mmd` is a gate error
+instead of the silently-optional default. `artifact-review` is an agent phase with no registered action — it
 auto-advances once `kb/gates/artifact-review.json` exists, same as any other output-only agent
 phase. `run_audit(ctx)` walks `PHASE_TABLE` from the first phase not yet
 `done`: runs deterministic phases in place, and for an agent phase auto-advances only when it has
@@ -275,3 +318,65 @@ harness's own sidecar output.
 `prefilter.py`'s candidate-id assignment moved into `_assign_candidate_ids`, which now numbers
 ids per attack class (`C-SQLI-0001`, `C-XSS-0001`, ...) instead of one global `C-0001..`
 sequence, so ids carry the class and never collide across rulesets (ISSUE-013).
+
+`mermaid_index.py` (new) — `index_mermaid(text)` line-oriented parser for Mermaid flowchart,
+sequence, and C4 diagrams, returning a `DiagramIndex` (nodes, edges, subgraphs, participants,
+messages, store_ids, has_style). Not a grammar: extracts only what the diagram gate checks;
+raises `ValueError` on an unrecognized diagram header. Feeds the upcoming diagram gate (Task 2).
+
+New module `diagram_gate.py` — deterministic hard gate over generated Mermaid diagrams
+(`check_diagram`, `run_diagram_gate`, `CAPS`, `SEQ_CAPS`): per-type node/participant/message
+caps, ≤4-word edge labels, DFD trust-boundary-subgraph requirement, derivation provenance
+(`%% derived-from:` header + sha256 freshness, no element/participant absent from the source),
+legend-required styling, and orphan-detail nodes — scoped to `container`/`component`/`dfd` only,
+never `context` or `sequence` (context actors are by design often degree-1). CLI-callable —
+see the module map entry.
+
+`mermaid_index.py` also gained a fix for an edge whose source node carries its own inline
+bracket label on the same line (`web[Web] --> api[API]`) — previously produced zero edges for
+that shape — and its C4 parser now adds `Person(...)`/`*_Ext(...)` ids to `store_ids` too,
+orphan-exempt alongside `ContainerDb`/`SystemDb`/`*Queue`.
+
+Crash-path hardening round: `_INLINE_LABEL_SKIP` in `mermaid_index.py` only spanned single-bracket
+shapes and missed multi-char forms like `q{{Queue}}` — widened to one bracket-class alternation
+covering `[[`, `((`, `{{`, `[(`, `([`, and bare `[`/`(`/`{`. In `diagram_gate.py`, `_provenance`
+crashed with `FileNotFoundError` when the derived-from source file didn't exist (a missing
+`container-diagram.mmd`, or an attack sequence whose header names an unknown parent, hitting
+`_attack_parent`'s `MISSING-PARENT` placeholder); it now reports `"derived-from source ... not
+found"` and returns instead of calling `read_bytes()`. `check_diagram`'s parse of the source
+diagram (for element/participant-diff checks) is now wrapped in `try/except ValueError`, reporting
+`"source ... unparseable: ..."` instead of an uncaught traceback.
+
+`mermaid_index.py`'s flowchart edge scan now tries `_FLOW_EDGE_MID` (`a -- some label --> b`)
+before the piped-label `_FLOW_EDGE` regex, fixing a defect where the label text itself was
+misread as a phantom source node and `a`/`b` were silently dropped from `nodes`.
+
+New module `ste_lint.py` — a deterministic linter for the checkable structural subset of
+ASD-STE100: sentence >25 words, semicolon in prose, and paragraph >6 sentences are errors; a
+4+ word capitalized run mid-sentence (noun-cluster suspicion) and a sentence repeating " then "
+are warnings. Fenced code blocks, mermaid blocks, headings, table separator rows, inline code
+spans, and URLs are exempt; table free-text cells are linted. `lint_prose(text) -> (errors,
+warnings)` is the entry point; the CLI (`python -m sec_overlay.ste_lint <files...>
+[--require-frontmatter]`) exits 1 on any error and additionally requires the literal
+`ASD-STE100` string somewhere in the file when `--require-frontmatter` is passed.
+
+`ste_lint.py` fix round: an unterminated code fence used to silently drop every line after it
+from linting with no signal at all — `_prose_blocks` now returns `(blocks, errors)` and reports
+an `"unbalanced code fence"` error when the file ends still inside a fence, so a real violation
+hidden behind a stray opening fence no longer passes clean. Sentence splitting (`_split_sentences`)
+now only breaks at `[.!?]` followed by a capitalized word, and folds the split back onto its
+clause when the preceding token is a known abbreviation (`e.g.`, `i.e.`, `etc.`, `vs.`, `cf.`,
+`approx.`, `viz.`, `al.`) — an abbreviation no longer fractures a paragraph into a false
+"over 6 sentences" or hides a genuinely over-length sentence by chopping it in two.
+
+Diagram-gate parsing-gap round: `mermaid_index.py`'s flowchart edge scan matched only the first
+`-->` on a line, so a chained edge (`a --> b --> c`) recorded `a→b` and silently dropped `b→c` —
+the scan now restarts each search at the matched destination's position, walking every hop on the
+line. The sequence-diagram regexes (`_PARTICIPANT`, `_SEQ_MSG`) rejected hyphenated ids
+(`auth-api`) — `_PARTICIPANT`'s id class now allows `-`, and `_SEQ_MSG`'s source-id match is
+non-greedy so it backtracks to the shortest id that still lets the arrow class match, instead of
+swallowing the arrow's leading dash. `diagram_gate.py` gained `_node_label_errors`: a node's
+bracket label over 4 words is now an error (bare-id nodes with no bracket label are exempt), and
+`run_diagram_gate` takes a keyword-only `require_threat_model` flag — when set, a missing
+`dfd.mmd` becomes a gate error instead of a silently-skipped optional diagram (CLI:
+`--require-threat-model`).

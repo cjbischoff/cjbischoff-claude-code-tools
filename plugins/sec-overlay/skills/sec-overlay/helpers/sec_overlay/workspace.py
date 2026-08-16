@@ -87,6 +87,8 @@ class Workspace:
         self.findings_dir.mkdir(parents=True, exist_ok=True)
         self.runs.mkdir(parents=True, exist_ok=True)
         self._reports.mkdir(parents=True, exist_ok=True)
+        (self.root / "architecture" / "runtime-view").mkdir(parents=True, exist_ok=True)
+        (self.root / "threat-model" / "attack-sequences").mkdir(parents=True, exist_ok=True)
 
 
 def _atomic_write(path: Path, text: str) -> None:

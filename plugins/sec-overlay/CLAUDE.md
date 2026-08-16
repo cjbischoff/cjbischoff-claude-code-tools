@@ -37,7 +37,8 @@ uv run python -m sec_overlay.preflight             # tool availability
   tool-receipt safety contract, count-invariant verdict tables) — these are load-bearing, not prose.
 - CLI-callable modules (`python -m sec_overlay.<module>`): `cli`, `preflight`, `postflight`,
   `calibrate`, `dedupe`, `verify`, `report`, `redteam`, `bugchain`, `astgrep`, `structural_index`,
-  `citations`, `findings_gate`, `rule_gaps`, `redactor`, `graph`, `artifact_gate`.
+  `citations`, `findings_gate`, `rule_gaps`, `redactor`, `graph`, `artifact_gate`, `diagram_gate`,
+  `ste_lint`.
 
 ---
 ## Documentation — READMEs track code (enforced)

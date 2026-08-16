@@ -149,7 +149,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | Module | Purpose |
 |--------|---------|
 | `calibrate.py` | Deterministic 1–10 `risk_score` for confirmed / needs-deployment-testing findings (severity base map + class boost + baseline cap + precondition gates). CLI-callable. |
-| `cvss.py` | CVSS 3.1 base-score from a vector (FIRST.org formula — **never** LLM arithmetic) + an orthogonal offensive-priority axis. |
+| `cvss.py` | CVSS v4.0 base-score from a vector (MacroVector model ported from FIRST's official calculator — **never** LLM arithmetic) + an orthogonal offensive-priority axis. |
 | `scoring.py` | Weighted fix-validation score (root_cause, scope_verified, …); regression is non-waivable. |
 | `fix_disposition.py` | Conservative fix-completeness tier (FULL / MITIGATION / WORKAROUND); ambiguity → LLM_REVIEW. |
 | `crypto_policy.py` | Machine-checked crypto policy from the two `references/approved-*.yaml` files (deny md5/sha1/des/ecb; floor rsa≥3072/pbkdf2≥600000/…). |
@@ -162,13 +162,20 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `sarif.py` | Emit valid SARIF 2.1.0; map severity → SARIF level. `_rules()` builds a de-duplicated `driver.rules` array (one entry per `rule_id`, first occurrence wins) carrying `cls` as `name` and `asvs_ids`/`codeguard_ids` as `properties` — additive to `driver.rules`, `results` unchanged. |
 | `render_util.py` | Shared markdown fragments for the two finding renderers. `signal_lines()` is the single source of truth for rendering an agent-authored `expected_signal` (dict `{secure, insecure}`, bare string, or None) into labeled bullet lines; a bare string is treated as the insecure signal everywhere it is rendered. |
 
+### Diagram generation & gate
+| Module | Purpose |
+|--------|---------|
+| `mermaid_index.py` | Line-oriented Mermaid structure extraction (not a grammar): `index_mermaid(text) -> DiagramIndex` pulls node ids/labels, edges + edge labels, subgraph membership, sequence participants/message count, and C4 element macros out of a flowchart/sequence/C4 diagram. `store_ids` marks orphan-exempt required shapes (data-stores, queues, `Person`/`*_Ext` actors); unrecognizable input raises `ValueError`. |
+| `diagram_gate.py` | Deterministic hard gate over generated diagrams: `CAPS`/`SEQ_CAPS` node/participant/message ceilings, ≤4-word edge labels, ≤4-word node labels (bare-id nodes with no bracket label exempt), DFD trust-boundary-subgraph requirement, derivation provenance (`%% derived-from: <file> sha256:<hash>` — a derived diagram introduces no element/participant absent from its source, and the hash must match the current source), legend-required styling, and orphan-detail nodes (a node that only ever receives, never sends, and isn't a store/actor). The orphan check applies only to `container`/`component`/`dfd` — never `context` (context actors are by definition often degree-1) or `sequence`. `run_diagram_gate(arch_dir, tm_dir, *, require_threat_model=False)` walks an architecture/threat-model tree end to end; `require_threat_model=True` turns a missing `dfd.mmd` into a gate error instead of a silent skip. CLI-callable. |
+| `ste_lint.py` | Deterministic linter for the checkable structural subset of ASD-STE100: sentence length, semicolons, paragraph size, plus warning-level noun-cluster and buried-sequence heuristics. Lexical rules are directional/unenforced — flagged with a front-matter statement instead. Code fences, mermaid blocks, headings, table structure, inline code, and URLs are exempt; table free-text cells are linted. `lint_prose(text) -> (errors, warnings)`. CLI-callable. |
+
 ### Campaign, state & per-repo memory
 | Module | Purpose |
 |--------|---------|
 | `campaign.py` | Multi-pass supervision: `record_stage`, `pass_report`, `carry_forward` (re-check settled findings on changed files). |
 | `state.py` | Load/save `CampaignState`; `begin_pass` pins the SHA and increments the pass counter. |
-| `phases.py` | The ordered phase table (`PhaseSpec`, `PHASE_TABLE`) + pure sequencer helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit driver walks. |
-| `driver.py` | The audit sequencer: deterministic-phase runner, loud halt, agent-dispatch printer. `run_deterministic_phase` gates a `PhaseSpec` on inputs/outputs, runs its `DETERMINISTIC_ACTIONS` entry, then `record_stage`s it — raising `PhaseHalt` on either gate. |
+| `phases.py` | The ordered phase table (`PhaseSpec`, `PHASE_TABLE`) + pure sequencer helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit driver walks. `architecture` now outputs `arc42.md` + `container-diagram.mmd` (not `kb/architecture.md`) followed by the deterministic `arch-gate` row; `threat_model` outputs `threat-model.md` + `dfd.mmd` followed by `tm-gate`. |
+| `driver.py` | The audit sequencer: deterministic-phase runner, loud halt, agent-dispatch printer. `run_deterministic_phase` gates a `PhaseSpec` on inputs/outputs, runs its `DETERMINISTIC_ACTIONS` entry, then `record_stage`s it — raising `PhaseHalt` on either gate. `_act_arch_gate`/`_act_tm_gate` run `diagram_gate.run_diagram_gate` + `ste_lint.lint_prose` (and, for `tm-gate`, `artifact_gate.check_duplication`), writing `kb/gates/arch-gate.json` / `kb/gates/tm-gate.json`; `tm-gate` alone passes `require_threat_model=True` so a missing `dfd.mmd` halts the run. |
 | `repo_memory.py` | The per-repo sidecar (`<target>/.sec-overlay/<slug>/`): workspace, `MEMORY.md`, dated `learnings/`, run status for resume. |
 | `workspace.py` | The on-disk layout (`kb/`, `findings/`, reports); per-finding read/write; `record_agent_return` / `read_agent_return`. |
 | `scanscope.py` | Resolve + pin `repo_root` + `scan_scope` once per campaign (monorepo-safe); `kb/scan-scope.json`. |
@@ -257,6 +264,8 @@ steps the orchestrator calls between agent phases:
 | `rule_gaps` | Flag hunting-only findings. |
 | `verify` | Apply a patch to a copy + re-scan. |
 | `redteam` | Render `redteam-plan.md`. |
+| `diagram_gate` | Hard-check generated Mermaid diagrams against caps, provenance, and orphan-detail rules. |
+| `ste_lint` | Lint markdown prose against the checkable ASD-STE100 structural rules. |
 | `report` | Assemble final SARIF + Markdown. |
 | `redactor` | Mask/verify secrets in a text blob. |
 | `postflight` | Write durable `kb/prior_context.json`. |

@@ -58,7 +58,7 @@ def test_all_mapped_ids_exist_in_seed():
 def test_calibrate_attaches_citations(tmp_path):
     from sec_overlay.calibrate import calibrate_findings
     ws = Workspace(tmp_path); ws.ensure()
-    write_findings(ws, [_f("crypto", cvss_vector="CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:H/A:N")])
+    write_findings(ws, [_f("crypto", cvss_vector="CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N")])
     calibrate_findings(ws)
     f = read_findings(ws)[0]
     assert f.asvs_ids == ["v5.0.0-6.2.1", "v5.0.0-6.2.3"] and f.risk_score

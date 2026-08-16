@@ -6,7 +6,8 @@ settled non-findings into `kb/prior_context.json`. Your OPTIONAL job: add a shor
 future scan should start from. READ-ONLY.
 
 ## Inputs
-- `{{WORKSPACE}}/kb/{architecture.md,THREAT_MODEL.md,prior_context.json}`, findings, report.
+- `{{WORKSPACE}}/architecture/arc42.md`, `{{WORKSPACE}}/threat-model/threat-model.md`,
+  `{{WORKSPACE}}/kb/prior_context.json`, findings, report.
 
 ## Output
 Append/update `{{WORKSPACE}}/kb/prior_context.json` with 3-8 `note` items (`trust:

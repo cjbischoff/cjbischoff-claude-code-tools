@@ -2,6 +2,283 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.30.3 - 2026-08-16
+
+### Changed
+
+- Name the CVSS v4.0 score invocation in `agents/threat-model.md` step 5 —
+  `sec_overlay.cvss.cvss40_base('<vector>')` run from `helpers/` — so the
+  agent has a way to obtain the score it is told never to hand-compute.
+  Note the same invocation in `agents/README.md`'s threat-model row.
+- Name STRIDE in the skill `CLAUDE.md` §2 phase table and `README.md`'s
+  worked-example table, restoring a term dropped from an earlier pass.
+
+## 1.30.2 - 2026-08-16
+
+### Changed
+
+- Restore the phase-adversary annotation on the Threat model row of the
+  skill `CLAUDE.md` §2 phase table (dropped in the 1.30.1 compression pass);
+  note in the skill `README.md` that each of `arch-gate` / `tm-gate` is
+  preceded by the opus phase-adversary review, not only the deterministic
+  check.
+
+## 1.30.1 - 2026-08-16
+
+### Changed
+
+- Document the `architecture/` and `threat-model/` artifact trees and the
+  `arch-gate` / `tm-gate` deterministic phases across the skill `CLAUDE.md`,
+  `SKILL.md`, both READMEs, and the plugin `CLAUDE.md`'s CLI-callable module
+  list (`diagram_gate`, `ste_lint`). No behavior change.
+
+## 1.30.0 - 2026-08-16
+
+### Changed
+
+- Re-point every remaining consumer prompt (`investigate.md`, `critic.md`,
+  `validate.md`, `context-ingest.md`, `phase-adversary.md`, `postflight.md`)
+  from the retired `kb/architecture.md` / `kb/entities/` / `kb/THREAT_MODEL.md`
+  paths to `architecture/arc42.md` and `threat-model/threat-model.md`.
+  `phase-adversary.md` gains an ownership-boundary checklist bullet: an
+  architecture claim naming threats/mitigations, or a threat-model claim
+  restating structure/stack, is a defect.
+- Remove the now-dead `kb.py::entities_dir` helper (no remaining callers).
+
+## 1.29.0 - 2026-08-16
+
+### Added
+
+- Wire `arch-gate` and `tm-gate` deterministic phase rows into `PHASE_TABLE`,
+  right after `architecture` and `threat_model`. Each gate runs the diagram
+  gate, the ASD-STE100 prose linter, and (for `tm-gate`) the arc42/threat-model
+  duplication check, writing `kb/gates/arch-gate.json` / `kb/gates/tm-gate.json`
+  and halting the run on any error. `tm-gate` requires `threat-model/dfd.mmd` to
+  exist; `arch-gate` does not require the threat-model tree at all.
+
+## 1.28.0 - 2026-08-16
+
+### Changed
+
+- `agents/threat-model.md` rebuilt on the DFD/STRIDE contract: it now derives
+  `threat-model/dfd.mmd` from `architecture/container-diagram.mmd` (SHA-headered),
+  `threat-model/attack-sequences/sequence-<scenario>.mmd`, and
+  `threat-model/threat-model.md` — a methodology record, a CVSS v4.0 findings table, and
+  a prioritized hunt list — replacing the old single-file `kb/THREAT_MODEL.md` output.
+
+## 1.27.0 - 2026-08-16
+
+### Changed
+
+- `agents/architecture.md` rebuilt on the C4/arc42 contract: it now writes
+  `architecture/context-diagram.mmd`, `architecture/container-diagram.mmd`,
+  `architecture/component-diagram-<name>.mmd` and
+  `architecture/runtime-view/sequence-<scenario>.mmd` (only where warranted), and
+  `architecture/arc42.md` — replacing the old single-file `kb/architecture.md` +
+  `kb/entities/<component>.md` output.
+
+## 1.26.0 - 2026-08-16
+
+### Added
+
+- `kb.py` gains path helpers for the new `architecture/` and `threat-model/` workspace trees
+  (`arch_dir`/`arc42_path`/`container_diagram_path`, `threat_dir`/`threat_model_path`/`dfd_path`),
+  replacing the old single-file `kb/architecture.md` and `kb/THREAT_MODEL.md` paths.
+  `Workspace.ensure()` now creates `architecture/runtime-view/` and
+  `threat-model/attack-sequences/` alongside the existing KB directories.
+
+## 1.25.0 - 2026-08-16
+
+### Added
+
+- `references/architecture-standards.md` fixes the C4 + arc42 contract for the architecture
+  phase: which diagrams to produce, the arc42 section table, and the ownership boundary
+  against the threat-model phase.
+- `references/threat-model-standards.md` fixes the DFD + STRIDE contract for the
+  threat-model phase: signal-based methodology augmentation (PASTA/LINDDUN), how `dfd.mmd`
+  derives from `container-diagram.mmd`, and the findings-table column contract.
+- `references/mermaid-caps.md` is the single source of truth for per-diagram-kind element
+  caps, mirrored in `sec_overlay.diagram_gate.CAPS`/`SEQ_CAPS` and kept in sync by
+  `tests/test_references_caps.py`.
+- `prompt-constants.md` gained an `STE_PROSE` block: human-facing prose (arc42.md,
+  threat-model.md, findings-table free text) now follows ASD-STE100's checkable core.
+
+## 1.24.1 - 2026-08-16
+
+### Fixed
+
+- `mermaid_index.py`'s flowchart edge scan matched only the first `-->` on a line, dropping every
+  hop after the first in a chained edge (`a --> b --> c`) and false-flagging the middle node as an
+  orphan; the scan now restarts each search at the matched destination.
+- `mermaid_index.py`'s sequence-diagram regexes rejected hyphenated participant/message ids
+  (`auth-api`), silently recording a truncated id and undercounting messages; the id class now
+  allows `-` and the source-id match is non-greedy so it stops before the arrow.
+- `diagram_gate.py`'s `run_diagram_gate` treated a missing `dfd.mmd` as always-optional; it now
+  takes a keyword-only `require_threat_model` flag (CLI: `--require-threat-model`) that turns a
+  missing threat-model diagram into a gate error.
+- `diagram_gate.py` gained a node-label word-count check (spec's "node labels: name only" rule):
+  a bracket label over 4 words is now an error, matching the existing edge-label check.
+
+## 1.24.0 - 2026-08-16
+
+### Added
+
+- `sec_overlay/artifact_gate.py` gains `check_duplication(arc42_text, tm_text)`: flags a
+  threat-model heading that restates an `architecture/arc42.md` heading, and flags a
+  structure heading (e.g. "Building Block View", "Deployment View") appearing in the
+  threat-model doc at all. `run_artifact_gate` calls it only when both
+  `architecture/arc42.md` and `threat-model/threat-model.md` exist; older workspaces and
+  the existing tests are unaffected.
+
+## 1.23.1 - 2026-08-16
+
+### Fixed
+
+- `sec_overlay/ste_lint.py`'s `_prose_blocks` no longer silently drops every line after an
+  unterminated code fence — an unclosed ` ``` ` now yields an `"unbalanced code fence"` error
+  instead of a false-clean result.
+- `sec_overlay/ste_lint.py`'s sentence splitter no longer fractures a paragraph or sentence at
+  an abbreviation (`e.g.`, `i.e.`, `etc.`, `vs.`, `cf.`, `approx.`, `viz.`, `al.`) — it now
+  splits only at sentence-ending punctuation followed by a capitalized word and folds an
+  abbreviation-preceded split back onto its clause, so an abbreviation-heavy paragraph no
+  longer produces a false "over 6 sentences" error and a genuinely over-length sentence
+  containing an abbreviation is still flagged.
+
+## 1.23.0 - 2026-08-16
+
+### Added
+
+- `sec_overlay/ste_lint.py`: a deterministic linter for the checkable structural subset of
+  ASD-STE100 — sentence >25 words, semicolon in prose, and paragraph >6 sentences are errors;
+  a 4+ word capitalized run mid-sentence and a sentence repeating " then " are warnings. Fenced
+  code, mermaid blocks, headings, table separator rows, inline code spans, and URLs are exempt;
+  table free-text cells are linted. `lint_prose(text)` is the entry point; the CLI
+  (`python -m sec_overlay.ste_lint <files...> [--require-frontmatter]`) exits 1 on any error.
+
+## 1.22.1 - 2026-08-16
+
+### Fixed
+
+- `sec_overlay/diagram_gate.py`'s `_provenance` no longer crashes with `FileNotFoundError` when
+  the derived-from source file doesn't exist — a missing `container-diagram.mmd`, or an attack
+  sequence whose header names an unknown parent — it now returns a `"derived-from source ... not
+  found"` error string.
+- `sec_overlay/diagram_gate.py`'s `check_diagram` no longer crashes with an uncaught `ValueError`
+  when the source diagram (for element/participant-diff checks) is unparseable — it now returns a
+  `"source ... unparseable: ..."` error string.
+- `sec_overlay/mermaid_index.py`'s `_INLINE_LABEL_SKIP` only spanned single-char bracket pairs and
+  missed multi-char forms like `q{{Queue}}`, dropping the edge entirely and false-flagging the
+  source node as an orphan-detail node — widened to one bracket-class alternation covering all
+  Mermaid node shapes.
+
+## 1.22.0 - 2026-08-16
+
+### Added
+
+- `sec_overlay/diagram_gate.py`: deterministic hard gate over generated Mermaid diagrams —
+  per-type node/participant/message caps (`CAPS`, `SEQ_CAPS`), ≤4-word edge labels, DFD
+  trust-boundary-subgraph requirement, derivation provenance (`%% derived-from: <file>
+  sha256:<hash>`, rejecting a stale hash or a new element/participant absent from the source),
+  legend-required styling, and orphan-detail nodes (a node that only ever receives and isn't a
+  store/actor) scoped to `container`/`component`/`dfd` diagrams only. `run_diagram_gate(arch_dir,
+  tm_dir)` walks a full architecture/threat-model tree. CLI-callable
+  (`python -m sec_overlay.diagram_gate --architecture DIR --threat-model DIR`).
+
+### Fixed
+
+- `sec_overlay/mermaid_index.py`'s edge regexes no longer drop an edge whose source node carries
+  an inline bracket label on the same line (`web[Web] --> api[API]`) — previously produced zero
+  edges for that shape.
+- `sec_overlay/mermaid_index.py`'s C4 parser now also adds `Person(...)` and `*_Ext(...)` element
+  ids to `store_ids`, marking them orphan-exempt alongside `ContainerDb`/`SystemDb`/`*Queue`.
+
+## 1.21.1 - 2026-08-16
+
+### Fixed
+
+- `sec_overlay/mermaid_index.py`'s flowchart edge scan no longer misreads a mid-arrow label
+  (`a -- some label --> b`) as a phantom source node — `_FLOW_EDGE_MID` now runs first, so the
+  real node ids and the label are captured instead of silently dropped.
+
+## 1.21.0 - 2026-08-16
+
+### Added
+
+- `sec_overlay/mermaid_index.py`: `index_mermaid(text)` line-oriented structure extractor for
+  Mermaid flowchart, sequence, and C4 diagrams — nodes, edges, subgraph membership, sequence
+  participants/message count, data-store ids, and style detection, feeding the upcoming diagram
+  gate.
+
+## 1.20.2 - 2026-08-16
+
+### Fixed
+
+- `sec_overlay/cvss.py`'s `_parse` no longer silently drops score-affecting Threat (`E`) or
+  Environmental (`CR`/`IR`/`AR`/`M*`) metrics — a vector carrying one with a value other than `X`
+  (Not Defined) now raises `ValueError` instead of returning the unchanged base score; NVD-shaped
+  `.../E:X/CR:X/IR:X/AR:X` suffixes still parse and score identically to the bare base vector.
+- `sec_overlay/calibrate.py`'s `_derived_score` now records a `calibrate:cvss-unparseable` history
+  event (with the offending vector) before falling back to the heuristic score on any unparseable
+  `cvss_vector`, so a pre-migration CVSS 3.1 vector leaves an audit trail instead of a silent
+  fallback.
+- `references/finding-template.md`'s §5 metric-justification list updated from the CVSS 3.1 metrics
+  (`AV, AC, PR, UI, S, C, I, A`) to all 11 CVSS v4.0 base metrics (`AV, AC, AT, PR, UI, VC, VI, VA,
+  SC, SI, SA`).
+
+## 1.20.1 - 2026-08-16
+
+### Fixed
+
+- Migrated the last `CVSS:3.1` fixture vectors in `test_report.py`, `test_models.py`,
+  `test_citations.py`, and `test_factcheck_baseline_envelope.py` to `CVSS:4.0` vectors of
+  equivalent meaning, so the repo has zero v3.1 vectors outside `sec_overlay/cvss.py`'s
+  rejection-path test and its own error message.
+
+## 1.20.0 - 2026-08-16
+
+### Changed
+
+- `agents/validate.md`'s confirmed-finding contract and `agents/investigate.md`'s example
+  finding now specify a CVSS v4.0 vector (`CVSS:4.0/AV:_/AC:_/AT:_/PR:_/UI:_/VC:_/VI:_/VA:_/
+  SC:_/SI:_/SA:_`) instead of v3.1, matching the v4.0-only parser (`sec_overlay/cvss.py`).
+  `references/prompt-constants.md`'s `SEVERITY_GUIDANCE` block, `references/finding-template.md`,
+  and `references/README.md` updated to the same legal v4.0 base-metric values so every prompt
+  that imports the shared block proposes a vector the engine accepts.
+
+## 1.19.0 - 2026-08-16
+
+### Changed
+
+- Re-point `sec_overlay/calibrate.py` from the removed `cvss31_base` to `cvss40_base`
+  (`sec_overlay/cvss.py`'s CVSS v4.0 engine); `risk_score`/`priority` derivation shape is
+  unchanged. `Finding.cvss_vector`'s docstring in `models.py` now says "CVSS v4.0". Migrated
+  `test_calibrate.py`'s CVSS fixtures to v4.0 vectors, with expectations recomputed from the
+  real scoring engine.
+
+## 1.18.1 - 2026-08-16
+
+### Fixed
+
+- Wrap `tests/test_cvss.py`'s `sec_overlay.cvss` import across multiple lines to clear a ruff
+  `I001` warning introduced by the CVSS v4.0 scoring-engine rewrite.
+
+## 1.18.0 - 2026-08-16
+
+### Changed
+
+- Rewrite the scoring engine (`sec_overlay/cvss.py`) from CVSS 3.1 to CVSS v4.0: `cvss40_base`
+  computes the base score via a MacroVector/interpolation port of FIRST's official calculator
+  (`cvss_score.js`, BSD-2-Clause) against `cvss4_data.py`'s tables, base metrics only (no
+  Threat/Environmental/Supplemental support). `offensive_priority` keeps its 3.1 branch order
+  verbatim. A `CVSS:3.x` vector now raises `ValueError` naming the required 4.0 migration.
+
+## 1.17.0 - 2026-08-16
+
+### Added
+
+- Vendor CVSS v4.0 MacroVector lookup and interpolation tables (`sec_overlay/cvss4_data.py`) from
+  FIRST's official calculator (BSD-2-Clause), for a future v4.0 scoring engine.
+
 ## 1.16.2 - 2026-08-15
 
 ### Fixed

@@ -187,3 +187,10 @@ def test_read_findings_skips_malformed_without_crashing(tmp_path, capsys):
     assert [f.id for f in findings] == ["F-1"]
     err = capsys.readouterr().err
     assert "BAD.json" in err
+
+
+def test_ensure_creates_trees(tmp_path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    assert (tmp_path / "architecture" / "runtime-view").is_dir()
+    assert (tmp_path / "threat-model" / "attack-sequences").is_dir()

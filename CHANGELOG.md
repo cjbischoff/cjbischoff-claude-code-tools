@@ -24,6 +24,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Added
 
+- Add the three implementation plans for the architecture/threat-model standards rebuild: CVSS v4.0 migration, diagram/STE enforcement modules, and the phase rebuild with consumer rewiring.
+- Add the architecture/threat-model standards design spec (with its user-authored source standard) rebuilding sec-overlay's architecture and threat-model phases around C4/arc42, a derived DFD with STRIDE(+PASTA/LINDDUN), CVSS v4.0 migration, hard Mermaid caps, and an STE prose linter.
 - Add the sec-overlay defect-remediation design spec covering all 57 issues from the agent-gateway run across seven fix themes plus a new independent artifact-review phase.
 - Add Plan D (themes T6/T7 plus artifact-review) of the sec-overlay defect-remediation spec: TDD tasks for a split risk-ordered report with real impact text and counts-in-words, per-finding detail files, phase telemetry via campaign-state timings, context doc-citation cross-checks, backend-completeness strictness, self-score critic metrics, and a new adversarial artifact-review phase with a deterministic artifact gate.
 - Add Plan C (themes T4/T5) of the sec-overlay defect-remediation spec: TDD tasks for a derived route-to-control coverage table with logged gaps, doc-coverage provenance, resolver-backed finding citations, prefilter sidecar exclusion, same-line dedupe, class-extension alias-map gap logging, and red-team payload reachability.

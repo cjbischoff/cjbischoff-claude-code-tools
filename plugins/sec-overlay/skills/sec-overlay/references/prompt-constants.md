@@ -27,10 +27,11 @@ A candidate is NOT a reportable finding when any holds (cite file:line for the r
 ## SEVERITY_GUIDANCE
 State preconditions, required access level, and blast radius BEFORE choosing a tier.
 When uncertain between two tiers, choose the LOWER — a mislabeled HIGH burns reviewer
-trust faster than a cautious MEDIUM. Propose a CVSS 3.1 vector; the harness computes the
+trust faster than a cautious MEDIUM. Propose a CVSS v4.0 vector; the harness computes the
 score deterministically (never assert a numeric score yourself).
-Legal CVSS 3.1 base-metric values (use ONLY these): AV:[N,A,L,P] AC:[L,H] PR:[N,L,H] UI:[N,R]
-S:[U,C] C:[N,L,H] I:[N,L,H] A:[N,L,H]. Never emit a value outside these sets (e.g. `C:M` is invalid).
+Legal CVSS v4.0 base-metric values (use ONLY these): AV:[N,A,L,P] AC:[L,H] AT:[N,P] PR:[N,L,H]
+UI:[N,P,A] VC:[H,L,N] VI:[H,L,N] VA:[H,L,N] SC:[H,L,N] SI:[H,L,N] SA:[H,L,N]. Never emit a
+value outside these sets (e.g. `VC:M` is invalid).
 
 SEVERITY VALUES: `severity` is exactly one of `info | low | medium | high | critical`. NEVER put a status value (`informational`, `needs-deployment-testing`, `candidate`) in `severity` — those are `status` values. A finding whose `severity` is not one of the five bands is rejected by the gate.
 
@@ -150,3 +151,18 @@ The evidence, status, and disposition vocabularies are closed sets. Use only the
   `needs-deployment-testing`.
 - **`runtime_disposition` (closed enum):** `needs-runtime`, `static-settled`, `unassessed`.
   Any other value (e.g. `neither`) is rejected at the findings gate.
+
+## STE_PROSE
+
+Prose you write for humans (arc42.md, threat-model.md, findings-table free text) follows
+ASD-STE100's checkable core. Hard rules: active voice; one instruction or claim per
+sentence; sentences ≤25 words; no semicolons; noun clusters ≤3 words; paragraphs ≤6
+sentences on one topic; numbered/bulleted list for any 3+ step sequence. Lexical rules
+are directional: one word per meaning (pick one verb per action and reuse it), verb over
+noun form, define kept domain terms once in the glossary. Preserve every hedge and scope
+qualifier — "may have failed" never becomes "failed"; when the tense rule and a hedge
+conflict, the hedge wins. Put the one-time statement "Prose follows an ASD-STE100-inspired
+clarity standard (structural rules enforced; lexical dictionary not verified)." in the
+document front matter. A deterministic linter rejects sentence/semicolon/paragraph
+violations, so write compliant the first time. Diagram labels are governed by
+mermaid-caps.md, not this block.

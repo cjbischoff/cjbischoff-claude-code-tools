@@ -44,6 +44,10 @@ A full audit now checks its own output before handing it off: a deterministic `a
 followed by an opus `artifact-review` adversary run after `report`, catching a stale or
 overclaiming report before a human reads it.
 
+The architecture and threat-model phases produce standards-based artifact trees (C4 + arc42,
+STRIDE + a derived data-flow diagram), each checked by a deterministic gate before the pipeline
+continues.
+
 ## More
 
 | To understand… | Read |

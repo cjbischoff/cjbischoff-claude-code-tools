@@ -1,12 +1,45 @@
 # `tests/` — the deterministic test suite
 
-86 pytest files, 711 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+90 pytest files, 785 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+`test_kb.py` gained `test_new_tree_paths` for `kb.py`'s new arc42/threat-model tree path helpers;
+`test_workspace.py` gained `test_ensure_creates_trees`, pinning that `Workspace.ensure()` creates
+`architecture/runtime-view/` and `threat-model/attack-sequences/`.
+
+New `test_ste_lint.py` covers `sec_overlay.ste_lint.lint_prose`: clean prose passes; a >25-word
+sentence, a semicolon in prose, and a >6-sentence paragraph each produce an error; a semicolon
+inside a code span or fenced code block is exempt; a heading and a table separator row are
+exempt but a semicolon inside a table cell is still flagged; a 4-word capitalized run and a
+sentence repeating " then " each produce a warning, not an error.
+
+`test_ste_lint.py` gained three fix-round regression tests: an unterminated code fence with a
+real semicolon violation after it reports an `"unbalanced"` error instead of silently linting
+nothing; a paragraph using "e.g." twice across three real sentences produces no false
+"over 6 sentences" error; and a 30-word sentence containing "e.g." mid-sentence is still
+flagged as over 25 words rather than being fractured into two short sentences.
+
+New `test_cvss4_data.py` covers the vendored CVSS v4.0 data: `MACROVECTOR_LOOKUP` has >250
+six-digit-key entries with scores in `[0, 10]`, and `MAX_COMPOSED`/`MAX_SEVERITY` are nonempty.
+
+New `test_references_caps.py` checks `references/mermaid-caps.md`'s cap table against
+`sec_overlay.diagram_gate.CAPS`/`SEQ_CAPS`, so the doc and the gate never drift apart.
+
+`test_cvss.py` fully rewritten for the v4.0 engine: 25 reference vectors pinned to NVD's published
+`cvssMetricV40` base scores (`E:X` only, so no threat-metric ambiguity), plus band/bounds/rejection
+and `offensive_priority` tests.
+
+`test_calibrate.py`'s CVSS fixtures migrated to CVSS v4.0 vectors (expectations recomputed from the
+real `cvss40_base` engine, not guessed); it now collects and passes against the re-pointed
+`calibrate.py`.
+
 New `test_artifact_gate.py` (§4.8) covers `run_artifact_gate`: a clean run passes; a stale constant
 section, a missing detail file, a missing red-team directive, and a triage ID with no matching
-finding each produce an error string; the gate always writes `kb/gates/artifact-gate.json`.
+finding each produce an error string; the gate always writes `kb/gates/artifact-gate.json`. Also
+covers `check_duplication`: a duplicated heading and a threat-model-owned structure heading each
+fail, distinct headings pass, and the gate skips the check silently when the arc42/threat-model
+trees are absent.
 
 `test_stage_validate.py` gained `test_unknown_stage_raises` (ISSUE-034): `validate_stage` now
 raises `ValueError` for an unregistered stage instead of silently passing. `test_bucket_c.py`'s
@@ -63,6 +96,8 @@ between `trace` and `calibrate` — ISSUE-047) and the pure sequencer helpers (`
 `outputs_present`, `next_actionable_phase`). `test_artifact_phases_follow_selfscore` (new, §4.8)
 asserts `artifact-gate` sits after `selfscore` and `artifact-review` sits after `artifact-gate`,
 and that `artifact-review` is an agent phase naming `agents/artifact-review.md`.
+`test_arch_tm_gate_rows` (new) asserts the deterministic `arch-gate`/`tm-gate` rows sit immediately
+after `architecture`/`threat_model`.
 
 `test_driver.py` covers `sec_overlay/driver.py`'s `run_deterministic_phase`: raises
 `PhaseHalt` on a missing input, raises `PhaseHalt` when the action ran but a declared output is
@@ -71,7 +106,12 @@ ISSUE-014) records the phase's wall-clock seconds into `state.budget["timings"]`
 `cost.record_timing`. Also covers `render_dispatch`: the
 returned block names the `agents/<prompt>` file and the substituted target/workspace/SHA, and now
 `test_dispatch_is_secret_redacted` asserts the block is passed through `redactor.safe_for_prompt`
-before returning (ISSUE-051). Three `run_audit` tests (new) cover the resumable table-walker:
+before returning (ISSUE-051). `test_act_arch_gate_halts_on_cap_breach`,
+`test_act_arch_gate_ignores_absent_threat_model_tree`, and
+`test_act_tm_gate_halts_when_dfd_missing` (new) cover `_act_arch_gate`/`_act_tm_gate`: a diagram
+cap breach halts and still writes the gate JSON, an absent threat-model tree does not halt
+`arch-gate`, and a missing `dfd.mmd` halts `tm-gate` (`require_threat_model=True`). Three
+`run_audit` tests (new) cover the resumable table-walker:
 halts at `recon` with no scan-profile yet, auto-advances past `recon` once its output exists and
 halts at `architecture`, and — the regression guard — does NOT auto-skip `critic` just because
 `findings_dir` (its shared input/output path) already exists from earlier phases. Also covers
@@ -237,3 +277,59 @@ list instead.
 
 The `_full` helper in `test_report.py` builds its `Finding` kwargs as a dict literal (not a
 `dict()` call) to satisfy ruff `C408`.
+
+`test_cvss.py`'s `sec_overlay.cvss` import is wrapped across multiple lines to satisfy ruff
+`I001` (the single-line form exceeded the 100-char limit).
+
+`test_report.py`, `test_models.py`, `test_citations.py`, and `test_factcheck_baseline_envelope.py`
+had their fixture `cvss_vector` strings swapped from `CVSS:3.1` to `CVSS:4.0` vectors of
+equivalent meaning, matching the v4.0-only parser (`sec_overlay/cvss.py`). `test_cvss.py`'s own
+`CVSS:3.1` fixture is untouched — it exercises the parser's rejection path.
+
+`test_mermaid_index.py` (new) covers `sec_overlay.mermaid_index.index_mermaid` against flowchart,
+sequence, and C4 fixtures: node/edge/subgraph/store-id extraction, sequence participant order and
+message count, `has_style` detection, and a `ValueError` on an unrecognized diagram header.
+
+`test_flowchart_mid_label_edge` added to `test_mermaid_index.py`: covers the `a -- label --> b`
+mid-arrow-label form, asserting the edge triple and that the label text never appears as a node.
+
+`test_c4_index` widened to expect `store_ids == {"user", "db"}`: `Person(...)` and `*_Ext(...)`
+element ids are orphan-exempt required shapes, same as `ContainerDb`/`SystemDb`/`*Queue`.
+`test_flowchart_edge_with_inline_source_label` (new) pins a fix to `mermaid_index.py`'s edge
+regexes: an edge whose source node carries its own inline bracket label on the same line
+(`web[Web] --> api[API]`) now parses — it previously produced zero edges, silently dropping
+every such edge.
+
+New `test_diagram_gate.py` covers `sec_overlay.diagram_gate`: node/participant/message caps
+(`CAPS`, `SEQ_CAPS`), the ≤4-word edge-label rule, DFD trust-boundary-subgraph requirement,
+derivation provenance (`%% derived-from: <file> sha256:<hash>` — missing header, stale hash, and
+an element/participant absent from the named source all fail), legend-required styling, and the
+orphan-detail check (a node that only ever receives — never a source — and isn't a store/actor
+is flagged; a chain's entry node, which is naturally out-degree-only, is not). Per design spec §6
+(R4), the orphan check runs only for `container`/`component`/`dfd` — never `context` or
+`sequence`, since context actors are by definition often degree-1.
+
+Crash-path hardening round (fix review findings F1–F4): `test_provenance_missing_source_reports_error_not_crash`
+and `test_attack_sequence_missing_parent_does_not_crash` pin `_provenance`'s guard against a
+missing derived-from source (both the direct-missing-file case and `_attack_parent`'s
+`MISSING-PARENT` placeholder) — an error string, not a `FileNotFoundError`.
+`test_source_diagram_unparseable_does_not_crash` pins the same treatment for a garbage source
+diagram (`ValueError` from `index_mermaid` now becomes an `"unparseable"` error string, not an
+uncaught traceback). `test_double_brace_source_not_orphan` (plus
+`test_flowchart_edge_with_double_brace_source_label` in `test_mermaid_index.py`) pins the fix to
+`_INLINE_LABEL_SKIP`: it only spanned single-char bracket pairs and missed multi-char forms like
+`q{{Queue}}`, silently dropping the edge and false-flagging the source node as an orphan. Three
+previously-untested branches are now pinned directly: `test_sequence_message_cap` (the message
+half of `SEQ_CAPS`), `test_target_diagram_unparseable_returns_error` (the top-level `check_diagram`
+parse-failure branch), and `test_style_with_legend_passes` (a styled diagram with a legend present
+passes clean).
+
+Diagram-gate parsing-gap round: `test_mermaid_index.py::test_chained_flowchart_edges` pins a
+chained edge line (`a --> b --> c`) recording both hops, not just the first.
+`test_hyphenated_sequence_participant_and_message` and
+`test_unhyphenated_sequence_messages_still_parse` pin hyphenated participant/message ids
+(`auth-api`) parsing correctly (message count, participant list, edge tuple) alongside the
+existing unhyphenated forms (`a->>b`, `a--)b`, `a-xb`). `test_diagram_gate.py` gained
+`test_empty_threat_model_passes_by_default` / `test_empty_threat_model_fails_when_required` for
+the new `require_threat_model` gate flag, and `test_node_label_over_four_words_fails` /
+`test_bare_id_node_label_not_flagged` for the new node-label word-count check.

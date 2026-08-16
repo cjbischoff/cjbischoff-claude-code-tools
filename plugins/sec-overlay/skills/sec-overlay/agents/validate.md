@@ -21,7 +21,7 @@ untrusted envelope pattern (`<untrusted nonce=...>`).
 - Workspace: `{{WORKSPACE}}`
 - Findings to validate: `{{WORKSPACE}}/findings/*.json` with `status == "raw"`.
 - KB for context only: `{{WORKSPACE}}/kb/*` (do not treat as ground truth for exploitability).
-- Threat model: `{{WORKSPACE}}/kb/THREAT_MODEL.md` + `kb/context.json` trust boundaries.
+- Threat model: `{{WORKSPACE}}/threat-model/threat-model.md` + `kb/context.json` trust boundaries.
 
 ## Threat-model kill-filter (the #1 false-positive reducer)
 The most common false positive is not misread code — it is the model not knowing what the
@@ -109,8 +109,9 @@ with resolves to exactly one of:
 - unchanged `status: "raw"` + `verification: "verify-error"`.
 
 Before a finding survives as `confirmed`, it MUST carry a real `cvss_vector`
-(the full CVSS v3.1 vector string you derived from the traced source→sink, not a
-placeholder) and a non-empty `preconditions` list enumerating every condition the
+(the full CVSS v4.0 vector string you derived from the traced source→sink, not a
+placeholder — `CVSS:4.0/AV:_/AC:_/AT:_/PR:_/UI:_/VC:_/VI:_/VA:_/SC:_/SI:_/SA:_`) and
+a non-empty `preconditions` list enumerating every condition the
 exploit needs. Calibrate computes the numeric score from this vector — a missing or
 guessed vector produces a flat, wrong score (ISSUE-008). If you cannot derive a
 vector, the finding is not `confirmed`; route it to `needs-deployment-testing` with

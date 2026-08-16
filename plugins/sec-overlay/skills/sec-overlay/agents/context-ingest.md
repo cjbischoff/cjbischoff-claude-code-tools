@@ -69,11 +69,11 @@ in the `claimed_control`'s `deployed_in` field, not just in prose.
 
 ## Output
 **Lens for this document: what the repo claims about itself, and whether that claim
-holds — not structural/architectural facts (those belong to `architecture.md`, which this
+holds — not structural/architectural facts (those belong to `arc42.md`, which this
 document must not restate).** `trust_boundary` items are the one place structure meets
 trust, so they appear here — but only as the anchor a claim hangs on: CONTEXT.md records
 whether a claimed control AT that boundary holds up, never what the boundary IS
-structurally (components, data flow, call paths — `architecture.md`'s job).
+structurally (components, data flow, call paths — `arc42.md`'s job).
 
 Write `{{WORKSPACE}}/kb/context.json` via the schema (build a `Context` of `ContextItem`s
 with `verify_status` and `deployed_in` set on claimed_controls, and `save` it), populate

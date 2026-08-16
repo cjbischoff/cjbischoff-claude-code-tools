@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 
 from sec_overlay.campaign import record_stage
-from sec_overlay.cvss import cvss31_base, offensive_priority
+from sec_overlay.cvss import cvss40_base, offensive_priority
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.workspace import Workspace, read_findings, write_findings
 
@@ -78,7 +78,7 @@ _PRECOND_WEAK = (
 # A claimed severity this far above the derived score is flagged as inflation (recall-safe:
 # we flag, we do not silently drop or re-score).
 _INFLATION_THRESHOLD = 3
-# Severity floor (fixes O-031): a medium can reach 8 via CVSS (C:L/I:H), so a critical must floor
+# Severity floor (fixes O-031): a medium can reach 8 via CVSS (VC:L/VI:H), so a critical must floor
 # at 8. Prevents inversion when severity and CVSS agree; disagreement is surfaced via the
 # inflation flag, not averaged.
 _SEVERITY_FLOOR = {"critical": 8, "high": 6, "medium": 4, "low": 2, "info": 1}
@@ -142,8 +142,11 @@ def _derived_score(finding: Finding) -> int:
     raw = None
     if finding.cvss_vector:
         try:
-            raw = max(1, min(10, round(cvss31_base(finding.cvss_vector)[0])))
+            raw = max(1, min(10, round(cvss40_base(finding.cvss_vector)[0])))
         except ValueError:
+            finding.history.append(
+                {"event": "calibrate:cvss-unparseable", "vector": finding.cvss_vector}
+            )
             raw = None  # malformed -> heuristic
     if raw is None:
         raw = _heuristic_score(finding)

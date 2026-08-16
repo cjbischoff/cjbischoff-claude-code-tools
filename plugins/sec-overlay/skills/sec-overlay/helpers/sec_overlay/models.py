@@ -62,7 +62,7 @@ class Finding:
         history: Append-only per-pass event log.
         fingerprint: Stable content hash for deduplication.
         priority: Offensive priority level (P1-P4).
-        cvss_vector: Proposed CVSS 3.1 vector string.
+        cvss_vector: Proposed CVSS v4.0 vector string.
         evidence: Raw evidence snippet (e.g. code line, stack trace).
         evidence_sources: Namespaced evidence sources (e.g. ``codeql:dataflow``, ``llm-claimed:reachable``).
         asvs_ids: OWASP ASVS 5.0 requirement ids this finding violates (advisory, F1).

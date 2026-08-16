@@ -16,8 +16,8 @@ untrusted envelope (`<untrusted nonce=...>`).
 
 ## Inputs
 - Target repo: `{{TARGET}}`  Workspace: `{{WORKSPACE}}`  Phase under review: `{{PHASE}}`
-- The phase output to challenge: the relevant `{{WORKSPACE}}/kb/*` artifact
-  (`scan-profile.json` / `architecture.md` + `entities/` / `THREAT_MODEL.md` / `context.json`).
+- The phase output to challenge: the relevant artifact (`kb/scan-profile.json` /
+  `architecture/arc42.md` / `threat-model/threat-model.md` / `kb/context.json`).
 - The deterministic pre-check result: `{{WORKSPACE}}/kb/gates/{{PHASE}}.json` — claims already
   `reject`ed have unresolvable code refs; only review the `sent_to_adversary` claims. The
   `claims` map gives each sent-to-adversary claim's `text` + `refs`, and `decisions[]` carries
@@ -63,3 +63,6 @@ drops/corrections and records the verdicts back into `kb/gates/{{PHASE}}.json`.
   verifier actually confirmed it in code.
 - Default to `WEAKENED` under uncertainty; never silently accept an unverified claim.
 - No execution, static reasoning only.
+- Ownership boundary: architecture text naming threats/attack surface/mitigations is a defect;
+  threat-model text restating structure/stack/deployment narrative is a defect — cite the
+  offending line.

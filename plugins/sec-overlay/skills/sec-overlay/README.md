@@ -95,8 +95,11 @@ flowchart TD
     P0["0 · preflight<br/>tools + CodeQL packs present?"] --> P1["1 · begin_pass<br/>pin SHA"]
     P1 --> C1(("C1 · context-ingest → context-adversary<br/>repo docs as UNTRUSTED leads"))
     C1 --> T1["T1 · graph build<br/>Tier-1 substrate (LLM-free)"]
-    T1 --> RA(("2-4 · recon → architecture → threat-model<br/>each gated by phase-adversary (opus)"))
-    RA --> PRE["5 · prefilter<br/>semgrep+codeql+sca+secrets, never-silent"]
+    T1 --> RA(("2 · recon → architecture<br/>gated by phase-adversary (opus)"))
+    RA --> AG2["3.5 · arch-gate<br/>diagram_gate + ste_lint, halts on violation"]
+    AG2 --> TM(("4 · threat-model<br/>gated by phase-adversary (opus)"))
+    TM --> TG["4.5 · tm-gate<br/>diagram_gate + ste_lint + duplication check"]
+    TG --> PRE["5 · prefilter<br/>semgrep+codeql+sca+secrets, never-silent"]
     PRE --> INV(("6 · investigate<br/>parallel per class, loop-until-dry"))
     INV --> DED["7 · dedupe<br/>refactor-resistant fingerprint"]
     DED --> CLUS["7.5 · cluster<br/>≥3 same-class/sink -> systemic cluster"]
@@ -135,7 +138,7 @@ def get_user():
 |-------|-----------|--------------------------|------------------|
 | **C1 context** | `context-ingest` (sonnet) | Reads the repo's docs; a runbook *claims* "all inputs validated by middleware." That claim is tagged **untrusted** — it becomes a lead to verify, not a safe-list. | `kb/context.json` |
 | **T1 substrate** | `graph build` (no LLM) | Builds a call graph: `request.args` is an entry point; `db.execute` is a sink; there's a one-hop edge between them. | `kb/graph.json` |
-| **2-4 analysis** | recon → architecture → threat-model | `injection` lands on the prioritized hunt list because recon saw Flask + raw SQL; opus phase-adversary confirms the entrypoint claim resolves to real code. | `kb/scan-profile.json`, `kb/THREAT_MODEL.md` |
+| **2-4 analysis** | recon → architecture → arch-gate → threat-model (STRIDE) → tm-gate | `injection` lands on the prioritized hunt list because recon saw Flask + raw SQL; opus phase-adversary confirms the entrypoint claim resolves to real code. | `kb/scan-profile.json`, `threat-model/threat-model.md` |
 | **5 prefilter** | semgrep + codeql (no LLM) | semgrep's SQLi rule fires on line 4 → a **candidate** with a real receipt `semgrep:<rule>`. | `findings/C-0001.json` (candidate) |
 | **6 investigate** | `investigate.md` (sonnet, `injection`) | Walks the gate ladder: cited code exists (Gate −1 ✓), reachable from `request.args` (Gate 1 ✓, `codeql:dataflow` receipt), `uid` is attacker-controlled (Gate 2a ✓), **reads the claimed middleware — it only trims whitespace, doesn't parameterize** (Gate 2b: sanitizer does *not* apply ✓), yields DB read/write (Gate 3 ✓). Promoted to **`raw`**. | status → `raw` |
 | **7 dedupe** | `dedupe` (no LLM) | Stamps fingerprint `sha256(sqli\|injection\|get_user)` so a later refactor that shifts the line still maps to the same finding. | `fingerprint` field |
@@ -218,11 +221,13 @@ Everything lands in `<target>/.sec-overlay/<slug>/` (self-ignoring):
 
 ```
 kb/scan-profile.json      recon output: languages, frameworks, attack_surface, sast_plan
-kb/architecture.md        components, data flows, trust boundaries (+ kb/entities/*.md)
-kb/THREAT_MODEL.md        attacker profiles + the prioritized hunt list
+architecture/             C4 diagrams + runtime views + arc42.md (building blocks in §5)
+threat-model/             dfd.mmd (derived) + attack-sequences/ + threat-model.md (hunt list)
 kb/context.json           the repo's own docs distilled, trust-tagged
 kb/graph.json             the Tier-1/Tier-2 code graph (reachability substrate)
 kb/gates/<phase>.json     adversary verdict audit trail per gated phase
+kb/gates/arch-gate.json, tm-gate.json   deterministic gates (diagram caps, STE prose, dup) — each
+                          phase is double-gated: opus phase-adversary first, then this check
 kb/coverage-ledger.json   surface-completeness (blocks "complete" while gaps remain)
 kb/discovery-ledger.json  investigate saturation state
 findings/<ID>.json        every finding, all statuses — evidence, reachability, cvss, patch

@@ -26,6 +26,15 @@ _BANNED_FRAGMENTS = (
 )
 _TRIAGE_WHAT_MAX = 72  # matches report._short_title's default limit
 
+# Ownership boundary between architecture/arc42.md and threat-model/threat-model.md
+# (§6): a threat-model heading that restates an arc42 heading, or that names an
+# arc42-owned structure section outright, is a duplication defect.
+_ALLOWED_SHARED_HEADINGS = {"glossary", "introduction", "references"}
+_STRUCTURE_HEADINGS = {
+    "building block view", "solution strategy", "deployment view",
+    "context and scope", "runtime view", "tech stack",
+}
+
 
 def _triage_rows(report_md: str) -> list[list[str]]:
     """Return the triage table's data rows as lists of stripped cells."""
@@ -56,6 +65,37 @@ def _mermaid_node_count(context_md: str) -> int | None:
     ids.discard("graph")
     ids.discard("flowchart")
     return len(ids)
+
+
+def _headings(md: str) -> set[str]:
+    """Return the lower-cased, number-stripped heading text of every ``#`` line."""
+    return {
+        re.sub(r"^[\d.\s]+", "", ln.lstrip("#").strip()).lower()
+        for ln in md.splitlines()
+        if ln.startswith("#")
+    }
+
+
+def check_duplication(arc42_text: str, tm_text: str) -> list[str]:
+    """Flag threat-model sections that duplicate arc42 building-block content.
+
+    Args:
+        arc42_text: Content of ``architecture/arc42.md``.
+        tm_text: Content of ``threat-model/threat-model.md``.
+
+    Returns:
+        Error strings; empty when the ownership boundary holds.
+    """
+    tm = _headings(tm_text)
+    errors = [
+        f"artifact-gate: threat-model restates architecture section {h!r}"
+        for h in sorted((_headings(arc42_text) & tm) - _ALLOWED_SHARED_HEADINGS)
+    ]
+    errors.extend(
+        f"artifact-gate: structure heading {h!r} belongs to the architecture doc"
+        for h in sorted(_STRUCTURE_HEADINGS & tm)
+    )
+    return errors
 
 
 def run_artifact_gate(ws: Workspace) -> list[str]:
@@ -108,6 +148,11 @@ def run_artifact_gate(ws: Workspace) -> list[str]:
         n = _mermaid_node_count(context_md.read_text())
         if n is not None and n > 10:
             errors.append(f"artifact-gate: context diagram has {n} nodes (>10 style cap, ISSUE-022)")
+
+    arc42 = ws.root / "architecture" / "arc42.md"
+    tm_doc = ws.root / "threat-model" / "threat-model.md"
+    if arc42.exists() and tm_doc.exists():
+        errors.extend(check_duplication(arc42.read_text(), tm_doc.read_text()))
 
     (ws.kb / "gates").mkdir(parents=True, exist_ok=True)
     (ws.kb / "gates" / "artifact-gate.json").write_text(

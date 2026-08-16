@@ -15,8 +15,7 @@ security engineer artifacts they can act on, in priority order:
    bar is a traced source→sink with attacker control and reachability, or an explicit
    `needs-runtime` disposition telling a human exactly what to test on a live system.
 3. **Artifacts an engineer can use.** Every run leaves a threat model, per-finding JSON with
-   evidence + reachability, a SARIF file, a Markdown report, and a `redteam-plan.md` manual test
-   plan for a human to extend by hand.
+   evidence + reachability, a SARIF file, a Markdown report, and a `redteam-plan.md` test plan.
 
 Recall matters too: coverage is pursued until a phase can defend it to its adversary; gaps are
 **logged, never dropped**. Uncertain findings stay `raw`/`candidate`, never deleted on a hunch.
@@ -33,9 +32,8 @@ Before a *full* audit, satisfy these environment prerequisites (a clean checkout
 - **Bench corpus is local-only** — `bench/corpus_seed/*.json` is gitignored (confirmed vulns in
   private code); its absence fails `test_bench.py::test_seed_corpus_is_valid` and
   `test_citations.py::test_all_mapped_ids_exist_in_seed` — both **dev/bench**, not part of a run.
-  Seed locally to run the bench — see the plugin `CLAUDE.md`'s "Developing the skill" section.
-
-These two failures are **environmental** — never "fix" by committing submodule/seed data.
+  Seed locally — see the plugin `CLAUDE.md`'s "Developing the skill" section. Both failures are
+  **environmental** — never "fix" by committing submodule/seed data.
 
 ---
 ## 2. How to run an audit
@@ -58,9 +56,11 @@ local semgrep ruleset.
 C1 Context-ingest   agents/context-ingest.md (sonnet) → context-adversary.md (opus)   # repo docs as UNTRUSTED
 T1 Tier-1 substrate  python -m sec_overlay.graph build --target <T> --workspace <WS> --sha <sha>
                      # LLM-free: structural_index + regex call-edges + osv/secrets/crypto → kb/graph.json v1
-2  Recon            agents/recon.md (sonnet)     → kb/scan-profile.json     ┐
-3  Architecture     agents/architecture.md (sonnet) → kb/architecture.md    ├ each → PHASE GATE
-4  Threat model     agents/threat-model.md (sonnet) → kb/THREAT_MODEL.md    ┘   (phase-adversary.md, opus)
+2  Recon            agents/recon.md (sonnet) → kb/scan-profile.json  # → PHASE GATE (opus)
+3  Architecture     agents/architecture.md (sonnet) → architecture/ tree (C4 + arc42)  # → PHASE GATE
+3.5 Arch gate       python -m sec_overlay.diagram_gate + ste_lint  # caps/prose, halts on violation
+4  Threat model     agents/threat-model.md (sonnet) → threat-model/ tree  # STRIDE → PHASE GATE
+4.5 TM gate         diagram gate + ste_lint + duplication check
 0.5 Tune (optional) agents/tune-config.md — ratcheted rule/exclusion loop, ≤3 rounds
 5  Prefilter        sec_overlay.prefilter.run_prefilter(ws, target, profile) # semgrep+codeql+osv+secrets
 6  Investigate      agents/investigate.md (sonnet, PARALLEL per attack-class) → raw / rejected
@@ -157,17 +157,17 @@ The read-only invariant is about the reviewed **source**, not this folder.
 
 ```
 kb/scan-profile.json     recon output: languages, frameworks, attack_surface, sast_plan, subsystems
-kb/architecture.md       component/data-flow/trust-boundary map + kb/entities/*.md
-kb/THREAT_MODEL.md       attacker profiles, prioritized hunt list (references architecture.md)
+architecture/            C4 diagrams + runtime views + arc42.md (building blocks in §5)
+threat-model/            dfd.mmd (derived) + attack-sequences/ + threat-model.md (findings, hunt list)
 kb/context.json          repo's own docs distilled (trust-tagged untrusted-doc / prior-scan)
 kb/gates/<phase>.json    adversary verdict audit trail per gated phase
+kb/gates/arch-gate.json, tm-gate.json    deterministic arch/tm gates (diagram caps, STE prose, dup)
 kb/discovery-ledger.json investigate saturation state (waves, consecutive_no_new, terminal_reason)
 kb/coverage-ledger.json  surface-completeness ledger; `complete` machine-rejected while gaps remain
 findings/<ID>.json       every finding, all statuses — evidence_sources, reachability, cvss, patch_diff
 report.sarif             SARIF 2.1.0 (confirmed/fixed)
 report.md                human report (finding-template.md structure; links redteam-plan.md)
-kb/gates/artifact-gate.json    deterministic artifact self-check result
-kb/gates/artifact-review.json  opus adversary verdict over the rendered report
+kb/gates/artifact-gate.json, artifact-review.json   self-check + opus adversary verdict on report
 redteam-plan.md          manual runtime test plan — the engineer's follow-up
 state.json               campaign state (pass number, pinned SHA, stages)
 MEMORY.md, learnings/     durable per-repo memory across runs
