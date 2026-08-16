@@ -52,6 +52,11 @@ once a gate stamps it; `None` before that.
 rendered as the report's Impact section. `findings_gate.validate_findings` rejects a
 `SHIPPING_STATUSES` finding whose `impact` is blank; non-shipping findings may stay blank.
 
+`report.py`'s `render_finding` §4 Impact now renders that real `f.impact` text (falling back to
+`"(impact not recorded)"` when blank) instead of a boilerplate sentence. The constant §6 Confirmed
+Attack Scenario and §8 Testing blocks are deleted — both always emitted identical fixed prose
+regardless of the finding (ISSUE-052); section numbering (`sev_no`/`fix_no`) is unchanged.
+
 `cluster.py` (new) groups ≥3 same-class, same-sink `raw` findings into one systemic cluster,
 run after dedupe and before the critic/gate ladder — see the module map entry.
 

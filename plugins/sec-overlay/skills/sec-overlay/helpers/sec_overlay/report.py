@@ -138,13 +138,8 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
             out += ["Non-receipt / llm-claimed: " + ", ".join(f"`{c}`" for c in claimed) + ".  "]
         out += [f"Verification: `{verification}`.", ""]
         # §4 Impact
-        out += [
-            (
-                f"**4. Impact.** Attack class `{f.cls}`; scope per Summary. Assess CIA "
-                "and whether impact is bounded/scriptable per the template."
-            ),
-            "",
-        ]
+        impact_text = (f.impact or "").strip() or "(impact not recorded)"
+        out += [f"**4. Impact.** {impact_text}", ""]
     # §5 Severity (full) / §3 Severity (condensed)
     sev_no, fix_no = ("5", "7") if full else ("3", "4")
     out += [
@@ -168,27 +163,8 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
             ),
             "",
         ]
-    # §6 Attack Scenario (full tier only)
-    if full:
-        out += [
-            (
-                "**6. Confirmed Attack Scenario** (theoretical — not dynamically "
-                "confirmed): follow the §2 data flow from source to sink."
-            ),
-            "",
-        ]
     # §7 Fix (full) / §4 Fix (condensed)
     out += [f"**{fix_no}. Fix.**", patch, ""]
-    # §8 Testing (full tier only)
-    if full:
-        out += [
-            (
-                "**8. Testing.** Negative: the §2 exploit path must return the expected "
-                "rejection post-fix. Regression: legitimate use still works. Static: the "
-                "detector rule must no longer fire in the file."
-            ),
-            "",
-        ]
     return "\n".join(out)
 
 

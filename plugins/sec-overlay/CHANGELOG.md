@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.9.1 - 2026-08-15
+
+### Fixed
+
+- `render_finding`'s §4 Impact now renders the finding's real `impact` text instead of a
+  boilerplate sentence. Deleted the constant §6 Confirmed Attack Scenario and §8 Testing
+  sections — both always emitted the same fixed prose regardless of the finding, misleadingly
+  labelled `full` tier (ISSUE-052).
+
 ## 1.9.0 - 2026-08-15
 
 ### Added

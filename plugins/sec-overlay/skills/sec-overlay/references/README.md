@@ -126,6 +126,10 @@ bound field-by-field to the `Finding` record. Includes three view subsections: *
 and **Dep-view** (dependency findings with reachability/blocker bindings). The condensed tier
 renumbers 1–4 with no gaps. This is *not* injected into an agent — it is **rendered by**
 `helpers/…/report.py:render_finding()`, which fills the sections from a finding's JSON fields.
+§4 Impact renders the finding's real `impact` field; §6 Confirmed Attack Scenario and §8 Testing
+are template-only sections the harness does not render (ISSUE-052) — both are now flagged as
+manual-analysis aids in the template text itself, since the static harness fabricated no
+attack-scenario or test-plan content for them.
 
 #### `DETECTION_COVERAGE.md` — an honest "what we can and can't see" statement
 A falsifiable statement of what each backend covers per class/language, and known blind

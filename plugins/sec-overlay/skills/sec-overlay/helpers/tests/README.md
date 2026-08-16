@@ -116,6 +116,9 @@ its doc-cited file doesn't exist under the target root.
 value through `to_dict`/`from_dict`; an old finding dict with no `impact` key loads blank.
 `test_findings_gate.py` gained coverage for the new gate rule: a `SHIPPING_STATUSES` finding with
 blank `impact` is rejected, a non-shipping finding with blank `impact` is not.
+`test_report.py` gained coverage that `render_finding`'s §4 Impact renders the finding's real
+`impact` text and that the constant §6 Confirmed Attack Scenario / §8 Testing strings are gone
+(ISSUE-052); the existing full-tier section-presence test was updated to match.
 
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).

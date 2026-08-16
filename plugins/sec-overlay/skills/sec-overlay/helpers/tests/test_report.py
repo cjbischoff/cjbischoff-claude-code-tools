@@ -225,11 +225,12 @@ def test_render_finding_full_for_high():
         "3. Confirmation",
         "4. Impact",
         "5. Severity",
-        "6. Confirmed Attack",
         "7. Fix",
-        "8. Testing",
     ):
         assert sec in md
+    # §6/§8 deleted by design (ISSUE-052) — no longer rendered even at full tier
+    assert "6. Confirmed Attack" not in md
+    assert "8. Testing" not in md
     assert "ast-grep:sink" in md  # tool receipt surfaced
     assert "llm-claimed:reach" in md  # claimed surfaced separately
     assert "src @ a.js:1" in md  # dataflow rendered
@@ -770,6 +771,32 @@ def test_write_report_defaults_to_suppressed_full_sarif(tmp_path):
         for r in doc["runs"][0]["results"]
     }
     assert uris == {"a.py", "b.py"}  # NDT now reaches SARIF
+
+
+def _full(**kw):
+    base = dict(
+        id="F-1",
+        rule_id="r",
+        cls="sqli",
+        status=FindingStatus.CONFIRMED,
+        severity=Severity.CRITICAL,
+        file="a.py",
+        line=3,
+        message="m",
+        impact="Unauthenticated DB read of all users",
+        risk_score=9,
+        evidence_sources=["semgrep:sqli"],
+    )
+    base.update(kw)
+    return Finding(**base)
+
+
+def test_render_finding_uses_real_impact_and_drops_constant_sections():
+    md = render_finding(_full())
+    assert "Unauthenticated DB read of all users" in md
+    assert "Confirmed Attack Scenario (theoretical" not in md
+    assert "**8. Testing.** Negative:" not in md
+    assert "**4. Impact.**" in md
 
 
 def test_write_report_confirmed_only_flag_restores_prior_output(tmp_path):
