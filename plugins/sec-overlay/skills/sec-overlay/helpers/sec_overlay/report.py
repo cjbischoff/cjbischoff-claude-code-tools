@@ -283,9 +283,9 @@ def to_markdown(
             "Manual runtime testing" section pointing the engineer at it (O-022).
         patch_statuses: Optional ``finding.id`` → :class:`PatchStatus`, from
             :func:`check_patch_applied` against the real target, for ``fixed`` findings.
-        economics: Optional ``{"by_phase": dict, "by_model": dict, "usd_estimate": float}``
-            from :func:`sec_overlay.cost`; renders a "Run economics" section and takes
-            priority over ``token_spend`` when both are given.
+        economics: Optional ``{"by_phase": dict, "by_model": dict, "by_phase_seconds": dict,
+            "usd_estimate": float}`` from :func:`sec_overlay.cost`; renders a "Run economics"
+            section and takes priority over ``token_spend`` when both are given.
 
     Returns:
         A Markdown report string.
@@ -412,6 +412,10 @@ def to_markdown(
         lines += [f"- **{phase}**: {n}" for phase, n in economics.get("by_phase", {}).items()]
         lines += ["", "**Tokens by model** (measured):"]
         lines += [f"- **{model}**: {n}" for model, n in economics.get("by_model", {}).items()]
+        by_secs = economics.get("by_phase_seconds") or {}
+        if by_secs:
+            lines += ["", "**Wall-clock by phase, seconds** (measured):"]
+            lines += [f"- **{phase}**: {secs:.2f}" for phase, secs in by_secs.items()]
         usd = economics.get("usd_estimate")
         if usd is not None:
             lines += ["", f"**Estimated cost:** ${usd:.4f} (estimate, not a billed figure)."]
@@ -531,13 +535,15 @@ def write_report(ws: Workspace, *, target: str | None = None, confirmed_only: bo
     has_redteam_plan = (ws.reports / "redteam-plan.md").exists()
     state = load_state(ws)
     by_phase = cost.aggregate_by_phase(state)
+    by_phase_seconds = cost.aggregate_timings_by_phase(state)
     economics = (
         {
             "by_phase": by_phase,
             "by_model": cost.aggregate_by_model(state),
+            "by_phase_seconds": by_phase_seconds,
             "usd_estimate": cost.estimate_cost_usd(state),
         }
-        if by_phase
+        if by_phase or by_phase_seconds
         else None
     )
     patch_statuses = None

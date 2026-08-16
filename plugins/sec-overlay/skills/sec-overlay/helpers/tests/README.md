@@ -47,7 +47,9 @@ between `trace` and `calibrate` — ISSUE-047) and the pure sequencer helpers (`
 
 `test_driver.py` covers `sec_overlay/driver.py`'s `run_deterministic_phase`: raises
 `PhaseHalt` on a missing input, raises `PhaseHalt` when the action ran but a declared output is
-still absent, and records the stage `"done"` on success. Also covers `render_dispatch`: the
+still absent, records the stage `"done"` on success, and (`test_deterministic_phase_records_timing`,
+ISSUE-014) records the phase's wall-clock seconds into `state.budget["timings"]` via
+`cost.record_timing`. Also covers `render_dispatch`: the
 returned block names the `agents/<prompt>` file and the substituted target/workspace/SHA, and now
 `test_dispatch_is_secret_redacted` asserts the block is passed through `redactor.safe_for_prompt`
 before returning (ISSUE-051). Three `run_audit` tests (new) cover the resumable table-walker:
@@ -188,6 +190,9 @@ digit ratio (`"1/1/2/1"`); the pre-existing NDT-separation test was updated to t
 `test_report.py` gained `test_short_title_cuts_on_word_boundary` and
 `test_short_title_no_cut_when_short` (ISSUE-011): `_short_title` trims a triage title to a word
 boundary with a trailing `…`, never cutting mid-word, and leaves short titles untouched.
+
+`test_report.py` gained `test_economics_renders_timing` (ISSUE-014): `to_markdown` renders a
+"Wall-clock by phase" list under "Run economics" when `economics["by_phase_seconds"]` is given.
 
 `test_prefilter.py` gained `test_candidate_ids_are_class_prefixed_and_per_class_numbered`
 (ISSUE-013): `_assign_candidate_ids` now numbers candidates per attack class

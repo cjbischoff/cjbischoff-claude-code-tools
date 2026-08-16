@@ -30,7 +30,9 @@ lists into the same `PhaseHalt`.
 `cost.py` gained `aggregate_by_model` (per-model token totals, alongside the existing
 `aggregate_by_phase`), feeding `report.py`'s "Run economics" section — see the module map entry.
 It also gained `record_timing`/`aggregate_timings_by_phase`, summing per-phase wall-clock
-seconds recorded in `CampaignState.budget["timings"]` (ISSUE-014).
+seconds recorded in `CampaignState.budget["timings"]` (ISSUE-014). `write_report` folds
+`aggregate_timings_by_phase` into the economics dict as `by_phase_seconds`, and `to_markdown`
+renders it as a "Wall-clock by phase, seconds" list in "Run economics" when present.
 
 `models.py`'s `Finding` gained `cluster_id` (systemic-cluster id) and `affected_sites` (member
 sites on a cluster primary) — additive, nullable fields that round-trip through `to_dict`/
@@ -134,8 +136,10 @@ see the module map entry.
 
 `driver.py` (new) is the audit sequencer: deterministic-phase runner, loud halt, agent-dispatch
 printer. `run_deterministic_phase` checks a `PhaseSpec`'s inputs, runs its registered
-`DETERMINISTIC_ACTIONS` entry, checks its outputs, then calls `record_stage` — raising
-`PhaseHalt` if an input or output artifact is missing. `AuditContext` carries the workspace,
+`DETERMINISTIC_ACTIONS` entry (timed with `time.perf_counter` and recorded via
+`cost.record_timing` before `record_stage`, ISSUE-014), checks its outputs, then calls
+`record_stage` — raising `PhaseHalt` if an input or output artifact is missing. `AuditContext`
+carries the workspace,
 target, config, pinned SHA, and lazily-loaded `ScanProfile` an action needs. `render_dispatch`
 returns the printable block for an agent phase — prompt file plus `{{TARGET}}`/`{{WORKSPACE}}`/
 `{{SHA}}` substitutions, plus an optional `{{ATTACK_CLASS}}` line when called with `classes=` —

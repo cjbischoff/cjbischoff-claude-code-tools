@@ -7,9 +7,11 @@ calls a model: agents stay external and independent.
 """
 
 import json
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from sec_overlay import cost
 from sec_overlay.calibrate import calibrate_findings
 from sec_overlay.campaign import record_stage
 from sec_overlay.dedupe import dedupe_findings
@@ -28,7 +30,7 @@ from sec_overlay.profile import ScanProfile, load_profile
 from sec_overlay.redactor import safe_for_prompt
 from sec_overlay.report import write_report
 from sec_overlay.selfscore import write_self_score
-from sec_overlay.state import load_state
+from sec_overlay.state import load_state, save_state
 from sec_overlay.verify import verify_findings
 from sec_overlay.workspace import Workspace, read_findings, write_findings
 
@@ -80,10 +82,15 @@ def run_deterministic_phase(phase: PhaseSpec, ctx: AuditContext) -> None:
     action = DETERMINISTIC_ACTIONS.get(phase.name)
     if action is None:
         raise PhaseHalt(f"phase {phase.name!r} has no registered action")
+    start = time.perf_counter()
     action(ctx)
+    elapsed = time.perf_counter() - start
     if not outputs_present(phase, ctx.ws):
         missing = [str(p(ctx.ws)) for p in phase.outputs if not p(ctx.ws).exists()]
         raise PhaseHalt(f"phase {phase.name!r} did not produce: " + ", ".join(missing))
+    state = load_state(ctx.ws)
+    cost.record_timing(state, phase.name, elapsed)
+    save_state(ctx.ws, state)
     record_stage(ctx.ws, phase.name)
 
 

@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.12.0 - 2026-08-15
+
+### Added
+
+- Time each deterministic driver phase (`run_deterministic_phase`) and record it into
+  `state.budget["timings"]`; the report's economics section renders a "Wall-clock by
+  phase" list when timings are present (ISSUE-014).
+
 ## 1.11.0 - 2026-08-15
 
 ### Added

@@ -866,3 +866,16 @@ def test_short_title_cuts_on_word_boundary():
 
 def test_short_title_no_cut_when_short():
     assert _short_title("short message", limit=40) == "short message"
+
+
+def test_economics_renders_timing():
+    md = to_markdown(
+        [_full()],
+        economics={
+            "by_phase": {"report": 10},
+            "by_model": {"opus": 10},
+            "by_phase_seconds": {"report": 1.25},
+            "usd_estimate": 0.0,
+        },
+    )
+    assert "Wall-clock by phase" in md and "1.25" in md
