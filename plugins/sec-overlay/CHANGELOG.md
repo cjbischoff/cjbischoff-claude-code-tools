@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.30.3 - 2026-08-16
+
+### Changed
+
+- Name the CVSS v4.0 score invocation in `agents/threat-model.md` step 5 —
+  `sec_overlay.cvss.cvss40_base('<vector>')` run from `helpers/` — so the
+  agent has a way to obtain the score it is told never to hand-compute.
+  Note the same invocation in `agents/README.md`'s threat-model row.
+- Name STRIDE in the skill `CLAUDE.md` §2 phase table and `README.md`'s
+  worked-example table, restoring a term dropped from an earlier pass.
+
 ## 1.30.2 - 2026-08-16
 
 ### Changed

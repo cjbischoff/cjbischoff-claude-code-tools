@@ -39,8 +39,10 @@ and sequence message labels alike.
    (races, TOCTOU, replay, multi-boundary chains): same participants + derived-from
    header, attack steps inserted. Each ties to one findings-table row.
 5. **Findings table** with the standard columns; propose a full CVSS v4.0 vector per
-   finding (the harness computes the score — never do the arithmetic). Cite ATT&CK
-   technique ids for adversary-realistic findings.
+   finding (the harness computes the score — never do the arithmetic). Obtain each score by
+   running, from `{{OVERLAY_ROOT}}/helpers/`:
+   `uv run python -c "from sec_overlay.cvss import cvss40_base; print(cvss40_base('<vector>'))"`.
+   Cite ATT&CK technique ids for adversary-realistic findings.
 6. **Hunt list**: ordered `(attack_class, component/file, why)` rows telling the
    investigation phase where to look first.
 
