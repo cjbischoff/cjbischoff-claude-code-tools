@@ -10,6 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from sec_overlay.kb import arc42_path, container_diagram_path, dfd_path, threat_model_path
 from sec_overlay.models import CampaignState
 from sec_overlay.workspace import Workspace
 
@@ -40,12 +41,28 @@ def _profile(ws: Workspace) -> Path:
     return ws.kb / "scan-profile.json"
 
 
-def _arch(ws: Workspace) -> Path:
-    return ws.kb / "architecture.md"
+def _arc42(ws: Workspace) -> Path:
+    return arc42_path(ws)
 
 
-def _threat(ws: Workspace) -> Path:
-    return ws.kb / "THREAT_MODEL.md"
+def _container(ws: Workspace) -> Path:
+    return container_diagram_path(ws)
+
+
+def _tm_doc(ws: Workspace) -> Path:
+    return threat_model_path(ws)
+
+
+def _dfd(ws: Workspace) -> Path:
+    return dfd_path(ws)
+
+
+def _arch_gate_json(ws: Workspace) -> Path:
+    return ws.kb / "gates" / "arch-gate.json"
+
+
+def _tm_gate_json(ws: Workspace) -> Path:
+    return ws.kb / "gates" / "tm-gate.json"
 
 
 def _findings_dir(ws: Workspace) -> Path:
@@ -70,8 +87,12 @@ def _artifact_review_json(ws: Workspace) -> Path:
 
 PHASE_TABLE: tuple[PhaseSpec, ...] = (
     PhaseSpec("recon", "agent", (), (_profile,), prompt="recon.md"),
-    PhaseSpec("architecture", "agent", (_profile,), (_arch,), prompt="architecture.md"),
-    PhaseSpec("threat_model", "agent", (_arch,), (_threat,), prompt="threat-model.md"),
+    PhaseSpec("architecture", "agent", (_profile,), (_arc42, _container), prompt="architecture.md"),
+    PhaseSpec("arch-gate", "deterministic", (_arc42, _container), (_arch_gate_json,)),
+    PhaseSpec(
+        "threat_model", "agent", (_arch_gate_json,), (_tm_doc, _dfd), prompt="threat-model.md"
+    ),
+    PhaseSpec("tm-gate", "deterministic", (_tm_doc, _dfd), (_tm_gate_json,)),
     PhaseSpec("prefilter", "deterministic", (_profile,), (_findings_dir,)),
     PhaseSpec("investigate", "agent", (_findings_dir,), (_findings_dir,), prompt="investigate.md"),
     PhaseSpec("findings-gate", "deterministic", (_findings_dir,), (_findings_dir,)),

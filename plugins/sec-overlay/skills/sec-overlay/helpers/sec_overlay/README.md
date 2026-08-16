@@ -184,7 +184,15 @@ helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit
 see the module map entry. `PHASE_TABLE` now ends with `artifact-gate` (deterministic, input
 `_report`/`_sarif`, output `_artifact_gate_json`) then `artifact-review` (agent,
 `agents/artifact-review.md`, input `_artifact_gate_json`, output `_artifact_review_json`), both
-after `selfscore`.
+after `selfscore`. `architecture` now outputs `_arc42`/`_container` (`kb.arc42_path` /
+`kb.container_diagram_path`, i.e. `architecture/arc42.md` + `architecture/container-diagram.mmd`,
+not the old `kb/architecture.md`), immediately followed by the deterministic `arch-gate` row
+(input those same two paths, output `_arch_gate_json` — `kb/gates/arch-gate.json`). `threat_model`
+now outputs `_tm_doc`/`_dfd` (`kb.threat_model_path` / `kb.dfd_path`, i.e.
+`threat-model/threat-model.md` + `threat-model/dfd.mmd`, not the old `kb/THREAT_MODEL.md`) and
+takes `_arch_gate_json` as its input — the threat model cannot start until the architecture gate
+passed — followed by the deterministic `tm-gate` row (output `_tm_gate_json` —
+`kb/gates/tm-gate.json`).
 
 `driver.py` (new) is the audit sequencer: deterministic-phase runner, loud halt, agent-dispatch
 printer. `run_deterministic_phase` checks a `PhaseSpec`'s inputs, runs its registered
@@ -212,7 +220,13 @@ reconciled class list passed to `render_dispatch(classes=...)` (no triage block,
 `demote-noise` → `partition.demote_noise`, `report` → `report.write_report`, `selfscore` →
 `selfscore.write_self_score`, `artifact-gate` → `_act_artifact_gate` (calls
 `artifact_gate.run_artifact_gate`, raising `PhaseHalt` naming every error when the gate rejects the
-run's own artifacts). `artifact-review` is an agent phase with no registered action — it
+run's own artifacts), `arch-gate` → `_act_arch_gate`, `tm-gate` → `_act_tm_gate`. Both new actions
+run `diagram_gate.run_diagram_gate` over `architecture/` (and `threat-model/` where present) plus
+`ste_lint.lint_prose` over their doc, write `{"passed", "errors", "warnings"}` to
+`kb/gates/<name>.json` via the shared `_write_gate` helper, and raise `PhaseHalt` naming every
+error; `_act_tm_gate` additionally runs `artifact_gate.check_duplication` against `arc42.md` and
+calls `run_diagram_gate(..., require_threat_model=True)` so a missing `dfd.mmd` is a gate error
+instead of the silently-optional default. `artifact-review` is an agent phase with no registered action — it
 auto-advances once `kb/gates/artifact-review.json` exists, same as any other output-only agent
 phase. `run_audit(ctx)` walks `PHASE_TABLE` from the first phase not yet
 `done`: runs deterministic phases in place, and for an agent phase auto-advances only when it has

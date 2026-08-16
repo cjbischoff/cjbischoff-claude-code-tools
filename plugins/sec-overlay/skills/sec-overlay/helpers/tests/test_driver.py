@@ -147,7 +147,7 @@ def _stage_to_investigate(ws):
     from sec_overlay.state import begin_pass
 
     begin_pass(ws, "sha1")
-    for stage in ("recon", "architecture", "threat_model", "prefilter"):
+    for stage in ("recon", "architecture", "arch-gate", "threat_model", "tm-gate", "prefilter"):
         record_stage(ws, stage)
 
 
@@ -201,7 +201,9 @@ def test_run_audit_does_not_skip_agent_phase_with_findings_dir_io(tmp_path):
     for stage in (
         "recon",
         "architecture",
+        "arch-gate",
         "threat_model",
+        "tm-gate",
         "prefilter",
         "investigate",
         "findings-gate",
@@ -341,3 +343,61 @@ def test_act_artifact_gate_halts_on_error(tmp_path):
     ctx = AuditContext(ws=ws, target=str(tmp_path), config="", sha="x")
     with pytest.raises(PhaseHalt):
         _act_artifact_gate(ctx)
+
+
+def test_act_arch_gate_halts_on_cap_breach(tmp_path):
+    from sec_overlay.driver import AuditContext, PhaseHalt, _act_arch_gate
+
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    (tmp_path / "architecture" / "arc42.md").write_text(
+        "Prose follows an ASD-STE100-inspired clarity standard.\n\nThe system is small.\n"
+    )
+    nodes = "\n".join(f"    n{i}[N{i}] -->|to| n{i+1}[N{i+1}]" for i in range(11))
+    (tmp_path / "architecture" / "context-diagram.mmd").write_text("flowchart LR\n" + nodes)
+    (tmp_path / "architecture" / "container-diagram.mmd").write_text(
+        "flowchart LR\n    a[A] -->|calls| b[(B)]\n"
+    )
+    ctx = AuditContext(ws=ws, target=str(tmp_path), config="", sha="x")
+    with pytest.raises(PhaseHalt):
+        _act_arch_gate(ctx)
+    assert (ws.kb / "gates" / "arch-gate.json").exists()
+
+
+def test_act_arch_gate_ignores_absent_threat_model_tree(tmp_path):
+    from sec_overlay.driver import AuditContext, _act_arch_gate
+
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    (tmp_path / "architecture" / "arc42.md").write_text(
+        "Prose follows an ASD-STE100-inspired clarity standard.\n\nThe system is small.\n"
+    )
+    (tmp_path / "architecture" / "context-diagram.mmd").write_text(
+        "flowchart LR\n    a[A] -->|calls| b[B]\n"
+    )
+    (tmp_path / "architecture" / "container-diagram.mmd").write_text(
+        "flowchart LR\n    a[A] -->|calls| b[(B)]\n"
+    )
+    ctx = AuditContext(ws=ws, target=str(tmp_path), config="", sha="x")
+    _act_arch_gate(ctx)  # no PhaseHalt: threat-model tree absent, arch-gate does not require it
+    assert (ws.kb / "gates" / "arch-gate.json").exists()
+
+
+def test_act_tm_gate_halts_when_dfd_missing(tmp_path):
+    from sec_overlay.driver import AuditContext, PhaseHalt, _act_tm_gate
+
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    (tmp_path / "architecture" / "arc42.md").write_text(
+        "Prose follows an ASD-STE100-inspired clarity standard.\n\nThe system is small.\n"
+    )
+    (tmp_path / "architecture" / "container-diagram.mmd").write_text(
+        "flowchart LR\n    a[A] -->|calls| b[(B)]\n"
+    )
+    (tmp_path / "threat-model" / "threat-model.md").write_text(
+        "Prose follows an ASD-STE100-inspired clarity standard.\n\nAn attacker can act.\n"
+    )
+    ctx = AuditContext(ws=ws, target=str(tmp_path), config="", sha="x")
+    with pytest.raises(PhaseHalt, match="dfd.mmd"):
+        _act_tm_gate(ctx)
+    assert (ws.kb / "gates" / "tm-gate.json").exists()

@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.29.0 - 2026-08-16
+
+### Added
+
+- Wire `arch-gate` and `tm-gate` deterministic phase rows into `PHASE_TABLE`,
+  right after `architecture` and `threat_model`. Each gate runs the diagram
+  gate, the ASD-STE100 prose linter, and (for `tm-gate`) the arc42/threat-model
+  duplication check, writing `kb/gates/arch-gate.json` / `kb/gates/tm-gate.json`
+  and halting the run on any error. `tm-gate` requires `threat-model/dfd.mmd` to
+  exist; `arch-gate` does not require the threat-model tree at all.
+
 ## 1.28.0 - 2026-08-16
 
 ### Changed

@@ -234,6 +234,49 @@ def _act_artifact_gate(ctx: AuditContext) -> None:
         )
 
 
+def _write_gate(ws: Workspace, name: str, errors: list[str], warnings: list[str]) -> None:
+    (ws.kb / "gates").mkdir(parents=True, exist_ok=True)
+    (ws.kb / "gates" / f"{name}.json").write_text(
+        json.dumps({"passed": not errors, "errors": errors, "warnings": warnings}, indent=2)
+    )
+
+
+def _act_arch_gate(ctx: AuditContext) -> None:
+    from sec_overlay.diagram_gate import run_diagram_gate
+    from sec_overlay.ste_lint import lint_prose
+
+    arch = ctx.ws.root / "architecture"
+    # run_diagram_gate existence-guards the threat-model files, so an absent
+    # tm tree at arch-gate time produces no spurious errors
+    errors = run_diagram_gate(arch, ctx.ws.root / "threat-model")
+    prose_errors, warnings = lint_prose((arch / "arc42.md").read_text())
+    errors += [f"arc42.md: {e}" for e in prose_errors]
+    if "ASD-STE100" not in (arch / "arc42.md").read_text():
+        errors.append("arc42.md: missing ASD-STE100 limitation statement")
+    _write_gate(ctx.ws, "arch-gate", errors, warnings)
+    if errors:
+        raise PhaseHalt(f"arch-gate rejected {len(errors)} issue(s): " + "; ".join(errors))
+
+
+def _act_tm_gate(ctx: AuditContext) -> None:
+    from sec_overlay.artifact_gate import check_duplication
+    from sec_overlay.diagram_gate import run_diagram_gate
+    from sec_overlay.ste_lint import lint_prose
+
+    arch = ctx.ws.root / "architecture"
+    tm = ctx.ws.root / "threat-model"
+    errors = run_diagram_gate(arch, tm, require_threat_model=True)
+    tm_text = (tm / "threat-model.md").read_text()
+    prose_errors, warnings = lint_prose(tm_text)
+    errors += [f"threat-model.md: {e}" for e in prose_errors]
+    if "ASD-STE100" not in tm_text:
+        errors.append("threat-model.md: missing ASD-STE100 limitation statement")
+    errors += check_duplication((arch / "arc42.md").read_text(), tm_text)
+    _write_gate(ctx.ws, "tm-gate", errors, warnings)
+    if errors:
+        raise PhaseHalt(f"tm-gate rejected {len(errors)} issue(s): " + "; ".join(errors))
+
+
 DETERMINISTIC_ACTIONS.update(
     {
         "prefilter": _act_prefilter,
@@ -246,6 +289,8 @@ DETERMINISTIC_ACTIONS.update(
         "report": _act_report,
         "selfscore": _act_selfscore,
         "artifact-gate": _act_artifact_gate,
+        "arch-gate": _act_arch_gate,
+        "tm-gate": _act_tm_gate,
     }
 )
 

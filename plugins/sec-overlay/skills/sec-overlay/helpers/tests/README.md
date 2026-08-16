@@ -96,6 +96,8 @@ between `trace` and `calibrate` — ISSUE-047) and the pure sequencer helpers (`
 `outputs_present`, `next_actionable_phase`). `test_artifact_phases_follow_selfscore` (new, §4.8)
 asserts `artifact-gate` sits after `selfscore` and `artifact-review` sits after `artifact-gate`,
 and that `artifact-review` is an agent phase naming `agents/artifact-review.md`.
+`test_arch_tm_gate_rows` (new) asserts the deterministic `arch-gate`/`tm-gate` rows sit immediately
+after `architecture`/`threat_model`.
 
 `test_driver.py` covers `sec_overlay/driver.py`'s `run_deterministic_phase`: raises
 `PhaseHalt` on a missing input, raises `PhaseHalt` when the action ran but a declared output is
@@ -104,7 +106,12 @@ ISSUE-014) records the phase's wall-clock seconds into `state.budget["timings"]`
 `cost.record_timing`. Also covers `render_dispatch`: the
 returned block names the `agents/<prompt>` file and the substituted target/workspace/SHA, and now
 `test_dispatch_is_secret_redacted` asserts the block is passed through `redactor.safe_for_prompt`
-before returning (ISSUE-051). Three `run_audit` tests (new) cover the resumable table-walker:
+before returning (ISSUE-051). `test_act_arch_gate_halts_on_cap_breach`,
+`test_act_arch_gate_ignores_absent_threat_model_tree`, and
+`test_act_tm_gate_halts_when_dfd_missing` (new) cover `_act_arch_gate`/`_act_tm_gate`: a diagram
+cap breach halts and still writes the gate JSON, an absent threat-model tree does not halt
+`arch-gate`, and a missing `dfd.mmd` halts `tm-gate` (`require_threat_model=True`). Three
+`run_audit` tests (new) cover the resumable table-walker:
 halts at `recon` with no scan-profile yet, auto-advances past `recon` once its output exists and
 halts at `architecture`, and — the regression guard — does NOT auto-skip `critic` just because
 `findings_dir` (its shared input/output path) already exists from earlier phases. Also covers

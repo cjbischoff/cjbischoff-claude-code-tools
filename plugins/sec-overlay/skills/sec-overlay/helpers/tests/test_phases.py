@@ -67,3 +67,13 @@ def test_artifact_phases_follow_selfscore():
     assert names.index("artifact-review") > names.index("artifact-gate")
     ar = next(p for p in PHASE_TABLE if p.name == "artifact-review")
     assert ar.kind == "agent" and ar.prompt == "artifact-review.md"
+
+
+def test_arch_tm_gate_rows():
+    from sec_overlay.phases import PHASE_TABLE
+
+    names = [p.name for p in PHASE_TABLE]
+    assert names.index("arch-gate") == names.index("architecture") + 1
+    assert names.index("tm-gate") == names.index("threat_model") + 1
+    for n in ("arch-gate", "tm-gate"):
+        assert next(p for p in PHASE_TABLE if p.name == n).kind == "deterministic"

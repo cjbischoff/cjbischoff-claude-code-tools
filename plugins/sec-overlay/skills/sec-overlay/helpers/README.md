@@ -174,8 +174,8 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 |--------|---------|
 | `campaign.py` | Multi-pass supervision: `record_stage`, `pass_report`, `carry_forward` (re-check settled findings on changed files). |
 | `state.py` | Load/save `CampaignState`; `begin_pass` pins the SHA and increments the pass counter. |
-| `phases.py` | The ordered phase table (`PhaseSpec`, `PHASE_TABLE`) + pure sequencer helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit driver walks. |
-| `driver.py` | The audit sequencer: deterministic-phase runner, loud halt, agent-dispatch printer. `run_deterministic_phase` gates a `PhaseSpec` on inputs/outputs, runs its `DETERMINISTIC_ACTIONS` entry, then `record_stage`s it — raising `PhaseHalt` on either gate. |
+| `phases.py` | The ordered phase table (`PhaseSpec`, `PHASE_TABLE`) + pure sequencer helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit driver walks. `architecture` now outputs `arc42.md` + `container-diagram.mmd` (not `kb/architecture.md`) followed by the deterministic `arch-gate` row; `threat_model` outputs `threat-model.md` + `dfd.mmd` followed by `tm-gate`. |
+| `driver.py` | The audit sequencer: deterministic-phase runner, loud halt, agent-dispatch printer. `run_deterministic_phase` gates a `PhaseSpec` on inputs/outputs, runs its `DETERMINISTIC_ACTIONS` entry, then `record_stage`s it — raising `PhaseHalt` on either gate. `_act_arch_gate`/`_act_tm_gate` run `diagram_gate.run_diagram_gate` + `ste_lint.lint_prose` (and, for `tm-gate`, `artifact_gate.check_duplication`), writing `kb/gates/arch-gate.json` / `kb/gates/tm-gate.json`; `tm-gate` alone passes `require_threat_model=True` so a missing `dfd.mmd` halts the run. |
 | `repo_memory.py` | The per-repo sidecar (`<target>/.sec-overlay/<slug>/`): workspace, `MEMORY.md`, dated `learnings/`, run status for resume. |
 | `workspace.py` | The on-disk layout (`kb/`, `findings/`, reports); per-finding read/write; `record_agent_return` / `read_agent_return`. |
 | `scanscope.py` | Resolve + pin `repo_root` + `scan_scope` once per campaign (monorepo-safe); `kb/scan-scope.json`. |
