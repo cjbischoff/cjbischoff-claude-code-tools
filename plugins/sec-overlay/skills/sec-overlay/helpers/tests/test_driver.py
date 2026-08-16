@@ -330,3 +330,14 @@ def test_deterministic_phase_records_timing(tmp_path):
     phase = PhaseSpec("selfscore", "deterministic", (_report,), (_findings_dir,))
     run_deterministic_phase(phase, ctx)
     assert "selfscore" in aggregate_timings_by_phase(load_state(ws))
+
+
+def test_act_artifact_gate_halts_on_error(tmp_path):
+    from sec_overlay.driver import AuditContext, PhaseHalt, _act_artifact_gate
+
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    ws.report_path.write_text("# r\n**8. Testing.** Negative: x\n")  # banned fragment
+    ctx = AuditContext(ws=ws, target=str(tmp_path), config="", sha="x")
+    with pytest.raises(PhaseHalt):
+        _act_artifact_gate(ctx)

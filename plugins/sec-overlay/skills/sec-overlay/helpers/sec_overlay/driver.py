@@ -224,6 +224,16 @@ def _act_report(ctx: AuditContext) -> None:
     write_report(ctx.ws, target=ctx.target)
 
 
+def _act_artifact_gate(ctx: AuditContext) -> None:
+    from sec_overlay.artifact_gate import run_artifact_gate  # local: avoid import cycle
+
+    errors = run_artifact_gate(ctx.ws)
+    if errors:
+        raise PhaseHalt(
+            f"artifact-gate rejected {len(errors)} issue(s): " + "; ".join(errors)
+        )
+
+
 DETERMINISTIC_ACTIONS.update(
     {
         "prefilter": _act_prefilter,
@@ -235,6 +245,7 @@ DETERMINISTIC_ACTIONS.update(
         "demote-noise": _act_demote_noise,
         "report": _act_report,
         "selfscore": _act_selfscore,
+        "artifact-gate": _act_artifact_gate,
     }
 )
 

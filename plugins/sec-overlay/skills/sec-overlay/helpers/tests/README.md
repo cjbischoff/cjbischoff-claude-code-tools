@@ -60,7 +60,9 @@ suppressed-full default and the `confirmed_only` restore path.
 `test_phases.py` (new) covers `sec_overlay/phases.py`'s `PHASE_TABLE` order (findings-gate right
 after investigate, dedupe/demote-noise before report, trace present, and now `factcheck` sitting
 between `trace` and `calibrate` — ISSUE-047) and the pure sequencer helpers (`missing_inputs`,
-`outputs_present`, `next_actionable_phase`).
+`outputs_present`, `next_actionable_phase`). `test_artifact_phases_follow_selfscore` (new, §4.8)
+asserts `artifact-gate` sits after `selfscore` and `artifact-review` sits after `artifact-gate`,
+and that `artifact-review` is an agent phase naming `agents/artifact-review.md`.
 
 `test_driver.py` covers `sec_overlay/driver.py`'s `run_deterministic_phase`: raises
 `PhaseHalt` on a missing input, raises `PhaseHalt` when the action ran but a declared output is
@@ -86,6 +88,10 @@ writes a `kb/verdicts.json` VERIFIED verdict for one finding, runs
 `test_run_audit_halts_when_scan_profile_missing_at_investigate` (new, M1, 0.10.1) stages state up
 to `investigate` with no `scan-profile.json` and asserts `run_audit` raises `PhaseHalt` (not
 `FileNotFoundError`) naming the missing file.
+
+`test_act_artifact_gate_halts_on_error` (new, §4.8) writes a `report.md` containing a banned
+constant fragment and asserts `driver._act_artifact_gate` raises `PhaseHalt`, covering the new
+`artifact-gate` phase's registered action (wraps `artifact_gate.run_artifact_gate`).
 
 `test_cli_e2e.py` gained `test_audit_cli_resumable_across_invocations` (new, C1, 0.10.1): drives
 `cli.main(["audit", ...])` twice with `driver.run_audit` stubbed and `record_stage(ws,

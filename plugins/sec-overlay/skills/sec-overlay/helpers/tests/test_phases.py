@@ -57,3 +57,13 @@ def test_first_phase_is_prefilter_and_investigate_precedes_findings_gate():
     assert "trace" in names
     # ISSUE-047: factcheck applies the validate phase's verdict artifact.
     assert names.index("trace") < names.index("factcheck") < names.index("calibrate")
+
+
+def test_artifact_phases_follow_selfscore():
+    from sec_overlay.phases import PHASE_TABLE
+
+    names = [p.name for p in PHASE_TABLE]
+    assert names.index("artifact-gate") > names.index("selfscore")
+    assert names.index("artifact-review") > names.index("artifact-gate")
+    ar = next(p for p in PHASE_TABLE if p.name == "artifact-review")
+    assert ar.kind == "agent" and ar.prompt == "artifact-review.md"

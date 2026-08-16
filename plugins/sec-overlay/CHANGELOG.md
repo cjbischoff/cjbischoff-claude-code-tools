@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.16.0 - 2026-08-15
+
+### Added
+
+- `PHASE_TABLE` (`phases.py`) gains two phases after `selfscore`: `artifact-gate` (deterministic,
+  runs `run_artifact_gate`) then `artifact-review` (agent, `agents/artifact-review.md`). The driver
+  registers `_act_artifact_gate`, which raises `PhaseHalt` when the gate reports any error, wiring
+  Task 14's `artifact_gate.py` and Task 15's prompt into a normal run for the first time.
+
 ## 1.15.0 - 2026-08-15
 
 ### Added

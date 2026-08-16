@@ -60,6 +60,14 @@ def _sarif(ws: Workspace) -> Path:
     return ws.sarif_path
 
 
+def _artifact_gate_json(ws: Workspace) -> Path:
+    return ws.kb / "gates" / "artifact-gate.json"
+
+
+def _artifact_review_json(ws: Workspace) -> Path:
+    return ws.kb / "gates" / "artifact-review.json"
+
+
 PHASE_TABLE: tuple[PhaseSpec, ...] = (
     PhaseSpec("recon", "agent", (), (_profile,), prompt="recon.md"),
     PhaseSpec("architecture", "agent", (_profile,), (_arch,), prompt="architecture.md"),
@@ -82,6 +90,14 @@ PHASE_TABLE: tuple[PhaseSpec, ...] = (
     PhaseSpec("demote-noise", "deterministic", (_findings_dir,), (_findings_dir,)),
     PhaseSpec("report", "deterministic", (_findings_dir,), (_report, _sarif)),
     PhaseSpec("selfscore", "deterministic", (_report,), (_findings_dir,)),
+    PhaseSpec("artifact-gate", "deterministic", (_report, _sarif), (_artifact_gate_json,)),
+    PhaseSpec(
+        "artifact-review",
+        "agent",
+        (_artifact_gate_json,),
+        (_artifact_review_json,),
+        prompt="artifact-review.md",
+    ),
 )
 
 
