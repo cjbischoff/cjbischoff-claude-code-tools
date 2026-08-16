@@ -208,6 +208,10 @@ and raising `ValueError` naming every `{{TOKEN}}` left unfilled — the orchestr
 agent dispatch prompt through it so a hand-substitution gap (a literal `{{ATTACK_CLASS}}`)
 fails before the model runs instead of silently reaching it.
 
+`coverage_ledger.py`'s `build_coverage_ledger` now stamps its own `needs_follow_up` surfaces with
+a `reason`/`next_step` too (previously bare), matching the shape `route_control.py`'s gap dicts
+already used; `validate_coverage_ledger` rejects a `needs_follow_up` surface missing either field.
+
 `route_control.py` (new, ISSUE-027/029/036) derives one route-to-control table from
 `kb/scan-profile.json` (`build_route_control_table`) and checks recon, architecture, and threat-
 model output against it (`check_recon_routes`, `check_architecture_controls`,

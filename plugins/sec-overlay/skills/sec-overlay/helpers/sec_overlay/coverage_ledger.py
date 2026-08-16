@@ -61,7 +61,11 @@ def build_coverage_ledger(ws: Workspace) -> dict:
         else:
             # no findings, or non-terminal statuses (RAW/CANDIDATE/STALE/DUPLICATE) remain
             disp = "needs_follow_up"
-        surfaces.append({"id": cls, "disposition": disp})
+        surface = {"id": cls, "disposition": disp}
+        if disp == "needs_follow_up":
+            surface["reason"] = "no terminal finding for this attack surface this pass"
+            surface["next_step"] = f"hunt {cls} or record why it is not applicable"
+        surfaces.append(surface)
     completeness = (
         "complete"
         if not any(s["disposition"] == "needs_follow_up" for s in surfaces)
@@ -98,6 +102,11 @@ def validate_coverage_ledger(d: dict) -> list[str]:
         if not isinstance(s, dict) or s.get("disposition") not in _DISPOSITIONS:
             errs.append(f"coverage-ledger.surfaces[{i}].disposition must be one of "
                         f"{sorted(_DISPOSITIONS)}")
+        if isinstance(s, dict) and s.get("disposition") == "needs_follow_up":
+            if not (s.get("reason") or "").strip():
+                errs.append(f"coverage-ledger.surfaces[{i}] needs_follow_up requires a reason")
+            if not (s.get("next_step") or "").strip():
+                errs.append(f"coverage-ledger.surfaces[{i}] needs_follow_up requires a next_step")
     deferred = d.get("deferred", [])
     if not isinstance(deferred, list):
         errs.append("coverage-ledger.deferred must be a list")
@@ -129,9 +138,13 @@ def render_markdown(d: dict) -> str:
     """
     lines = ["## Coverage completeness", "",
              f"Completeness: **{d.get('completeness', 'unknown')}**", "",
-             "| Surface | Disposition |", "|---------|-------------|"]
+             "| Surface | Disposition | Reason | Next step |",
+             "|---------|-------------|--------|-----------|"]
     for s in d.get("surfaces", []):
-        lines.append(f"| {s.get('id', '?')} | {s.get('disposition', '?')} |")
+        lines.append(
+            f"| {s.get('id', '?')} | {s.get('disposition', '?')} "
+            f"| {s.get('reason', '') or '—'} | {s.get('next_step', '') or '—'} |"
+        )
     deferred = d.get("deferred", [])
     if deferred:
         lines += ["", "Deferred (not examined this pass):"]

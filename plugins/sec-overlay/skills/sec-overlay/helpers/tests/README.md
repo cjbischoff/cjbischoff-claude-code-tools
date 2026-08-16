@@ -157,6 +157,10 @@ with no evidence at all is rejected.
 `test_prompts.py` (new) covers `prompts.render_prompt`: all tokens filled, an unfilled token
 raising `ValueError` that names it, and extra unused `subs` keys being ignored.
 
+`test_coverage_ledger.py` gained cases for `build_coverage_ledger`'s own `needs_follow_up`
+surfaces now carrying `reason`/`next_step`: `validate_coverage_ledger` rejects one missing
+either field, accepts one carrying both, and `render_markdown` renders both columns.
+
 `test_route_control.py` (new, ISSUE-027/029/036) covers `route_control.py`: a table control the
 architecture markdown omits is a `needs_follow_up` gap, a table entrypoint the threat model drops
 is a gap, no gap when everything is present, and `record_route_gaps` round-trips a gap's

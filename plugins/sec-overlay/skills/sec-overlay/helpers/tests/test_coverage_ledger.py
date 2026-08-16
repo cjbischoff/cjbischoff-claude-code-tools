@@ -129,3 +129,28 @@ def test_render_markdown_lists_deferred():
     d = _ledger("partial", [{"id": "auth", "disposition": "reported"}], deferred=["liquid templates"])
     md = render_markdown(d)
     assert "Coverage completeness" in md and "liquid templates" in md
+
+
+def test_needs_follow_up_requires_reason_and_next_step():
+    bad = {"completeness": "partial",
+           "surfaces": [{"id": "ssrf", "disposition": "needs_follow_up"}],
+           "deferred": [], "open_questions": []}
+    errs = validate_coverage_ledger(bad)
+    assert any("reason" in e for e in errs)
+    assert any("next_step" in e for e in errs)
+
+
+def test_needs_follow_up_with_reason_and_next_step_valid():
+    ok = {"completeness": "partial",
+          "surfaces": [{"id": "ssrf", "disposition": "needs_follow_up",
+                        "reason": "no ssrf detector ran", "next_step": "add codeql ssrf pack"}],
+          "deferred": [], "open_questions": []}
+    assert validate_coverage_ledger(ok) == []
+
+
+def test_render_shows_reason_and_next_step():
+    md = render_markdown({"completeness": "partial",
+        "surfaces": [{"id": "ssrf", "disposition": "needs_follow_up",
+                      "reason": "R", "next_step": "N"}],
+        "deferred": [], "open_questions": []})
+    assert "R" in md and "N" in md

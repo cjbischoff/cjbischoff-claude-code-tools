@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.9.5 - 2026-08-15
+
+### Fixed
+
+- A `needs_follow_up` coverage-ledger surface now carries a non-empty `reason` and
+  `next_step`; `validate_coverage_ledger` rejects one missing either, and `render_markdown`
+  renders both columns.
+
 ## 1.9.4 - 2026-08-15
 
 ### Fixed
