@@ -41,6 +41,30 @@ def _assign_candidate_ids(kept: list[Finding]) -> None:
         f.id = f"C-{prefix}-{counters[prefix]:04d}"
 
 
+def _raise_on_incomplete_backends(
+    *, skipped_reasons: dict[str, str], failed: list[dict], strict: bool
+) -> None:
+    """Raise when a planned backend did not run (strict never-silent contract).
+
+    Args:
+        skipped_reasons: Backend -> reason for backends that did not run.
+        failed: Backend failure records.
+        strict: When True, any skipped or failed backend is a hard error.
+
+    Raises:
+        RuntimeError: ``strict`` and at least one backend is skipped or failed.
+    """
+    if not strict:
+        return
+    problems = list(skipped_reasons.items()) + [(f.get("backend"), f.get("error")) for f in failed]
+    if problems:
+        joined = ", ".join(f"{b}: {r}" for b, r in problems)
+        raise RuntimeError(
+            f"prefilter: planned backend(s) did not run — {joined}. "
+            "A partial scan is a coverage hole, not 'no findings'."
+        )
+
+
 def run_prefilter(
     ws: Workspace,
     target: str,
@@ -55,6 +79,7 @@ def run_prefilter(
     sca_fn=run_sca,
     exclusions_fn=load_exclusions,
     max_workers: int | None = None,
+    strict: bool = True,
 ) -> dict:
     """Run the profile's enabled SAST backends concurrently and persist merged candidates.
 
@@ -78,6 +103,10 @@ def run_prefilter(
         trust_fn: Injectable CodeQL config trust checker; returns (trusted, reason).
         exclusions_fn: Injectable exclusion loader; called with workspace.
         max_workers: Thread pool size; defaults to ``cpu_count - 1`` (capped at 8).
+        strict: When True (default), any planned backend left in ``skipped_reasons``
+            or ``failed`` raises ``RuntimeError`` instead of returning a silent
+            partial result (ISSUE-034). Pass False only for a deliberately partial
+            run (e.g. a test exercising one backend's skip/failure path).
 
     A backend whose binary is absent is recorded in ``skipped``. A backend that
     ran but errored (e.g. a CodeQL build/analyze failure) is recorded in
@@ -97,6 +126,9 @@ def run_prefilter(
         records why each backend was not run, and ``coverage`` is the per-language dataflow/
         pattern-only/none breakdown from :func:`sec_overlay.coverage.compute_coverage` (also
         persisted to ``kb/coverage.json``).
+
+    Raises:
+        RuntimeError: ``strict`` (the default) and a planned backend is skipped or failed.
     """
     plan = profile.sast_plan
     codeql_db_root = tempfile.mkdtemp(prefix="sec-overlay-codeql-")
@@ -245,6 +277,7 @@ def run_prefilter(
     coverage = compute_coverage(profile, ran, target)
     ws.kb.mkdir(parents=True, exist_ok=True)
     (ws.kb / "coverage.json").write_text(json.dumps(coverage, indent=2))
+    _raise_on_incomplete_backends(skipped_reasons=skipped_reasons, failed=failed, strict=strict)
     record_stage(ws, "prefilter")
     return {
         "candidates": len(kept),

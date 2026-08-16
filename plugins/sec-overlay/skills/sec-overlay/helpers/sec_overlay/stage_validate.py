@@ -44,7 +44,8 @@ def _validate_context(obj: dict) -> list[str]:
     return errors
 
 
-# stage name -> validator(obj) -> error list. Unknown stages have no schema (pass).
+# stage name -> validator(obj) -> error list. An unregistered stage is a hard error
+# (validate_stage raises) — see ISSUE-034.
 _VALIDATORS = {
     "recon": validate_profile,
     "scan-profile": validate_profile,
@@ -57,9 +58,16 @@ _VALIDATORS = {
 
 
 def validate_stage(stage: str, obj: object) -> list[str]:
-    """Validate a stage's structured output; empty list == valid (or no schema for the stage)."""
+    """Validate a stage's structured output; empty list == valid.
+
+    Raises:
+        ValueError: ``stage`` has no registered validator — a silent pass here
+            masked mis-named stages (ISSUE-034), so it is now an error.
+    """
     fn = _VALIDATORS.get(stage)
-    return fn(obj) if fn else []
+    if fn is None:
+        raise ValueError(f"validate_stage: no validator for stage {stage!r}")
+    return fn(obj)
 
 
 def repair_prompt(stage: str, obj: object, errors: list[str]) -> str:

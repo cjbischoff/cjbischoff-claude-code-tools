@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 
 def test_discovery_ledger_stage_is_validated():
     from sec_overlay.discovery_ledger import new_ledger
@@ -35,3 +37,9 @@ def test_context_validator_ok_when_cited_doc_present():
            "provenance": {"docs_read": ["SECURITY.md"], "docs_discovered": ["SECURITY.md"],
                           "sha": "x"}}
     assert not any("docs_read" in e for e in validate_stage("context", obj))
+
+
+def test_unknown_stage_raises():
+    from sec_overlay.stage_validate import validate_stage
+    with pytest.raises(ValueError):
+        validate_stage("no-such-stage", {})

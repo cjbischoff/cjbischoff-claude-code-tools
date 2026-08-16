@@ -1,7 +1,9 @@
 """Tests for the profile-driven prefilter dispatch."""
 
+import pytest
+
 from sec_overlay.models import Finding, FindingStatus, Severity
-from sec_overlay.prefilter import run_prefilter
+from sec_overlay.prefilter import _raise_on_incomplete_backends, run_prefilter
 from sec_overlay.profile import ScanProfile
 from sec_overlay.workspace import Workspace, read_findings
 
@@ -46,7 +48,7 @@ def test_prefilter_skips_absent_backend(tmp_path):
     cql = lambda *a, **k: (_ for _ in ()).throw(AssertionError("codeql should not run"))
     # codeql binary absent -> must be skipped, not called
     res = run_prefilter(ws, "tgt", _profile(), semgrep=sem, codeql=cql,
-                        has_tool=lambda n: None if n == "codeql" else "/x")
+                        has_tool=lambda n: None if n == "codeql" else "/x", strict=False)
     assert "codeql" in res["skipped"]
     assert res["backends_run"] == ["semgrep"]
 
@@ -62,7 +64,7 @@ def test_prefilter_records_codeql_failure_without_crashing(tmp_path):
 
     # codeql present but its build fails -> recorded in `failed`, not swallowed as clean
     res = run_prefilter(ws, "tgt", _profile(), semgrep=sem, codeql=boom, has_tool=lambda n: "/x",
-                        qlpack_fn=lambda lang: True)
+                        qlpack_fn=lambda lang: True, strict=False)
     assert res["backends_run"] == ["semgrep"]        # codeql errored -> not counted as run
     assert len(res["failed"]) == 1
     assert res["failed"][0]["backend"] == "codeql"
@@ -75,7 +77,8 @@ def test_prefilter_skips_codeql_on_untrusted_config(tmp_path):
     sem = lambda target, config, **k: [_cand("sqli", "a.go", 1)]
     cql = lambda *a, **k: (_ for _ in ()).throw(AssertionError("codeql must not run on untrusted config"))
     res = run_prefilter(ws, "tgt", _profile(), semgrep=sem, codeql=cql,
-                        has_tool=lambda n: "/x", trust_fn=lambda t: (False, "custom extractor"))
+                        has_tool=lambda n: "/x", trust_fn=lambda t: (False, "custom extractor"),
+                        strict=False)
     assert any(x["backend"] == "codeql" and "extractor" in x["error"] for x in res["failed"])
     assert "codeql" not in res["backends_run"]
 
@@ -97,6 +100,7 @@ def test_prefilter_applies_exclusions(tmp_path):
         codeql=lambda *a, **k: [],
         has_tool=lambda n: "/x" if n == "semgrep" else None,
         exclusions_fn=lambda w: Exclusions(classes={"log-injection"}),
+        strict=False,
     )
     assert res["excluded"] == 1
     assert {f.cls for f in read_findings(ws)} == {"sqli"}
@@ -158,7 +162,7 @@ def test_disabled_and_absent_backends_recorded(tmp_path):
         ["xss"], {})
     res = run_prefilter(ws, "t", prof, semgrep=lambda *a, **k: [],
                         has_tool=lambda n: False,   # codeql binary absent
-                        exclusions_fn=lambda w: Exclusions([], [], []))
+                        exclusions_fn=lambda w: Exclusions([], [], []), strict=False)
     assert res["skipped_reasons"]["semgrep"] == "disabled"
     assert res["skipped_reasons"]["codeql"] == "absent"
     assert res["backends_run"] == []
@@ -202,7 +206,7 @@ def test_codeql_disabled_recorded(tmp_path):
         ["xss"], {})
     res = run_prefilter(ws, "t", prof, semgrep=lambda *a, **k: [],
                         has_tool=lambda n: True,
-                        exclusions_fn=lambda w: Exclusions([], [], []))
+                        exclusions_fn=lambda w: Exclusions([], [], []), strict=False)
     assert res["skipped_reasons"]["codeql"] == "disabled"
 
 
@@ -214,7 +218,7 @@ def test_prefilter_records_codeql_pack_missing(tmp_path):
     sem = lambda target, config, **k: [_cand("sqli", "a.go", 1)]
     cql = lambda *a, **k: (_ for _ in ()).throw(AssertionError("codeql must not run without pack"))
     res = run_prefilter(ws, "tgt", _profile(), semgrep=sem, codeql=cql,
-                        has_tool=lambda n: "/x", qlpack_fn=lambda lang: False)
+                        has_tool=lambda n: "/x", qlpack_fn=lambda lang: False, strict=False)
     assert res["backends_run"] == ["semgrep"]
     assert res["skipped_reasons"].get("codeql") == "pack-missing"
     assert any(x["backend"] == "codeql" and "pack download" in x["error"] for x in res["failed"])
@@ -234,7 +238,7 @@ def test_prefilter_runs_secrets_and_sca_never_silent(tmp_path):
         has_tool=lambda n: True,
         secrets_fn=lambda target: fake_sec,
         sca_fn=lambda target, **k: (_ for _ in ()).throw(__import__("sec_overlay.sca", fromlist=["ScaError"]).ScaError("osv-scanner not installed")),
-        exclusions_fn=lambda w: Exclusions([], [], []))
+        exclusions_fn=lambda w: Exclusions([], [], []), strict=False)
     assert "secrets" in res["backends_run"]
     assert res["skipped_reasons"].get("sca") == "absent"   # NOT silent
     assert any(x["backend"] == "sca" for x in res["failed"])
@@ -252,7 +256,7 @@ def test_prefilter_never_silent_unimplemented_backend(tmp_path):
         [], {})
     res = run_prefilter(ws, "t", prof, semgrep=lambda *a, **k: [],
         has_tool=lambda n: True, secrets_fn=lambda t: [],
-        exclusions_fn=lambda w: Exclusions([], [], []))
+        exclusions_fn=lambda w: Exclusions([], [], []), strict=False)
     assert res["skipped_reasons"].get("sca") == "disabled"
 
 
@@ -295,3 +299,22 @@ def test_candidate_ids_are_class_prefixed_and_per_class_numbered():
     # per-class numbering follows the canonical (file,line,rule,cls) sort
     sqli = sorted([f for f in kept if f.cls == "sqli"], key=lambda f: f.id)
     assert sqli[0].file == "a.py"  # a.py sorts before b.py
+
+
+def test_strict_raises_when_planned_backend_skipped():
+    with pytest.raises(RuntimeError):
+        _raise_on_incomplete_backends(
+            skipped_reasons={"codeql": "pack-missing"}, failed=[], strict=True)
+
+
+def test_strict_ok_when_all_ran():
+    _raise_on_incomplete_backends(skipped_reasons={}, failed=[], strict=True)  # no raise
+
+
+def test_run_prefilter_raises_strict_by_default_on_skipped_backend(tmp_path):
+    ws = Workspace(tmp_path / "ws"); ws.ensure()
+    sem = lambda target, config, **k: [_cand("sqli", "a.go", 1)]
+    cql = lambda *a, **k: (_ for _ in ()).throw(AssertionError("codeql should not run"))
+    with pytest.raises(RuntimeError):
+        run_prefilter(ws, "tgt", _profile(), semgrep=sem, codeql=cql,
+                      has_tool=lambda n: None if n == "codeql" else "/x")

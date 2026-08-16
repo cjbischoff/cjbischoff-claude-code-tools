@@ -1,8 +1,16 @@
 # `tests/` — the deterministic test suite
 
-85 pytest files, 677 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+85 pytest files, 701 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+`test_stage_validate.py` gained `test_unknown_stage_raises` (ISSUE-034): `validate_stage` now
+raises `ValueError` for an unregistered stage instead of silently passing. `test_bucket_c.py`'s
+`test_stage_validate_dispatch` updated to expect the same raise for `"unknown-stage"`.
+`test_prefilter.py` gained `test_strict_raises_when_planned_backend_skipped`,
+`test_strict_ok_when_all_ran`, and `test_run_prefilter_raises_strict_by_default_on_skipped_backend`
+for the new `_raise_on_incomplete_backends` helper and `run_prefilter(..., strict=True)` default;
+every existing test that deliberately exercises a skipped/failed backend now passes `strict=False`.
 
 `test_cost.py` gained `test_record_and_aggregate_timings` (ISSUE-014), covering the new
 `cost.record_timing`/`cost.aggregate_timings_by_phase` per-phase wall-clock accounting.

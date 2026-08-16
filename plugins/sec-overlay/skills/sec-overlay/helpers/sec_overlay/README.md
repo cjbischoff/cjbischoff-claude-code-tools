@@ -18,6 +18,12 @@ pointer if the package layout changed — in the same commit (enforced by the pr
 
 `context.py` gained `doc_coverage()` to compare documents discovered vs read and flag a low read ratio. The `load()` function now accepts optional `repo_root` and `scan_scope` parameters to populate `provenance["docs_discovered"]` at load time (wiring by downstream caller) — see the module map entry.
 
+`stage_validate.py`'s `validate_stage` now raises `ValueError` for a stage with no registered
+validator instead of silently passing, and `prefilter.py`'s `run_prefilter` gained a
+`strict: bool = True` parameter plus a new `_raise_on_incomplete_backends` helper: a planned SAST
+backend left in `skipped_reasons` or `failed` now raises `RuntimeError` instead of returning a
+silent partial result (ISSUE-034). Pass `strict=False` only for a deliberately partial run.
+
 `context.py` also gained `cited_source_docs()` (every `source_doc` an item or its history cites); `stage_validate.py`'s `_validate_context` now appends an error when a cited doc is absent from `provenance["docs_read"]` (ISSUE-021).
 
 `findings_gate.py` gained `validate_citations(ws, root, *, statuses=None)`, a resolver-backed

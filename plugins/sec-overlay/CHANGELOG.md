@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.12.2 - 2026-08-15
+
+### Fixed
+
+- `validate_stage` now raises `ValueError` for a stage with no registered validator instead of
+  silently passing — a silent pass masked mis-named stages (ISSUE-034).
+- `run_prefilter` gained a `strict: bool = True` parameter: a planned SAST backend left in
+  `skipped_reasons` or `failed` now raises `RuntimeError` via the new `_raise_on_incomplete_backends`
+  helper instead of returning a silent partial result. Pass `strict=False` only for a deliberately
+  partial run.
+
 ## 1.12.1 - 2026-08-15
 
 ### Fixed
