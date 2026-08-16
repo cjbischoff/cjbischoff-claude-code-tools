@@ -2,6 +2,12 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.36.0 - 2026-08-16
+
+### Added
+
+- Add single-repo drive loop with per-phase fence and receipt.
+
 ## 1.35.0 - 2026-08-16
 
 ### Added

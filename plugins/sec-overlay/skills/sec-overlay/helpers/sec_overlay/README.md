@@ -400,3 +400,13 @@ tokens from this file instead of the orchestrator re-substituting them by hand o
 `run.py` gained `synthesize_manifest(product, members) -> dict`, which wraps `members` under
 `product` and raises `ValueError` when `sec_overlay.correlate.manifest.validate_manifest` rejects
 the result — building the `product.json`-shaped dict `python -m sec_overlay.correlate` consumes.
+
+`run.py` gained `drive(target, config, *, scope=".", workspace=None, runner=subprocess.run,
+table=PHASE_TABLE) -> str`, the single-repo audit loop. It opens or resumes the sidecar
+`Workspace` (via `_target_workspace`, which delegates to `RepoMemory.for_target`), pins the SHA,
+calls `state.begin_pass` on a fresh workspace, snapshots the `git status --porcelain` baseline,
+writes `run.env` once, then calls `driver.run_audit` with an `on_complete` callback. That callback
+fences the tree (`fence`) and writes a receipt (`receipt`) before every `record_stage` — `driver.py`
+now accepts this `on_complete: Callable[[str], None] | None` hook on both `run_deterministic_phase`
+and `run_audit`, invoking it immediately before each stage is recorded so a receipt always exists
+before its stage counts as done (O-67 ordering).

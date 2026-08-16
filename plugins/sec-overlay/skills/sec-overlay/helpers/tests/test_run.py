@@ -118,3 +118,34 @@ def test_synthesize_manifest_rejects_bad_role():
         synthesize_manifest(
             "p", [{"slug": "a", "repo_root": "/a", "scan_scope": ".", "role": "nonsense"}]
         )
+
+
+def test_drive_writes_receipt_and_env_and_fences(tmp_path, monkeypatch):
+    import subprocess
+    from sec_overlay import run as run_mod
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    ws_root = tmp_path / "ws"
+
+    # git status --porcelain returns clean both at baseline and per phase
+    def fake_git(cmd, *a, **k):
+        if cmd[:2] == ["git", "-C"] and "status" in cmd:
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+        if "rev-parse" in cmd:
+            return subprocess.CompletedProcess(cmd, 0, stdout="deadbeef\n", stderr="")
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    from sec_overlay.driver import DETERMINISTIC_ACTIONS
+    from sec_overlay.phases import PhaseSpec
+
+    DETERMINISTIC_ACTIONS["noop"] = lambda ctx: None
+    table = (PhaseSpec("noop", "deterministic", (), ()),)
+    monkeypatch.setattr(run_mod, "_PHASE_TABLE", table, raising=False)
+
+    result = run_mod.drive(
+        str(target), config="", workspace=str(ws_root), runner=fake_git, table=table
+    )
+    assert result == "AUDIT COMPLETE"
+    assert (ws_root / "run.env").exists()
+    assert (ws_root / "kb" / "receipts" / "noop.json").exists()

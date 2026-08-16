@@ -401,3 +401,25 @@ def test_act_tm_gate_halts_when_dfd_missing(tmp_path):
     with pytest.raises(PhaseHalt, match="dfd.mmd"):
         _act_tm_gate(ctx)
     assert (ws.kb / "gates" / "tm-gate.json").exists()
+
+
+def test_run_audit_calls_on_complete_before_recording(tmp_path):
+    from sec_overlay.driver import AuditContext, run_audit
+    from sec_overlay.phases import PhaseSpec
+    from sec_overlay.workspace import Workspace
+
+    ws = Workspace(root=tmp_path)
+    ws.ensure()
+    marker = ws.kb / "marker.json"
+    marker.write_text("{}")  # single deterministic phase whose output already exists
+
+    from sec_overlay.driver import DETERMINISTIC_ACTIONS
+
+    DETERMINISTIC_ACTIONS["noop"] = lambda ctx: None
+    table = (PhaseSpec("noop", "deterministic", (), (lambda w: w.kb / "marker.json",)),)
+    ctx = AuditContext(ws=ws, target=str(tmp_path), config="", sha="deadbeef")
+
+    seen: list[str] = []
+    result = run_audit(ctx, table=table, on_complete=seen.append)
+    assert seen == ["noop"]
+    assert result == "AUDIT COMPLETE"

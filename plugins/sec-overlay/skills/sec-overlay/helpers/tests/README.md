@@ -356,3 +356,11 @@ returns `service-enforcer`, and an ambiguous profile defaults to `infra`.
 `test_run.py` gained two `synthesize_manifest` tests, covering `sec_overlay.run.synthesize_manifest`:
 a valid two-member call passes `validate_manifest` with distinct `slug#scan_scope` keys, and a
 member with a role outside `ROLES` raises `ValueError`.
+
+`test_run.py` gained `test_drive_writes_receipt_and_env_and_fences`, covering `sec_overlay.run.drive`:
+with a fake git runner reporting a clean tree at every call, one deterministic `noop` phase runs,
+`run.env` and `kb/receipts/noop.json` both exist afterward, and the result is `"AUDIT COMPLETE"`.
+
+`test_driver.py` gained `test_run_audit_calls_on_complete_before_recording`, covering the new
+`on_complete` parameter on `driver.run_audit`: for a single deterministic phase whose output already
+exists, `on_complete` is called with the phase name before `run_audit` returns `"AUDIT COMPLETE"`.

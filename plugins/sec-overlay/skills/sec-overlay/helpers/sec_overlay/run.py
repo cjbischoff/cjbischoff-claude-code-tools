@@ -10,7 +10,11 @@ import subprocess
 from pathlib import Path
 
 from sec_overlay.correlate.manifest import ROLES, validate_manifest
+from sec_overlay.driver import AuditContext, run_audit
+from sec_overlay.phases import PHASE_TABLE
 from sec_overlay.profile import ScanProfile
+from sec_overlay.repo_memory import RepoMemory
+from sec_overlay.state import begin_pass, load_state
 from sec_overlay.workspace import Workspace
 
 _RBAC_SIGNALS = ("auth", "rbac", "iam", "policy", "interceptor", "middleware", "identity")
@@ -155,3 +159,53 @@ def write_env(ws: Workspace, target, scope, sha):
         f"REPO_ROOT={target}\n"
     )
     return path
+
+
+def _target_workspace(target) -> Workspace:
+    """Return the in-repo sidecar workspace for a target (via RepoMemory)."""
+    return RepoMemory.for_target(str(target)).workspace
+
+
+def drive(target, config, *, scope=".", workspace=None, runner=subprocess.run, table=PHASE_TABLE):
+    """Audit one repository, driving every phase with a fence and a receipt.
+
+    Opens (or resumes) the workspace, pins the SHA, snapshots the fence
+    baseline, writes ``run.env`` once, then walks the phase table. Before each
+    stage is recorded done, the tree is fenced and a receipt is written.
+
+    Args:
+        target: Path to the audited repository.
+        config: Semgrep/ruleset config path for scanning phases.
+        scope: Scanned scope relative to the repo root.
+        workspace: Explicit workspace root; ``None`` uses the target sidecar.
+        runner: Injectable process runner (git calls).
+        table: Phase table to walk (defaults to ``PHASE_TABLE``).
+
+    Returns:
+        ``run_audit``'s result: ``"AUDIT COMPLETE"`` or the next dispatch block.
+    """
+    ws = Workspace(root=workspace) if workspace else _target_workspace(target)
+    ws.ensure()
+    sha = runner(
+        ["git", "-C", str(target), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    state = load_state(ws)
+    if not state.stages:
+        begin_pass(ws, sha)
+    baseline = runner(
+        ["git", "-C", str(target), "status", "--porcelain"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    write_env(ws, target, scope, sha)
+    ctx = AuditContext(ws=ws, target=str(target), config=config, sha=sha)
+
+    def on_complete(phase_name: str) -> None:
+        fence(target, baseline, runner=runner)
+        receipt(
+            ws,
+            phase_name,
+            counts={"findings": len(list(ws.findings_dir.glob("F-*.json")))},
+        )
+
+    return run_audit(ctx, table=table, on_complete=on_complete)
