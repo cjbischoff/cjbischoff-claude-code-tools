@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.28.0 - 2026-08-16
+
+### Changed
+
+- `agents/threat-model.md` rebuilt on the DFD/STRIDE contract: it now derives
+  `threat-model/dfd.mmd` from `architecture/container-diagram.mmd` (SHA-headered),
+  `threat-model/attack-sequences/sequence-<scenario>.mmd`, and
+  `threat-model/threat-model.md` — a methodology record, a CVSS v4.0 findings table, and
+  a prioritized hunt list — replacing the old single-file `kb/THREAT_MODEL.md` output.
+
 ## 1.27.0 - 2026-08-16
 
 ### Changed
