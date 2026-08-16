@@ -79,3 +79,29 @@ def receipt(
         )
     )
     return path
+
+
+def write_env(ws: Workspace, target, scope, sha):
+    """Resolve the substitution tokens once and write ``run.env``.
+
+    Agent phases read tokens from this file instead of the orchestrator
+    re-substituting them by hand on every spawn.
+
+    Args:
+        ws: The audit workspace.
+        target: Path to the audited repository.
+        scope: Scanned scope relative to the repo root ("." for the whole repo).
+        sha: The pinned target SHA for this pass.
+
+    Returns:
+        The path written: ``<ws.root>/run.env``.
+    """
+    path = ws.root / "run.env"
+    path.write_text(
+        f"TARGET={target}\n"
+        f"WORKSPACE={ws.root}\n"
+        f"SHA={sha}\n"
+        f"SCAN_SCOPE={scope}\n"
+        f"REPO_ROOT={target}\n"
+    )
+    return path

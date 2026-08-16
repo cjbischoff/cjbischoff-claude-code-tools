@@ -3,7 +3,7 @@ import subprocess
 
 import pytest
 
-from sec_overlay.run import WorkingTreeFenceError, fence, receipt
+from sec_overlay.run import WorkingTreeFenceError, fence, receipt, write_env
 from sec_overlay.workspace import Workspace
 
 
@@ -34,3 +34,18 @@ def test_receipt_writes_counts_even_when_stdout_empty(tmp_path):
     assert body["phase"] == "findings-gate"
     assert body["stdout"] == ""
     assert body["counts"] == {"findings": 3}
+
+
+def test_write_env_writes_all_tokens(tmp_path):
+    ws = Workspace(root=tmp_path / "ws")
+    ws.ensure()
+    path = write_env(ws, target="/repos/app", scope=".", sha="abc123")
+    assert path == ws.root / "run.env"
+    lines = dict(
+        line.split("=", 1) for line in path.read_text().splitlines() if "=" in line
+    )
+    assert lines["TARGET"] == "/repos/app"
+    assert lines["WORKSPACE"] == str(ws.root)
+    assert lines["SHA"] == "abc123"
+    assert lines["SCAN_SCOPE"] == "."
+    assert lines["REPO_ROOT"] == "/repos/app"

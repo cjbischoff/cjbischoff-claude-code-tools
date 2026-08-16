@@ -2,6 +2,12 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.33.0 - 2026-08-16
+
+### Added
+
+- Add run.env token writer.
+
 ## 1.32.0 - 2026-08-16
 
 ### Added

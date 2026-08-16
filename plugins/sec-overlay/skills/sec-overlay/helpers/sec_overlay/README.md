@@ -388,3 +388,7 @@ when `git status --porcelain` output differs from the captured baseline.
 `run.py` gained `receipt(ws, phase, *, stdout="", artifacts=None, counts=None)`, which writes
 `<ws.kb>/receipts/<phase>.json` (keys `phase`, `stdout`, `artifacts`, `counts`) and returns the
 path — so no stage advances without a receipt on disk.
+
+`run.py` gained `write_env(ws, target, scope, sha)`, which writes `<ws.root>/run.env` with
+`TARGET`, `WORKSPACE`, `SHA`, `SCAN_SCOPE`, and `REPO_ROOT` resolved once — agent phases read the
+tokens from this file instead of the orchestrator re-substituting them by hand on every spawn.
