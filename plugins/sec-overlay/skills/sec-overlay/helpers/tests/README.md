@@ -11,6 +11,9 @@ raises `ValueError` for an unregistered stage instead of silently passing. `test
 `test_strict_ok_when_all_ran`, and `test_run_prefilter_raises_strict_by_default_on_skipped_backend`
 for the new `_raise_on_incomplete_backends` helper and `run_prefilter(..., strict=True)` default;
 every existing test that deliberately exercises a skipped/failed backend now passes `strict=False`.
+It also gained `test_strict_ignores_disabled_backend` and `test_strict_raises_on_absent_backend`
+(R14): a `"disabled"` skip reason is excluded from the strict raise, but `"absent"` and other
+reasons still raise.
 
 `test_cost.py` gained `test_record_and_aggregate_timings` (ISSUE-014), covering the new
 `cost.record_timing`/`cost.aggregate_timings_by_phase` per-phase wall-clock accounting.

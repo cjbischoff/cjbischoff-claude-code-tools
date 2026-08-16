@@ -2,7 +2,7 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
-## 1.12.2 - 2026-08-15
+## 1.12.3 - 2026-08-15
 
 ### Fixed
 
@@ -11,7 +11,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - `run_prefilter` gained a `strict: bool = True` parameter: a planned SAST backend left in
   `skipped_reasons` or `failed` now raises `RuntimeError` via the new `_raise_on_incomplete_backends`
   helper instead of returning a silent partial result. Pass `strict=False` only for a deliberately
-  partial run.
+  partial run. A `"disabled"` skip reason is excluded from the raise — a profile turning a backend
+  off on purpose is a planning decision, not a coverage hole.
 
 ## 1.12.1 - 2026-08-15
 

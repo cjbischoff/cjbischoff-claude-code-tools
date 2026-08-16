@@ -311,6 +311,17 @@ def test_strict_ok_when_all_ran():
     _raise_on_incomplete_backends(skipped_reasons={}, failed=[], strict=True)  # no raise
 
 
+def test_strict_ignores_disabled_backend():
+    _raise_on_incomplete_backends(
+        skipped_reasons={"secrets": "disabled"}, failed=[], strict=True)  # no raise
+
+
+def test_strict_raises_on_absent_backend():
+    with pytest.raises(RuntimeError):
+        _raise_on_incomplete_backends(
+            skipped_reasons={"codeql": "absent"}, failed=[], strict=True)
+
+
 def test_run_prefilter_raises_strict_by_default_on_skipped_backend(tmp_path):
     ws = Workspace(tmp_path / "ws"); ws.ensure()
     sem = lambda target, config, **k: [_cand("sqli", "a.go", 1)]

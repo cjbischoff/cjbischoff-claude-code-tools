@@ -22,7 +22,9 @@ pointer if the package layout changed — in the same commit (enforced by the pr
 validator instead of silently passing, and `prefilter.py`'s `run_prefilter` gained a
 `strict: bool = True` parameter plus a new `_raise_on_incomplete_backends` helper: a planned SAST
 backend left in `skipped_reasons` or `failed` now raises `RuntimeError` instead of returning a
-silent partial result (ISSUE-034). Pass `strict=False` only for a deliberately partial run.
+silent partial result (ISSUE-034). Pass `strict=False` only for a deliberately partial run. A
+`"disabled"` skip reason is excluded from the raise — a profile turning a backend off on purpose
+is a planning decision, not a coverage hole (R14).
 
 `context.py` also gained `cited_source_docs()` (every `source_doc` an item or its history cites); `stage_validate.py`'s `_validate_context` now appends an error when a cited doc is absent from `provenance["docs_read"]` (ISSUE-021).
 

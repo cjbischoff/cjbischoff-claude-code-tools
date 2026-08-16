@@ -47,16 +47,21 @@ def _raise_on_incomplete_backends(
     """Raise when a planned backend did not run (strict never-silent contract).
 
     Args:
-        skipped_reasons: Backend -> reason for backends that did not run.
+        skipped_reasons: Backend -> reason for backends that did not run. A
+            ``"disabled"`` reason is excluded — a profile deliberately turning a
+            backend off is a planning decision, not a coverage hole (ISSUE-034, R14).
         failed: Backend failure records.
-        strict: When True, any skipped or failed backend is a hard error.
+        strict: When True, any skipped (other than disabled) or failed backend is a
+            hard error.
 
     Raises:
-        RuntimeError: ``strict`` and at least one backend is skipped or failed.
+        RuntimeError: ``strict`` and at least one non-disabled backend is skipped or
+            failed.
     """
     if not strict:
         return
-    problems = list(skipped_reasons.items()) + [(f.get("backend"), f.get("error")) for f in failed]
+    skips = [(b, r) for b, r in skipped_reasons.items() if r != "disabled"]
+    problems = skips + [(f.get("backend"), f.get("error")) for f in failed]
     if problems:
         joined = ", ".join(f"{b}: {r}" for b, r in problems)
         raise RuntimeError(
