@@ -23,7 +23,7 @@ listed pattern unless the code changed materially since it was rejected.
 - Target repo: `{{TARGET}}`
 - Workspace: `{{WORKSPACE}}`
 - Findings to review: `{{WORKSPACE}}/findings/*.json` with `status == "raw"`.
-- KB for context: `{{WORKSPACE}}/kb/architecture.md`, `{{WORKSPACE}}/kb/THREAT_MODEL.md`.
+- KB for context: `{{WORKSPACE}}/architecture/arc42.md`, `{{WORKSPACE}}/threat-model/threat-model.md`.
 
 ## Allowed tools
 - `rg`, file reads, directory listing, and the structural index CLI

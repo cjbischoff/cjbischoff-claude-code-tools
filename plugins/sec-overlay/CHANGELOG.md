@@ -2,6 +2,19 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.30.0 - 2026-08-16
+
+### Changed
+
+- Re-point every remaining consumer prompt (`investigate.md`, `critic.md`,
+  `validate.md`, `context-ingest.md`, `phase-adversary.md`, `postflight.md`)
+  from the retired `kb/architecture.md` / `kb/entities/` / `kb/THREAT_MODEL.md`
+  paths to `architecture/arc42.md` and `threat-model/threat-model.md`.
+  `phase-adversary.md` gains an ownership-boundary checklist bullet: an
+  architecture claim naming threats/mitigations, or a threat-model claim
+  restating structure/stack, is a defect.
+- Remove the now-dead `kb.py::entities_dir` helper (no remaining callers).
+
 ## 1.29.0 - 2026-08-16
 
 ### Added

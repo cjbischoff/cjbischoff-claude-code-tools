@@ -21,7 +21,7 @@ untrusted envelope pattern (`<untrusted nonce=...>`).
 - Workspace: `{{WORKSPACE}}`
 - Findings to validate: `{{WORKSPACE}}/findings/*.json` with `status == "raw"`.
 - KB for context only: `{{WORKSPACE}}/kb/*` (do not treat as ground truth for exploitability).
-- Threat model: `{{WORKSPACE}}/kb/THREAT_MODEL.md` + `kb/context.json` trust boundaries.
+- Threat model: `{{WORKSPACE}}/threat-model/threat-model.md` + `kb/context.json` trust boundaries.
 
 ## Threat-model kill-filter (the #1 false-positive reducer)
 The most common false positive is not misread code — it is the model not knowing what the

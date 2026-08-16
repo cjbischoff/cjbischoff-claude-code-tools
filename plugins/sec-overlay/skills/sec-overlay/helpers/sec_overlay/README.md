@@ -21,7 +21,8 @@ pointer if the package layout changed — in the same commit (enforced by the pr
 `kb/architecture.md` and `kb/THREAT_MODEL.md` single-file paths; `kb_status` now reports
 `arc42_path`/`threat_model_path` existence. `workspace.py`'s `Workspace.ensure()` now also
 creates `architecture/runtime-view/` and `threat-model/attack-sequences/` under the workspace
-root.
+root. `kb.py`'s now-dead `entities_dir` (no remaining callers once the prompts stopped reading
+`kb/entities/`) was removed.
 
 New module `cvss4_data.py`: CVSS v4.0 MacroVector lookup table (270 entries) and interpolation
 tables (`MAX_COMPOSED`, `MAX_SEVERITY`), vendored verbatim from FIRST's official calculator

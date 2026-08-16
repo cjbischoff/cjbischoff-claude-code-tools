@@ -43,11 +43,6 @@ def dfd_path(ws: Workspace) -> Path:
     return threat_dir(ws) / "dfd.mmd"
 
 
-def entities_dir(ws: Workspace) -> Path:
-    """Directory holding per-component entity notes."""
-    return ws.kb / "entities"
-
-
 def write_profile(ws: Workspace, profile: ScanProfile) -> None:
     """Persist a scan profile into the KB.
 

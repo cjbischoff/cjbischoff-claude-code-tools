@@ -39,9 +39,9 @@ a true positive you silently filter here is gone for good.
 - Workspace: `{{WORKSPACE}}`
 - Candidate findings of your class: files in `{{WORKSPACE}}/findings/*.json` where
   `cls == "{{ATTACK_CLASS}}"` and `status == "candidate"`.
-- Threat model hunt list: `{{WORKSPACE}}/kb/THREAT_MODEL.md` — rows for your class
+- Threat model hunt list: `{{WORKSPACE}}/threat-model/threat-model.md` — rows for your class
   tell you where to look even when no SAST candidate exists.
-- Architecture + entities: `{{WORKSPACE}}/kb/architecture.md`, `{{WORKSPACE}}/kb/entities/*.md`.
+- Architecture: `{{WORKSPACE}}/architecture/arc42.md` §5 Building Block View.
 - Attack-class guidance: `{{OVERLAY_ROOT}}/references/attack-classes.md`.
 
 ## Allowed tools
