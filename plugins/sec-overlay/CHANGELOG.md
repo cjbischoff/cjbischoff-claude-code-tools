@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.14.0 - 2026-08-15
+
+### Added
+
+- New `artifact_gate.py` module (§4.8): `run_artifact_gate(ws)` is a deterministic gate over a
+  finished run's own output artifacts, checking `report.md` for stale constant sections and
+  over-long triage cells, every shipping finding for a detail file and a red-team directive, every
+  triage-table ID for a resolving finding, and `CONTEXT.md`'s mermaid diagram for the ≤10-node
+  style cap (ISSUE-022). Writes `kb/gates/artifact-gate.json` and runs before the opus
+  artifact-review adversary.
+
 ## 1.13.1 - 2026-08-15
 
 ### Fixed

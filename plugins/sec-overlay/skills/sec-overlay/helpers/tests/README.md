@@ -1,8 +1,12 @@
 # `tests/` — the deterministic test suite
 
-85 pytest files, 701 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+86 pytest files, 711 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_artifact_gate.py` (§4.8) covers `run_artifact_gate`: a clean run passes; a stale constant
+section, a missing detail file, a missing red-team directive, and a triage ID with no matching
+finding each produce an error string; the gate always writes `kb/gates/artifact-gate.json`.
 
 `test_stage_validate.py` gained `test_unknown_stage_raises` (ISSUE-034): `validate_stage` now
 raises `ValueError` for an unregistered stage instead of silently passing. `test_bucket_c.py`'s

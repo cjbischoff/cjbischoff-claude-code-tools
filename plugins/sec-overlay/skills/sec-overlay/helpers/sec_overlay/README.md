@@ -16,6 +16,13 @@ entry point; read the parent map for the full inventory.
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
 
+New module `artifact_gate.py` (§4.8): `run_artifact_gate(ws)` checks a finished run's own
+artifacts — report.md free of stale constant sections and over-long triage cells, every shipping
+finding has a `findings/<ID>.md` detail file and a red-team directive, every triage-table ID
+resolves to a finding, and `CONTEXT.md`'s mermaid diagram stays at ≤10 nodes (ISSUE-022). Writes
+`kb/gates/artifact-gate.json`; runs before the opus artifact-review adversary, never deletes
+findings.
+
 `context.py` gained `doc_coverage()` to compare documents discovered vs read and flag a low read ratio. The `load()` function now accepts optional `repo_root` and `scan_scope` parameters to populate `provenance["docs_discovered"]` at load time (wiring by downstream caller) — see the module map entry.
 
 `stage_validate.py`'s `validate_stage` now raises `ValueError` for a stage with no registered
