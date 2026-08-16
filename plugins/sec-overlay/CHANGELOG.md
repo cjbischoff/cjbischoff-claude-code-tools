@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.10.0 - 2026-08-15
+
+### Added
+
+- Split `report.md`: full per-finding bodies now write to `findings/<ID>.md`, and the
+  Markdown report renders a slim, risk-ordered **Detail** link list instead of inlining
+  every finding's full body (`write_finding_details`, ISSUE-009).
+
 ## 1.9.5 - 2026-08-15
 
 ### Fixed

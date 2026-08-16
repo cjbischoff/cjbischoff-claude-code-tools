@@ -105,6 +105,13 @@ external-dependency verification" section (via `render_ndt`), separate from the 
 needs-runtime section, so a capped external-boundary lead is never conflated with an in-repo
 needs-runtime finding.
 
+`report.py` gained `write_finding_details(ws, findings, patch_statuses=None)`, which writes one
+Markdown file per finding to `ws.findings_dir/<ID>.md` (full `render_finding`/`render_ndt` body).
+`to_markdown` no longer inlines the "Needs runtime proof" or "Confirmed (source-provable)"
+sections — it renders a risk-ordered "## Detail" link list pointing at `findings/<ID>.md` instead,
+so `report.md` stays short while the full evidence stays one click away. `write_report` calls
+`write_finding_details` after writing `report.md` so the linked files always exist.
+
 `sarif.py` gained `_rules()`, populating `driver.rules` from the finding set (de-duplicated by
 `rule_id`, `cls` as `name`, `asvs_ids`/`codeguard_ids` as `properties`) — additive only, `results`
 unchanged — see the module map entry.

@@ -263,8 +263,9 @@ def to_markdown(
 ) -> str:
     """Render findings and optional token accounting as Markdown.
 
-    Structure: Bottom line → Triage table → Needs runtime proof section →
-    Confirmed section → Coverage / redteam link / coverage-ledger / token-spend tail.
+    Structure: Bottom line → Triage table → Detail link list (per-finding bodies
+    live in ``findings/<ID>.md``, written by :func:`write_finding_details`) →
+    Coverage / redteam link / coverage-ledger / token-spend tail.
     NDT findings are NEVER folded into confirmed counts; the ``Needs runtime proof``
     line is never 0 when ``needs_deployment`` is non-empty.
 
@@ -339,11 +340,25 @@ def to_markdown(
         lines.append(_triage_row(f, status_label, action))
     lines.append("")
 
-    # Needs runtime proof section (NDT only, leads above confirmed)
-    if ndt:
-        lines += ["## Needs runtime proof — the real leads", ""]
-        for f in ndt:
-            lines += [render_ndt(f), "---", ""]
+    # Detail — risk-ordered links to per-finding files (bodies live in findings/<ID>.md)
+    detail = sorted(list(conf) + list(ndt), key=_risk_sort_key)
+    if detail:
+        lines += ["## Detail", ""]
+        for f in detail:
+            risk = f.risk_score if f.risk_score is not None else "-"
+            label = "needs-runtime" if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING else "confirmed"
+            lines.append(
+                f"- [{f.id}](findings/{f.id}.md) — risk {risk} — {label} — "
+                f"{_short_title((f.message or '').split('|', 1)[0].split('. ')[0].strip())}"
+            )
+        lines.append("")
+        lines += [
+            (
+                "_Informational findings (not shipped in this report) remain in "
+                "`findings.json`._"
+            ),
+            "",
+        ]
 
     # External-unverifiable leads — sink crosses into an un-ingested dependency
     if external:
@@ -358,12 +373,6 @@ def to_markdown(
         ]
         for f in external:
             lines += ["", render_ndt(f)]
-
-    # Confirmed section
-    if conf:
-        lines += ["## Confirmed (source-provable)", ""]
-        for f in conf:
-            lines += [render_finding(f, patch_status=(patch_statuses or {}).get(f.id)), "---", ""]
 
     if coverage:
         lines += [
@@ -410,6 +419,31 @@ def to_markdown(
         lines += ["", "## Token spend by phase", ""]
         lines += [f"- **{phase}**: {n}" for phase, n in token_spend.items()]
     return "\n".join(lines) + "\n"
+
+
+def write_finding_details(
+    ws: Workspace, findings: list[Finding], patch_statuses: dict | None = None
+) -> list[str]:
+    """Write one Markdown detail file per finding to ``ws.findings_dir/<ID>.md``.
+
+    Args:
+        ws: Workspace whose ``findings_dir`` receives the ``<ID>.md`` files.
+        findings: Confirmed/fixed/NDT findings to render in full.
+        patch_statuses: Optional ``id -> PatchStatus`` for fixed findings.
+
+    Returns:
+        The finding ids written, in input order.
+    """
+    ws.findings_dir.mkdir(parents=True, exist_ok=True)
+    written: list[str] = []
+    for f in findings:
+        if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING:
+            body = render_ndt(f)
+        else:
+            body = render_finding(f, patch_status=(patch_statuses or {}).get(f.id))
+        (ws.findings_dir / f"{f.id}.md").write_text(body + "\n")
+        written.append(f.id)
+    return written
 
 
 def collapse_clusters(findings: list[Finding]) -> list[Finding]:
@@ -529,6 +563,7 @@ def write_report(ws: Workspace, *, target: str | None = None, confirmed_only: bo
             economics=economics,
         )
     )
+    write_finding_details(ws, reportable + ndt, patch_statuses=patch_statuses)
     findings_out = reportable + ndt
     ws.findings_json_path.write_text(json.dumps([f.to_dict() for f in findings_out], indent=2))
     record_stage(ws, "report")

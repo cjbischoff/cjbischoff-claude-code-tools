@@ -191,3 +191,11 @@ boundary with a trailing `…`, never cutting mid-word, and leaves short titles 
 (`C-SQLI-0001`, `C-XSS-0001`, ...) instead of one global `C-0001..` sequence, so ids carry the
 class and never collide across rulesets; `test_serial_and_concurrent_identical` was updated to
 the new scheme.
+
+`test_report_split.py` (new, ISSUE-009) covers the per-finding-file report split:
+`write_report` writes `findings/<ID>.md` for every reportable/NDT finding, `report.md` links each
+one under "## Detail" instead of inlining its body, and the Detail list is risk-ordered. Six
+pre-existing `test_report.py` assertions that expected the old inline "Confirmed
+(source-provable)"/"Needs runtime proof" bodies (verification text, receipts, `Caution` notes,
+section headings) were updated to check the new `findings/<ID>.md` files or the "## Detail" link
+list instead.
