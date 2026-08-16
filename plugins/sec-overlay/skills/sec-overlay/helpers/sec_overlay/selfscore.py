@@ -26,13 +26,22 @@ def build_self_score(ws: Workspace) -> dict:
 
     Returns:
         ``{reported, confirmed, needs_runtime, rejected, clusters,
-        external_boundary, shipping}`` — all ints.
+        external_boundary, shipping, critic_viable, critic_rejected,
+        critic_reject_rate}`` — all ints except ``critic_reject_rate`` (float).
     """
     findings = read_findings(ws)
     clusters = {f.cluster_id for f in findings if getattr(f, "cluster_id", None)}
     external = sum(
         1 for f in findings if (f.reachability or {}).get("blocker") == "external-boundary"
     )
+    critic_viable = sum(
+        1 for f in findings for h in f.history if h.get("event") == "critic:viable"
+    )
+    critic_rejected = sum(
+        1 for f in findings for h in f.history if h.get("event") == "critic:rejected"
+    )
+    critic_total = critic_viable + critic_rejected
+    critic_reject_rate = (critic_rejected / critic_total) if critic_total else 0.0
     return {
         "reported": sum(1 for f in findings if f.status in _REPORTED),
         "confirmed": sum(1 for f in findings if f.status is FindingStatus.CONFIRMED),
@@ -43,6 +52,9 @@ def build_self_score(ws: Workspace) -> dict:
         "clusters": len(clusters),
         "external_boundary": external,
         "shipping": sum(1 for f in findings if f.status.value in SHIPPING_STATUSES),
+        "critic_viable": critic_viable,
+        "critic_rejected": critic_rejected,
+        "critic_reject_rate": critic_reject_rate,
     }
 
 

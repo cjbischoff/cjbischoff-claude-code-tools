@@ -1,5 +1,7 @@
 """Tests for Bucket C: reachability gate, fail-open parse, salvage/terminal, stage-validate."""
 
+import pytest
+
 from sec_overlay import parse, reachability, stage_validate
 from sec_overlay.campaign import TERMINAL_STATUSES, salvage_partial
 from sec_overlay.models import Finding, FindingStatus, Severity
@@ -79,7 +81,8 @@ def test_stage_validate_dispatch():
     assert stage_validate.validate_stage("recon", {"languages": "nope"}) != []
     assert stage_validate.validate_stage("reachability", {"reachable": False}) != []
     assert stage_validate.validate_stage("runtime_test", {"payloads": []}) != []  # no objective
-    assert stage_validate.validate_stage("unknown-stage", {"x": 1}) == []  # no schema -> pass
+    with pytest.raises(ValueError):  # unregistered stage is a hard error (ISSUE-034)
+        stage_validate.validate_stage("unknown-stage", {"x": 1})
 
 
 def test_repair_prompt_quotes_errors():

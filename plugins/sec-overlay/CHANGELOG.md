@@ -2,6 +2,163 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.16.2 - 2026-08-15
+
+### Fixed
+
+- Rewrite the `_full` test helper in `test_report.py` as a dict literal to clear a ruff `C408`
+  warning introduced by the report-split work.
+
+## 1.16.1 - 2026-08-15
+
+### Changed
+
+- Document the `artifact-gate` → `artifact-review` phases (Tasks 14–16) in the operating manual:
+  `skills/sec-overlay/CLAUDE.md` §2 phase order and §4 workspace artifacts, `CLAUDE.md`'s
+  CLI-callable module list (`artifact_gate`), and `skills/sec-overlay/README.md`'s pipeline map.
+
+## 1.16.0 - 2026-08-15
+
+### Added
+
+- `PHASE_TABLE` (`phases.py`) gains two phases after `selfscore`: `artifact-gate` (deterministic,
+  runs `run_artifact_gate`) then `artifact-review` (agent, `agents/artifact-review.md`). The driver
+  registers `_act_artifact_gate`, which raises `PhaseHalt` when the gate reports any error, wiring
+  Task 14's `artifact_gate.py` and Task 15's prompt into a normal run for the first time.
+
+## 1.15.0 - 2026-08-15
+
+### Added
+
+- New `agents/artifact-review.md` (§4.8): the opus adversary that runs after the deterministic
+  `artifact_gate` passes, checking that `report.md`, `report.sarif`, and `redteam-plan.md` tell
+  the truth about what the run found — claim-to-evidence against each finding's tool receipt,
+  impact honesty, and red-team coverage. Reasoning alone may demote severity, force a re-render
+  via `render_stale`, or add an `open_questions` entry, but never delete or reject a tool-receipt-
+  backed finding. Writes `kb/gates/artifact-review.json`.
+
+## 1.14.0 - 2026-08-15
+
+### Added
+
+- New `artifact_gate.py` module (§4.8): `run_artifact_gate(ws)` is a deterministic gate over a
+  finished run's own output artifacts, checking `report.md` for stale constant sections and
+  over-long triage cells, every shipping finding for a detail file and a red-team directive, every
+  triage-table ID for a resolving finding, and `CONTEXT.md`'s mermaid diagram for the ≤10-node
+  style cap (ISSUE-022). Writes `kb/gates/artifact-gate.json` and runs before the opus
+  artifact-review adversary.
+
+## 1.13.1 - 2026-08-15
+
+### Fixed
+
+- `validate.md` now requires a `confirmed` finding to carry a real, derived `cvss_vector` and a
+  non-empty `preconditions` list, routing to `needs-deployment-testing` otherwise; `trace.md` now
+  records `preconditions` on a statically-confirmed reachability verdict — calibrate scores off
+  these fields verbatim, so a missing/guessed vector no longer produces a flat, wrong score
+  (ISSUE-008). Prompt-only fix; the calibrate scorer is unchanged.
+
+## 1.13.0 - 2026-08-15
+
+### Added
+
+- `build_self_score` gained `critic_viable`, `critic_rejected`, and `critic_reject_rate` (0.0 with
+  no critic events), counted from `critic:viable`/`critic:rejected` history events across all
+  findings (ISSUE-043) — measurement only, nothing gates on the rate.
+
+## 1.12.3 - 2026-08-15
+
+### Fixed
+
+- `validate_stage` now raises `ValueError` for a stage with no registered validator instead of
+  silently passing — a silent pass masked mis-named stages (ISSUE-034).
+- `run_prefilter` gained a `strict: bool = True` parameter: a planned SAST backend left in
+  `skipped_reasons` or `failed` now raises `RuntimeError` via the new `_raise_on_incomplete_backends`
+  helper instead of returning a silent partial result. Pass `strict=False` only for a deliberately
+  partial run. A `"disabled"` skip reason is excluded from the raise — a profile turning a backend
+  off on purpose is a planning decision, not a coverage hole.
+
+## 1.12.1 - 2026-08-15
+
+### Fixed
+
+- `context-ingest` now has a real check on `docs_read`: `cited_source_docs` collects
+  every `source_doc` an item or its history cites, and the `context` stage-validator
+  rejects a citation to a doc absent from `provenance.docs_read` — `docs_read` can no
+  longer be a placeholder count.
+
+## 1.12.0 - 2026-08-15
+
+### Added
+
+- Time each deterministic driver phase (`run_deterministic_phase`) and record it into
+  `state.budget["timings"]`; the report's economics section renders a "Wall-clock by
+  phase" list when timings are present (ISSUE-014).
+
+## 1.11.0 - 2026-08-15
+
+### Added
+
+- Per-phase wall-clock timing accounting: `cost.record_timing` and
+  `cost.aggregate_timings_by_phase` sum recorded seconds by phase (ISSUE-014).
+
+## 1.10.0 - 2026-08-15
+
+### Added
+
+- Split `report.md`: full per-finding bodies now write to `findings/<ID>.md`, and the
+  Markdown report renders a slim, risk-ordered **Detail** link list instead of inlining
+  every finding's full body (`write_finding_details`, ISSUE-009).
+
+## 1.9.5 - 2026-08-15
+
+### Fixed
+
+- A `needs_follow_up` coverage-ledger surface now carries a non-empty `reason` and
+  `next_step`; `validate_coverage_ledger` rejects one missing either, and `render_markdown`
+  renders both columns.
+
+## 1.9.4 - 2026-08-15
+
+### Fixed
+
+- Prefilter candidate ids are now class-prefixed and numbered per class
+  (`C-SQLI-0001`, `C-XSS-0001`, ...) instead of one global `C-0001..` sequence, so ids carry
+  the attack class and never collide across rulesets (ISSUE-013).
+
+## 1.9.3 - 2026-08-15
+
+### Fixed
+
+- The triage table's `what` column now trims a long title to a word boundary with a trailing
+  `…` instead of cutting mid-word at a fixed 80-character slice (ISSUE-011).
+
+## 1.9.2 - 2026-08-15
+
+### Fixed
+
+- The report's bottom-line `Confirmed:` line now renders counts in words (e.g. `"1 critical, 1
+  high, 2 medium, 1 low"`) instead of an ambiguous digit ratio (`"1/1/2/1"`) (ISSUE-010).
+
+## 1.9.1 - 2026-08-15
+
+### Fixed
+
+- `render_finding`'s §4 Impact now renders the finding's real `impact` text instead of a
+  boilerplate sentence. Deleted the constant §6 Confirmed Attack Scenario and §8 Testing
+  sections — both always emitted the same fixed prose regardless of the finding, misleadingly
+  labelled `full` tier (ISSUE-052).
+
+## 1.9.0 - 2026-08-15
+
+### Added
+
+- `Finding.impact: str = ""` — the concrete consequence of exploitation, rendered as the
+  report's Impact section. `findings_gate.validate_findings` now rejects a `SHIPPING_STATUSES`
+  finding (`confirmed`/`fixed`/`needs-deployment-testing`) whose `impact` is blank; non-shipping
+  findings may stay blank. `references/finding.schema.json` gained the matching `impact` property
+  (not in `required`).
+
 ## 1.8.3 - 2026-08-15
 
 ### Fixed

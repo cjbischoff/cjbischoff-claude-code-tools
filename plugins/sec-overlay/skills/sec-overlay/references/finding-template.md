@@ -93,6 +93,8 @@ Evidence of the trace, keyed to receipts:
   unknown into either a confirmation or a rejection.
 
 ## 4. Impact
+> Rendered from the finding's `impact` field (data-driven); the harness does not fabricate this text.
+
 Business + technical: what data/systems/operations are affected; scope (single
 user, single tenant, cross-tenant, catalog-wide, unbounded); CIA assessment
 (Confidentiality/Integrity/Availability); whether it is repeatable, scriptable, or
@@ -109,6 +111,8 @@ one-shot.
 - Note compensating controls that raise or lower effective risk.
 
 ## 6. Confirmed Attack Scenario
+> The static harness does not render this section (ISSUE-052); it is a manual-analysis aid only.
+
 Preconditions the attacker needs; numbered steps (API calls, payloads, UI
 interactions); expected vs. observed behavior per step; concrete harm. For
 static-only findings, mark this "theoretical — not dynamically confirmed" and give
@@ -124,6 +128,8 @@ the reasoned path.
   residual risk the fix does not address.
 
 ## 8. Testing and Verification
+> The static harness does not render this section (ISSUE-052); the red-team plan covers runtime testing.
+
 - Unit/integration tests: inputs, expected outputs, assertions; reference existing
   suites/frameworks.
 - **Negative test:** the original exploit path must now return the expected

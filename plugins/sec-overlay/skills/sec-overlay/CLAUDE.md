@@ -79,6 +79,8 @@ T1 Tier-1 substrate  python -m sec_overlay.graph build --target <T> --workspace 
 13.5 Red Team       agents/redteam.md (sonnet) → agents/redteam-adversary.md (opus)
                     python -m sec_overlay.redteam --workspace <WS> [--min-risk N]  → redteam-plan.md
 14 Report           python -m sec_overlay.report --workspace <WS>   → report.sarif + report.md
+14.5 Artifact gate  python -m sec_overlay.artifact_gate --workspace <WS>   # deterministic self-check (runs first)
+14.6 Artifact review agents/artifact-review.md (opus, DIFFERENT family) — claim↔evidence, cannot delete a receipt-backed finding
 C2 Postflight       python -m sec_overlay.postflight --workspace <WS> --sha <sha>  # durable prior_context
 ```
 
@@ -95,21 +97,17 @@ Emits `findings/F-*.json`, `report.sarif`, `report.md` — a fast smoke path, no
 ### Hard operating rules during a run
 
 - **A scan is clean only if every PLANNED backend ran.** STOP on a setup error if `run_prefilter`
-  returns empty `backends_run`, or any planned backend appears in `failed`/`skipped_reasons` (e.g.
-  `codeql: pack-missing` = zero dataflow). A partial scan is a **coverage hole**, not "no findings".
-  A missing CodeQL pack silently drops that language's dataflow; run
-  `codeql pack download codeql/<lang>-queries` if preflight shows one absent.
-- **Do not orphan candidates.** The classifier produces classes beyond `agents_to_spawn` (e.g.
-  `security-other`, `unknown`) — call `unrouted_candidate_classes(ws, agents_to_spawn)` and spawn a
-  general-triage agent if non-empty.
-- **Fan-out under provider load:** dispatch parallel agents in waves of ~3–4 on a flaky API — a
-  transient 429/529 can wipe a one-message batch. Re-dispatch is safe: completed candidates carry a
-  terminal status, so skip classes whose candidates are all non-`candidate`.
+  returns empty `backends_run`, or a planned backend appears in `failed`/`skipped_reasons` (e.g.
+  `codeql: pack-missing` = zero dataflow) — a partial scan is a **coverage hole**, not "no findings".
+  Run `codeql pack download codeql/<lang>-queries` if a pack is missing.
+- **Do not orphan candidates.** Classes beyond `agents_to_spawn` (e.g. `security-other`, `unknown`)
+  need `unrouted_candidate_classes(ws, agents_to_spawn)` checked — spawn a general-triage agent if non-empty.
+- **Fan-out under provider load:** dispatch parallel agents in waves of ~3–4 — a transient 429/529
+  can wipe a one-message batch. Re-dispatch is safe: skip classes whose candidates are all non-`candidate`.
 - **Phase completion:** a phase is done only when ALL its outputs exist AND `record_stage` ran —
   never infer completion from one file's presence.
-- **Multi-pass (pass N>1):** scope to changed code with `diffscope.changed_files(<prior_sha>,
-  "HEAD")`; `carry_forward(...)` re-checks settled findings on changed files (→ `stale`) and keeps
-  those on unchanged files. Full re-scan is the safe default; incremental is the token optimization.
+- **Multi-pass (pass N>1):** scope to changed code with `diffscope.changed_files(<prior_sha>, "HEAD")`;
+  `carry_forward(...)` re-checks settled findings on changed files (→ `stale`), keeps unchanged ones — full re-scan is the safe default, incremental is the token optimization.
 - **The Tier-1 substrate is always built**, never behind a flag; `no_path` receipts are only valid
   after Tier-2 taint merge at prefilter.
 
@@ -168,6 +166,8 @@ kb/coverage-ledger.json  surface-completeness ledger; `complete` machine-rejecte
 findings/<ID>.json       every finding, all statuses — evidence_sources, reachability, cvss, patch_diff
 report.sarif             SARIF 2.1.0 (confirmed/fixed)
 report.md                human report (finding-template.md structure; links redteam-plan.md)
+kb/gates/artifact-gate.json    deterministic artifact self-check result
+kb/gates/artifact-review.json  opus adversary verdict over the rendered report
 redteam-plan.md          manual runtime test plan — the engineer's follow-up
 state.json               campaign state (pass number, pinned SHA, stages)
 MEMORY.md, learnings/     durable per-repo memory across runs
@@ -183,18 +183,17 @@ Under `references/`. Agents load these by target type; know when each applies:
 - **`prompt-constants.md`** — twelve verbatim blocks (`ANTI_MANIPULATION`, `EXCLUSION_RULES`,
   `SEVERITY_GUIDANCE`, `SEVERITY_PRECONDITION`, `SHAPE_HUNTING`, `EXHAUSTIVENESS`, `TOOL_TRUST`,
   `PATH_BASE`, `OUTPUT_WRITE_FALLBACK`, `DIAGRAM_STYLE`, `FIELD_OWNERSHIP`, `QUALIFIER_PROOF`)
-  injected into **every** agent so these rules never drift; all agents wrap untrusted repo text
-  in the trust envelope and import these.
+  injected into **every** agent so these rules never drift; all agents wrap untrusted repo text in
+  the trust envelope and import these.
 - **`attack-classes.md`** — attack-class keys + ripgrep indicators; recon fills `agents_to_spawn`.
 - **`hunting/`** — exploit-reasoning companions, loaded conditionally: `methodology.md` +
   `anti-patterns.md` (always, the operational core), `business-logic.md`, `web-protocol-auth.md`
-  (proxies/JWT/OAuth/SAML), `ai-agent.md` (LangChain/MCP/RAG), `memory-native.md` (C/C++/Rust-
-  unsafe/cgo only), `client-side.md` (SPA/browser).
+  (proxies/JWT/OAuth/SAML), `ai-agent.md` (LangChain/MCP/RAG), `memory-native.md` (C/C++/Rust-unsafe/
+  cgo only), `client-side.md` (SPA/browser).
 - **`codeguard/`** — 7 secure-coding checklists per domain, guiding patch/triage remediation shape.
 - **`approved-crypto-algorithms.yaml` / `approved-key-sources.yaml`** — machine-checked by
   `crypto_policy.check` (denies md5/sha1/des/ecb, floors rsa≥3072/pbkdf2≥100000/ecc≥256, denies
   literal key sources): "weak crypto" becomes a deterministic lookup.
 - **`asvs/asvs_5.0.0.json`** (12-item seed), **schemas** (`scan-profile`, `fix-disposition`),
   **`finding-template.md`** (9-section report bound to `Finding`), and **`DETECTION_COVERAGE.md`**
-  (tool-coverage gaps: Liquid/Handlebars templates, single-function OSS-semgrep taint, no CodeQL
-  for PHP).
+  (tool-coverage gaps: Liquid/Handlebars templates, single-function OSS-semgrep taint, no CodeQL for PHP).

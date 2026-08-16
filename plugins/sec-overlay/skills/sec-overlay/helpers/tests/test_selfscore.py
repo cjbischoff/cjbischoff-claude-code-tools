@@ -49,6 +49,9 @@ def test_self_score_counts_by_status_and_persists(tmp_path):
         "clusters": 1,
         "external_boundary": 1,
         "shipping": 5,
+        "critic_viable": 0,
+        "critic_rejected": 0,
+        "critic_reject_rate": 0.0,
     }
     assert load_state(ws).budget["self_score"] == score
 
@@ -80,3 +83,40 @@ def test_shipping_counts_full_set(tmp_path):
     _write_finding_json(ws, "F-4", "rejected")
     score = build_self_score(ws)
     assert score["shipping"] == 3
+
+
+def _wf(ws, fid, events):
+    (ws.findings_dir / f"{fid}.json").write_text(
+        json.dumps(
+            {
+                "id": fid,
+                "rule_id": "r",
+                "cls": "sqli",
+                "status": "raw",
+                "severity": "low",
+                "file": "a.py",
+                "line": 1,
+                "message": "m",
+                "history": [{"event": e} for e in events],
+            }
+        )
+    )
+
+
+def test_self_score_counts_critic_reject_rate(tmp_path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    _wf(ws, "F-1", ["critic:viable"])
+    _wf(ws, "F-2", ["critic:rejected"])
+    _wf(ws, "F-3", ["critic:rejected"])
+    s = build_self_score(ws)
+    assert s["critic_viable"] == 1
+    assert s["critic_rejected"] == 2
+    assert abs(s["critic_reject_rate"] - (2 / 3)) < 1e-9
+
+
+def test_self_score_reject_rate_zero_without_critic_events(tmp_path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    _wf(ws, "F-1", [])
+    assert build_self_score(ws)["critic_reject_rate"] == 0.0

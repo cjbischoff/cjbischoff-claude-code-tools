@@ -126,6 +126,10 @@ bound field-by-field to the `Finding` record. Includes three view subsections: *
 and **Dep-view** (dependency findings with reachability/blocker bindings). The condensed tier
 renumbers 1–4 with no gaps. This is *not* injected into an agent — it is **rendered by**
 `helpers/…/report.py:render_finding()`, which fills the sections from a finding's JSON fields.
+§4 Impact renders the finding's real `impact` field; §6 Confirmed Attack Scenario and §8 Testing
+are template-only sections the harness does not render (ISSUE-052) — both are now flagged as
+manual-analysis aids in the template text itself, since the static harness fabricated no
+attack-scenario or test-plan content for them.
 
 #### `DETECTION_COVERAGE.md` — an honest "what we can and can't see" statement
 A falsifiable statement of what each backend covers per class/language, and known blind
@@ -174,7 +178,7 @@ they never confirm a finding.
 
 | File | Read by | What it decides |
 |------|---------|-----------------|
-| `finding.schema.json` | `findings_gate.py` | Every `findings/*.json` must validate: required fields, `status`/`severity` enums, the hard rule that `confirmed`/`fixed` findings carry ≥1 tool receipt, the inner shape of `runtime_test` (its `expected_signal` may be object, string, or null — the renderers tolerate all three), `open_questions` (array of `{question, why_it_matters, who_to_ask_or_check}` objects — human-answerable unknowns a live-exploit test can't settle, populated by `trace`/`redteam`), `cluster_id`/`affected_sites` (systemic-cluster id and, on a cluster primary, the member sites `{id, file, line}` — set by the cluster pass), and `receipt_tier` (optional integer or null — the derived tool-receipt strength, absent until a gate stamps it). |
+| `finding.schema.json` | `findings_gate.py` | Every `findings/*.json` must validate: required fields, `status`/`severity` enums, the hard rule that `confirmed`/`fixed` findings carry ≥1 tool receipt, the inner shape of `runtime_test` (its `expected_signal` may be object, string, or null — the renderers tolerate all three), `open_questions` (array of `{question, why_it_matters, who_to_ask_or_check}` objects — human-answerable unknowns a live-exploit test can't settle, populated by `trace`/`redteam`), `cluster_id`/`affected_sites` (systemic-cluster id and, on a cluster primary, the member sites `{id, file, line}` — set by the cluster pass), and `receipt_tier` (optional integer or null — the derived tool-receipt strength, absent until a gate stamps it), and `impact` (string, default empty — required non-empty for a `SHIPPING_STATUSES` finding, enforced by `findings_gate`). |
 | `scan-profile.schema.json` | `profile.py` | `kb/scan-profile.json` shape (languages, frameworks, attack_surface, sast_plan, agents_to_spawn, budget_hint, attack_surface_evidence — required, matches `profile._REQUIRED`; optional subsystems, scan_options). |
 | `fix-disposition.schema.json` | `fix_disposition.py` | Fix-completeness records (FULL/MITIGATION/WORKAROUND + gates/evidence/rationale). |
 | `coverage-ledger.schema.json` | `coverage_ledger.py` | The surface-completeness ledger (`completeness`, `surfaces`, `deferred`, `open_questions`). |

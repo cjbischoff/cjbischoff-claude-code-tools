@@ -315,3 +315,29 @@ def test_findings_gate_action_halts_on_error(tmp_path):
     ctx = AuditContext(ws=ws, target=str(tmp_path), config="", sha="s")
     with pytest.raises(PhaseHalt):
         DETERMINISTIC_ACTIONS["findings-gate"](ctx)
+
+
+def test_deterministic_phase_records_timing(tmp_path):
+    from sec_overlay.cost import aggregate_timings_by_phase
+    from sec_overlay.driver import AuditContext, run_deterministic_phase
+    from sec_overlay.phases import PhaseSpec, _findings_dir, _report
+    from sec_overlay.state import load_state
+
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    ws.report_path.write_text("# stub\n")
+    ctx = AuditContext(ws=ws, target=str(tmp_path), config="", sha="deadbeef")
+    phase = PhaseSpec("selfscore", "deterministic", (_report,), (_findings_dir,))
+    run_deterministic_phase(phase, ctx)
+    assert "selfscore" in aggregate_timings_by_phase(load_state(ws))
+
+
+def test_act_artifact_gate_halts_on_error(tmp_path):
+    from sec_overlay.driver import AuditContext, PhaseHalt, _act_artifact_gate
+
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    ws.report_path.write_text("# r\n**8. Testing.** Negative: x\n")  # banned fragment
+    ctx = AuditContext(ws=ws, target=str(tmp_path), config="", sha="x")
+    with pytest.raises(PhaseHalt):
+        _act_artifact_gate(ctx)

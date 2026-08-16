@@ -138,13 +138,8 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
             out += ["Non-receipt / llm-claimed: " + ", ".join(f"`{c}`" for c in claimed) + ".  "]
         out += [f"Verification: `{verification}`.", ""]
         # §4 Impact
-        out += [
-            (
-                f"**4. Impact.** Attack class `{f.cls}`; scope per Summary. Assess CIA "
-                "and whether impact is bounded/scriptable per the template."
-            ),
-            "",
-        ]
+        impact_text = (f.impact or "").strip() or "(impact not recorded)"
+        out += [f"**4. Impact.** {impact_text}", ""]
     # §5 Severity (full) / §3 Severity (condensed)
     sev_no, fix_no = ("5", "7") if full else ("3", "4")
     out += [
@@ -168,27 +163,8 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
             ),
             "",
         ]
-    # §6 Attack Scenario (full tier only)
-    if full:
-        out += [
-            (
-                "**6. Confirmed Attack Scenario** (theoretical — not dynamically "
-                "confirmed): follow the §2 data flow from source to sink."
-            ),
-            "",
-        ]
     # §7 Fix (full) / §4 Fix (condensed)
     out += [f"**{fix_no}. Fix.**", patch, ""]
-    # §8 Testing (full tier only)
-    if full:
-        out += [
-            (
-                "**8. Testing.** Negative: the §2 exploit path must return the expected "
-                "rejection post-fix. Regression: legitimate use still works. Static: the "
-                "detector rule must no longer fire in the file."
-            ),
-            "",
-        ]
     return "\n".join(out)
 
 
@@ -241,6 +217,24 @@ def render_ndt(f: Finding) -> str:
     return "\n".join(out)
 
 
+def _short_title(text: str, limit: int = 72) -> str:
+    """Trim a triage title to ``limit`` chars on a word boundary.
+
+    Args:
+        text: The raw title text.
+        limit: Maximum characters before the ellipsis.
+
+    Returns:
+        ``text`` unchanged when within ``limit``; otherwise the longest
+        whole-word prefix that fits, plus a trailing ``"…"``. Never cuts a word.
+    """
+    text = " ".join(text.split())
+    if len(text) <= limit:
+        return text
+    cut = text[:limit].rsplit(" ", 1)[0].rstrip()
+    return (cut or text[:limit].rstrip()) + "…"
+
+
 def _triage_row(f: Finding, status_label: str, action: str) -> str:
     """Render one triage table row: id, risk, one-clause what, location, status, next action.
 
@@ -252,7 +246,7 @@ def _triage_row(f: Finding, status_label: str, action: str) -> str:
     Returns:
         A single Markdown table row string (pipe-delimited).
     """
-    what = (f.message or "").split("|", 1)[0].split(". ")[0].strip()[:80]
+    what = _short_title((f.message or "").split("|", 1)[0].split(". ")[0].strip())
     risk = f.risk_score if f.risk_score is not None else "-"
     return f"| {f.id} | {risk} | {what} | {f.file}:{f.line} | {status_label} | {action} |"
 
@@ -269,8 +263,9 @@ def to_markdown(
 ) -> str:
     """Render findings and optional token accounting as Markdown.
 
-    Structure: Bottom line → Triage table → Needs runtime proof section →
-    Confirmed section → Coverage / redteam link / coverage-ledger / token-spend tail.
+    Structure: Bottom line → Triage table → Detail link list (per-finding bodies
+    live in ``findings/<ID>.md``, written by :func:`write_finding_details`) →
+    Coverage / redteam link / coverage-ledger / token-spend tail.
     NDT findings are NEVER folded into confirmed counts; the ``Needs runtime proof``
     line is never 0 when ``needs_deployment`` is non-empty.
 
@@ -288,9 +283,9 @@ def to_markdown(
             "Manual runtime testing" section pointing the engineer at it (O-022).
         patch_statuses: Optional ``finding.id`` → :class:`PatchStatus`, from
             :func:`check_patch_applied` against the real target, for ``fixed`` findings.
-        economics: Optional ``{"by_phase": dict, "by_model": dict, "usd_estimate": float}``
-            from :func:`sec_overlay.cost`; renders a "Run economics" section and takes
-            priority over ``token_spend`` when both are given.
+        economics: Optional ``{"by_phase": dict, "by_model": dict, "by_phase_seconds": dict,
+            "usd_estimate": float}`` from :func:`sec_overlay.cost`; renders a "Run economics"
+            section and takes priority over ``token_spend`` when both are given.
 
     Returns:
         A Markdown report string.
@@ -313,11 +308,19 @@ def to_markdown(
         summary_sentence = f"{'Critical' if crit else 'High'}-severity source-provable findings require immediate remediation."
     else:
         summary_sentence = "Source-provable findings at medium/low severity."
+    counts_phrase = (
+        ", ".join(
+            f"{n} {label}"
+            for label, n in (("critical", crit), ("high", high), ("medium", med), ("low", low))
+            if n
+        )
+        or "none"
+    )
     lines = [
         "# sec-overlay Report",
         "",
         f"**Bottom line.** {summary_sentence}  ",
-        f"Confirmed: {crit}/{high}/{med}/{low}",
+        f"Confirmed: {counts_phrase}",
         f"Needs runtime proof: {len(ndt)}",
         "",
     ]
@@ -337,11 +340,25 @@ def to_markdown(
         lines.append(_triage_row(f, status_label, action))
     lines.append("")
 
-    # Needs runtime proof section (NDT only, leads above confirmed)
-    if ndt:
-        lines += ["## Needs runtime proof — the real leads", ""]
-        for f in ndt:
-            lines += [render_ndt(f), "---", ""]
+    # Detail — risk-ordered links to per-finding files (bodies live in findings/<ID>.md)
+    detail = sorted(list(conf) + list(ndt), key=_risk_sort_key)
+    if detail:
+        lines += ["## Detail", ""]
+        for f in detail:
+            risk = f.risk_score if f.risk_score is not None else "-"
+            label = "needs-runtime" if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING else "confirmed"
+            lines.append(
+                f"- [{f.id}](findings/{f.id}.md) — risk {risk} — {label} — "
+                f"{_short_title((f.message or '').split('|', 1)[0].split('. ')[0].strip())}"
+            )
+        lines.append("")
+        lines += [
+            (
+                "_Informational findings (not shipped in this report) remain in "
+                "`findings.json`._"
+            ),
+            "",
+        ]
 
     # External-unverifiable leads — sink crosses into an un-ingested dependency
     if external:
@@ -356,12 +373,6 @@ def to_markdown(
         ]
         for f in external:
             lines += ["", render_ndt(f)]
-
-    # Confirmed section
-    if conf:
-        lines += ["## Confirmed (source-provable)", ""]
-        for f in conf:
-            lines += [render_finding(f, patch_status=(patch_statuses or {}).get(f.id)), "---", ""]
 
     if coverage:
         lines += [
@@ -401,6 +412,10 @@ def to_markdown(
         lines += [f"- **{phase}**: {n}" for phase, n in economics.get("by_phase", {}).items()]
         lines += ["", "**Tokens by model** (measured):"]
         lines += [f"- **{model}**: {n}" for model, n in economics.get("by_model", {}).items()]
+        by_secs = economics.get("by_phase_seconds") or {}
+        if by_secs:
+            lines += ["", "**Wall-clock by phase, seconds** (measured):"]
+            lines += [f"- **{phase}**: {secs:.2f}" for phase, secs in by_secs.items()]
         usd = economics.get("usd_estimate")
         if usd is not None:
             lines += ["", f"**Estimated cost:** ${usd:.4f} (estimate, not a billed figure)."]
@@ -408,6 +423,31 @@ def to_markdown(
         lines += ["", "## Token spend by phase", ""]
         lines += [f"- **{phase}**: {n}" for phase, n in token_spend.items()]
     return "\n".join(lines) + "\n"
+
+
+def write_finding_details(
+    ws: Workspace, findings: list[Finding], patch_statuses: dict | None = None
+) -> list[str]:
+    """Write one Markdown detail file per finding to ``ws.findings_dir/<ID>.md``.
+
+    Args:
+        ws: Workspace whose ``findings_dir`` receives the ``<ID>.md`` files.
+        findings: Confirmed/fixed/NDT findings to render in full.
+        patch_statuses: Optional ``id -> PatchStatus`` for fixed findings.
+
+    Returns:
+        The finding ids written, in input order.
+    """
+    ws.findings_dir.mkdir(parents=True, exist_ok=True)
+    written: list[str] = []
+    for f in findings:
+        if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING:
+            body = render_ndt(f)
+        else:
+            body = render_finding(f, patch_status=(patch_statuses or {}).get(f.id))
+        (ws.findings_dir / f"{f.id}.md").write_text(body + "\n")
+        written.append(f.id)
+    return written
 
 
 def collapse_clusters(findings: list[Finding]) -> list[Finding]:
@@ -495,13 +535,15 @@ def write_report(ws: Workspace, *, target: str | None = None, confirmed_only: bo
     has_redteam_plan = (ws.reports / "redteam-plan.md").exists()
     state = load_state(ws)
     by_phase = cost.aggregate_by_phase(state)
+    by_phase_seconds = cost.aggregate_timings_by_phase(state)
     economics = (
         {
             "by_phase": by_phase,
             "by_model": cost.aggregate_by_model(state),
+            "by_phase_seconds": by_phase_seconds,
             "usd_estimate": cost.estimate_cost_usd(state),
         }
-        if by_phase
+        if by_phase or by_phase_seconds
         else None
     )
     patch_statuses = None
@@ -527,6 +569,7 @@ def write_report(ws: Workspace, *, target: str | None = None, confirmed_only: bo
             economics=economics,
         )
     )
+    write_finding_details(ws, reportable + ndt, patch_statuses=patch_statuses)
     findings_out = reportable + ndt
     ws.findings_json_path.write_text(json.dumps([f.to_dict() for f in findings_out], indent=2))
     record_stage(ws, "report")

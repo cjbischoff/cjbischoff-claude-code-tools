@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
@@ -13,12 +14,60 @@ from sec_overlay.campaign import record_stage
 from sec_overlay.codeql import CodeQLError, codeql_config_trusted, qlpack_installed, run_codeql
 from sec_overlay.coverage import compute_coverage
 from sec_overlay.exclusions import apply_exclusions, load_exclusions
+from sec_overlay.models import Finding
 from sec_overlay.normalize import normalize
 from sec_overlay.profile import ScanProfile
 from sec_overlay.sast import run_semgrep
 from sec_overlay.sca import ScaError, run_sca
 from sec_overlay.secrets import scan_secrets
 from sec_overlay.workspace import Workspace, write_findings
+
+
+def _assign_candidate_ids(kept: list[Finding]) -> None:
+    """Assign per-class candidate ids ``C-<PREFIX>-####`` in canonical order.
+
+    Sorts ``kept`` in place by ``(file, line, rule_id, cls)`` — the same canonical
+    order used before — then numbers each class independently so ids never collide
+    across rulesets and carry the attack class (ISSUE-013).
+
+    Args:
+        kept: Findings to number, mutated in place.
+    """
+    kept.sort(key=lambda f: (f.file, f.line, f.rule_id, f.cls))
+    counters: dict[str, int] = {}
+    for f in kept:
+        prefix = re.sub(r"[^A-Z0-9]+", "-", f.cls.upper()).strip("-") or "UNKNOWN"
+        counters[prefix] = counters.get(prefix, 0) + 1
+        f.id = f"C-{prefix}-{counters[prefix]:04d}"
+
+
+def _raise_on_incomplete_backends(
+    *, skipped_reasons: dict[str, str], failed: list[dict], strict: bool
+) -> None:
+    """Raise when a planned backend did not run (strict never-silent contract).
+
+    Args:
+        skipped_reasons: Backend -> reason for backends that did not run. A
+            ``"disabled"`` reason is excluded — a profile deliberately turning a
+            backend off is a planning decision, not a coverage hole (ISSUE-034, R14).
+        failed: Backend failure records.
+        strict: When True, any skipped (other than disabled) or failed backend is a
+            hard error.
+
+    Raises:
+        RuntimeError: ``strict`` and at least one non-disabled backend is skipped or
+            failed.
+    """
+    if not strict:
+        return
+    skips = [(b, r) for b, r in skipped_reasons.items() if r != "disabled"]
+    problems = skips + [(f.get("backend"), f.get("error")) for f in failed]
+    if problems:
+        joined = ", ".join(f"{b}: {r}" for b, r in problems)
+        raise RuntimeError(
+            f"prefilter: planned backend(s) did not run — {joined}. "
+            "A partial scan is a coverage hole, not 'no findings'."
+        )
 
 
 def run_prefilter(
@@ -35,6 +84,7 @@ def run_prefilter(
     sca_fn=run_sca,
     exclusions_fn=load_exclusions,
     max_workers: int | None = None,
+    strict: bool = True,
 ) -> dict:
     """Run the profile's enabled SAST backends concurrently and persist merged candidates.
 
@@ -58,6 +108,10 @@ def run_prefilter(
         trust_fn: Injectable CodeQL config trust checker; returns (trusted, reason).
         exclusions_fn: Injectable exclusion loader; called with workspace.
         max_workers: Thread pool size; defaults to ``cpu_count - 1`` (capped at 8).
+        strict: When True (default), any planned backend left in ``skipped_reasons``
+            or ``failed`` raises ``RuntimeError`` instead of returning a silent
+            partial result (ISSUE-034). Pass False only for a deliberately partial
+            run (e.g. a test exercising one backend's skip/failure path).
 
     A backend whose binary is absent is recorded in ``skipped``. A backend that
     ran but errored (e.g. a CodeQL build/analyze failure) is recorded in
@@ -77,6 +131,9 @@ def run_prefilter(
         records why each backend was not run, and ``coverage`` is the per-language dataflow/
         pattern-only/none breakdown from :func:`sec_overlay.coverage.compute_coverage` (also
         persisted to ``kb/coverage.json``).
+
+    Raises:
+        RuntimeError: ``strict`` (the default) and a planned backend is skipped or failed.
     """
     plan = profile.sast_plan
     codeql_db_root = tempfile.mkdtemp(prefix="sec-overlay-codeql-")
@@ -219,14 +276,13 @@ def run_prefilter(
     # sort below is a stable canonical ordering (total key incl. cls, so ties
     # can't reorder), and the id reassignment fixes the latent bug where each
     # ruleset's parser numbered its findings from C-0001, colliding across rulesets.
-    kept.sort(key=lambda f: (f.file, f.line, f.rule_id, f.cls))
-    for i, f in enumerate(kept, start=1):
-        f.id = f"C-{i:04d}"
+    _assign_candidate_ids(kept)
 
     write_findings(ws, kept)
     coverage = compute_coverage(profile, ran, target)
     ws.kb.mkdir(parents=True, exist_ok=True)
     (ws.kb / "coverage.json").write_text(json.dumps(coverage, indent=2))
+    _raise_on_incomplete_backends(skipped_reasons=skipped_reasons, failed=failed, strict=strict)
     record_stage(ws, "prefilter")
     return {
         "candidates": len(kept),

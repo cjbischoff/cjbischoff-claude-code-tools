@@ -93,6 +93,7 @@ def test_gate_accepts_needs_deployment_without_receipt(tmp_path):
     ws = Workspace(tmp_path / "workspace"); ws.ensure()
     f = _good(); f.status = FindingStatus.NEEDS_DEPLOYMENT_TESTING
     f.evidence_sources = ["llm-claimed:reasoning"]   # no mechanical receipt is OK here
+    f.impact = "read arbitrary rows"
     write_findings(ws, [f])
     assert validate_findings(ws) == []
 
@@ -126,7 +127,7 @@ def test_validate_findings_records_stage(tmp_path):
 def _write_raw(ws: Workspace, fid: str, **over) -> None:
     data = {"id": fid, "rule_id": "r", "cls": "injection", "status": "confirmed",
             "severity": "high", "file": "a.py", "line": 3, "message": "m",
-            "dataflow": [], "evidence_sources": ["ripgrep"]}
+            "dataflow": [], "evidence_sources": ["ripgrep"], "impact": "read arbitrary rows"}
     data.update(over)
     (ws.findings_dir / f"{fid}.json").write_text(json.dumps(data))
 
@@ -227,3 +228,27 @@ def test_control_finding_placeholder_anchor_rejected(tmp_path):
         f.status = FindingStatus.CONFIRMED  # force shipping status to exercise the gate
     write_findings(ws, cf)
     assert validate_citations(ws, root)  # non-empty: the placeholder anchor is rejected
+
+
+def _write(ws, fid, status, impact, sources):
+    p = ws.findings_dir / f"{fid}.json"
+    p.write_text(json.dumps({
+        "id": fid, "rule_id": "r", "cls": "sqli", "status": status, "severity": "high",
+        "file": "a.py", "line": 1, "message": "m", "dataflow": [], "impact": impact,
+        "evidence_sources": sources}))
+
+
+def test_shipping_finding_requires_nonempty_impact(tmp_path):
+    from sec_overlay.workspace import Workspace
+    ws = Workspace(tmp_path); ws.ensure()
+    _write(ws, "F-1", "confirmed", "", ["semgrep:rule"])
+    errs = validate_findings(ws)
+    assert any("impact must be non-empty" in e for e in errs)
+
+
+def test_nonshipping_finding_allows_empty_impact(tmp_path):
+    from sec_overlay.workspace import Workspace
+    ws = Workspace(tmp_path); ws.ensure()
+    _write(ws, "F-2", "rejected", "", ["semgrep:rule"])
+    errs = validate_findings(ws)
+    assert not any("impact must be non-empty" in e for e in errs)

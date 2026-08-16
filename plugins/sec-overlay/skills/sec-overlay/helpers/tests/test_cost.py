@@ -31,3 +31,12 @@ def test_aggregate_by_model():
     cost.record_agent(st, "validate", "opus", 2000)
     cost.record_agent(st, "investigate", "sonnet", 500)
     assert cost.aggregate_by_model(st) == {"sonnet": 1500, "opus": 2000}
+
+
+def test_record_and_aggregate_timings():
+    st = CampaignState(pass_number=1, active_sha=None)
+    cost.record_timing(st, "prefilter", 1.5)
+    cost.record_timing(st, "prefilter", 0.5)
+    cost.record_timing(st, "report", 2.0)
+    agg = cost.aggregate_timings_by_phase(st)
+    assert agg == {"prefilter": 2.0, "report": 2.0}

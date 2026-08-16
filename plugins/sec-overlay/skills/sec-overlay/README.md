@@ -108,7 +108,9 @@ flowchart TD
     GATE --> RT(("13.5 · redteam → redteam-adversary"))
     RT --> RTR["redteam.py → redteam-plan.md"]
     RTR --> REP["14 · report<br/>report.sarif + report.md"]
-    REP --> C2["C2 · postflight<br/>durable prior_context.json"]
+    REP --> AG["14.5 · artifact_gate<br/>deterministic self-check"]
+    AG --> AR(("14.6 · artifact-review (opus)<br/>claim↔evidence over the rendered report"))
+    AR --> C2["C2 · postflight<br/>durable prior_context.json"]
 ```
 
 The phase legend with exact commands is in [`SKILL.md`](SKILL.md); the hard operating rules
@@ -145,6 +147,8 @@ def get_user():
 | **12 verify** | `verify` (no LLM) | Applies the diff to a temp copy, re-runs semgrep → the rule no longer fires → **`fixed` / verified-static**. | status → `fixed` |
 | **13.5 redteam** | `redteam` → `redteam-adversary` | Marks it `static-settled` (source proves it) but still writes a `runtime_test` with a `$PAYLOAD` shell var so an operator can confirm live; opus adversary keeps it (payload ties to the real sink). | `redteam-plan.md` |
 | **14 report** | `report` (no LLM) | Renders the finding into `report.md` (9-section template) and `report.sarif`. | `report.md`, `report.sarif` |
+| **14.5 artifact_gate** | `artifact_gate` (no LLM) | Checks the finding has a detail file and a red-team directive, and that its triage-table `what` cell isn't stale or over-long. Passes. | `kb/gates/artifact-gate.json` |
+| **14.6 artifact-review** | `artifact-review.md` (**opus**) | Reads the finding's tool receipt against `report.md`'s claim — they match, impact text is honest, red-team coverage is present. No demotion, no re-render forced. | `kb/gates/artifact-review.json` |
 | **C2 postflight** | `postflight` | Records "confirmed SQLi in get_user, fixed at <sha>" into durable memory so the next scan doesn't re-litigate it. | `kb/prior_context.json` |
 
 The point of the table: **no single step is trusted.** A tool found it, a sonnet agent
@@ -196,6 +200,8 @@ uv run python -m sec_overlay.findings_gate --workspace <WS>    # 13
 # 13.5 spawn redteam → redteam-adversary
 uv run python -m sec_overlay.redteam       --workspace <WS>
 uv run python -m sec_overlay.report        --workspace <WS>    # 14
+uv run python -m sec_overlay.artifact_gate --workspace <WS>    # 14.5
+# 14.6 spawn agents/artifact-review.md (opus)
 uv run python -m sec_overlay.postflight    --workspace <WS> --sha <sha>   # C2
 uv run python -m sec_overlay.selfscore     --workspace <WS>
 ```
@@ -222,6 +228,8 @@ kb/discovery-ledger.json  investigate saturation state
 findings/<ID>.json        every finding, all statuses — evidence, reachability, cvss, patch
 report.sarif              SARIF 2.1.0 (confirmed/fixed)
 report.md                 the human report (finding-template structure)
+kb/gates/artifact-gate.json    deterministic artifact self-check result
+kb/gates/artifact-review.json  opus adversary verdict over the rendered report
 redteam-plan.md           the manual runtime test plan — the engineer's follow-up
 state.json                campaign state (pass number, pinned SHA, stages)
 MEMORY.md, learnings/     durable per-repo memory across runs

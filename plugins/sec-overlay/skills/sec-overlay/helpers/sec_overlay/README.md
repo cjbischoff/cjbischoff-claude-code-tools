@@ -16,7 +16,24 @@ entry point; read the parent map for the full inventory.
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
 
+New module `artifact_gate.py` (§4.8): `run_artifact_gate(ws)` checks a finished run's own
+artifacts — report.md free of stale constant sections and over-long triage cells, every shipping
+finding has a `findings/<ID>.md` detail file and a red-team directive, every triage-table ID
+resolves to a finding, and `CONTEXT.md`'s mermaid diagram stays at ≤10 nodes (ISSUE-022). Writes
+`kb/gates/artifact-gate.json`; runs before the opus artifact-review adversary, never deletes
+findings.
+
 `context.py` gained `doc_coverage()` to compare documents discovered vs read and flag a low read ratio. The `load()` function now accepts optional `repo_root` and `scan_scope` parameters to populate `provenance["docs_discovered"]` at load time (wiring by downstream caller) — see the module map entry.
+
+`stage_validate.py`'s `validate_stage` now raises `ValueError` for a stage with no registered
+validator instead of silently passing, and `prefilter.py`'s `run_prefilter` gained a
+`strict: bool = True` parameter plus a new `_raise_on_incomplete_backends` helper: a planned SAST
+backend left in `skipped_reasons` or `failed` now raises `RuntimeError` instead of returning a
+silent partial result (ISSUE-034). Pass `strict=False` only for a deliberately partial run. A
+`"disabled"` skip reason is excluded from the raise — a profile turning a backend off on purpose
+is a planning decision, not a coverage hole (R14).
+
+`context.py` also gained `cited_source_docs()` (every `source_doc` an item or its history cites); `stage_validate.py`'s `_validate_context` now appends an error when a cited doc is absent from `provenance["docs_read"]` (ISSUE-021).
 
 `findings_gate.py` gained `validate_citations(ws, root, *, statuses=None)`, a resolver-backed
 citation/anchor check: it rejects any finding at a gated status (default
@@ -29,6 +46,10 @@ lists into the same `PhaseHalt`.
 
 `cost.py` gained `aggregate_by_model` (per-model token totals, alongside the existing
 `aggregate_by_phase`), feeding `report.py`'s "Run economics" section — see the module map entry.
+It also gained `record_timing`/`aggregate_timings_by_phase`, summing per-phase wall-clock
+seconds recorded in `CampaignState.budget["timings"]` (ISSUE-014). `write_report` folds
+`aggregate_timings_by_phase` into the economics dict as `by_phase_seconds`, and `to_markdown`
+renders it as a "Wall-clock by phase, seconds" list in "Run economics" when present.
 
 `models.py`'s `Finding` gained `cluster_id` (systemic-cluster id) and `affected_sites` (member
 sites on a cluster primary) — additive, nullable fields that round-trip through `to_dict`/
@@ -39,6 +60,10 @@ sites on a cluster primary) — additive, nullable fields that round-trip throug
 returns a `shipping` count over the full `evidence.SHIPPING_STATUSES` set, alongside the
 narrower `reported` count (`confirmed`/`fixed` only) it retains for backward continuity.
 
+`build_self_score` gained `critic_viable`, `critic_rejected`, and `critic_reject_rate` (0.0 with
+no critic events), counted from `critic:viable`/`critic:rejected` history events across all
+findings (ISSUE-043) — measurement only, nothing gates on the rate.
+
 `evidence.py` gained a shared tier/status vocabulary: `TIER1_RECEIPTS`/`TIER2_RECEIPTS` (partition
 `_MECHANICAL`), `SHIPPING_STATUSES`, `RUNTIME_DISPOSITIONS`, and the `receipt_tier()`/
 `confirms_alone()` predicates — a single source of truth for later modules that need to know
@@ -47,6 +72,15 @@ whether a source can confirm a finding alone.
 `models.py`'s `Finding` gained `receipt_tier: int | None` — an additive, nullable field that
 round-trips through `to_dict`/`from_dict`. It holds the value `evidence.receipt_tier()` derives
 once a gate stamps it; `None` before that.
+
+`models.py`'s `Finding` also gained `impact: str = ""` — the concrete consequence of exploitation,
+rendered as the report's Impact section. `findings_gate.validate_findings` rejects a
+`SHIPPING_STATUSES` finding whose `impact` is blank; non-shipping findings may stay blank.
+
+`report.py`'s `render_finding` §4 Impact now renders that real `f.impact` text (falling back to
+`"(impact not recorded)"` when blank) instead of a boilerplate sentence. The constant §6 Confirmed
+Attack Scenario and §8 Testing blocks are deleted — both always emitted identical fixed prose
+regardless of the finding (ISSUE-052); section numbering (`sev_no`/`fix_no`) is unchanged.
 
 `cluster.py` (new) groups ≥3 same-class, same-sink `raw` findings into one systemic cluster,
 run after dedupe and before the critic/gate ladder — see the module map entry.
@@ -61,6 +95,14 @@ so two dataflow-less findings at the same site collapse regardless of message wo
 finding (highest-risk member, or the elected primary if present) before the confirmed and
 needs-runtime buckets are counted and rendered; `render_ndt` renders an affected-sites table when
 the finding carries `affected_sites`.
+
+`report.py`'s bottom-line `Confirmed:` line now renders counts in words (`"1 critical, 1 high, 2
+medium, 1 low"`, zero counts omitted, `"none"` when all zero) instead of a digit ratio
+(`"1/1/2/1"`) (ISSUE-010).
+
+`report.py` gained `_short_title(text, limit=72)`, trimming the triage table's `what` column to a
+word boundary with a trailing `…` instead of cutting mid-word at a fixed 80-character slice
+(ISSUE-011).
 
 **Breaking:** `findings_gate.validate_findings` now enforces the tier model instead of the
 old "any mechanical receipt confirms" rule. It stamps `Finding.receipt_tier` (the lowest —
@@ -88,6 +130,13 @@ external-dependency verification" section (via `render_ndt`), separate from the 
 needs-runtime section, so a capped external-boundary lead is never conflated with an in-repo
 needs-runtime finding.
 
+`report.py` gained `write_finding_details(ws, findings, patch_statuses=None)`, which writes one
+Markdown file per finding to `ws.findings_dir/<ID>.md` (full `render_finding`/`render_ndt` body).
+`to_markdown` no longer inlines the "Needs runtime proof" or "Confirmed (source-provable)"
+sections — it renders a risk-ordered "## Detail" link list pointing at `findings/<ID>.md` instead,
+so `report.md` stays short while the full evidence stays one click away. `write_report` calls
+`write_finding_details` after writing `report.md` so the linked files always exist.
+
 `sarif.py` gained `_rules()`, populating `driver.rules` from the finding set (de-duplicated by
 `rule_id`, `cls` as `name`, `asvs_ids`/`codeguard_ids` as `properties`) — additive only, `results`
 unchanged — see the module map entry.
@@ -104,12 +153,17 @@ review-improvements branch; keep them that way (run `ruff format` before committ
 
 `phases.py` (new) is the ordered phase table (`PhaseSpec`, `PHASE_TABLE`) plus pure sequencer
 helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit driver walks —
-see the module map entry.
+see the module map entry. `PHASE_TABLE` now ends with `artifact-gate` (deterministic, input
+`_report`/`_sarif`, output `_artifact_gate_json`) then `artifact-review` (agent,
+`agents/artifact-review.md`, input `_artifact_gate_json`, output `_artifact_review_json`), both
+after `selfscore`.
 
 `driver.py` (new) is the audit sequencer: deterministic-phase runner, loud halt, agent-dispatch
 printer. `run_deterministic_phase` checks a `PhaseSpec`'s inputs, runs its registered
-`DETERMINISTIC_ACTIONS` entry, checks its outputs, then calls `record_stage` — raising
-`PhaseHalt` if an input or output artifact is missing. `AuditContext` carries the workspace,
+`DETERMINISTIC_ACTIONS` entry (timed with `time.perf_counter` and recorded via
+`cost.record_timing` before `record_stage`, ISSUE-014), checks its outputs, then calls
+`record_stage` — raising `PhaseHalt` if an input or output artifact is missing. `AuditContext`
+carries the workspace,
 target, config, pinned SHA, and lazily-loaded `ScanProfile` an action needs. `render_dispatch`
 returns the printable block for an agent phase — prompt file plus `{{TARGET}}`/`{{WORKSPACE}}`/
 `{{SHA}}` substitutions, plus an optional `{{ATTACK_CLASS}}` line when called with `classes=` —
@@ -128,7 +182,11 @@ reconciled class list passed to `render_dispatch(classes=...)` (no triage block,
 (a `static-only` re-verify routes the finding to `needs-deployment-testing`, never leaves it
 `confirmed` implying a dynamic check passed; only `verified-static` promotes to `fixed`),
 `demote-noise` → `partition.demote_noise`, `report` → `report.write_report`, `selfscore` →
-`selfscore.write_self_score`. `run_audit(ctx)` walks `PHASE_TABLE` from the first phase not yet
+`selfscore.write_self_score`, `artifact-gate` → `_act_artifact_gate` (calls
+`artifact_gate.run_artifact_gate`, raising `PhaseHalt` naming every error when the gate rejects the
+run's own artifacts). `artifact-review` is an agent phase with no registered action — it
+auto-advances once `kb/gates/artifact-review.json` exists, same as any other output-only agent
+phase. `run_audit(ctx)` walks `PHASE_TABLE` from the first phase not yet
 `done`: runs deterministic phases in place, and for an agent phase auto-advances only when it has
 an output path that is *not also* one of its inputs (several agent phases — `investigate`,
 `critic`, `judge`, `validate`, `trace`, `patch` — declare the same `findings_dir` callable as both
@@ -191,6 +249,10 @@ and raising `ValueError` naming every `{{TOKEN}}` left unfilled — the orchestr
 agent dispatch prompt through it so a hand-substitution gap (a literal `{{ATTACK_CLASS}}`)
 fails before the model runs instead of silently reaching it.
 
+`coverage_ledger.py`'s `build_coverage_ledger` now stamps its own `needs_follow_up` surfaces with
+a `reason`/`next_step` too (previously bare), matching the shape `route_control.py`'s gap dicts
+already used; `validate_coverage_ledger` rejects a `needs_follow_up` surface missing either field.
+
 `route_control.py` (new, ISSUE-027/029/036) derives one route-to-control table from
 `kb/scan-profile.json` (`build_route_control_table`) and checks recon, architecture, and threat-
 model output against it (`check_recon_routes`, `check_architecture_controls`,
@@ -209,3 +271,7 @@ silently lost. Uses an alias map (e.g., sqli/cmdi/xss → injection.md) to count
 `sast.py` now excludes `.sec-overlay`, `.git`, `.venv`, and `node_modules` directories from
 semgrep scans via `_SKIP_DIRS` tuple and `--exclude` flags, preventing audit findings on the
 harness's own sidecar output.
+
+`prefilter.py`'s candidate-id assignment moved into `_assign_candidate_ids`, which now numbers
+ids per attack class (`C-SQLI-0001`, `C-XSS-0001`, ...) instead of one global `C-0001..`
+sequence, so ids carry the class and never collide across rulesets (ISSUE-013).

@@ -6,6 +6,7 @@ from pathlib import Path
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.patch_status import PatchStatus
 from sec_overlay.report import (
+    _short_title,
     collapse_clusters,
     render_finding,
     render_ndt,
@@ -127,12 +128,13 @@ def _rf(id_, status, risk=None, verification=None, sev=Severity.HIGH):
 
 
 def test_to_markdown_shows_risk_and_verification():
-    # Intent: risk score and verification text both appear in the report.
-    # Risk appears in the triage table header; verification in the detailed section.
+    # Intent: risk score appears in the triage table; verification text is now in the
+    # per-finding detail file (findings/<ID>.md), not inlined in the slim report body.
     md = to_markdown([_rf("F-0002", FindingStatus.FIXED, risk=9, verification="verified-static")])
     assert "Risk" in md
     assert "| 9 |" in md  # Risk column in the triage table
-    assert "verified-static" in md
+    assert "findings/F-0002.md" in md  # links to the detail file instead of inlining
+    assert "verified-static" not in md
 
 
 def test_select_reportable_filters_and_sorts():
@@ -187,7 +189,7 @@ def test_write_report_writes_final_artifacts(tmp_path):
     assert ws.sarif_path.exists() and ws.report_path.exists()
     sarif = json.loads(ws.sarif_path.read_text())
     assert len(sarif["runs"][0]["results"]) == 1  # only the reportable finding
-    assert "verified-static" in ws.report_path.read_text()
+    assert "verified-static" in (ws.findings_dir / "F-0002.md").read_text()
     assert ws.findings_json_path.exists()
     fj = json.loads(ws.findings_json_path.read_text())
     assert len(fj) == 1 and fj[0]["id"] == "F-0002"
@@ -225,11 +227,12 @@ def test_render_finding_full_for_high():
         "3. Confirmation",
         "4. Impact",
         "5. Severity",
-        "6. Confirmed Attack",
         "7. Fix",
-        "8. Testing",
     ):
         assert sec in md
+    # §6/§8 deleted by design (ISSUE-052) — no longer rendered even at full tier
+    assert "6. Confirmed Attack" not in md
+    assert "8. Testing" not in md
     assert "ast-grep:sink" in md  # tool receipt surfaced
     assert "llm-claimed:reach" in md  # claimed surfaced separately
     assert "src @ a.js:1" in md  # dataflow rendered
@@ -260,11 +263,12 @@ def test_render_finding_flags_missing_receipt():
 
 
 def test_to_markdown_includes_detailed_section():
-    # Intent: confirmed finding detail block appears under the "Confirmed" heading.
+    # Intent: confirmed finding gets a "## Detail" link to its per-finding file, not an
+    # inlined body — the full detail lives in findings/<ID>.md (written separately).
     from sec_overlay.report import to_markdown
 
     md = to_markdown([_tf("XSS-1", "high")])
-    assert "## Confirmed" in md and "### XSS-1" in md
+    assert "## Detail" in md and "findings/XSS-1.md" in md
 
 
 def test_report_sections_needs_deployment(tmp_path):
@@ -359,7 +363,8 @@ def test_report_links_redteam_plan_and_shows_receipts(tmp_path):
     write_report(ws)
     md = (ws.reports / "report.md").read_text()
     assert "redteam-plan.md" in md  # T11a: link the manual test plan
-    assert "ripgrep:a.py:1" in md  # T11b: receipts visible even in condensed (medium) tier
+    # T11b: receipts visible in the per-finding detail file, even at condensed (medium) tier
+    assert "ripgrep:a.py:1" in (ws.findings_dir / "F-1.md").read_text()
 
 
 def test_to_markdown_renders_coverage_ledger():
@@ -422,8 +427,8 @@ def test_write_report_with_target_annotates_caution(monkeypatch, tmp_path):
     ws.ensure()
     write_findings(ws, [_fixed_with_patch("F-1")])
     write_report(ws, target="/tgt")
-    md = ws.report_path.read_text()
-    assert "Caution" in md
+    # Caution now lives in the per-finding detail file, not the slim report body.
+    assert "Caution" in (ws.findings_dir / "F-1.md").read_text()
 
 
 def test_write_report_without_target_skips_patch_check(tmp_path):
@@ -640,17 +645,17 @@ def test_to_markdown_bottom_line_counts_ndt_separately():
     # confirmed count line must not include the NDT medium finding
     conf_line = next(l for l in out.splitlines() if l.startswith("Confirmed:"))
     # confirmed = 0 crit/high/med, 1 low; NDT medium NOT folded into the medium bucket
-    assert "0/0/0/1" in conf_line
+    assert conf_line == "Confirmed: 1 low"
 
 
 def test_triage_puts_ndt_lead_above_low_dep():
-    """Higher-risk NDT row sorts above lower-risk dep in triage; NDT section before Confirmed."""
+    """Higher-risk NDT row sorts above lower-risk dep in both triage and the Detail link list."""
     out = to_markdown([_confirmed_dep()], needs_deployment=[_ndt_med()])
     triage = out.split("## Triage")[1].split("##")[0]
     # NDT-T4 (risk 5) above DEP-T4 (risk 3) in the triage table
     assert triage.index("NDT-T4") < triage.index("DEP-T4")
-    assert "## Needs runtime proof" in out
-    assert out.index("## Needs runtime proof") < out.index("## Confirmed")  # leads above confirmed
+    detail = out.split("## Detail")[1]
+    assert detail.index("NDT-T4") < detail.index("DEP-T4")  # leads above confirmed, risk-ordered
 
 
 def test_run_economics_section_renders_phase_model_and_usd_estimate():
@@ -772,6 +777,33 @@ def test_write_report_defaults_to_suppressed_full_sarif(tmp_path):
     assert uris == {"a.py", "b.py"}  # NDT now reaches SARIF
 
 
+def _full(**kw):
+    return Finding(
+        **{
+            "id": "F-1",
+            "rule_id": "r",
+            "cls": "sqli",
+            "status": FindingStatus.CONFIRMED,
+            "severity": Severity.CRITICAL,
+            "file": "a.py",
+            "line": 3,
+            "message": "m",
+            "impact": "Unauthenticated DB read of all users",
+            "risk_score": 9,
+            "evidence_sources": ["semgrep:sqli"],
+            **kw,
+        }
+    )
+
+
+def test_render_finding_uses_real_impact_and_drops_constant_sections():
+    md = render_finding(_full())
+    assert "Unauthenticated DB read of all users" in md
+    assert "Confirmed Attack Scenario (theoretical" not in md
+    assert "**8. Testing.** Negative:" not in md
+    assert "**4. Impact.**" in md
+
+
 def test_write_report_confirmed_only_flag_restores_prior_output(tmp_path):
     ws = Workspace(tmp_path / "ws")
     ws.ensure()
@@ -809,3 +841,42 @@ def test_write_report_confirmed_only_flag_restores_prior_output(tmp_path):
         for r in doc["runs"][0]["results"]
     }
     assert uris == {"a.py"}  # NDT excluded again
+
+
+def test_bottom_line_counts_in_words():
+    fs = [
+        _full(id=f"F-{i}", severity=s)
+        for i, s in enumerate(
+            [Severity.CRITICAL, Severity.HIGH] + [Severity.MEDIUM] * 2 + [Severity.LOW]
+        )
+    ]
+    md = to_markdown(fs)
+    assert "1 critical, 1 high, 2 medium, 1 low" in md
+    assert "1/1/2/1" not in md
+
+
+def test_short_title_cuts_on_word_boundary():
+    s = "authentication bypass through unvalidated token audience claim in middleware layer"
+    out = _short_title(s, limit=40)
+    assert len(out) <= 41  # 40 + the ellipsis is one char
+    assert out.endswith("…")
+    assert not out[:-1].endswith(" ")
+    assert " ".join(out[:-1].split()) == out[:-1]  # no mid-word cut → no partial trailing token
+    assert s.startswith(out[:-1])
+
+
+def test_short_title_no_cut_when_short():
+    assert _short_title("short message", limit=40) == "short message"
+
+
+def test_economics_renders_timing():
+    md = to_markdown(
+        [_full()],
+        economics={
+            "by_phase": {"report": 10},
+            "by_model": {"opus": 10},
+            "by_phase_seconds": {"report": 1.25},
+            "usd_estimate": 0.0,
+        },
+    )
+    assert "Wall-clock by phase" in md and "1.25" in md

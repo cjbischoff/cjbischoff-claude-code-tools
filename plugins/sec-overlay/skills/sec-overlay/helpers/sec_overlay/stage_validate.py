@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 
-from sec_overlay.context import Context
+from sec_overlay.context import Context, cited_source_docs
 from sec_overlay.coverage_ledger import validate_coverage_ledger
 from sec_overlay.discovery_ledger import validate_discovery_ledger
 from sec_overlay.profile import validate_profile
@@ -34,12 +34,18 @@ def _validate_runtime_test(obj: object) -> list[str]:
 
 def _validate_context(obj: dict) -> list[str]:
     try:
-        return Context.from_dict(obj).validate()
+        errors = Context.from_dict(obj).validate()
     except (TypeError, KeyError, AttributeError) as e:
         return [f"context is not a valid Context document: {e}"]
+    prov = obj.get("provenance", {}) if isinstance(obj, dict) else {}
+    read = set(prov.get("docs_read", []) or [])
+    for doc in sorted(cited_source_docs(obj) - read):
+        errors.append(f"context: source_doc {doc!r} cited but absent from provenance.docs_read")
+    return errors
 
 
-# stage name -> validator(obj) -> error list. Unknown stages have no schema (pass).
+# stage name -> validator(obj) -> error list. An unregistered stage is a hard error
+# (validate_stage raises) — see ISSUE-034.
 _VALIDATORS = {
     "recon": validate_profile,
     "scan-profile": validate_profile,
@@ -52,9 +58,16 @@ _VALIDATORS = {
 
 
 def validate_stage(stage: str, obj: object) -> list[str]:
-    """Validate a stage's structured output; empty list == valid (or no schema for the stage)."""
+    """Validate a stage's structured output; empty list == valid.
+
+    Raises:
+        ValueError: ``stage`` has no registered validator — a silent pass here
+            masked mis-named stages (ISSUE-034), so it is now an error.
+    """
     fn = _VALIDATORS.get(stage)
-    return fn(obj) if fn else []
+    if fn is None:
+        raise ValueError(f"validate_stage: no validator for stage {stage!r}")
+    return fn(obj)
 
 
 def repair_prompt(stage: str, obj: object, errors: list[str]) -> str:

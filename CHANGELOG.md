@@ -25,6 +25,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 ### Added
 
 - Add the sec-overlay defect-remediation design spec covering all 57 issues from the agent-gateway run across seven fix themes plus a new independent artifact-review phase.
+- Add Plan D (themes T6/T7 plus artifact-review) of the sec-overlay defect-remediation spec: TDD tasks for a split risk-ordered report with real impact text and counts-in-words, per-finding detail files, phase telemetry via campaign-state timings, context doc-citation cross-checks, backend-completeness strictness, self-score critic metrics, and a new adversarial artifact-review phase with a deterministic artifact gate.
 - Add Plan C (themes T4/T5) of the sec-overlay defect-remediation spec: TDD tasks for a derived route-to-control coverage table with logged gaps, doc-coverage provenance, resolver-backed finding citations, prefilter sidecar exclusion, same-line dedupe, class-extension alias-map gap logging, and red-team payload reachability.
 - Add Plan A (theme T1) of the sec-overlay defect-remediation spec: TDD implementation tasks for the deterministic `audit` phase-driver, wiring the six unwired modules and the findings-gate, unrouted-class, and verify-honesty fixes.
 - Add `docs/templates/plugin/`, a new-plugin skeleton (`plugin.json`, README, CLAUDE.md, CHANGELOG, sample `SKILL.md`) with `{{PLACEHOLDER}}` markers, matching the root `CLAUDE.md` "New plugin" checklist.

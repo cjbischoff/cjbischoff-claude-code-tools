@@ -1,8 +1,26 @@
 # `tests/` — the deterministic test suite
 
-85 pytest files, 677 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+86 pytest files, 711 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_artifact_gate.py` (§4.8) covers `run_artifact_gate`: a clean run passes; a stale constant
+section, a missing detail file, a missing red-team directive, and a triage ID with no matching
+finding each produce an error string; the gate always writes `kb/gates/artifact-gate.json`.
+
+`test_stage_validate.py` gained `test_unknown_stage_raises` (ISSUE-034): `validate_stage` now
+raises `ValueError` for an unregistered stage instead of silently passing. `test_bucket_c.py`'s
+`test_stage_validate_dispatch` updated to expect the same raise for `"unknown-stage"`.
+`test_prefilter.py` gained `test_strict_raises_when_planned_backend_skipped`,
+`test_strict_ok_when_all_ran`, and `test_run_prefilter_raises_strict_by_default_on_skipped_backend`
+for the new `_raise_on_incomplete_backends` helper and `run_prefilter(..., strict=True)` default;
+every existing test that deliberately exercises a skipped/failed backend now passes `strict=False`.
+It also gained `test_strict_ignores_disabled_backend` and `test_strict_raises_on_absent_backend`
+(R14): a `"disabled"` skip reason is excluded from the strict raise, but `"absent"` and other
+reasons still raise.
+
+`test_cost.py` gained `test_record_and_aggregate_timings` (ISSUE-014), covering the new
+`cost.record_timing`/`cost.aggregate_timings_by_phase` per-phase wall-clock accounting.
 
 `test_wiring.py` gained four regression pins (ISSUE-017, ISSUE-020, ISSUE-031, ISSUE-033) for
 already-wired items: `reconcile_plan(` and `unrouted_candidate_classes(`/`unrouted_triage_dispatch(`
@@ -27,6 +45,8 @@ and `test_threat_model_retains_every_entrypoint` check that `recon.md`, `archite
 
 `test_context.py` gained three tests for `doc_coverage()`: `test_doc_coverage_warns_when_few_docs_read`, `test_doc_coverage_warns_below_ratio`, and `test_doc_coverage_no_docs_no_warning` (ISSUE-016) — validate doc coverage ratio computation and warning thresholds.
 
+`test_stage_validate.py` gained `test_context_validator_flags_cited_doc_missing_from_docs_read` and `test_context_validator_ok_when_cited_doc_present` (ISSUE-021) — the `context` stage-validator rejects a `source_doc` citation absent from `provenance.docs_read`.
+
 `test_profile.py` gained `test_schema_declares_evidence_and_subsystems` and
 `test_profile_required_includes_attack_surface_evidence` (ISSUE-025): the schema and
 `profile._REQUIRED` now agree that `attack_surface_evidence` is required, `subsystems` optional.
@@ -40,11 +60,15 @@ suppressed-full default and the `confirmed_only` restore path.
 `test_phases.py` (new) covers `sec_overlay/phases.py`'s `PHASE_TABLE` order (findings-gate right
 after investigate, dedupe/demote-noise before report, trace present, and now `factcheck` sitting
 between `trace` and `calibrate` — ISSUE-047) and the pure sequencer helpers (`missing_inputs`,
-`outputs_present`, `next_actionable_phase`).
+`outputs_present`, `next_actionable_phase`). `test_artifact_phases_follow_selfscore` (new, §4.8)
+asserts `artifact-gate` sits after `selfscore` and `artifact-review` sits after `artifact-gate`,
+and that `artifact-review` is an agent phase naming `agents/artifact-review.md`.
 
 `test_driver.py` covers `sec_overlay/driver.py`'s `run_deterministic_phase`: raises
 `PhaseHalt` on a missing input, raises `PhaseHalt` when the action ran but a declared output is
-still absent, and records the stage `"done"` on success. Also covers `render_dispatch`: the
+still absent, records the stage `"done"` on success, and (`test_deterministic_phase_records_timing`,
+ISSUE-014) records the phase's wall-clock seconds into `state.budget["timings"]` via
+`cost.record_timing`. Also covers `render_dispatch`: the
 returned block names the `agents/<prompt>` file and the substituted target/workspace/SHA, and now
 `test_dispatch_is_secret_redacted` asserts the block is passed through `redactor.safe_for_prompt`
 before returning (ISSUE-051). Three `run_audit` tests (new) cover the resumable table-walker:
@@ -64,6 +88,10 @@ writes a `kb/verdicts.json` VERIFIED verdict for one finding, runs
 `test_run_audit_halts_when_scan_profile_missing_at_investigate` (new, M1, 0.10.1) stages state up
 to `investigate` with no `scan-profile.json` and asserts `run_audit` raises `PhaseHalt` (not
 `FileNotFoundError`) naming the missing file.
+
+`test_act_artifact_gate_halts_on_error` (new, §4.8) writes a `report.md` containing a banned
+constant fragment and asserts `driver._act_artifact_gate` raises `PhaseHalt`, covering the new
+`artifact-gate` phase's registered action (wraps `artifact_gate.run_artifact_gate`).
 
 `test_cli_e2e.py` gained `test_audit_cli_resumable_across_invocations` (new, C1, 0.10.1): drives
 `cli.main(["audit", ...])` twice with `driver.run_audit` stubbed and `record_stage(ws,
@@ -112,6 +140,14 @@ anchor on a missing file is rejected, a `candidate`-status finding is not gated,
 finding (`context.control_findings`) forced to `confirmed` status is rejected the same way once
 its doc-cited file doesn't exist under the target root.
 
+`test_models.py` gained coverage for `Finding.impact` — defaults to `""` and round-trips a set
+value through `to_dict`/`from_dict`; an old finding dict with no `impact` key loads blank.
+`test_findings_gate.py` gained coverage for the new gate rule: a `SHIPPING_STATUSES` finding with
+blank `impact` is rejected, a non-shipping finding with blank `impact` is not.
+`test_report.py` gained coverage that `render_finding`'s §4 Impact renders the finding's real
+`impact` text and that the constant §6 Confirmed Attack Scenario / §8 Testing strings are gone
+(ISSUE-052); the existing full-tier section-presence test was updated to match.
+
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 
@@ -121,6 +157,10 @@ before committing edits.
 
 `test_selfscore.py` gained `test_shipping_counts_full_set`, covering `build_self_score`'s new
 `shipping` count over `evidence.SHIPPING_STATUSES`.
+
+`test_selfscore.py` gained `test_self_score_counts_critic_reject_rate` and
+`test_self_score_reject_rate_zero_without_critic_events` (ISSUE-043), covering the new
+`critic_viable`/`critic_rejected`/`critic_reject_rate` keys counted from history events.
 
 `test_redteam.py`'s red-team bar tests now cover the coverage-first `_above_bar`: severity above
 the floor earns a directive with no receipt required; the dead `prime-manual-test` history test
@@ -149,6 +189,10 @@ with no evidence at all is rejected.
 `test_prompts.py` (new) covers `prompts.render_prompt`: all tokens filled, an unfilled token
 raising `ValueError` that names it, and extra unused `subs` keys being ignored.
 
+`test_coverage_ledger.py` gained cases for `build_coverage_ledger`'s own `needs_follow_up`
+surfaces now carrying `reason`/`next_step`: `validate_coverage_ledger` rejects one missing
+either field, accepts one carrying both, and `render_markdown` renders both columns.
+
 `test_route_control.py` (new, ISSUE-027/029/036) covers `route_control.py`: a table control the
 architecture markdown omits is a `needs_follow_up` gap, a table entrypoint the threat model drops
 is a gap, no gap when everything is present, and `record_route_gaps` round-trips a gap's
@@ -165,3 +209,31 @@ coverage is never silent.
 `test_sast.py` gained `test_semgrep_excludes_sidecar` to verify `run_semgrep` includes
 `--exclude` flags for `.sec-overlay`, `.git`, `.venv`, and `node_modules` directories via
 the `_SKIP_DIRS` tuple.
+
+`test_report.py` gained `test_bottom_line_counts_in_words` (ISSUE-010): the bottom-line
+`Confirmed:` line renders counts in words (`"1 critical, 1 high, 2 medium, 1 low"`), never as a
+digit ratio (`"1/1/2/1"`); the pre-existing NDT-separation test was updated to the words format.
+
+`test_report.py` gained `test_short_title_cuts_on_word_boundary` and
+`test_short_title_no_cut_when_short` (ISSUE-011): `_short_title` trims a triage title to a word
+boundary with a trailing `…`, never cutting mid-word, and leaves short titles untouched.
+
+`test_report.py` gained `test_economics_renders_timing` (ISSUE-014): `to_markdown` renders a
+"Wall-clock by phase" list under "Run economics" when `economics["by_phase_seconds"]` is given.
+
+`test_prefilter.py` gained `test_candidate_ids_are_class_prefixed_and_per_class_numbered`
+(ISSUE-013): `_assign_candidate_ids` now numbers candidates per attack class
+(`C-SQLI-0001`, `C-XSS-0001`, ...) instead of one global `C-0001..` sequence, so ids carry the
+class and never collide across rulesets; `test_serial_and_concurrent_identical` was updated to
+the new scheme.
+
+`test_report_split.py` (new, ISSUE-009) covers the per-finding-file report split:
+`write_report` writes `findings/<ID>.md` for every reportable/NDT finding, `report.md` links each
+one under "## Detail" instead of inlining its body, and the Detail list is risk-ordered. Six
+pre-existing `test_report.py` assertions that expected the old inline "Confirmed
+(source-provable)"/"Needs runtime proof" bodies (verification text, receipts, `Caution` notes,
+section headings) were updated to check the new `findings/<ID>.md` files or the "## Detail" link
+list instead.
+
+The `_full` helper in `test_report.py` builds its `Finding` kwargs as a dict literal (not a
+`dict()` call) to satisfy ruff `C408`.

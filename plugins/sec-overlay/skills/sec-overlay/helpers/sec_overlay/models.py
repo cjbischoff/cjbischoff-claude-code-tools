@@ -97,6 +97,9 @@ class Finding:
             ``{"id", "file", "line"}``.
         receipt_tier: Derived tool-receipt strength (see the gate that stamps it), or
             ``None`` before that gate runs.
+        impact: Concrete consequence of exploitation (CIA + scope), rendered as the
+            finding's Impact section. Required non-empty for a shipping finding
+            (enforced in findings_gate); empty on non-shipping findings.
     """
 
     id: str
@@ -132,6 +135,7 @@ class Finding:
     cluster_id: str | None = None
     affected_sites: list[dict] = field(default_factory=list)
     receipt_tier: int | None = None
+    impact: str = ""
 
     def to_dict(self) -> dict:
         """Serialize to a JSON-safe dict (enums become their string values)."""

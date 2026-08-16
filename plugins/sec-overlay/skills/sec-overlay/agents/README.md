@@ -72,7 +72,7 @@ flowchart TD
 ### Phase 1 — Context ingestion (C1)
 | Prompt | Model | Reads | Writes / does |
 |--------|-------|-------|---------------|
-| `context-ingest.md` | sonnet | repo docs/specs/ADRs/runbooks + prior scans + deployment config (IaC) | `kb/context.json` (trust-tagged); doc-claims-vs-reality lens (never restates `architecture.md`'s structural facts); verifies each **claimed control** vs code → `PRESENT`/`MISSING`/`BYPASSABLE`; cross-checks Pulumi/Terraform/Helm/k8s/docker-compose/serverless files to set `deployed_in`; MISSING/BYPASSABLE become `CTL-####` candidate findings; sets `Context.diagram` (claimed-control status map) which `render_markdown` writes into `CONTEXT.md`. |
+| `context-ingest.md` | sonnet | repo docs/specs/ADRs/runbooks + prior scans + deployment config (IaC) | `kb/context.json` (trust-tagged); doc-claims-vs-reality lens (never restates `architecture.md`'s structural facts); verifies each **claimed control** vs code → `PRESENT`/`MISSING`/`BYPASSABLE`; cross-checks Pulumi/Terraform/Helm/k8s/docker-compose/serverless files to set `deployed_in`; MISSING/BYPASSABLE become `CTL-####` candidate findings; sets `Context.diagram` (claimed-control status map) which `render_markdown` writes into `CONTEXT.md`; `docs_read` must be the literal list of docs actually opened — the `context` stage-validator rejects a `source_doc` citation absent from it (ISSUE-021). |
 | `context-adversary.md` | opus | `kb/context.json` + `CTL-*` findings | pressure-checks the *verification* (was a control really PRESENT in code, or just doc-asserted?); includes a diagram-consistency check against `CONTEXT.md`'s claimed-control diagram; verdicts → `kb/gates/context.json`. |
 
 **Hard rule:** repo docs are **untrusted claims**. A doc never confirms a finding and never
@@ -115,7 +115,7 @@ the agent doesn't re-raise known false positives.
 |--------|-------|-----|
 | `critic.md` | sonnet | production-viability filter: reject debug-only/dead/test-fixture/vendored/fully-mitigated code. **Demote on doubt, don't hard-reject.** |
 | `judge.md` | cheap, **no tools** | reads only the finding + critic verdict; asks "is the severity inflated?" Uphold / downgrade / flag. |
-| `validate.md` | opus (different family) | **assumes every finding is wrong** and tries to refute it independently. Survival = confirmation. A `false-positive` verdict *requires* a `file:line` cite of the defeating control. Never confirms a finding whose `reachability.blocker == "external-boundary"` — it stays a lead for calibrate/report to handle. |
+| `validate.md` | opus (different family) | **assumes every finding is wrong** and tries to refute it independently. Survival = confirmation. A `false-positive` verdict *requires* a `file:line` cite of the defeating control. Never confirms a finding whose `reachability.blocker == "external-boundary"` — it stays a lead for calibrate/report to handle. A `confirmed` finding now also requires a real (derived, not placeholder) `cvss_vector` and a non-empty `preconditions` list, or it routes to `needs-deployment-testing` instead (ISSUE-008) — calibrate scores off this vector verbatim. |
 
 > `judge` and `validate` must **never** run concurrently against the same finding file — the
 > last writer silently drops the other's field. (Enforced by orchestration order, not code.)
@@ -129,7 +129,7 @@ the agent doesn't re-raise known false positives.
 ### Phase 5.5 — Red team (static → runtime bridge)
 | Prompt | Model | Job |
 |--------|-------|-----|
-| `trace.md` | opus | backward-trace each confirmed sink to an entry point; verdict `reachable?` + blocker taxonomy; when the blocker is an external fact this repo can't answer, populates `open_questions` instead of guessing; when a sink resolves into an un-ingested dependency, sets `reachability.blocker = "external-boundary"` and records the package in `preconditions` rather than guessing reachable/confirmed. |
+| `trace.md` | opus | backward-trace each confirmed sink to an entry point; verdict `reachable?` + blocker taxonomy; when the blocker is an external fact this repo can't answer, populates `open_questions` instead of guessing; when a sink resolves into an un-ingested dependency, sets `reachability.blocker = "external-boundary"` and records the package in `preconditions` rather than guessing reachable/confirmed. On a static-settled `reachable: true` verdict, also records `preconditions` (attacker position, required inputs, config/state) that feed calibrate's severity precondition check (ISSUE-008). |
 | `redteam.md` | sonnet | split confirmed findings into `static-settled` vs `needs-runtime`; write a `runtime_test` block (objective, preconditions, `$SHELL_VAR` payloads — **never literal secrets**, expected signal, telemetry). `expected_signal` must be an object `{secure, insecure}` — not a bare string — because the deterministic renderer reads both keys. For findings that hinge on a human-answerable fact rather than a runtime test, populates `open_questions` instead of forcing a hollow `runtime_test`. |
 | `redteam-adversary.md` | opus | strip items that are actually settleable from source, payloads not tied to a real sink, or claims resting on `llm-claimed` confidence alone. |
 
@@ -140,6 +140,11 @@ the confidence bar). **The harness never executes the target** — it hands an o
 input validation before shipping it as a live directive (ISSUE-056); an untraceable payload is an
 unrunnable precondition, not a live directive — enforced deterministically downstream by
 `redteam.py`'s `payload_runnable` gate, which routes such findings to a new `"unrunnable"` bucket.
+
+### Phase 6 — Artifact review (§4.8)
+| Prompt | Model | Reads | Writes / does |
+|--------|-------|-------|---------------|
+| `artifact-review.md` | opus | `report.md`, `report.sarif`, `redteam-plan.md`, `findings/*.json`, plus the deterministic `kb/gates/artifact-gate.json` (already passed) | the final adversary — checks the *rendered* output tells the truth about what the run found: claim-to-evidence (does the report's severity/impact/status match the finding's tool receipt?), impact honesty (a real consequence, not a restated attack class), and red-team coverage (every `needs-runtime` finding has a matching `redteam-plan.md` directive). Same safety contract as everywhere else: reasoning alone may demote severity (with a `file:line` cite), mark a finding `render_stale: true` to force a re-render, or add an `open_questions` entry — never delete or reject a tool-receipt-backed finding. Verdict → `kb/gates/artifact-review.json`. It runs after the deterministic `artifact_gate.py` (helpers) and never writes `report.md` itself. |
 
 ### Postflight & optional extensions
 | Prompt | Role |
