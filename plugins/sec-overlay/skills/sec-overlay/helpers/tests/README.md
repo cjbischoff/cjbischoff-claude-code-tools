@@ -173,3 +173,7 @@ coverage is never silent.
 `test_sast.py` gained `test_semgrep_excludes_sidecar` to verify `run_semgrep` includes
 `--exclude` flags for `.sec-overlay`, `.git`, `.venv`, and `node_modules` directories via
 the `_SKIP_DIRS` tuple.
+
+`test_report.py` gained `test_bottom_line_counts_in_words` (ISSUE-010): the bottom-line
+`Confirmed:` line renders counts in words (`"1 critical, 1 high, 2 medium, 1 low"`), never as a
+digit ratio (`"1/1/2/1"`); the pre-existing NDT-separation test was updated to the words format.

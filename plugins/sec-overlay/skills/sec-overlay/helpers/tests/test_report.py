@@ -641,7 +641,7 @@ def test_to_markdown_bottom_line_counts_ndt_separately():
     # confirmed count line must not include the NDT medium finding
     conf_line = next(l for l in out.splitlines() if l.startswith("Confirmed:"))
     # confirmed = 0 crit/high/med, 1 low; NDT medium NOT folded into the medium bucket
-    assert "0/0/0/1" in conf_line
+    assert conf_line == "Confirmed: 1 low"
 
 
 def test_triage_puts_ndt_lead_above_low_dep():
@@ -836,3 +836,15 @@ def test_write_report_confirmed_only_flag_restores_prior_output(tmp_path):
         for r in doc["runs"][0]["results"]
     }
     assert uris == {"a.py"}  # NDT excluded again
+
+
+def test_bottom_line_counts_in_words():
+    fs = [
+        _full(id=f"F-{i}", severity=s)
+        for i, s in enumerate(
+            [Severity.CRITICAL, Severity.HIGH] + [Severity.MEDIUM] * 2 + [Severity.LOW]
+        )
+    ]
+    md = to_markdown(fs)
+    assert "1 critical, 1 high, 2 medium, 1 low" in md
+    assert "1/1/2/1" not in md

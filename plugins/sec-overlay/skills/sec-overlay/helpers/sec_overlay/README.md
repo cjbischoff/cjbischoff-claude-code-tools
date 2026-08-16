@@ -71,6 +71,10 @@ finding (highest-risk member, or the elected primary if present) before the conf
 needs-runtime buckets are counted and rendered; `render_ndt` renders an affected-sites table when
 the finding carries `affected_sites`.
 
+`report.py`'s bottom-line `Confirmed:` line now renders counts in words (`"1 critical, 1 high, 2
+medium, 1 low"`, zero counts omitted, `"none"` when all zero) instead of a digit ratio
+(`"1/1/2/1"`) (ISSUE-010).
+
 **Breaking:** `findings_gate.validate_findings` now enforces the tier model instead of the
 old "any mechanical receipt confirms" rule. It stamps `Finding.receipt_tier` (the lowest —
 strongest — tier among `evidence_sources`, via `evidence.receipt_tier`), rejects a

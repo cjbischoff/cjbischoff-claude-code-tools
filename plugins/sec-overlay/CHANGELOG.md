@@ -2,6 +2,13 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.9.2 - 2026-08-15
+
+### Fixed
+
+- The report's bottom-line `Confirmed:` line now renders counts in words (e.g. `"1 critical, 1
+  high, 2 medium, 1 low"`) instead of an ambiguous digit ratio (`"1/1/2/1"`) (ISSUE-010).
+
 ## 1.9.1 - 2026-08-15
 
 ### Fixed

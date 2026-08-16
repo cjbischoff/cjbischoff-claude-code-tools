@@ -289,11 +289,19 @@ def to_markdown(
         summary_sentence = f"{'Critical' if crit else 'High'}-severity source-provable findings require immediate remediation."
     else:
         summary_sentence = "Source-provable findings at medium/low severity."
+    counts_phrase = (
+        ", ".join(
+            f"{n} {label}"
+            for label, n in (("critical", crit), ("high", high), ("medium", med), ("low", low))
+            if n
+        )
+        or "none"
+    )
     lines = [
         "# sec-overlay Report",
         "",
         f"**Bottom line.** {summary_sentence}  ",
-        f"Confirmed: {crit}/{high}/{med}/{low}",
+        f"Confirmed: {counts_phrase}",
         f"Needs runtime proof: {len(ndt)}",
         "",
     ]
