@@ -54,6 +54,10 @@ Update each confirmed finding's JSON with `reachability`. Return a table: id, re
 blocker (if any), chain length. Reachable findings proceed; the red-team phase reads
 `reachability` as the primary static-settled-vs-needs-runtime discriminator.
 
+When you settle reachability as statically confirmed, record the `preconditions`
+you relied on (attacker position, required inputs, config/state). These feed
+calibrate's severity precondition check; an empty list forces the tier lower.
+
 ## Rules
 - Exhaust all callers; a reachability claim needs a tool receipt (`structural-index:callers` /
   `ast-grep:callers` / `codeql:reachable`), not a hunch.

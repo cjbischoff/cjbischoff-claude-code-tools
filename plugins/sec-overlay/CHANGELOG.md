@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.13.1 - 2026-08-15
+
+### Fixed
+
+- `validate.md` now requires a `confirmed` finding to carry a real, derived `cvss_vector` and a
+  non-empty `preconditions` list, routing to `needs-deployment-testing` otherwise; `trace.md` now
+  records `preconditions` on a statically-confirmed reachability verdict — calibrate scores off
+  these fields verbatim, so a missing/guessed vector no longer produces a flat, wrong score
+  (ISSUE-008). Prompt-only fix; the calibrate scorer is unchanged.
+
 ## 1.13.0 - 2026-08-15
 
 ### Added

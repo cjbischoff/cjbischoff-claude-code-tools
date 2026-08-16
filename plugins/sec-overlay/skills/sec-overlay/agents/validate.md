@@ -108,6 +108,14 @@ with resolves to exactly one of:
 - `status: "rejected"` + a `history` entry citing the defeating control, or
 - unchanged `status: "raw"` + `verification: "verify-error"`.
 
+Before a finding survives as `confirmed`, it MUST carry a real `cvss_vector`
+(the full CVSS v3.1 vector string you derived from the traced source→sink, not a
+placeholder) and a non-empty `preconditions` list enumerating every condition the
+exploit needs. Calibrate computes the numeric score from this vector — a missing or
+guessed vector produces a flat, wrong score (ISSUE-008). If you cannot derive a
+vector, the finding is not `confirmed`; route it to `needs-deployment-testing` with
+the open question that blocks scoring.
+
 Return a verdict table with exactly as many rows as the candidate count from
 step 1 (id, verdict, one-line reason), followed by confirmed/rejected/verify-error
 counts.
