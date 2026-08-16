@@ -75,6 +75,10 @@ the finding carries `affected_sites`.
 medium, 1 low"`, zero counts omitted, `"none"` when all zero) instead of a digit ratio
 (`"1/1/2/1"`) (ISSUE-010).
 
+`report.py` gained `_short_title(text, limit=72)`, trimming the triage table's `what` column to a
+word boundary with a trailing `…` instead of cutting mid-word at a fixed 80-character slice
+(ISSUE-011).
+
 **Breaking:** `findings_gate.validate_findings` now enforces the tier model instead of the
 old "any mechanical receipt confirms" rule. It stamps `Finding.receipt_tier` (the lowest —
 strongest — tier among `evidence_sources`, via `evidence.receipt_tier`), rejects a

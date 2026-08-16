@@ -217,6 +217,24 @@ def render_ndt(f: Finding) -> str:
     return "\n".join(out)
 
 
+def _short_title(text: str, limit: int = 72) -> str:
+    """Trim a triage title to ``limit`` chars on a word boundary.
+
+    Args:
+        text: The raw title text.
+        limit: Maximum characters before the ellipsis.
+
+    Returns:
+        ``text`` unchanged when within ``limit``; otherwise the longest
+        whole-word prefix that fits, plus a trailing ``"…"``. Never cuts a word.
+    """
+    text = " ".join(text.split())
+    if len(text) <= limit:
+        return text
+    cut = text[:limit].rsplit(" ", 1)[0].rstrip()
+    return (cut or text[:limit].rstrip()) + "…"
+
+
 def _triage_row(f: Finding, status_label: str, action: str) -> str:
     """Render one triage table row: id, risk, one-clause what, location, status, next action.
 
@@ -228,7 +246,7 @@ def _triage_row(f: Finding, status_label: str, action: str) -> str:
     Returns:
         A single Markdown table row string (pipe-delimited).
     """
-    what = (f.message or "").split("|", 1)[0].split(". ")[0].strip()[:80]
+    what = _short_title((f.message or "").split("|", 1)[0].split(". ")[0].strip())
     risk = f.risk_score if f.risk_score is not None else "-"
     return f"| {f.id} | {risk} | {what} | {f.file}:{f.line} | {status_label} | {action} |"
 

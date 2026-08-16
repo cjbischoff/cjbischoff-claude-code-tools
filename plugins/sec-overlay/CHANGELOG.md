@@ -2,6 +2,13 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.9.3 - 2026-08-15
+
+### Fixed
+
+- The triage table's `what` column now trims a long title to a word boundary with a trailing
+  `…` instead of cutting mid-word at a fixed 80-character slice (ISSUE-011).
+
 ## 1.9.2 - 2026-08-15
 
 ### Fixed

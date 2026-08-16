@@ -177,3 +177,7 @@ the `_SKIP_DIRS` tuple.
 `test_report.py` gained `test_bottom_line_counts_in_words` (ISSUE-010): the bottom-line
 `Confirmed:` line renders counts in words (`"1 critical, 1 high, 2 medium, 1 low"`), never as a
 digit ratio (`"1/1/2/1"`); the pre-existing NDT-separation test was updated to the words format.
+
+`test_report.py` gained `test_short_title_cuts_on_word_boundary` and
+`test_short_title_no_cut_when_short` (ISSUE-011): `_short_title` trims a triage title to a word
+boundary with a trailing `…`, never cutting mid-word, and leaves short titles untouched.

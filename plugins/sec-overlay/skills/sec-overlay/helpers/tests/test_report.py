@@ -6,6 +6,7 @@ from pathlib import Path
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.patch_status import PatchStatus
 from sec_overlay.report import (
+    _short_title,
     collapse_clusters,
     render_finding,
     render_ndt,
@@ -848,3 +849,17 @@ def test_bottom_line_counts_in_words():
     md = to_markdown(fs)
     assert "1 critical, 1 high, 2 medium, 1 low" in md
     assert "1/1/2/1" not in md
+
+
+def test_short_title_cuts_on_word_boundary():
+    s = "authentication bypass through unvalidated token audience claim in middleware layer"
+    out = _short_title(s, limit=40)
+    assert len(out) <= 41  # 40 + the ellipsis is one char
+    assert out.endswith("…")
+    assert not out[:-1].endswith(" ")
+    assert " ".join(out[:-1].split()) == out[:-1]  # no mid-word cut → no partial trailing token
+    assert s.startswith(out[:-1])
+
+
+def test_short_title_no_cut_when_short():
+    assert _short_title("short message", limit=40) == "short message"
