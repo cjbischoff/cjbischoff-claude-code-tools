@@ -2,6 +2,22 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.25.0 - 2026-08-16
+
+### Added
+
+- `references/architecture-standards.md` fixes the C4 + arc42 contract for the architecture
+  phase: which diagrams to produce, the arc42 section table, and the ownership boundary
+  against the threat-model phase.
+- `references/threat-model-standards.md` fixes the DFD + STRIDE contract for the
+  threat-model phase: signal-based methodology augmentation (PASTA/LINDDUN), how `dfd.mmd`
+  derives from `container-diagram.mmd`, and the findings-table column contract.
+- `references/mermaid-caps.md` is the single source of truth for per-diagram-kind element
+  caps, mirrored in `sec_overlay.diagram_gate.CAPS`/`SEQ_CAPS` and kept in sync by
+  `tests/test_references_caps.py`.
+- `prompt-constants.md` gained an `STE_PROSE` block: human-facing prose (arc42.md,
+  threat-model.md, findings-table free text) now follows ASD-STE100's checkable core.
+
 ## 1.24.1 - 2026-08-16
 
 ### Fixed

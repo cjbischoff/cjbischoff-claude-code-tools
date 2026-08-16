@@ -34,8 +34,11 @@ answers. `references/` kills that drift two ways:
 ```mermaid
 flowchart LR
     subgraph REF["references/"]
-        PC["prompt-constants.md<br/>(13 verbatim blocks)"]
+        PC["prompt-constants.md<br/>(14 verbatim blocks)"]
         AC["attack-classes.md"]
+        ARCH["architecture-standards.md"]
+        TMS["threat-model-standards.md"]
+        MC["mermaid-caps.md"]
         FT["finding-template.md"]
         HUNT["hunting/*.md"]
         CG["codeguard/*.md"]
@@ -57,10 +60,14 @@ flowchart LR
         CGPY["codeguard.py"]
         REP["report.py"]
         DCPY["detection_coverage.py"]
+        DGATE["diagram_gate.py"]
     end
 
     PC -->|"injected into prompt text"| A
     AC --> A
+    ARCH -->|"read by"| A
+    TMS -->|"read by"| A
+    MC -->|"caps mirrored in"| DGATE
     HUNT --> A
     FT -->|"rendered by"| REP
     SCHEMA -->|"validated by"| FG
@@ -81,8 +88,8 @@ flowchart LR
 
 ### Prompt text — injected into agents
 
-#### `prompt-constants.md` — the constitution (13 blocks, pasted into every agent)
-The single most load-bearing file here. Thirteen named blocks are copied **verbatim** into the
+#### `prompt-constants.md` — the constitution (14 blocks, pasted into every agent)
+The single most load-bearing file here. Fourteen named blocks are copied **verbatim** into the
 top of every agent prompt (agents reference it via the `{{OVERLAY_ROOT}}` path token). If
 you change a word here, every agent's behaviour changes.
 
@@ -101,6 +108,7 @@ you change a word here, every agent's behaviour changes.
 | `FIELD_OWNERSHIP` | Each `Finding` field is owned by exactly one phase. Only populate your phase's Output fields; never overwrite downstream phase fields (e.g. `risk_score`, `patch_diff`). |
 | `QUALIFIER_PROOF` | A blanket security claim ("mitigated", "sanitized", "handled elsewhere") is a claim about *every* code path. Enumerate all reachable paths and confirm the qualifier on each, or state which specific paths you verified. |
 | `EVIDENCE_VOCABULARY` | The receipt tiers, shipping statuses, and `runtime_disposition` enum are closed sets — Tier-1 (`codeql`/`semgrep`/`sca`/`secrets`) confirms alone, Tier-2 (`ripgrep`/`structural-index`/`ast-grep`/`tree-sitter`) only corroborates. Bound to `sec_overlay.evidence`'s constants by a drift test. |
+| `STE_PROSE` | Human-facing prose (arc42.md, threat-model.md, findings-table free text) follows ASD-STE100's checkable core: active voice, one claim per sentence, ≤25-word sentences, no semicolons, ≤3-word noun clusters, ≤6-sentence paragraphs, lists for 3+ steps. Hedges and scope qualifiers are never dropped. Checked by `sec_overlay.ste_lint`. |
 
 > **Note:** the table above is authoritative. If you add or remove a block, update the count
 > in the Mermaid diagram, the section header, and this table.
@@ -118,6 +126,35 @@ discriminate confusable shapes. Split into **universal** classes (always conside
 (maps classes to entrypoints), `investigate` (per-class guidance), and `helpers/…/clsmap.py`
 as the source of truth for CWE→class mapping. Evidence-based only: an empty class list beats
 a guessed one.
+
+#### `architecture-standards.md` — the C4 + arc42 contract for the architecture phase
+Fixes which C4 diagrams `architecture.md` produces (context, container, component-when-complex,
+runtime-view sequences), the arc42 section table (`5. Building Block View` replaces the old
+`kb/entities/` files), and the ownership boundary: architecture owns structure and rationale,
+never threats or mitigations. All diagrams obey `mermaid-caps.md`.
+
+**Consumed by:** `agents/architecture.md`; the ownership boundary is what keeps architecture
+and threat-model from duplicating each other's content.
+
+#### `threat-model-standards.md` — the DFD + STRIDE contract for the threat-model phase
+Fixes the per-system methodology-selection rule (STRIDE always, PASTA/LINDDUN added by
+evidenced signal, never hardcoded), how `dfd.mmd` derives from `container-diagram.mmd`
+(same element ids, trust-boundary `subgraph`s, derived-from SHA header), and the
+findings-table column contract (threat, DFD element, STRIDE/LINDDUN category, CVSS v4.0,
+mitigation, residual risk). Threat-model never restates architecture narrative — it
+references arc42 by section instead.
+
+**Consumed by:** `agents/threat-model.md`.
+
+#### `mermaid-caps.md` — hard per-diagram-kind element caps
+The single source of truth for how many nodes/participants/messages any generated diagram
+may contain, mirrored mechanically in `sec_overlay.diagram_gate.CAPS`/`SEQ_CAPS`
+(`tests/test_references_caps.py` keeps the two from drifting). Also states the generation
+rules: label word limits (node/edge/message labels all ≤4 words), the orphan-node rule and
+its store/actor escape hatch for required terminal elements, grouping-over-enumeration, and
+the group→split→promote re-scoping order on cap breach.
+
+**Consumed by:** every agent emitting a mermaid diagram; enforced by `diagram_gate.py`.
 
 #### `finding-template.md` — the shape of a human-readable finding
 The 9-section report template (full depth for critical/high, condensed for medium/low),

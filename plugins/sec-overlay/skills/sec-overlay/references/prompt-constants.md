@@ -151,3 +151,18 @@ The evidence, status, and disposition vocabularies are closed sets. Use only the
   `needs-deployment-testing`.
 - **`runtime_disposition` (closed enum):** `needs-runtime`, `static-settled`, `unassessed`.
   Any other value (e.g. `neither`) is rejected at the findings gate.
+
+## STE_PROSE
+
+Prose you write for humans (arc42.md, threat-model.md, findings-table free text) follows
+ASD-STE100's checkable core. Hard rules: active voice; one instruction or claim per
+sentence; sentences ≤25 words; no semicolons; noun clusters ≤3 words; paragraphs ≤6
+sentences on one topic; numbered/bulleted list for any 3+ step sequence. Lexical rules
+are directional: one word per meaning (pick one verb per action and reuse it), verb over
+noun form, define kept domain terms once in the glossary. Preserve every hedge and scope
+qualifier — "may have failed" never becomes "failed"; when the tense rule and a hedge
+conflict, the hedge wins. Put the one-time statement "Prose follows an ASD-STE100-inspired
+clarity standard (structural rules enforced; lexical dictionary not verified)." in the
+document front matter. A deterministic linter rejects sentence/semicolon/paragraph
+violations, so write compliant the first time. Diagram labels are governed by
+mermaid-caps.md, not this block.

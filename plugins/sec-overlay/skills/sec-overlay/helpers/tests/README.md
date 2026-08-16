@@ -19,6 +19,9 @@ flagged as over 25 words rather than being fractured into two short sentences.
 New `test_cvss4_data.py` covers the vendored CVSS v4.0 data: `MACROVECTOR_LOOKUP` has >250
 six-digit-key entries with scores in `[0, 10]`, and `MAX_COMPOSED`/`MAX_SEVERITY` are nonempty.
 
+New `test_references_caps.py` checks `references/mermaid-caps.md`'s cap table against
+`sec_overlay.diagram_gate.CAPS`/`SEQ_CAPS`, so the doc and the gate never drift apart.
+
 `test_cvss.py` fully rewritten for the v4.0 engine: 25 reference vectors pinned to NVD's published
 `cvssMetricV40` base scores (`E:X` only, so no threat-metric ambiguity), plus band/bounds/rejection
 and `offensive_priority` tests.
