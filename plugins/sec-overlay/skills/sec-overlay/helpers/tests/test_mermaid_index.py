@@ -90,3 +90,33 @@ def test_flowchart_edge_with_double_brace_source_label():
 def test_unrecognizable_raises():
     with pytest.raises(ValueError):
         index_mermaid("this is not mermaid\n")
+
+
+def test_chained_flowchart_edges():
+    # A chained edge line (`a --> b --> c`) must record both hops, not just the
+    # first: a single non-restarting search drops the second hop entirely.
+    idx = index_mermaid("flowchart LR\n    a[A] --> b[B] --> c[(C)]\n")
+    assert ("a", "b", "") in idx.edges
+    assert ("b", "c", "") in idx.edges
+
+
+def test_hyphenated_sequence_participant_and_message():
+    idx = index_mermaid(
+        "sequenceDiagram\n"
+        "    participant auth-api\n"
+        "    participant db\n"
+        "    auth-api->>db: read row\n"
+        "    db-->>auth-api: rows\n"
+    )
+    assert "auth-api" in idx.participants
+    assert idx.messages == 2
+    assert ("auth-api", "db", "read row") in idx.edges
+    assert ("db", "auth-api", "rows") in idx.edges
+
+
+def test_unhyphenated_sequence_messages_still_parse():
+    idx = index_mermaid(
+        "sequenceDiagram\n    participant a\n    participant b\n"
+        "    a->>b: hi\n    a--)b: ack\n    a-xb: drop\n"
+    )
+    assert idx.messages == 3

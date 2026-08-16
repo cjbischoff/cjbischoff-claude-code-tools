@@ -49,6 +49,16 @@ def _label_errors(idx: DiagramIndex, name: str) -> list[str]:
     ]
 
 
+def _node_label_errors(idx: DiagramIndex, name: str) -> list[str]:
+    # A node with no bracket label defaults its label to its own id (bare id) —
+    # that's not a description, so it's exempt from the word-count check.
+    return [
+        f"{name}: node label over {_EDGE_LABEL_MAX_WORDS} words: {label!r}"
+        for nid, label in idx.nodes.items()
+        if label and label != nid and len(label.split()) > _EDGE_LABEL_MAX_WORDS
+    ]
+
+
 def _orphan_errors(idx: DiagramIndex, name: str) -> list[str]:
     # A chain's entry node (out-degree only) is normal topology, not over-detailing.
     # Only a node that exclusively receives — a single incoming edge and no
@@ -100,6 +110,7 @@ def check_diagram(path: Path, kind: str, *, source: Path | None = None) -> list[
             )
         if kind in _ORPHAN_CHECKED_KINDS:
             errs.extend(_orphan_errors(idx, name))
+        errs.extend(_node_label_errors(idx, name))
     errs.extend(_label_errors(idx, name))
     if idx.has_style and "legend" not in text.lower():
         errs.append(f"{name}: styled diagram has no legend")
@@ -126,12 +137,16 @@ def check_diagram(path: Path, kind: str, *, source: Path | None = None) -> list[
     return errs
 
 
-def run_diagram_gate(arch_dir: Path, tm_dir: Path) -> list[str]:
+def run_diagram_gate(
+    arch_dir: Path, tm_dir: Path, *, require_threat_model: bool = False
+) -> list[str]:
     """Gate every diagram in the architecture and threat-model trees.
 
     Args:
         arch_dir: ``<workspace>/architecture``.
         tm_dir: ``<workspace>/threat-model``.
+        require_threat_model: When ``True``, a missing ``dfd.mmd`` is a gate
+            error instead of a silently-skipped optional diagram.
 
     Returns:
         Error strings across all diagrams; empty when everything passes.
@@ -151,6 +166,8 @@ def run_diagram_gate(arch_dir: Path, tm_dir: Path) -> list[str]:
     dfd = tm_dir / "dfd.mmd"
     if dfd.exists():
         errs.extend(check_diagram(dfd, "dfd", source=container))
+    elif require_threat_model:
+        errs.append(f"missing required diagram {dfd.name}")
     for p in sorted((tm_dir / "attack-sequences").glob("sequence-*.mmd")):
         parent = _attack_parent(p, runtime)
         errs.extend(check_diagram(p, "sequence", source=parent))
@@ -175,8 +192,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="sec-overlay-diagram-gate")
     parser.add_argument("--architecture", required=True)
     parser.add_argument("--threat-model", required=True)
+    parser.add_argument("--require-threat-model", action="store_true")
     args = parser.parse_args(argv)
-    errors = run_diagram_gate(Path(args.architecture), Path(args.threat_model))
+    errors = run_diagram_gate(
+        Path(args.architecture),
+        Path(args.threat_model),
+        require_threat_model=args.require_threat_model,
+    )
     for e in errors:
         print(e)
     return 1 if errors else 0

@@ -32,10 +32,11 @@ _FLOW_EDGE_MID = re.compile(
     r"([A-Za-z][\w-]*)" + _INLINE_LABEL_SKIP + r"\s*--\s*([^->][^-]*?)\s*-->\s*([A-Za-z][\w-]*)"
 )
 _SUBGRAPH = re.compile(r"^\s*subgraph\s+([A-Za-z][\w-]*)")
-_PARTICIPANT = re.compile(r"^\s*(?:participant|actor)\s+(\w+)")
-# Sequence ids never carry hyphens in this notation, so the id class excludes
-# "-" to avoid swallowing the arrow's leading dash.
-_SEQ_MSG = re.compile(r"^\s*(\w+)\s*-{1,2}[)>x]{1,2}\+?-?\s*(\w+)\s*:\s*(.*)")
+_PARTICIPANT = re.compile(r"^\s*(?:participant|actor)\s+([\w-]+)")
+# The source id is matched non-greedily so a hyphenated id (`auth-api`) doesn't
+# swallow the arrow's leading dash — the engine backtracks to the shortest id
+# that lets the arrow class match right after it.
+_SEQ_MSG = re.compile(r"^\s*(\w[\w-]*?)\s*-{1,2}[)>x]{1,2}\+?-?\s*([\w-]+)\s*:\s*(.*)")
 _C4_ELEM = re.compile(
     r"^\s*(Person|System|Container|Component)(?:Db|Queue)?(?:_Ext)?\s*"
     r"\(\s*([\w-]+)\s*,\s*\"([^\"]*)\""
@@ -128,8 +129,11 @@ def _index_flowchart(lines: list[str]) -> DiagramIndex:
                 idx.store_ids.add(nid)
             if stack:
                 idx.subgraphs[stack[-1]].add(nid)
-        em = _FLOW_EDGE_MID.search(ln) or _FLOW_EDGE.search(ln)
-        if em:
+        pos = 0
+        while True:
+            em = _FLOW_EDGE_MID.search(ln, pos) or _FLOW_EDGE.search(ln, pos)
+            if not em:
+                break
             if em.re is _FLOW_EDGE_MID:
                 src, label, dst = em.group(1), em.group(2).strip(), em.group(3)
             else:
@@ -139,6 +143,9 @@ def _index_flowchart(lines: list[str]) -> DiagramIndex:
                 idx.nodes.setdefault(nid, nid)
                 if stack:
                     idx.subgraphs[stack[-1]].add(nid)
+            # Restart the next search at the destination so a chained edge line
+            # (`a --> b --> c`) picks up b's outgoing hop too, not just a's.
+            pos = em.start(3)
     return idx
 
 

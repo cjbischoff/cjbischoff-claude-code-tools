@@ -185,6 +185,39 @@ def test_source_diagram_unparseable_does_not_crash(tmp_path):
     assert any("unparseable" in e for e in errs)
 
 
+def test_empty_threat_model_passes_by_default(tmp_path):
+    arch = tmp_path / "architecture"
+    tm = tmp_path / "threat-model"
+    _write(arch / "container-diagram.mmd", CONTAINER)
+    _write(arch / "context-diagram.mmd", "flowchart LR\n    u[User] -->|uses| sys[System]\n")
+    assert run_diagram_gate(arch, tm) == []
+
+
+def test_empty_threat_model_fails_when_required(tmp_path):
+    arch = tmp_path / "architecture"
+    tm = tmp_path / "threat-model"
+    _write(arch / "container-diagram.mmd", CONTAINER)
+    _write(arch / "context-diagram.mmd", "flowchart LR\n    u[User] -->|uses| sys[System]\n")
+    errs = run_diagram_gate(arch, tm, require_threat_model=True)
+    assert any("dfd.mmd" in e for e in errs)
+
+
+def test_node_label_over_four_words_fails(tmp_path):
+    p = _write(
+        tmp_path / "container-diagram.mmd",
+        CONTAINER + "    a[This label is far too long] -->|to| api\n",
+    )
+    errs = check_diagram(p, "container")
+    assert any("node label" in e for e in errs)
+
+
+def test_bare_id_node_label_not_flagged(tmp_path):
+    # A node introduced only as an edge endpoint (no bracket label) defaults its
+    # label to its own id — that must never be treated as an over-long label.
+    p = _write(tmp_path / "container-diagram.mmd", CONTAINER)
+    assert not any("node label" in e for e in check_diagram(p, "container"))
+
+
 def test_attack_sequence_new_participant_fails(tmp_path):
     parent = _write(
         tmp_path / "runtime-view" / "sequence-login.mmd",

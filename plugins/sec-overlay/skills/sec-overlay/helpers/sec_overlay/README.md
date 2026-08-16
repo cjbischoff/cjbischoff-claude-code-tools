@@ -346,3 +346,15 @@ now only breaks at `[.!?]` followed by a capitalized word, and folds the split b
 clause when the preceding token is a known abbreviation (`e.g.`, `i.e.`, `etc.`, `vs.`, `cf.`,
 `approx.`, `viz.`, `al.`) — an abbreviation no longer fractures a paragraph into a false
 "over 6 sentences" or hides a genuinely over-length sentence by chopping it in two.
+
+Diagram-gate parsing-gap round: `mermaid_index.py`'s flowchart edge scan matched only the first
+`-->` on a line, so a chained edge (`a --> b --> c`) recorded `a→b` and silently dropped `b→c` —
+the scan now restarts each search at the matched destination's position, walking every hop on the
+line. The sequence-diagram regexes (`_PARTICIPANT`, `_SEQ_MSG`) rejected hyphenated ids
+(`auth-api`) — `_PARTICIPANT`'s id class now allows `-`, and `_SEQ_MSG`'s source-id match is
+non-greedy so it backtracks to the shortest id that still lets the arrow class match, instead of
+swallowing the arrow's leading dash. `diagram_gate.py` gained `_node_label_errors`: a node's
+bracket label over 4 words is now an error (bare-id nodes with no bracket label are exempt), and
+`run_diagram_gate` takes a keyword-only `require_threat_model` flag — when set, a missing
+`dfd.mmd` becomes a gate error instead of a silently-skipped optional diagram (CLI:
+`--require-threat-model`).

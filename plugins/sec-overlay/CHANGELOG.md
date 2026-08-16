@@ -2,6 +2,22 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.24.1 - 2026-08-16
+
+### Fixed
+
+- `mermaid_index.py`'s flowchart edge scan matched only the first `-->` on a line, dropping every
+  hop after the first in a chained edge (`a --> b --> c`) and false-flagging the middle node as an
+  orphan; the scan now restarts each search at the matched destination.
+- `mermaid_index.py`'s sequence-diagram regexes rejected hyphenated participant/message ids
+  (`auth-api`), silently recording a truncated id and undercounting messages; the id class now
+  allows `-` and the source-id match is non-greedy so it stops before the arrow.
+- `diagram_gate.py`'s `run_diagram_gate` treated a missing `dfd.mmd` as always-optional; it now
+  takes a keyword-only `require_threat_model` flag (CLI: `--require-threat-model`) that turns a
+  missing threat-model diagram into a gate error.
+- `diagram_gate.py` gained a node-label word-count check (spec's "node labels: name only" rule):
+  a bracket label over 4 words is now an error, matching the existing edge-label check.
+
 ## 1.24.0 - 2026-08-16
 
 ### Added

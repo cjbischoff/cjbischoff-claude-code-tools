@@ -309,3 +309,13 @@ previously-untested branches are now pinned directly: `test_sequence_message_cap
 half of `SEQ_CAPS`), `test_target_diagram_unparseable_returns_error` (the top-level `check_diagram`
 parse-failure branch), and `test_style_with_legend_passes` (a styled diagram with a legend present
 passes clean).
+
+Diagram-gate parsing-gap round: `test_mermaid_index.py::test_chained_flowchart_edges` pins a
+chained edge line (`a --> b --> c`) recording both hops, not just the first.
+`test_hyphenated_sequence_participant_and_message` and
+`test_unhyphenated_sequence_messages_still_parse` pin hyphenated participant/message ids
+(`auth-api`) parsing correctly (message count, participant list, edge tuple) alongside the
+existing unhyphenated forms (`a->>b`, `a--)b`, `a-xb`). `test_diagram_gate.py` gained
+`test_empty_threat_model_passes_by_default` / `test_empty_threat_model_fails_when_required` for
+the new `require_threat_model` gate flag, and `test_node_label_over_four_words_fails` /
+`test_bare_id_node_label_not_flagged` for the new node-label word-count check.

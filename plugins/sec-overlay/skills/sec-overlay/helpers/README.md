@@ -166,7 +166,8 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | Module | Purpose |
 |--------|---------|
 | `mermaid_index.py` | Line-oriented Mermaid structure extraction (not a grammar): `index_mermaid(text) -> DiagramIndex` pulls node ids/labels, edges + edge labels, subgraph membership, sequence participants/message count, and C4 element macros out of a flowchart/sequence/C4 diagram. `store_ids` marks orphan-exempt required shapes (data-stores, queues, `Person`/`*_Ext` actors); unrecognizable input raises `ValueError`. |
-| `diagram_gate.py` | Deterministic hard gate over generated diagrams: `CAPS`/`SEQ_CAPS` node/participant/message ceilings, ≤4-word edge labels, DFD trust-boundary-subgraph requirement, derivation provenance (`%% derived-from: <file> sha256:<hash>` — a derived diagram introduces no element/participant absent from its source, and the hash must match the current source), legend-required styling, and orphan-detail nodes (a node that only ever receives, never sends, and isn't a store/actor). The orphan check applies only to `container`/`component`/`dfd` — never `context` (context actors are by definition often degree-1) or `sequence`. `run_diagram_gate(arch_dir, tm_dir)` walks an architecture/threat-model tree end to end. CLI-callable. |
+| `diagram_gate.py` | Deterministic hard gate over generated diagrams: `CAPS`/`SEQ_CAPS` node/participant/message ceilings, ≤4-word edge labels, ≤4-word node labels (bare-id nodes with no bracket label exempt), DFD trust-boundary-subgraph requirement, derivation provenance (`%% derived-from: <file> sha256:<hash>` — a derived diagram introduces no element/participant absent from its source, and the hash must match the current source), legend-required styling, and orphan-detail nodes (a node that only ever receives, never sends, and isn't a store/actor). The orphan check applies only to `container`/`component`/`dfd` — never `context` (context actors are by definition often degree-1) or `sequence`. `run_diagram_gate(arch_dir, tm_dir, *, require_threat_model=False)` walks an architecture/threat-model tree end to end; `require_threat_model=True` turns a missing `dfd.mmd` into a gate error instead of a silent skip. CLI-callable. |
+| `ste_lint.py` | Deterministic linter for the checkable structural subset of ASD-STE100: sentence length, semicolons, paragraph size, plus warning-level noun-cluster and buried-sequence heuristics. Lexical rules are directional/unenforced — flagged with a front-matter statement instead. Code fences, mermaid blocks, headings, table structure, inline code, and URLs are exempt; table free-text cells are linted. `lint_prose(text) -> (errors, warnings)`. CLI-callable. |
 
 ### Campaign, state & per-repo memory
 | Module | Purpose |
@@ -264,6 +265,7 @@ steps the orchestrator calls between agent phases:
 | `verify` | Apply a patch to a copy + re-scan. |
 | `redteam` | Render `redteam-plan.md`. |
 | `diagram_gate` | Hard-check generated Mermaid diagrams against caps, provenance, and orphan-detail rules. |
+| `ste_lint` | Lint markdown prose against the checkable ASD-STE100 structural rules. |
 | `report` | Assemble final SARIF + Markdown. |
 | `redactor` | Mask/verify secrets in a text blob. |
 | `postflight` | Write durable `kb/prior_context.json`. |
