@@ -16,6 +16,13 @@ entry point; read the parent map for the full inventory.
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
 
+`kb.py` gained the arc42/threat-model tree path helpers (`arch_dir`/`arc42_path`/
+`container_diagram_path`, `threat_dir`/`threat_model_path`/`dfd_path`), replacing the old
+`kb/architecture.md` and `kb/THREAT_MODEL.md` single-file paths; `kb_status` now reports
+`arc42_path`/`threat_model_path` existence. `workspace.py`'s `Workspace.ensure()` now also
+creates `architecture/runtime-view/` and `threat-model/attack-sequences/` under the workspace
+root.
+
 New module `cvss4_data.py`: CVSS v4.0 MacroVector lookup table (270 entries) and interpolation
 tables (`MAX_COMPOSED`, `MAX_SEVERITY`), vendored verbatim from FIRST's official calculator
 (BSD-2-Clause). Data only, no logic — Task 2 builds the v4.0 scoring engine on it.

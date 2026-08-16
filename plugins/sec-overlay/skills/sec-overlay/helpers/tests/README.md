@@ -4,6 +4,10 @@
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+`test_kb.py` gained `test_new_tree_paths` for `kb.py`'s new arc42/threat-model tree path helpers;
+`test_workspace.py` gained `test_ensure_creates_trees`, pinning that `Workspace.ensure()` creates
+`architecture/runtime-view/` and `threat-model/attack-sequences/`.
+
 New `test_ste_lint.py` covers `sec_overlay.ste_lint.lint_prose`: clean prose passes; a >25-word
 sentence, a semicolon in prose, and a >6-sentence paragraph each produce an error; a semicolon
 inside a code span or fenced code block is exempt; a heading and a table separator row are

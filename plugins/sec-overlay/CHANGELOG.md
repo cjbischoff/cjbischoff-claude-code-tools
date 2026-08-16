@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.26.0 - 2026-08-16
+
+### Added
+
+- `kb.py` gains path helpers for the new `architecture/` and `threat-model/` workspace trees
+  (`arch_dir`/`arc42_path`/`container_diagram_path`, `threat_dir`/`threat_model_path`/`dfd_path`),
+  replacing the old single-file `kb/architecture.md` and `kb/THREAT_MODEL.md` paths.
+  `Workspace.ensure()` now creates `architecture/runtime-view/` and
+  `threat-model/attack-sequences/` alongside the existing KB directories.
+
 ## 1.25.0 - 2026-08-16
 
 ### Added
