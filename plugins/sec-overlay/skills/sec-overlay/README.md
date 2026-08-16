@@ -226,7 +226,8 @@ threat-model/             dfd.mmd (derived) + attack-sequences/ + threat-model.m
 kb/context.json           the repo's own docs distilled, trust-tagged
 kb/graph.json             the Tier-1/Tier-2 code graph (reachability substrate)
 kb/gates/<phase>.json     adversary verdict audit trail per gated phase
-kb/gates/arch-gate.json, tm-gate.json   deterministic arch/tm gates (diagram caps, STE prose, dup)
+kb/gates/arch-gate.json, tm-gate.json   deterministic gates (diagram caps, STE prose, dup) — each
+                          phase is double-gated: opus phase-adversary first, then this check
 kb/coverage-ledger.json   surface-completeness (blocks "complete" while gaps remain)
 kb/discovery-ledger.json  investigate saturation state
 findings/<ID>.json        every finding, all statuses — evidence, reachability, cvss, patch

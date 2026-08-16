@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.30.2 - 2026-08-16
+
+### Changed
+
+- Restore the phase-adversary annotation on the Threat model row of the
+  skill `CLAUDE.md` §2 phase table (dropped in the 1.30.1 compression pass);
+  note in the skill `README.md` that each of `arch-gate` / `tm-gate` is
+  preceded by the opus phase-adversary review, not only the deterministic
+  check.
+
 ## 1.30.1 - 2026-08-16
 
 ### Changed

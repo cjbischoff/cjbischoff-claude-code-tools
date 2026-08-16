@@ -59,7 +59,7 @@ T1 Tier-1 substrate  python -m sec_overlay.graph build --target <T> --workspace 
 2  Recon            agents/recon.md (sonnet) → kb/scan-profile.json  # → PHASE GATE (opus)
 3  Architecture     agents/architecture.md (sonnet) → architecture/ tree (C4 + arc42)  # → PHASE GATE
 3.5 Arch gate       python -m sec_overlay.diagram_gate + ste_lint  # caps/prose, halts on violation
-4  Threat model     agents/threat-model.md (sonnet) → threat-model/ tree (DFD, STRIDE, hunt list)
+4  Threat model     agents/threat-model.md (sonnet) → threat-model/ tree  # → PHASE GATE
 4.5 TM gate         diagram gate + ste_lint + duplication check
 0.5 Tune (optional) agents/tune-config.md — ratcheted rule/exclusion loop, ≤3 rounds
 5  Prefilter        sec_overlay.prefilter.run_prefilter(ws, target, profile) # semgrep+codeql+osv+secrets
