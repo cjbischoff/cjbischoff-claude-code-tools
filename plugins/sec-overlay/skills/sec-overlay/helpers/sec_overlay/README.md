@@ -25,6 +25,10 @@ algorithm from `cvss_score.js` against `cvss4_data.py`'s tables (base metrics on
 fixed at their spec worst-case defaults, no environmental/threat support); `offensive_priority`
 keeps its 3.1 branch order verbatim. `CVSS:3.x` input now raises `ValueError`.
 
+`calibrate.py` re-pointed to `cvss40_base` (was `cvss31_base`, removed in the v4.0 migration) at
+its import and both call sites; `risk_score`/`priority` derivation shape is unchanged. The
+`Finding.cvss_vector` docstring in `models.py` now says "CVSS v4.0" to match.
+
 New module `artifact_gate.py` (§4.8): `run_artifact_gate(ws)` checks a finished run's own
 artifacts — report.md free of stale constant sections and over-long triage cells, every shipping
 finding has a `findings/<ID>.md` detail file and a red-team directive, every triage-table ID

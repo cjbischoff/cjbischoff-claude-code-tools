@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.19.0 - 2026-08-16
+
+### Changed
+
+- Re-point `sec_overlay/calibrate.py` from the removed `cvss31_base` to `cvss40_base`
+  (`sec_overlay/cvss.py`'s CVSS v4.0 engine); `risk_score`/`priority` derivation shape is
+  unchanged. `Finding.cvss_vector`'s docstring in `models.py` now says "CVSS v4.0". Migrated
+  `test_calibrate.py`'s CVSS fixtures to v4.0 vectors, with expectations recomputed from the
+  real scoring engine.
+
 ## 1.18.1 - 2026-08-16
 
 ### Fixed

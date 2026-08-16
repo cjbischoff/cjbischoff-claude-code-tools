@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 
 from sec_overlay.campaign import record_stage
-from sec_overlay.cvss import cvss31_base, offensive_priority
+from sec_overlay.cvss import cvss40_base, offensive_priority
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.workspace import Workspace, read_findings, write_findings
 
@@ -142,7 +142,7 @@ def _derived_score(finding: Finding) -> int:
     raw = None
     if finding.cvss_vector:
         try:
-            raw = max(1, min(10, round(cvss31_base(finding.cvss_vector)[0])))
+            raw = max(1, min(10, round(cvss40_base(finding.cvss_vector)[0])))
         except ValueError:
             raw = None  # malformed -> heuristic
     if raw is None:

@@ -66,9 +66,9 @@ def test_calibrate_uses_cvss_vector_when_present():
         file="a.py",
         line=1,
         message="m",
-        cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        cvss_vector="CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H",
     )
-    # CVSS 9.8 wins over the LOW severity heuristic
+    # CVSS 10.0 wins over the LOW severity heuristic
     assert calibrate_score(f) == 10
 
 
@@ -144,7 +144,7 @@ def test_precondition_cap_uses_weight_not_count():
 
 
 def test_precondition_cap_lowers_score():
-    crit_vec = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"  # 9.8 -> 10
+    crit_vec = "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H"  # 10.0 -> 10
     assert calibrate_score(_crit(crit_vec, [])) == 10  # weight 0 -> no cap
     assert calibrate_score(_crit(crit_vec, ["unauthenticated"])) == 10  # free -> no cap
     strong_preconds = ["requires admin token", "non-default config", "local access"]
@@ -175,13 +175,13 @@ def test_critical_never_ranks_below_medium():
     crit = _sev(
         "C-CRIT",
         Severity.CRITICAL,
-        "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+        "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N",
         ["unauthenticated", "extended query parsing", "route wiring"],
     )
     med = _sev(
         "C-MED",
         Severity.MEDIUM,
-        "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:H/A:N",
+        "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N",
         ["secret is live/unrotated"],
     )
     assert calibrate_score(crit) >= 8  # severity floor for critical
@@ -207,7 +207,7 @@ def test_inflation_flag_recorded(tmp_path):
         ws,
         [
             _crit(
-                "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H",
                 ["requires admin token", "non-default config", "local access"],
             )
         ],
@@ -232,7 +232,7 @@ def test_cluster_a_acceptance_ordering(tmp_path):
         file="orders.js",
         line=87,
         message="unauth order cancel",
-        cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:H/A:H",
+        cvss_vector="CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:L/VI:H/VA:H/SC:N/SI:N/SA:N",
         preconditions=["unauthenticated", "knows order id"],
         runtime_disposition="needs-runtime",
         dataflow=["src", "sink"],
@@ -246,7 +246,7 @@ def test_cluster_a_acceptance_ordering(tmp_path):
         file=".env.example",
         line=23,
         message="committed secret",
-        cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:H/A:N",
+        cvss_vector="CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:L/VI:H/VA:N/SC:N/SI:N/SA:N",
         preconditions=["secret is live"],
         runtime_disposition="needs-runtime",
     )
@@ -326,7 +326,7 @@ def test_malformed_cvss_does_not_crash_batch(tmp_path):
         file="a.py",
         line=2,
         message="m",
-        cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:M/I:H/A:N",
+        cvss_vector="CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:M/VI:H/VA:N/SC:N/SI:N/SA:N",
     )
     write_findings(ws, [good, bad])
     n = calibrate_findings(ws)  # must not raise
