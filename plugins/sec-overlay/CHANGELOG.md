@@ -2,6 +2,13 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.16.2 - 2026-08-15
+
+### Fixed
+
+- Rewrite the `_full` test helper in `test_report.py` as a dict literal to clear a ruff `C408`
+  warning introduced by the report-split work.
+
 ## 1.16.1 - 2026-08-15
 
 ### Changed

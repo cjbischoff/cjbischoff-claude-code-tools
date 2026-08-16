@@ -234,3 +234,6 @@ pre-existing `test_report.py` assertions that expected the old inline "Confirmed
 (source-provable)"/"Needs runtime proof" bodies (verification text, receipts, `Caution` notes,
 section headings) were updated to check the new `findings/<ID>.md` files or the "## Detail" link
 list instead.
+
+The `_full` helper in `test_report.py` builds its `Finding` kwargs as a dict literal (not a
+`dict()` call) to satisfy ruff `C408`.

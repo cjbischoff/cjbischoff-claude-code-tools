@@ -778,21 +778,22 @@ def test_write_report_defaults_to_suppressed_full_sarif(tmp_path):
 
 
 def _full(**kw):
-    base = dict(
-        id="F-1",
-        rule_id="r",
-        cls="sqli",
-        status=FindingStatus.CONFIRMED,
-        severity=Severity.CRITICAL,
-        file="a.py",
-        line=3,
-        message="m",
-        impact="Unauthenticated DB read of all users",
-        risk_score=9,
-        evidence_sources=["semgrep:sqli"],
+    return Finding(
+        **{
+            "id": "F-1",
+            "rule_id": "r",
+            "cls": "sqli",
+            "status": FindingStatus.CONFIRMED,
+            "severity": Severity.CRITICAL,
+            "file": "a.py",
+            "line": 3,
+            "message": "m",
+            "impact": "Unauthenticated DB read of all users",
+            "risk_score": 9,
+            "evidence_sources": ["semgrep:sqli"],
+            **kw,
+        }
     )
-    base.update(kw)
-    return Finding(**base)
 
 
 def test_render_finding_uses_real_impact_and_drops_constant_sections():
