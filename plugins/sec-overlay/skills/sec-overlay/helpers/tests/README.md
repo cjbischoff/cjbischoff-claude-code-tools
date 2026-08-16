@@ -148,6 +148,10 @@ before committing edits.
 `test_selfscore.py` gained `test_shipping_counts_full_set`, covering `build_self_score`'s new
 `shipping` count over `evidence.SHIPPING_STATUSES`.
 
+`test_selfscore.py` gained `test_self_score_counts_critic_reject_rate` and
+`test_self_score_reject_rate_zero_without_critic_events` (ISSUE-043), covering the new
+`critic_viable`/`critic_rejected`/`critic_reject_rate` keys counted from history events.
+
 `test_redteam.py`'s red-team bar tests now cover the coverage-first `_above_bar`: severity above
 the floor earns a directive with no receipt required; the dead `prime-manual-test` history test
 is removed, and `test_lead_carrier_without_receipt_is_not_a_directive` is replaced with

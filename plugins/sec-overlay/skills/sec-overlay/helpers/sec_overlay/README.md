@@ -53,6 +53,10 @@ sites on a cluster primary) — additive, nullable fields that round-trip throug
 returns a `shipping` count over the full `evidence.SHIPPING_STATUSES` set, alongside the
 narrower `reported` count (`confirmed`/`fixed` only) it retains for backward continuity.
 
+`build_self_score` gained `critic_viable`, `critic_rejected`, and `critic_reject_rate` (0.0 with
+no critic events), counted from `critic:viable`/`critic:rejected` history events across all
+findings (ISSUE-043) — measurement only, nothing gates on the rate.
+
 `evidence.py` gained a shared tier/status vocabulary: `TIER1_RECEIPTS`/`TIER2_RECEIPTS` (partition
 `_MECHANICAL`), `SHIPPING_STATUSES`, `RUNTIME_DISPOSITIONS`, and the `receipt_tier()`/
 `confirms_alone()` predicates — a single source of truth for later modules that need to know

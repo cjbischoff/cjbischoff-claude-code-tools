@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.13.0 - 2026-08-15
+
+### Added
+
+- `build_self_score` gained `critic_viable`, `critic_rejected`, and `critic_reject_rate` (0.0 with
+  no critic events), counted from `critic:viable`/`critic:rejected` history events across all
+  findings (ISSUE-043) — measurement only, nothing gates on the rate.
+
 ## 1.12.3 - 2026-08-15
 
 ### Fixed
