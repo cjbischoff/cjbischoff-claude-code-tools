@@ -122,6 +122,7 @@ def test_synthesize_manifest_rejects_bad_role():
 
 def test_drive_writes_receipt_and_env_and_fences(tmp_path, monkeypatch):
     import subprocess
+
     from sec_overlay import run as run_mod
 
     target = tmp_path / "repo"

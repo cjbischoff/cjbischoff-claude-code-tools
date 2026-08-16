@@ -370,3 +370,6 @@ with a fake git runner reporting a clean tree at every call, one deterministic `
 `test_driver.py` gained `test_run_audit_calls_on_complete_before_recording`, covering the new
 `on_complete` parameter on `driver.run_audit`: for a single deterministic phase whose output already
 exists, `on_complete` is called with the phase name before `run_audit` returns `"AUDIT COMPLETE"`.
+
+`test_run.py` keeps its import block sorted (ruff I001) — the local `sec_overlay` import in
+`test_synthesize_manifest_rejects_bad_role` is separated by a blank line.

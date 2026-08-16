@@ -2,6 +2,12 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.37.1 - 2026-08-16
+
+### Fixed
+
+- Sort import block in test_run.py to clear ruff I001.
+
 ## 1.37.0 - 2026-08-16
 
 ### Added
