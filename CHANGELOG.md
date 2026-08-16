@@ -24,6 +24,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Added
 
+- Add the sec-overlay invocation implementation plan: TDD tasks for the `run.py` driver (working-tree fence, per-phase receipt, token env, role inference, manifest synthesis, single-repo drive loop), the driver `on_complete` hook, the O-65 red-team gate path fix, and the `/sec-overlay:audit` command.
 - Add the sec-overlay invocation design spec: one `/sec-overlay:audit` command that audits one repo or audits several and correlates them, a thin `run.py` driver (token env, per-phase receipts, working-tree fence), scan-profile role inference feeding the existing correlation core, and the one-writer redteam-adversary path fix; the coverage/recall defect family is named as deferred.
 - Add the previously uncommitted Plan B (themes T2/T3, shared reference parser and status/receipt vocabulary) of the sec-overlay defect-remediation spec for the record; its implementation already shipped.
 - Add the three implementation plans for the architecture/threat-model standards rebuild: CVSS v4.0 migration, diagram/STE enforcement modules, and the phase rebuild with consumer rewiring.
