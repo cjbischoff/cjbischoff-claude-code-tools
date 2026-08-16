@@ -111,6 +111,26 @@ def test_invalid_metric_value_rejected():
         cvss40_base("CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:X/VI:H/VA:H/SC:N/SI:N/SA:N")
 
 
+def test_threat_metric_rejected():
+    with pytest.raises(ValueError, match="base metrics only"):
+        cvss40_base(
+            "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:U"
+        )
+
+
+def test_environmental_metric_rejected():
+    with pytest.raises(ValueError, match="base metrics only"):
+        cvss40_base(
+            "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/CR:L"
+        )
+
+
+def test_not_defined_threat_and_environmental_suffix_parses():
+    base = "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N"
+    nvd_shaped = base + "/E:X/CR:X/IR:X/AR:X"
+    assert cvss40_base(nvd_shaped) == cvss40_base(base)
+
+
 def test_offensive_priority_v4():
     p1 = "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N"
     assert offensive_priority(p1) == "P1"

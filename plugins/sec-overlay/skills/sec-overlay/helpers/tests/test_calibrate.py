@@ -432,6 +432,30 @@ def test_judge_uphold_does_not_lower(tmp_path: Path):
     assert result >= 6  # floor intact
 
 
+def test_unparseable_cvss_vector_records_history_event(tmp_path):
+    ws = Workspace(tmp_path / "ws")
+    ws.ensure()
+    f = Finding(
+        id="F-1",
+        rule_id="r",
+        cls="xss",
+        status=FindingStatus.CONFIRMED,
+        severity=Severity.LOW,
+        file="a.py",
+        line=1,
+        message="m",
+        dataflow=[],
+        cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+    )
+    write_findings(ws, [f])
+    calibrate_findings(ws)
+    out = read_findings(ws)[0]
+    assert out.risk_score == 3  # fell back to the heuristic
+    events = [h for h in out.history if h.get("event") == "calibrate:cvss-unparseable"]
+    assert len(events) == 1
+    assert events[0]["vector"] == "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"
+
+
 def test_external_boundary_finding_is_capped_and_tagged(tmp_path):
     ws = Workspace(tmp_path / "ws")
     ws.ensure()

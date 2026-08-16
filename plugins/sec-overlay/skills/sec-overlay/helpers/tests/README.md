@@ -13,9 +13,7 @@ and `offensive_priority` tests.
 
 `test_calibrate.py`'s CVSS fixtures migrated to CVSS v4.0 vectors (expectations recomputed from the
 real `cvss40_base` engine, not guessed); it now collects and passes against the re-pointed
-`calibrate.py`. `test_report.py`, `test_citations.py`, and `test_factcheck_baseline_envelope.py`
-still have unmigrated CVSS 3.1 fixture vectors (a later migration task's job to fix), though none
-of those currently fail collection.
+`calibrate.py`.
 
 New `test_artifact_gate.py` (§4.8) covers `run_artifact_gate`: a clean run passes; a stale constant
 section, a missing detail file, a missing red-team directive, and a triage ID with no matching

@@ -103,7 +103,7 @@ one-shot.
 ## 5. Severity Rationale
 - Propose a **CVSS v4.0 vector**; the harness computes the numeric **score**
   deterministically — never assert a score by hand.
-- Justify each metric choice (AV, AC, PR, UI, S, C, I, A).
+- Justify each metric choice (AV, AC, AT, PR, UI, VC, VI, VA, SC, SI, SA).
 - Justify the band (Critical/High/Medium/Low).
 - **When a precondition or delivery vector is unproven (only `llm-claimed`),
   choose the LOWER tier** and say why (e.g. CSRF delivery unconfirmed → hold at

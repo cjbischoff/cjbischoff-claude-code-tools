@@ -2,6 +2,22 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.20.2 - 2026-08-16
+
+### Fixed
+
+- `sec_overlay/cvss.py`'s `_parse` no longer silently drops score-affecting Threat (`E`) or
+  Environmental (`CR`/`IR`/`AR`/`M*`) metrics — a vector carrying one with a value other than `X`
+  (Not Defined) now raises `ValueError` instead of returning the unchanged base score; NVD-shaped
+  `.../E:X/CR:X/IR:X/AR:X` suffixes still parse and score identically to the bare base vector.
+- `sec_overlay/calibrate.py`'s `_derived_score` now records a `calibrate:cvss-unparseable` history
+  event (with the offending vector) before falling back to the heuristic score on any unparseable
+  `cvss_vector`, so a pre-migration CVSS 3.1 vector leaves an audit trail instead of a silent
+  fallback.
+- `references/finding-template.md`'s §5 metric-justification list updated from the CVSS 3.1 metrics
+  (`AV, AC, PR, UI, S, C, I, A`) to all 11 CVSS v4.0 base metrics (`AV, AC, AT, PR, UI, VC, VI, VA,
+  SC, SI, SA`).
+
 ## 1.20.1 - 2026-08-16
 
 ### Fixed

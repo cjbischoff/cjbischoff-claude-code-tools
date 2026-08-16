@@ -69,6 +69,15 @@ def _parse(vector: str) -> dict[str, str]:
     for k in _REQUIRED:
         if metrics[k] not in _ALLOWED[k]:
             raise ValueError(f"invalid CVSS 4.0 value {k}:{metrics[k]}")
+    for k, v in metrics.items():
+        if k in _REQUIRED:
+            continue
+        if v == "X":  # Not Defined -> no-op, matches the base-only defaults
+            continue
+        if k in ("E", "CR", "IR", "AR") or k.startswith("M"):
+            raise ValueError(
+                f"this engine scores base metrics only; {k}:{v} affects score: {vector}"
+            )
     return metrics
 
 
@@ -116,7 +125,8 @@ def _macrovector(metrics: dict[str, str]) -> str:
     eq5 = "0"  # E defaults to "A" under base-only scoring.
 
     cr, ir, ar = _m(metrics, "CR"), _m(metrics, "IR"), _m(metrics, "AR")
-    eq6 = "0" if ((cr == "H" and vc == "H") or (ir == "H" and vi == "H") or (ar == "H" and va == "H")) else "1"
+    high_impact = (cr == "H" and vc == "H") or (ir == "H" and vi == "H") or (ar == "H" and va == "H")
+    eq6 = "0" if high_impact else "1"
 
     return eq1 + eq2 + eq3 + eq4 + eq5 + eq6
 
@@ -256,6 +266,10 @@ def cvss40_base(vector: str) -> tuple[float, str]:
     Raises:
         ValueError: If the vector is a CVSS 3.x vector, or is missing/has
             invalid base metrics.
+
+    Example:
+        >>> cvss40_base("CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N")
+        (9.3, 'Critical')
     """
     m = _parse(vector)
     if all(m[k] == "N" for k in ("VC", "VI", "VA", "SC", "SI", "SA")):
@@ -273,6 +287,10 @@ def offensive_priority(vector: str, *, externally_facing: bool = False) -> str:
 
     Returns:
         ``"P1".."P4"``.
+
+    Example:
+        >>> offensive_priority("CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N")
+        'P1'
     """
     m = _parse(vector)
     av, pr = m["AV"], m["PR"]

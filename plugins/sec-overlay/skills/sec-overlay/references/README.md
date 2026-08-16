@@ -129,7 +129,9 @@ renumbers 1–4 with no gaps. This is *not* injected into an agent — it is **r
 §4 Impact renders the finding's real `impact` field; §6 Confirmed Attack Scenario and §8 Testing
 are template-only sections the harness does not render (ISSUE-052) — both are now flagged as
 manual-analysis aids in the template text itself, since the static harness fabricated no
-attack-scenario or test-plan content for them.
+attack-scenario or test-plan content for them. §5 Severity Rationale's metric-justification list
+names all 11 CVSS v4.0 base metrics (AV, AC, AT, PR, UI, VC, VI, VA, SC, SI, SA), matching
+`sec_overlay/cvss.py`'s `_REQUIRED` set.
 
 #### `DETECTION_COVERAGE.md` — an honest "what we can and can't see" statement
 A falsifiable statement of what each backend covers per class/language, and known blind

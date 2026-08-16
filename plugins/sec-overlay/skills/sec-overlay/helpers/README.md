@@ -149,7 +149,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | Module | Purpose |
 |--------|---------|
 | `calibrate.py` | Deterministic 1–10 `risk_score` for confirmed / needs-deployment-testing findings (severity base map + class boost + baseline cap + precondition gates). CLI-callable. |
-| `cvss.py` | CVSS 3.1 base-score from a vector (FIRST.org formula — **never** LLM arithmetic) + an orthogonal offensive-priority axis. |
+| `cvss.py` | CVSS v4.0 base-score from a vector (MacroVector model ported from FIRST's official calculator — **never** LLM arithmetic) + an orthogonal offensive-priority axis. |
 | `scoring.py` | Weighted fix-validation score (root_cause, scope_verified, …); regression is non-waivable. |
 | `fix_disposition.py` | Conservative fix-completeness tier (FULL / MITIGATION / WORKAROUND); ambiguity → LLM_REVIEW. |
 | `crypto_policy.py` | Machine-checked crypto policy from the two `references/approved-*.yaml` files (deny md5/sha1/des/ecb; floor rsa≥3072/pbkdf2≥600000/…). |

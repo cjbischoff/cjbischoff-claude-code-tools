@@ -29,6 +29,11 @@ keeps its 3.1 branch order verbatim. `CVSS:3.x` input now raises `ValueError`.
 its import and both call sites; `risk_score`/`priority` derivation shape is unchanged. The
 `Finding.cvss_vector` docstring in `models.py` now says "CVSS v4.0" to match.
 
+`cvss.py`'s `_parse` now raises `ValueError` when a Threat (`E`) or Environmental (`CR`/`IR`/`AR`/
+`M*`) metric is present with a value other than `X` (Not Defined) — this engine scores base
+metrics only; `calibrate.py` records a `calibrate:cvss-unparseable` history event before falling
+back to the heuristic score on any unparseable vector.
+
 New module `artifact_gate.py` (§4.8): `run_artifact_gate(ws)` checks a finished run's own
 artifacts — report.md free of stale constant sections and over-long triage cells, every shipping
 finding has a `findings/<ID>.md` detail file and a red-team directive, every triage-table ID
