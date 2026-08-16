@@ -82,7 +82,7 @@ suppresses one — it only produces leads to verify against code.
 | Prompt | Model | Reads | Writes |
 |--------|-------|-------|--------|
 | `recon.md` | sonnet | target, `attack-classes.md`, context | `kb/scan-profile.json` (languages, frameworks, attack_surface, sast_plan, agents_to_spawn). Selects which `hunting/` docs apply. |
-| `architecture.md` | sonnet | scan-profile | `kb/architecture.md` + `kb/entities/<component>.md` (components, data flows, trust boundaries) — the **canonical** structural source every other KB doc references instead of restating; carries the 3-diagram sequence (component overview, DFD, canonical trust-boundary diagram). |
+| `architecture.md` | sonnet | scan-profile | `architecture/context-diagram.mmd`, `architecture/container-diagram.mmd`, `architecture/component-diagram-<name>.mmd` (only where warranted), `architecture/runtime-view/sequence-<scenario>.mmd` (only where warranted), and `architecture/arc42.md` (C4 + arc42 sections 1–8, 10–12) — the **canonical** structural source every other doc references instead of restating. |
 | `threat-model.md` | sonnet | the KB only (not raw repo) | `kb/THREAT_MODEL.md` — attacker profiles + a **prioritized hunt list**; trust boundaries are attacker-relevant pointers back to `architecture.md`'s diagram, never a restatement; carries the attacker-lens diagrams (profile→entrypoint reachability, top-hunt-item threat diagram). |
 | `phase-adversary.md` | opus | one phase's output + a deterministic ref-check | re-derives each claim from code; includes a diagram-consistency check against `architecture.md`'s/`threat-model.md`'s diagrams; verdicts → `kb/gates/<phase>.json`. Runs after **each** of the three above. |
 

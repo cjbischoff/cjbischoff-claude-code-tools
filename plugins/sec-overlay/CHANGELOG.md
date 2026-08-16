@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.27.0 - 2026-08-16
+
+### Changed
+
+- `agents/architecture.md` rebuilt on the C4/arc42 contract: it now writes
+  `architecture/context-diagram.mmd`, `architecture/container-diagram.mmd`,
+  `architecture/component-diagram-<name>.mmd` and
+  `architecture/runtime-view/sequence-<scenario>.mmd` (only where warranted), and
+  `architecture/arc42.md` — replacing the old single-file `kb/architecture.md` +
+  `kb/entities/<component>.md` output.
+
 ## 1.26.0 - 2026-08-16
 
 ### Added
