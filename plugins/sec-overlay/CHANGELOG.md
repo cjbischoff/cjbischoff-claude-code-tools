@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.16.1 - 2026-08-15
+
+### Changed
+
+- Document the `artifact-gate` → `artifact-review` phases (Tasks 14–16) in the operating manual:
+  `skills/sec-overlay/CLAUDE.md` §2 phase order and §4 workspace artifacts, `CLAUDE.md`'s
+  CLI-callable module list (`artifact_gate`), and `skills/sec-overlay/README.md`'s pipeline map.
+
 ## 1.16.0 - 2026-08-15
 
 ### Added

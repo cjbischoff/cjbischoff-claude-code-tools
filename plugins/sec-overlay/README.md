@@ -40,6 +40,10 @@ uv run python -m sec_overlay.cli scan \
 This runs semgrep → normalize → SARIF/Markdown only. It is the smoke path, **not** a real
 audit (no agents, no gate ladder). For a full agentic audit, see the skill playbook below.
 
+A full audit now checks its own output before handing it off: a deterministic `artifact-gate`
+followed by an opus `artifact-review` adversary run after `report`, catching a stale or
+overclaiming report before a human reads it.
+
 ## More
 
 | To understand… | Read |
