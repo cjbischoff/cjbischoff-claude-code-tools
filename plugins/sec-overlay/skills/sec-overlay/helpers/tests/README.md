@@ -256,3 +256,7 @@ The `_full` helper in `test_report.py` builds its `Finding` kwargs as a dict lit
 had their fixture `cvss_vector` strings swapped from `CVSS:3.1` to `CVSS:4.0` vectors of
 equivalent meaning, matching the v4.0-only parser (`sec_overlay/cvss.py`). `test_cvss.py`'s own
 `CVSS:3.1` fixture is untouched — it exercises the parser's rejection path.
+
+`test_mermaid_index.py` (new) covers `sec_overlay.mermaid_index.index_mermaid` against flowchart,
+sequence, and C4 fixtures: node/edge/subgraph/store-id extraction, sequence participant order and
+message count, `has_style` detection, and a `ValueError` on an unrecognized diagram header.

@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.21.0 - 2026-08-16
+
+### Added
+
+- `sec_overlay/mermaid_index.py`: `index_mermaid(text)` line-oriented structure extractor for
+  Mermaid flowchart, sequence, and C4 diagrams — nodes, edges, subgraph membership, sequence
+  participants/message count, data-store ids, and style detection, feeding the upcoming diagram
+  gate.
+
 ## 1.20.2 - 2026-08-16
 
 ### Fixed

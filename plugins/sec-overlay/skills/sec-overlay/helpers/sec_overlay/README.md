@@ -293,3 +293,8 @@ harness's own sidecar output.
 `prefilter.py`'s candidate-id assignment moved into `_assign_candidate_ids`, which now numbers
 ids per attack class (`C-SQLI-0001`, `C-XSS-0001`, ...) instead of one global `C-0001..`
 sequence, so ids carry the class and never collide across rulesets (ISSUE-013).
+
+`mermaid_index.py` (new) — `index_mermaid(text)` line-oriented parser for Mermaid flowchart,
+sequence, and C4 diagrams, returning a `DiagramIndex` (nodes, edges, subgraphs, participants,
+messages, store_ids, has_style). Not a grammar: extracts only what the diagram gate checks;
+raises `ValueError` on an unrecognized diagram header. Feeds the upcoming diagram gate (Task 2).
