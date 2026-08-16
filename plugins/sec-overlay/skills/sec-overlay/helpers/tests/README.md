@@ -7,6 +7,12 @@ checkout are environmental (gitignored bench corpus, excluded semgrep submodule)
 New `test_cvss4_data.py` covers the vendored CVSS v4.0 data: `MACROVECTOR_LOOKUP` has >250
 six-digit-key entries with scores in `[0, 10]`, and `MAX_COMPOSED`/`MAX_SEVERITY` are nonempty.
 
+`test_cvss.py` fully rewritten for the v4.0 engine: 25 reference vectors pinned to NVD's published
+`cvssMetricV40` base scores (`E:X` only, so no threat-metric ambiguity), plus band/bounds/rejection
+and `offensive_priority` tests. `test_calibrate.py`, `test_factcheck_baseline_envelope.py`, and
+`test_wiring.py` now fail to collect — they import `sec_overlay.calibrate`, which still imports the
+removed `cvss31_base` (a later migration task's job to fix).
+
 New `test_artifact_gate.py` (§4.8) covers `run_artifact_gate`: a clean run passes; a stale constant
 section, a missing detail file, a missing red-team directive, and a triage ID with no matching
 finding each produce an error string; the gate always writes `kb/gates/artifact-gate.json`.

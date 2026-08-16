@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.18.0 - 2026-08-16
+
+### Changed
+
+- Rewrite the scoring engine (`sec_overlay/cvss.py`) from CVSS 3.1 to CVSS v4.0: `cvss40_base`
+  computes the base score via a MacroVector/interpolation port of FIRST's official calculator
+  (`cvss_score.js`, BSD-2-Clause) against `cvss4_data.py`'s tables, base metrics only (no
+  Threat/Environmental/Supplemental support). `offensive_priority` keeps its 3.1 branch order
+  verbatim. A `CVSS:3.x` vector now raises `ValueError` naming the required 4.0 migration.
+
 ## 1.17.0 - 2026-08-16
 
 ### Added

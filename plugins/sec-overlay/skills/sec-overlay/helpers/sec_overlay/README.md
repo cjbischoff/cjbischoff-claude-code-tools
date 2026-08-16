@@ -20,6 +20,11 @@ New module `cvss4_data.py`: CVSS v4.0 MacroVector lookup table (270 entries) and
 tables (`MAX_COMPOSED`, `MAX_SEVERITY`), vendored verbatim from FIRST's official calculator
 (BSD-2-Clause). Data only, no logic — Task 2 builds the v4.0 scoring engine on it.
 
+`cvss.py` rewritten to CVSS v4.0: `cvss40_base(vector)` ports the MacroVector/interpolation
+algorithm from `cvss_score.js` against `cvss4_data.py`'s tables (base metrics only — E/CR/IR/AR
+fixed at their spec worst-case defaults, no environmental/threat support); `offensive_priority`
+keeps its 3.1 branch order verbatim. `CVSS:3.x` input now raises `ValueError`.
+
 New module `artifact_gate.py` (§4.8): `run_artifact_gate(ws)` checks a finished run's own
 artifacts — report.md free of stale constant sections and over-long triage cells, every shipping
 finding has a `findings/<ID>.md` detail file and a red-team directive, every triage-table ID
