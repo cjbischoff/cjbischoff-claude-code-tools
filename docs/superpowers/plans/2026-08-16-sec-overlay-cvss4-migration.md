@@ -1,0 +1,392 @@
+# sec-overlay CVSS v4.0 Migration Implementation Plan (Plan 1 of 3)
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Replace sec-overlay's CVSS 3.1 scoring engine with a CVSS v4.0 engine — one version everywhere, no mixing.
+
+**Architecture:** `cvss.py` is rewritten around the v4.0 MacroVector model: base metrics map to a 6-digit MacroVector, a vendored official lookup table gives its score, and interpolation refines it. The vendored data and the reference test scores both come from FIRST's official calculator repository, never from memory. Callers (`calibrate.py`) and prompts (`validate.md`, `investigate.md`) move to `CVSS:4.0` vectors in the same plan.
+
+**Tech Stack:** Python 3.13 stdlib only (vendored data module, no runtime deps). pytest, ruff, ty.
+
+**Spec:** `docs/superpowers/specs/2026-08-16-architecture-threat-model-standards-design.md` (§5). Source standard: `docs/superpowers/specs/2026-08-16-architecture-threat-model-standards-source.md`.
+
+## Global Constraints
+
+- Work on branch `feat/architecture-threat-model-standards`. Never commit to main. Conventional Commits `<type>(sec-overlay): <summary under 50 chars>`.
+- Run all commands from `plugins/sec-overlay/skills/sec-overlay/helpers/` with `uv run`.
+- stdlib-only runtime: no new dependencies in `pyproject.toml`. Vendored *data* generated from FIRST's published files is allowed; a `cvss` pip package is not.
+- TDD: failing test first, confirm red, then implement.
+- Doc-guard (prek): staging `sec_overlay/*.py` requires staging `sec_overlay/README.md`; staging `tests/*.py` requires staging `tests/README.md`; every commit stages `plugins/sec-overlay/CHANGELOG.md` and bumps `plugins/sec-overlay/.claude-plugin/plugin.json` (feat → minor, others → patch). Stage explicit paths only; never `--no-verify`; no `Co-Authored-By` trailer.
+- Expected pre-existing test failures (environmental, do not fix): `test_bench.py::test_seed_corpus_is_valid`, `test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd`, `test_citations.py::test_all_mapped_ids_exist_in_seed` (this one may pass in some checkouts).
+- ty baseline is ~161 pre-existing diagnostics repo-wide; introduce none in touched files.
+- NEVER hand-type CVSS v4.0 lookup values or reference scores from memory. Fetch them from the official sources named in Task 1.
+
+---
+
+### Task 1: Vendor the official v4.0 lookup data
+
+**Files:**
+- Create: `sec_overlay/cvss4_data.py` (generated, committed)
+- Create: `tests/test_cvss4_data.py`
+
+**Interfaces:**
+- Consumes: nothing in-repo.
+- Produces: `MACROVECTOR_LOOKUP: dict[str, float]` (6-digit MacroVector string → score), `MAX_COMPOSED: dict` and `MAX_SEVERITY: dict` (the interpolation tables), exactly as published in FIRST's calculator. Task 2 imports all three.
+
+- [ ] **Step 1: Fetch the official data files into the scratchpad**
+
+FIRST's official calculator (BSD-2-Clause) publishes the authoritative data as JS files. Fetch:
+
+```bash
+mkdir -p "$SCRATCH/cvss4" && cd "$SCRATCH/cvss4"
+curl -fsSLO https://raw.githubusercontent.com/FIRSTdotorg/cvss-v4-calculator/main/cvss_lookup.js
+curl -fsSLO https://raw.githubusercontent.com/FIRSTdotorg/cvss-v4-calculator/main/max_composed.js
+curl -fsSLO https://raw.githubusercontent.com/FIRSTdotorg/cvss-v4-calculator/main/max_severity.js
+curl -fsSLO https://raw.githubusercontent.com/FIRSTdotorg/cvss-v4-calculator/main/cvss40.js
+```
+
+(`$SCRATCH` = the session scratchpad directory. `cvss40.js` is the reference implementation ported in Task 2; it is read, not vendored.) If any filename 404s, list the repo tree (`gh api repos/FIRSTdotorg/cvss-v4-calculator/contents`) and locate the moved equivalents — the lookup dict is the one holding ~270 `"000000": 10` style entries.
+
+- [ ] **Step 2: Write the failing test**
+
+```python
+# tests/test_cvss4_data.py — new
+from sec_overlay.cvss4_data import MACROVECTOR_LOOKUP, MAX_COMPOSED, MAX_SEVERITY
+
+
+def test_lookup_shape():
+    # 6-char keys of digits, scores within CVSS bounds
+    assert len(MACROVECTOR_LOOKUP) > 250
+    for k, v in MACROVECTOR_LOOKUP.items():
+        assert len(k) == 6 and k.isdigit()
+        assert 0.0 <= v <= 10.0
+
+
+def test_interpolation_tables_nonempty():
+    assert MAX_COMPOSED and MAX_SEVERITY
+```
+
+- [ ] **Step 3: Run, confirm red**
+
+Run: `uv run pytest tests/test_cvss4_data.py -v` — Expected: FAIL (module missing).
+
+- [ ] **Step 4: Convert JS objects to a Python module**
+
+Write a throwaway converter (in the scratchpad, not the repo) that strips the `export const <name> =` prefix from each JS file, parses the remaining object with `json.loads` (quote bare keys first via regex if needed), and emits `sec_overlay/cvss4_data.py`:
+
+```python
+"""CVSS v4.0 scoring data, vendored from FIRST's official calculator.
+
+Source: https://github.com/FIRSTdotorg/cvss-v4-calculator (BSD-2-Clause).
+Generated by conversion, never hand-edited. Regenerate from the source repo
+if FIRST revises the specification.
+"""
+
+MACROVECTOR_LOOKUP: dict[str, float] = { ... }   # full converted content
+MAX_COMPOSED: dict = { ... }                      # full converted content
+MAX_SEVERITY: dict = { ... }                      # full converted content
+```
+
+Spot-check three entries against the raw JS by eye before committing. Delete the converter script afterward (`trash`).
+
+- [ ] **Step 5: Run, confirm green, lint**
+
+Run: `uv run pytest tests/test_cvss4_data.py -q && uv run ruff check sec_overlay/ && uv run ty check`
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add helpers/sec_overlay/cvss4_data.py helpers/tests/test_cvss4_data.py \
+  helpers/sec_overlay/README.md helpers/tests/README.md \
+  plugins/sec-overlay/CHANGELOG.md plugins/sec-overlay/.claude-plugin/plugin.json
+git commit -m "feat(sec-overlay): vendor CVSS v4.0 lookup data"
+```
+
+---
+
+### Task 2: Rewrite the scoring engine to v4.0
+
+**Files:**
+- Modify: `sec_overlay/cvss.py` (full rewrite; current file is 104 lines of 3.1 code)
+- Rewrite: `tests/test_cvss.py` (delete 3.1 tests with the engine)
+
+**Interfaces:**
+- Consumes: `MACROVECTOR_LOOKUP`, `MAX_COMPOSED`, `MAX_SEVERITY` from Task 1.
+- Produces: `cvss40_base(vector: str) -> tuple[float, str]` (score, rating) and `offensive_priority(vector: str, *, externally_facing: bool = False) -> str` accepting v4.0 vectors. Any `CVSS:3.1/` input raises `ValueError` naming the migration. Task 3 and all later plans depend on these two names.
+
+- [ ] **Step 1: Fetch reference test vectors**
+
+The official calculator repo ships test data with expected scores. Fetch it:
+
+```bash
+cd "$SCRATCH/cvss4"
+gh api repos/FIRSTdotorg/cvss-v4-calculator/contents | python3 -c "import json,sys; [print(e['name']) for e in json.load(sys.stdin)]"
+# locate the test/vector file (e.g. app tests or a vectors JSON) and download it
+```
+
+Select ≥20 vectors spanning: all-High, all-None-impact, PR:H cases, UI:P and UI:A, subsequent-system impact (SC/SI/SA non-N), and at least three interpolation-sensitive vectors (score not equal to its bare MacroVector lookup value). Copy each vector string and its published expected score verbatim into the test file. If no machine-readable test data exists in the repo, generate expected scores by executing the fetched `cvss40.js` reference implementation with `node` against your chosen vectors, and record in the test file's docstring that scores came from the official implementation run locally.
+
+- [ ] **Step 2: Write the failing tests**
+
+```python
+# tests/test_cvss.py — full rewrite
+"""Engine tests pinned to FIRST's official CVSS v4.0 calculator outputs.
+
+Reference scores obtained from https://github.com/FIRSTdotorg/cvss-v4-calculator
+(see Task 1/2 provenance note in the module docstring).
+"""
+
+import pytest
+
+from sec_overlay.cvss import cvss40_base, offensive_priority
+
+# (vector, expected_score) — VALUES COPIED FROM THE OFFICIAL SOURCE, ≥20 rows
+REFERENCE = [
+    # ("CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H", 10.0),
+    # ... filled verbatim from the official test data in Step 1
+]
+
+
+@pytest.mark.parametrize("vector,expected", REFERENCE)
+def test_reference_scores(vector, expected):
+    score, _ = cvss40_base(vector)
+    assert score == expected
+
+
+def test_bounds_and_bands():
+    score, rating = cvss40_base(
+        "CVSS:4.0/AV:P/AC:H/AT:P/PR:H/UI:A/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N"
+    )
+    assert score == 0.0 and rating == "None"
+
+
+def test_rating_band_boundaries():
+    # bands per the v4.0 spec: 0.0 None, 0.1–3.9 Low, 4.0–6.9 Medium, 7.0–8.9 High, 9.0–10.0 Critical
+    from sec_overlay.cvss import _rating
+    assert _rating(0.0) == "None"
+    assert _rating(3.9) == "Low"
+    assert _rating(4.0) == "Medium"
+    assert _rating(6.9) == "Medium"
+    assert _rating(7.0) == "High"
+    assert _rating(9.0) == "Critical"
+
+
+def test_v31_vector_rejected_with_migration_message():
+    with pytest.raises(ValueError, match="4.0"):
+        cvss40_base("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N")
+
+
+def test_malformed_vector_rejected():
+    with pytest.raises(ValueError):
+        cvss40_base("CVSS:4.0/AV:N/AC:L")  # missing required metrics
+
+
+def test_offensive_priority_v4():
+    p1 = "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N"
+    assert offensive_priority(p1) == "P1"
+    p2 = "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N"
+    assert offensive_priority(p2) == "P2"
+    local = "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N"
+    assert offensive_priority(local) == "P3"
+    assert offensive_priority(local, externally_facing=True) == "P3"  # PR:N but AV:L → still P3? no:
+    # externally_facing hint with PR != H promotes to P2 — keep the 3.1 semantics
+```
+
+Resolve the last assertion pair while writing: the 3.1 `offensive_priority` promoted `externally_facing` + `pr != "H"` to P2 before the AV check demoted; preserve that exact branch order (see the old implementation, kept verbatim except for the parser).
+
+- [ ] **Step 3: Run, confirm red**
+
+Run: `uv run pytest tests/test_cvss.py -v` — Expected: FAIL (`cvss40_base` not defined).
+
+- [ ] **Step 4: Implement the engine**
+
+Port the scoring algorithm from the fetched `cvss40.js` reference implementation. Required structure:
+
+```python
+"""Deterministic CVSS v4.0 base scoring + an orthogonal OffensivePriority axis.
+
+The LLM proposes a CVSS v4.0 vector; the score is computed here via the
+MacroVector model ported from FIRST's official calculator
+(https://github.com/FIRSTdotorg/cvss-v4-calculator, BSD-2-Clause), never LLM
+arithmetic. OffensivePriority (P1-P4) is unchanged from the 3.1 era.
+"""
+
+from __future__ import annotations
+
+from sec_overlay.cvss4_data import MACROVECTOR_LOOKUP, MAX_COMPOSED, MAX_SEVERITY
+
+_REQUIRED = ("AV", "AC", "AT", "PR", "UI", "VC", "VI", "VA", "SC", "SI", "SA")
+_ALLOWED = {
+    "AV": {"N", "A", "L", "P"}, "AC": {"L", "H"}, "AT": {"N", "P"},
+    "PR": {"N", "L", "H"}, "UI": {"N", "P", "A"},
+    "VC": {"H", "L", "N"}, "VI": {"H", "L", "N"}, "VA": {"H", "L", "N"},
+    "SC": {"H", "L", "N"}, "SI": {"H", "L", "N"}, "SA": {"H", "L", "N"},
+}
+
+
+def _parse(vector: str) -> dict[str, str]:
+    if vector.startswith("CVSS:3"):
+        raise ValueError(
+            f"CVSS 3.x vector is no longer supported; re-derive as CVSS:4.0 ({vector})"
+        )
+    if not vector.startswith("CVSS:4.0/"):
+        raise ValueError(f"not a CVSS 4.0 vector: {vector}")
+    metrics: dict[str, str] = {}
+    for part in vector.split("/")[1:]:
+        k, _, v = part.partition(":")
+        metrics[k] = v
+    missing = [k for k in _REQUIRED if k not in metrics]
+    if missing:
+        raise ValueError(f"malformed CVSS 4.0 vector, missing {missing}: {vector}")
+    for k in _REQUIRED:
+        if metrics[k] not in _ALLOWED[k]:
+            raise ValueError(f"invalid CVSS 4.0 value {k}:{metrics[k]}")
+    return metrics
+```
+
+Then the MacroVector computation (`_macrovector(m) -> str`, six EQ digits computed exactly per the reference implementation's `macroVector()` rules), the interpolation (`_interpolated_score(m, mv) -> float` porting `cvss40.js`'s severity-distance logic against `MAX_COMPOSED`/`MAX_SEVERITY`), and:
+
+```python
+def cvss40_base(vector: str) -> tuple[float, str]:
+    """Compute the CVSS v4.0 base score and rating for a vector string."""
+    m = _parse(vector)
+    if all(m[k] == "N" for k in ("VC", "VI", "VA", "SC", "SI", "SA")):
+        return 0.0, "None"
+    score = _interpolated_score(m, _macrovector(m))
+    return score, _rating(score)
+```
+
+`_rating` keeps the same band boundaries as before (they are identical in v4.0). `offensive_priority` keeps its 3.1 body verbatim, calling the new `_parse` (AV and PR carry the same value sets it branches on). Port faithfully: where the JS reads a metric with modified/threat fallbacks, base-only means the base value is used directly — do not implement threat/environmental metrics (YAGNI; findings only carry base vectors).
+
+- [ ] **Step 5: Run, confirm green, lint**
+
+Run: `uv run pytest tests/test_cvss.py tests/test_cvss4_data.py -q && uv run ruff check sec_overlay/ && uv run ty check`
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add helpers/sec_overlay/cvss.py helpers/tests/test_cvss.py \
+  helpers/sec_overlay/README.md helpers/tests/README.md \
+  plugins/sec-overlay/CHANGELOG.md plugins/sec-overlay/.claude-plugin/plugin.json
+git commit -m "feat(sec-overlay): rewrite scoring engine to CVSS v4.0"
+```
+
+---
+
+### Task 3: Re-point calibrate and the finding model
+
+**Files:**
+- Modify: `sec_overlay/calibrate.py:9,143-145,242-244`
+- Modify: `sec_overlay/models.py:65,122` (docstring/comment only)
+- Test: `tests/test_calibrate.py`
+
+**Interfaces:**
+- Consumes: `cvss40_base`, `offensive_priority` (Task 2).
+- Produces: `calibrate` behavior unchanged in shape — `risk_score` still derives `max(1, min(10, round(base_score)))`; `priority` still from `offensive_priority`.
+
+- [ ] **Step 1: Update the failing tests**
+
+In `tests/test_calibrate.py`, replace every `CVSS:3.1/...` fixture vector with its v4.0 counterpart expressing the same scenario, e.g. `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N` → `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N`. Where a test asserts a specific `risk_score`, recompute the expectation from the v4.0 score of the new vector (compute it with the Task 2 engine in a REPL — never guess).
+
+- [ ] **Step 2: Run, confirm red**
+
+Run: `uv run pytest tests/test_calibrate.py -v` — Expected: FAIL (calibrate still imports `cvss31_base`).
+
+- [ ] **Step 3: Implement**
+
+In `calibrate.py`: change line 9 to `from sec_overlay.cvss import cvss40_base, offensive_priority`; replace both `cvss31_base(` call sites with `cvss40_base(`. In `models.py`: update line 65's docstring to "Proposed CVSS v4.0 vector string." (field name `cvss_vector` unchanged).
+
+- [ ] **Step 4: Run, confirm green**
+
+Run: `uv run pytest tests/test_calibrate.py tests/test_models.py -q && uv run ruff check sec_overlay/ && uv run ty check`
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add helpers/sec_overlay/calibrate.py helpers/sec_overlay/models.py \
+  helpers/tests/test_calibrate.py \
+  helpers/sec_overlay/README.md helpers/tests/README.md \
+  plugins/sec-overlay/CHANGELOG.md plugins/sec-overlay/.claude-plugin/plugin.json
+git commit -m "feat(sec-overlay): calibrate scores CVSS v4.0 vectors"
+```
+
+---
+
+### Task 4: Move the prompts to v4.0 vectors
+
+**Files:**
+- Modify: `agents/validate.md:107-112` (the confirmed-finding contract)
+- Modify: `agents/investigate.md:151` (the example finding JSON)
+- Modify: `agents/README.md` (same-commit doc rule)
+
+**Interfaces:**
+- Consumes: nothing.
+- Produces: prompts that instruct agents to emit `CVSS:4.0/AV:.../SA:N` vectors. The Task 2 parser rejects anything else, so prompt and engine must land in the same plan.
+
+- [ ] **Step 1: Edit validate.md**
+
+At lines 107-112, change "the full CVSS v3.1 vector string" to "the full CVSS v4.0 vector string (`CVSS:4.0/AV:_/AC:_/AT:_/PR:_/UI:_/VC:_/VI:_/VA:_/SC:_/SI:_/SA:_`)". Preserve every other sentence of the block verbatim — it is a load-bearing hard rule (derived-from-traced-source→sink requirement).
+
+- [ ] **Step 2: Edit investigate.md**
+
+Replace the line-151 example `"cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"` with `"cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N"`.
+
+- [ ] **Step 3: Verify no 3.1 references remain in prompts**
+
+Run: `rg -n "CVSS:3\.1|v3\.1|CVSS 3" ../agents/ ../references/` — Expected: no output.
+
+- [ ] **Step 4: Run the contract tests**
+
+Run: `uv run pytest tests/test_contracts.py tests/test_wiring.py -q` — Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add agents/validate.md agents/investigate.md agents/README.md \
+  plugins/sec-overlay/CHANGELOG.md plugins/sec-overlay/.claude-plugin/plugin.json
+git commit -m "feat(sec-overlay): prompts emit CVSS v4.0 vectors"
+```
+
+---
+
+### Task 5: Sweep remaining fixtures and run the full suite
+
+**Files:**
+- Modify: `tests/test_report.py`, `tests/test_models.py`, `tests/test_citations.py`, `tests/test_factcheck_baseline_envelope.py` (fixture vectors only)
+
+**Interfaces:**
+- Consumes: Task 2 engine.
+- Produces: a repo with zero `CVSS:3.1` occurrences outside the git history.
+
+- [ ] **Step 1: Find every remaining 3.1 fixture**
+
+Run: `rg -ln "CVSS:3\.1" sec_overlay/ tests/ ../agents/ ../references/` — expect only the four test files above.
+
+- [ ] **Step 2: Replace fixtures**
+
+Swap each fixture vector for a v4.0 vector of equivalent meaning (same pattern as Task 3 Step 1). Where a test derives expectations from the score, recompute with the new engine in a REPL.
+
+- [ ] **Step 3: Full suite + static checks**
+
+Run: `uv run pytest -q && uv run ruff check sec_overlay/ bench/ tests/ && uv run ty check`
+Expected: only the environmental failures listed in Global Constraints; ty at baseline.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add helpers/tests/test_report.py helpers/tests/test_models.py \
+  helpers/tests/test_citations.py helpers/tests/test_factcheck_baseline_envelope.py \
+  helpers/tests/README.md \
+  plugins/sec-overlay/CHANGELOG.md plugins/sec-overlay/.claude-plugin/plugin.json
+git commit -m "test(sec-overlay): migrate fixtures to CVSS v4.0"
+```
+
+---
+
+## Self-Review
+
+**1. Spec coverage (§5):** engine rewrite → Task 2; vendored lookup data → Task 1; no-mixing hard error → Task 2 `_parse`; validate.md/schema move → Tasks 3-4; calibrate unchanged consumption → Task 3; multi-pass re-scoring needs no code (the parser error plus the re-validate prompt already force re-derivation; Plan 3 documents it); reference-score verification → Task 2 tests.
+
+**2. Placeholder scan:** Task 1 Step 4 and Task 2's `REFERENCE` table intentionally defer *values* to the official fetched sources — that is a provenance requirement (never hand-type from memory), not a placeholder; the fetch commands and shapes are fully specified. No TBDs otherwise.
+
+**3. Type consistency:** `cvss40_base(vector: str) -> tuple[float, str]` and `offensive_priority(vector: str, *, externally_facing: bool = False) -> str` are used identically in Tasks 2, 3. Data names `MACROVECTOR_LOOKUP`/`MAX_COMPOSED`/`MAX_SEVERITY` match between Tasks 1 and 2.

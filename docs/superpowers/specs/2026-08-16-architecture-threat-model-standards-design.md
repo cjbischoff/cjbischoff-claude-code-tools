@@ -106,7 +106,7 @@ Input: the architecture tree. Ordered procedure baked into the prompt:
 | Sentence length ≤25 words | Reject (uniform cap; instruction-vs-description intent detection is guesswork) |
 | No semicolons in prose | Reject |
 | Paragraphs ≤6 sentences | Reject |
-| 3+ step sequences must be lists | Reject |
+| 3+ step sequences must be lists | Warn only (deterministic detection of a buried sequence is unreliable; heuristic: two or more " then " joins in one sentence) |
 | Noun clusters ≤3 words | Warn only (4+ consecutive noun-like tokens; not reliably checkable) |
 
 Lexical rules stay directional-only per the source standard: no dictionary check. The document front matter carries the one-time lexical-limitation statement. Reject → one regeneration round → a second failure ships with violations listed in the gate file as flags. Modality preservation ("may have failed" never becomes "failed") is a prompt rule and an adversary-checklist item, not a lint rule.
