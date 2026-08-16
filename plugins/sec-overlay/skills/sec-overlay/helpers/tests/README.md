@@ -1,8 +1,10 @@
 # `tests/` — the deterministic test suite
 
-90 pytest files, 785 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+91 pytest files, 786 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_command_audit.py` covers the load-bearing content of `/sec-overlay:audit`: the command file documents routing (`/sec-overlay:audit`), single-repo driver (`run.drive`), multi-repo confirmation step, and the `correlate` CLI with required `--out` flag.
 
 `test_kb.py` gained `test_new_tree_paths` for `kb.py`'s new arc42/threat-model tree path helpers;
 `test_workspace.py` gained `test_ensure_creates_trees`, pinning that `Workspace.ensure()` creates
