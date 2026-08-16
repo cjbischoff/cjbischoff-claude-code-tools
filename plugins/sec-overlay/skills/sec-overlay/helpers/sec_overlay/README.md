@@ -392,3 +392,7 @@ path — so no stage advances without a receipt on disk.
 `run.py` gained `write_env(ws, target, scope, sha)`, which writes `<ws.root>/run.env` with
 `TARGET`, `WORKSPACE`, `SHA`, `SCAN_SCOPE`, and `REPO_ROOT` resolved once — agent phases read the
 tokens from this file instead of the orchestrator re-substituting them by hand on every spawn.
+
+`run.py` gained `infer_role(profile: ScanProfile) -> str`, which maps a `ScanProfile`'s
+`subsystems`/`frameworks`/`attack_surface` to one of `sec_overlay.correlate.manifest.ROLES`
+(`rbac-source` → `service-enforcer` → `infra` default) for correlation-manifest synthesis.

@@ -348,3 +348,7 @@ satisfy ruff F401; `tmp_path` already provides a `Path` instance via the pytest 
 `test_run.py` gained `test_write_env_writes_all_tokens`, covering `sec_overlay.run.write_env`:
 writes `<ws.root>/run.env` with `TARGET`, `WORKSPACE`, `SHA`, `SCAN_SCOPE`, and `REPO_ROOT` lines
 and returns that path.
+
+`test_run.py` gained three `infer_role` tests, covering `sec_overlay.run.infer_role`: a dict-form
+`subsystems` entry named `rbac-policy`/`identity` returns `rbac-source`, a network `attack_surface`
+returns `service-enforcer`, and an ambiguous profile defaults to `infra`.

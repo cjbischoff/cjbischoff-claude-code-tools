@@ -9,7 +9,12 @@ import json
 import subprocess
 from pathlib import Path
 
+from sec_overlay.correlate.manifest import ROLES
+from sec_overlay.profile import ScanProfile
 from sec_overlay.workspace import Workspace
+
+_RBAC_SIGNALS = ("auth", "rbac", "iam", "policy", "interceptor", "middleware", "identity")
+_SERVICE_SIGNALS = ("grpc", "http", "service", "handler", "endpoint", "network")
 
 
 class WorkingTreeFenceError(RuntimeError):
@@ -42,6 +47,30 @@ def fence(target: str | Path, baseline: str, *, runner=subprocess.run) -> None:
     raise WorkingTreeFenceError(
         "audited tree changed during the run: " + "; ".join(delta)
     )
+
+
+def infer_role(profile: ScanProfile) -> str:
+    """Infer a correlation role from a repo's scan profile.
+
+    Under-correlating is safer than over-correlating: a wrong ``rbac-source``
+    label fabricates a ``control-enforces`` edge and drives a false verdict, so
+    ambiguity falls through to ``infra``.
+
+    Args:
+        profile: The recon-produced scan profile.
+
+    Returns:
+        One of :data:`ROLES`.
+    """
+    subsystem_names = [s["name"] if isinstance(s, dict) else s for s in profile.subsystems]
+    rbac_text = " ".join(subsystem_names + profile.frameworks + profile.attack_surface).lower()
+    if any(sig in rbac_text for sig in _RBAC_SIGNALS):
+        return "rbac-source"
+    surface_text = " ".join(profile.attack_surface).lower()
+    if any(sig in surface_text for sig in _SERVICE_SIGNALS):
+        return "service-enforcer"
+    assert "infra" in ROLES  # invariant: the default is a valid role
+    return "infra"
 
 
 def receipt(
