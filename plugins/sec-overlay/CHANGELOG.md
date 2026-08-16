@@ -2,6 +2,13 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.17.0 - 2026-08-16
+
+### Added
+
+- Vendor CVSS v4.0 MacroVector lookup and interpolation tables (`sec_overlay/cvss4_data.py`) from
+  FIRST's official calculator (BSD-2-Clause), for a future v4.0 scoring engine.
+
 ## 1.16.2 - 2026-08-15
 
 ### Fixed
