@@ -384,3 +384,7 @@ bracket label over 4 words is now an error (bare-id nodes with no bracket label 
 New module `run.py` — driver helpers for a sec-overlay audit run; first addition is `fence(target,
 baseline, *, runner=subprocess.run)`, which raises `WorkingTreeFenceError` naming the delta lines
 when `git status --porcelain` output differs from the captured baseline.
+
+`run.py` gained `receipt(ws, phase, *, stdout="", artifacts=None, counts=None)`, which writes
+`<ws.kb>/receipts/<phase>.json` (keys `phase`, `stdout`, `artifacts`, `counts`) and returns the
+path — so no stage advances without a receipt on disk.

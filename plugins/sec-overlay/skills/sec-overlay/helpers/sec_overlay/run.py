@@ -5,8 +5,11 @@ per-phase receipt writer, a one-time token env writer, scan-profile role
 inference, and manifest synthesis, plus the single-repo ``drive`` loop.
 """
 
+import json
 import subprocess
 from pathlib import Path
+
+from sec_overlay.workspace import Workspace
 
 
 class WorkingTreeFenceError(RuntimeError):
@@ -39,3 +42,40 @@ def fence(target: str | Path, baseline: str, *, runner=subprocess.run) -> None:
     raise WorkingTreeFenceError(
         "audited tree changed during the run: " + "; ".join(delta)
     )
+
+
+def receipt(
+    ws: Workspace,
+    phase: str,
+    *,
+    stdout: str = "",
+    artifacts: list[str] | None = None,
+    counts: dict | None = None,
+) -> Path:
+    """Persist a phase receipt so no stage advances without one on disk.
+
+    Args:
+        ws: The audit workspace.
+        phase: The phase name (the receipt file stem).
+        stdout: Captured phase stdout, verbatim (empty for in-process phases).
+        artifacts: Paths the phase produced, as strings.
+        counts: Small numeric summary (e.g. ``{"findings": 3}``).
+
+    Returns:
+        The path written: ``<ws.kb>/receipts/<phase>.json``.
+    """
+    out_dir = ws.kb / "receipts"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"{phase}.json"
+    path.write_text(
+        json.dumps(
+            {
+                "phase": phase,
+                "stdout": stdout,
+                "artifacts": artifacts or [],
+                "counts": counts or {},
+            },
+            indent=2,
+        )
+    )
+    return path

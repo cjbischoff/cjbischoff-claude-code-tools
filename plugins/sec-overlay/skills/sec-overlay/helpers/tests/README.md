@@ -340,3 +340,7 @@ otherwise.
 
 `test_run.py`'s unused `pathlib.Path` import (leftover from the initial draft) was removed to
 satisfy ruff F401; `tmp_path` already provides a `Path` instance via the pytest fixture.
+
+`test_run.py` gained `test_receipt_writes_counts_even_when_stdout_empty`, covering
+`sec_overlay.run.receipt`: writes `<ws.kb>/receipts/<phase>.json` with the `phase`, `stdout`,
+`artifacts`, and `counts` keys, and returns that path.
