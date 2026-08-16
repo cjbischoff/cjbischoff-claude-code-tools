@@ -105,8 +105,14 @@ finding. When dispatching, keep that fallback in the agent's instructions.
 C1. **Context-ingest** (sonnet) — `agents/context-ingest.md` → `kb/context.json`; `agents/context-adversary.md` (opus) pressure-checks it. Runs here, BEFORE recon, so its leads can feed recon's `attack_surface`. See **Context ingestion (C1/C2)** below.
 T1. **Tier-1 substrate** (no LLM) — `python -m sec_overlay.graph build --target <T> --workspace <WS> --sha <sha>`; structural_index + a regex call-edge heuristic + osv/secrets/crypto facts → `kb/graph.json` v1, consumed by recon, architecture, and threat-model.
 2. **Recon** (sonnet) — `agents/recon.md` → `kb/scan-profile.json`. Validate with `load_profile`. **→ phase gate** (`agents/phase-adversary.md`, opus).
-3. **Architecture** (sonnet) — `agents/architecture.md` → `kb/architecture.md` + `kb/entities/`. **→ phase gate**.
-4. **Threat model** (sonnet) — `agents/threat-model.md` → `kb/THREAT_MODEL.md` (hunt list). **→ phase gate**.
+3. **Architecture** (sonnet) — `agents/architecture.md` → `architecture/` tree (C4 diagrams,
+   runtime-view sequences, `arc42.md`). **→ arch-gate** (`sec_overlay.diagram_gate` + `ste_lint`;
+   deterministic, halts on cap/prose violation).
+4. **Threat model** (sonnet) — `agents/threat-model.md` → `threat-model/` tree (`dfd.mmd` derived
+   from the container diagram, `attack-sequences/`, `threat-model.md` with STRIDE findings + hunt
+   list). **→ tm-gate** (same checks plus a duplication check against `arc42.md`). Both gates halt
+   the pipeline on cap/prose/derivation violations; the producer re-scopes (group → split →
+   promote) and regenerates once.
 5. **Prefilter** (no LLM) — `from sec_overlay.prefilter import run_prefilter; run_prefilter(ws, target, profile)` (args: `Workspace`, target path, the `ScanProfile` from recon — NOT the raw `sast_plan` dict). Backends run concurrently (one unit per semgrep ruleset / codeql language); results are merged deterministically (sorted, `C-####` ids) so serial and concurrent runs are byte-identical. Returns `{candidates, backends_run, skipped, failed, excluded, dropped_nonsecurity, skipped_reasons}`: `skipped_reasons` maps each backend that did NOT run to a reason (`disabled`/`absent`/`untrusted`/`pack-missing`); `dropped_nonsecurity` counts non-security semgrep lint dropped by the security-only filter; `failed` lists backends that errored. **A scan is only clean if every PLANNED backend ran. STOP and surface a setup error if `backends_run` is empty OR any planned backend appears in `failed` / `skipped_reasons` (e.g. `codeql: pack-missing` = a missing query pack → zero dataflow for that language). A partial scan (semgrep ran, codeql failed) is a coverage hole, not "no findings" — do NOT report it as clean.** Then `demote_noise(ws)` and `agents = reconcile_plan(ws, profile.agents_to_spawn)` (both from `sec_overlay.partition`) — `demote_noise` moves log-injection/clear-text-logging/unknown candidates to `informational`, `reconcile_plan` routes real-security classes recon omitted; and `agents = merge_custom_check_classes(agents, discover_custom_checks(target))` (from `sec_overlay.custom_checks`; adds any in-repo `.sec-overlay/checks/` bundles the target declares). Spawn investigate agents over the reconciled `agents`; for any class that is a custom-check id, append `custom_check_instructions(check)` to the standard `agents/investigate.md` prompt after the shared `prompt-constants.md` blocks, per its check's own bundle. The general-triage `security-other` agent handles any residual unrouted classes.
 6. **Investigate** (sonnet, parallel over `scan-profile.agents_to_spawn`) — `agents/investigate.md` per class → `raw`/`rejected`/new `A-####`.
 7. **Dedupe** (no LLM) — `python -m sec_overlay.dedupe --workspace <WS>`.
@@ -163,7 +169,7 @@ phase-adversary invocations fire — but it **never** lets a finding reach `conf
 a mechanical tool receipt. The finding-side FP ladder (critic → judge → adversarial-validate)
 always runs at full strength regardless of `adversary_depth`.
 
-Authoring KB artifacts (e.g. `architecture.md`, `THREAT_MODEL.md`) directly from a verified
+Authoring KB artifacts (e.g. `arc42.md`, `threat-model.md`) directly from a verified
 adversary-context output is permitted **only under `gate-by-exception`** — when the opus
 context-adversary has already enumerated components and trust-boundaries with cited `file:line`
 evidence, the orchestrator may author those artifacts from that verified output instead of
@@ -218,13 +224,16 @@ are READ-ONLY over the target and call only binary tools (`rg`, file reads).
    `{{WORKSPACE}}/kb/scan-profile.json`. Validate it afterward:
    `uv run python -c "from sec_overlay.profile import load_profile; load_profile('{{WORKSPACE}}/kb/scan-profile.json')"` (raises on invalid).
 2. **Architecture** (model: sonnet) — prompt `agents/architecture.md`. Reads the
-   profile + repo, writes `kb/architecture.md` and `kb/entities/*.md`.
+   profile + repo, writes the `architecture/` tree (C4 diagrams, runtime-view sequences,
+   `arc42.md`). **→ arch-gate** halts on cap/prose/derivation violation.
 3. **Threat model** (model: sonnet) — prompt `agents/threat-model.md`. Reads the KB
-   only, writes `kb/THREAT_MODEL.md` (attacker profiles, prioritized hunt list).
+   only, writes the `threat-model/` tree (derived `dfd.mmd`, `attack-sequences/`,
+   `threat-model.md` with STRIDE findings + hunt list). **→ tm-gate** (same checks plus
+   a duplication check).
 
 **Phase completion + crash recovery:** a phase is done only when ALL its outputs
 exist AND `record_stage` ran — never infer completion from one file's presence
-(an agent can crash after writing `architecture.md` but before `kb/entities/*`).
+(an agent can crash after writing `arc42.md` but before the `architecture/` tree finishes).
 If an agentic phase dies (e.g. transient 429/529), resume the same agent by its
 id (context intact) or re-run it; the deterministic phases are idempotent. Verify
 outputs before advancing.
@@ -277,7 +286,7 @@ bound the spend. Confirmed-delta conflates config effect with FP-ladder non-dete
 ## Phase 2–3: Prefilter + investigation (agentic)
 
 Run AFTER the KB build. Prerequisites in the workspace: `kb/scan-profile.json`,
-`kb/THREAT_MODEL.md`, and candidate findings from the deterministic prefilter.
+`threat-model/threat-model.md`, and candidate findings from the deterministic prefilter.
 
 1. **Prefilter** (no LLM): run the deterministic scan to produce candidate
    findings (Plan 1):
@@ -580,7 +589,7 @@ keeps scan output out of the repo's git tree). The `<repo-slug>` is keyed by rep
 (git `origin` URL if present, else path) + a short hash.
 
 The folder IS the campaign workspace and persists across invocations:
-- `kb/` — recon `scan-profile.json`, `architecture.md`, `entities/`, `THREAT_MODEL.md`
+- `kb/` — recon `scan-profile.json`; `architecture/` and `threat-model/` trees sit alongside `kb/`
 - `findings/` — every finding (all statuses), `state.json` — campaign state
 - `MEMORY.md` — human index: identity, current status, dated learnings log
 - `learnings/<date>.md` — dated free-text learnings accumulated across runs

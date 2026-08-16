@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.30.1 - 2026-08-16
+
+### Changed
+
+- Document the `architecture/` and `threat-model/` artifact trees and the
+  `arch-gate` / `tm-gate` deterministic phases across the skill `CLAUDE.md`,
+  `SKILL.md`, both READMEs, and the plugin `CLAUDE.md`'s CLI-callable module
+  list (`diagram_gate`, `ste_lint`). No behavior change.
+
 ## 1.30.0 - 2026-08-16
 
 ### Changed
