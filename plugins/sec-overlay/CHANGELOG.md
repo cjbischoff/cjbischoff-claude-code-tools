@@ -2,6 +2,12 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.36.1 - 2026-08-16
+
+### Fixed
+
+- Fix red-team gate path collision (O-65): the adversary writes redteam-adversary.json.
+
 ## 1.36.0 - 2026-08-16
 
 ### Added

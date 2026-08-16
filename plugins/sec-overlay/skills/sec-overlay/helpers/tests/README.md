@@ -41,6 +41,10 @@ covers `check_duplication`: a duplicated heading and a threat-model-owned struct
 fail, distinct headings pass, and the gate skips the check silently when the arc42/threat-model
 trees are absent.
 
+New `test_redteam_gate_paths.py` verifies the red-team gate path split (O-65): `redteam-adversary.md`
+line 38 declares `kb/gates/redteam-adversary.json`, avoiding collision with `redteam.py:357`'s
+`kb/gates/redteam.json`.
+
 `test_stage_validate.py` gained `test_unknown_stage_raises` (ISSUE-034): `validate_stage` now
 raises `ValueError` for an unregistered stage instead of silently passing. `test_bucket_c.py`'s
 `test_stage_validate_dispatch` updated to expect the same raise for `"unknown-stage"`.
