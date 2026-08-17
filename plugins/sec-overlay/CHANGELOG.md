@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.41.0 - 2026-08-17
+
+### Added
+
+- `file_select.py`: full allowlist and default-exclude globs ported from open-code-review.
+  `ALLOWED_EXTENSIONS` is now the complete 86-extension set from
+  `supported_file_types.json`; `DEFAULT_EXCLUDE_GLOBS` is a new 40-pattern tuple, brace-expanded
+  from `default_exclude_patterns.json`, driving a new `_is_generated(path)` check. `partition`
+  normalizes a git-quoted non-ASCII path and lowercases the extension before matching, and
+  checks deleted status, then generated globs, then the allowlist, in that order.
+
 ## 1.40.0 - 2026-08-17
 
 ### Added

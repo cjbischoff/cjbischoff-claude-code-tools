@@ -457,3 +457,12 @@ new functions — `file_diff_line_count` and `binary_paths` — give `file_selec
 size-cap and binary inputs. `cli.py`'s `review` branch now catches a `ValueError` from ref
 resolution and exits `2` with one stderr line naming the ref, without laundering any other
 `ValueError` in the run into the same exit code.
+
+`file_select.py`'s `ALLOWED_EXTENSIONS` is now the full 86-extension allowlist ported from
+open-code-review's `supported_file_types.json`, and a new `DEFAULT_EXCLUDE_GLOBS` tuple (40
+fnmatch-compatible patterns, brace-expanded from the OCR source's 34) drives a new
+`_is_generated(path)` check. `partition` now normalizes a git-quoted non-ASCII path
+(`_normalize_path`) before matching, lowercases the extension, and orders its checks deleted →
+generated → not-allowlisted; binary detection and the diff-line size cap land in a later task
+of the same plan. `fnmatch` approximates `doublestar`'s `**` (no true zero-or-more-segment
+matching) — the parametrised glob test in `tests/test_file_select.py` holds that gap honest.
