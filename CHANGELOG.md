@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Record the Phase 2 security verification at `.planning/phases/02-diff-pipeline-positioning/02-SECURITY.md` (24 threats, all closed, threats_open 0; the two open report/ledger wiring threats were fixed in the sec-overlay plugin before sign-off).
 - Record the Phase 2 code review fix report at `.planning/phases/02-diff-pipeline-positioning/02-REVIEW-FIX.md` (status all_fixed: 5/5 findings fixed, 0 skipped).
 - Record the Phase 2 verification report at `.planning/phases/02-diff-pipeline-positioning/02-VERIFICATION.md` (status gaps_found, 6/9 must-haves verified; the 3 gaps mirror the code review's critical findings).
 - Record the Phase 2 code review report at `.planning/phases/02-diff-pipeline-positioning/02-REVIEW.md` (26 files at standard depth: 3 critical, 2 warning findings).
