@@ -1,8 +1,14 @@
 # `tests/` — the deterministic test suite
 
-98 pytest files, 1014 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+98 pytest files, 1021 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+`test_cli.py` gained seven failing tests for `run_review` mapping the coverage-manifest seal to
+an exit code: a `complete` seal returns 0 (including a diff with zero reviewable files), a
+`partial` seal returns 3 and prints one "unfinished file" line per non-`done` manifest entry
+naming its path, state, and note, and the same mapping holds through the `main()` entry point.
+No `cli.py` change lands in this release — this is the RED phase.
 
 `test_report.py` covers `render_dropped_findings_section` (three drops, the empty-list
 none-dropped statement, input-order preservation), `to_markdown` wiring both the

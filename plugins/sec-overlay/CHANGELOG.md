@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.47.1 - 2026-08-17
+
+### Added
+
+- `tests/test_cli.py`: failing tests for `run_review` mapping the coverage-manifest seal to an
+  exit code — a `complete` seal returns 0, a `partial` seal returns 3 and prints one line per
+  unfinished file naming its path, state, and note. RED phase for the next `cli.py` change — no
+  production code changed in this release.
+
 ## 1.47.0 - 2026-08-17
 
 ### Added
