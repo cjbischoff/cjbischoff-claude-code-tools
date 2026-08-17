@@ -536,3 +536,14 @@ rather than omitting the section, for the same reason a declined finding is neve
 dropped. `write_report` takes the same two arguments and threads them into both `to_markdown`
 and `write_review_ledger` from a single call, so the markdown table and the JSON ledger can
 never disagree about what was dropped in one run.
+
+Plan 02-05, task 3 wires the coverage manifest's seal to `run_review`'s exit code (D-15). The
+per-file loop now wraps `parse_hunks(file_diff_text(...))` in a `try`/`except`: on success the
+file transitions `pending` -> `in_review` -> `done` as before; on any exception the file
+transitions to `failed` with the exception text as its `note`, and the loop moves to the next
+file rather than aborting the run. A `complete` seal (including a diff with zero reviewable
+files) returns 0; a `partial` seal — one or more `failed` files — prints one "unfinished file"
+line per non-`done` entry, read through `manifest.entries()`, naming its path, state, and note,
+then returns 3. The pre-existing exit-2 ref-validation path is unaffected — it runs before the
+manifest exists at all. No `--max-diff-lines` override flag and no `logging` import: both stay
+out of scope for this milestone.

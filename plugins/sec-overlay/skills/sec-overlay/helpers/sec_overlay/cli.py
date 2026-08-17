@@ -98,8 +98,9 @@ def run_review(base: str, head: str, root: str, *, runner=None) -> int:
         runner: Injectable subprocess runner (tests); defaults to ``subprocess.run``.
 
     Returns:
-        0 when the coverage manifest seals ``complete``, 2 on an invalid ``base``/
-        ``head`` ref (D-06), 1 otherwise.
+        0 when the coverage manifest seals ``complete`` (including a diff with no
+        reviewable files), 2 on an invalid ``base``/``head`` ref (D-06), 3 when
+        the seal is ``partial`` (D-15) — one or more files could not be reviewed.
     """
     import subprocess
     r = runner or subprocess.run
@@ -122,9 +123,13 @@ def run_review(base: str, head: str, root: str, *, runner=None) -> int:
     for record in selection.reviewable:
         manifest.add(record.path)
         manifest.start(record.path)
-        hunks_by_path[record.path] = parse_hunks(
-            file_diff_text(record.path, base_sha, head_sha, runner=r)
-        )
+        try:
+            hunks_by_path[record.path] = parse_hunks(
+                file_diff_text(record.path, base_sha, head_sha, runner=r)
+            )
+        except Exception as exc:  # noqa: BLE001 - any per-file failure becomes a coverage gap, not a crash
+            manifest.fail(record.path, note=str(exc))
+            continue
         manifest.finish(record.path)
 
     review_position_gate([], hunks_by_path)
@@ -132,7 +137,13 @@ def run_review(base: str, head: str, root: str, *, runner=None) -> int:
     if not selection.reviewable:
         return 0
 
-    return 0 if manifest.seal() == "complete" else 1
+    if manifest.seal() == "complete":
+        return 0
+
+    for entry in manifest.entries():
+        if entry.state != "done":
+            print(f"unfinished file: {entry.path} (state={entry.state}, note={entry.note})")
+    return 3
 
 
 def main(argv: list[str] | None = None) -> int:

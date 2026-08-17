@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.48.0 - 2026-08-17
+
+### Added
+
+- `cli.py`: `run_review`'s per-file loop now catches any exception from
+  `parse_hunks(file_diff_text(...))`, transitions that file to `failed` with the exception text
+  as its note, and continues to the next file instead of aborting the run. The coverage
+  manifest's seal now drives the exit code — `complete` (including zero reviewable files)
+  returns 0, `partial` prints one "unfinished file" line per non-`done` entry (path, state,
+  note) and returns 3. The exit-2 ref-validation path is unchanged.
+
 ## 1.47.1 - 2026-08-17
 
 ### Added
