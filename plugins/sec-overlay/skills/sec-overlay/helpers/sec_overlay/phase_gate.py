@@ -443,7 +443,7 @@ def review_position_gate(
             file_text_by_path or {},
         )
         if result.decision == "needs-position-review":
-            declines.append(finding)
+            declines.append(result)
             continue
         # A non-decline result always carries a resolved path/line (positioning.py's
         # PositionResult.__post_init__ enforces this contract).

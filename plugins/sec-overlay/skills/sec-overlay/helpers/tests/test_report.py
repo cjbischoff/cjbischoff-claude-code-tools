@@ -5,7 +5,7 @@ from pathlib import Path
 
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.patch_status import PatchStatus
-from sec_overlay.phase_gate import DroppedFinding
+from sec_overlay.phase_gate import DroppedFinding, review_position_gate
 from sec_overlay.positioning import PositionResult
 from sec_overlay.report import (
     DROPPED_FINDINGS_HEADING,
@@ -1054,6 +1054,26 @@ def test_write_report_writes_ledger_with_dropped_and_position_reviews_from_same_
     md = ws.report_path.read_text()
     assert "a.py" in md and "outside-diff" in md
     assert "b.py" in md and "no-hunk-match" in md
+
+
+def test_review_position_gate_declines_compose_directly_into_write_report(tmp_path: Path):
+    # Regression (CR-01): review_position_gate's declines must be PositionResult objects
+    # write_report can consume directly, with no adapter in between.
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    write_findings(ws, [_rf("F-0001", FindingStatus.CONFIRMED, risk=5)])
+    finding = _f_new("F-0002", FindingStatus.RAW)
+    finding.file = "b.py"
+    finding.line = 2
+    finding.evidence = ""  # no snippet -> declines
+    _, _, declines = review_position_gate([finding], {})
+    write_report(ws, position_reviews=declines)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
+    entry = ledger["position_reviews"][0]
+    assert entry["claimed_path"] == "b.py"
+    assert entry["claimed_line"] == 2
+    assert entry["reason"] == "no-snippet"
+    assert "b.py" in ws.report_path.read_text()
 
 
 def test_dropped_ledger_entry_carries_path_line_rule_and_reason(tmp_path: Path):

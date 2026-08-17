@@ -12,6 +12,7 @@ from sec_overlay.phase_gate import (
     run_phase_checks,
     write_gate_record,
 )
+from sec_overlay.positioning import PositionResult
 from sec_overlay.workspace import Workspace
 
 
@@ -395,7 +396,16 @@ def test_needs_position_review_is_a_decline_not_a_drop_or_keep():
     kept, dropped, declines = review_position_gate([finding], _HUNKS)
     assert kept == []
     assert dropped == []
-    assert declines == [finding]
+    assert declines == [
+        PositionResult(
+            decision="needs-position-review",
+            path=None,
+            line=None,
+            reason="no-snippet",
+            claimed_path="f.py",
+            claimed_line=10,
+        )
+    ]
 
 
 def test_empty_findings_returns_three_empty_lists():

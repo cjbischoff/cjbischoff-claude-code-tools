@@ -21,6 +21,12 @@ arguments it renders into the markdown report, with the markdown row count and t
 `test_phase_gate.py` covers `review_position_gate`: a three-way kept/dropped/declines split of
 findings against diff hunks, using `diffhunks.hunk_for_line` on the resolved position — including
 both hunk-boundary adjacency edges and drop-list sort/idempotency checks.
+`test_needs_position_review_is_a_decline_not_a_drop_or_keep` asserts `declines` holds the
+`PositionResult` `resolve_position` returned, not the raw `Finding` (CR-01 regression); the
+`test_report.py` companion,
+`test_review_position_gate_declines_compose_directly_into_write_report`, pipes a real
+`review_position_gate` decline straight into `write_report(position_reviews=...)` with no
+adapter, proving the two modules' contracts actually compose.
 
 New `test_review_coverage.py` (23 tests) and `test_diffhunks.py` (18 tests) bring
 `CoverageManifest` and `parse_hunks` to full behavior (DIFF-03, DIFF-04): every legal and

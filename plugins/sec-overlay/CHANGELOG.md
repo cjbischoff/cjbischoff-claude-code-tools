@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.48.1 - 2026-08-17
+
+### Fixed
+
+- `phase_gate.py`: `review_position_gate`'s `declines` list now holds the `PositionResult`
+  `resolve_position` returned, not the raw `Finding`. `report.write_report(...,
+  position_reviews=declines)` requires `PositionResult`-only fields (`claimed_path`,
+  `claimed_line`, `snippet`, `reason`) that `Finding` does not have, so composing the two
+  functions raised `AttributeError` on the first decline (CR-01).
+
 ## 1.48.0 - 2026-08-17
 
 ### Added
