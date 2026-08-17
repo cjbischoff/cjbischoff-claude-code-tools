@@ -69,6 +69,12 @@ is a planning decision, not a coverage hole (R14).
 
 `context.py` also gained `cited_source_docs()` (every `source_doc` an item or its history cites); `stage_validate.py`'s `_validate_context` now appends an error when a cited doc is absent from `provenance["docs_read"]` (ISSUE-021).
 
+`stage_validate.py`'s `_VALIDATORS` dict now routes every entry through `_adapt_dict`/
+`_adapt_optional_dict`, two small factories that isinstance-check the stage payload before
+delegating to the real validator. Previously only `_validate_runtime_test` guarded against a
+non-dict stage output; the other validators would raise `AttributeError` on malformed subagent
+JSON instead of returning a validation error. No behavior change for well-formed input.
+
 `findings_gate.py` gained `validate_citations(ws, root, *, statuses=None)`, a resolver-backed
 citation/anchor check: it rejects any finding at a gated status (default
 `evidence.SHIPPING_STATUSES`) whose `file:line` does not resolve against `root`, reusing

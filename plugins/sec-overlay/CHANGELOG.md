@@ -2,6 +2,19 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.37.10 - 2026-08-17
+
+### Fixed
+
+- `sec_overlay/stage_validate.py`'s `_VALIDATORS` dict held three differently-typed validator
+  signatures (`dict`-only, `dict | None`, and `object`), which `ty` flagged as a union-callable
+  mismatch at the `fn(obj)` call site. Added `_adapt_dict`/`_adapt_optional_dict` factories that
+  isinstance-check the stage payload before delegating, unifying every entry to
+  `Callable[[object], list[str]]`. This also closes a real gap: a non-dict subagent output to
+  most stages previously crashed with `AttributeError` instead of returning a validation error
+  (only `_validate_runtime_test` guarded against this before). No behavior change for
+  well-formed dict input.
+
 ## 1.37.9 - 2026-08-17
 
 ### Fixed

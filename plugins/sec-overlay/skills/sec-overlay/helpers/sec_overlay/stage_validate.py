@@ -13,12 +13,15 @@ Usage in the orchestrator (documented in SKILL.md): after a stage emits JSON, ca
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 
 from sec_overlay.context import Context, cited_source_docs
 from sec_overlay.coverage_ledger import validate_coverage_ledger
 from sec_overlay.discovery_ledger import validate_discovery_ledger
 from sec_overlay.profile import validate_profile
 from sec_overlay.reachability import validate_reachability
+
+_MISSING = object()
 
 
 def _validate_runtime_test(obj: object) -> list[str]:
@@ -27,7 +30,8 @@ def _validate_runtime_test(obj: object) -> list[str]:
     errs = []
     if not obj.get("objective"):
         errs.append("runtime_test.objective is required")
-    if "payloads" in obj and not isinstance(obj["payloads"], list):
+    payloads = obj.get("payloads", _MISSING)
+    if payloads is not _MISSING and not isinstance(payloads, list):
         errs.append("runtime_test.payloads must be a list")
     return errs
 
@@ -44,16 +48,44 @@ def _validate_context(obj: dict) -> list[str]:
     return errors
 
 
+def _adapt_dict(fn: Callable[[dict], list[str]]) -> Callable[[object], list[str]]:
+    """Wrap a dict-only validator so it also rejects a non-dict stage output.
+
+    `obj` here is untrusted subagent JSON of unknown shape — the wrapped validators
+    assume a dict and would raise `AttributeError` on anything else; this turns that
+    crash into a normal validation error, the same defense `_validate_runtime_test`
+    already applies inline.
+    """
+
+    def wrapped(obj: object) -> list[str]:
+        if not isinstance(obj, dict):
+            return ["stage output must be an object"]
+        return fn(obj)
+
+    return wrapped
+
+
+def _adapt_optional_dict(fn: Callable[[dict | None], list[str]]) -> Callable[[object], list[str]]:
+    """Same as `_adapt_dict`, for a validator that also accepts `None`."""
+
+    def wrapped(obj: object) -> list[str]:
+        if obj is not None and not isinstance(obj, dict):
+            return ["stage output must be an object or null"]
+        return fn(obj)
+
+    return wrapped
+
+
 # stage name -> validator(obj) -> error list. An unregistered stage is a hard error
 # (validate_stage raises) — see ISSUE-034.
-_VALIDATORS = {
-    "recon": validate_profile,
-    "scan-profile": validate_profile,
-    "context": _validate_context,
-    "reachability": validate_reachability,
+_VALIDATORS: dict[str, Callable[[object], list[str]]] = {
+    "recon": _adapt_dict(validate_profile),
+    "scan-profile": _adapt_dict(validate_profile),
+    "context": _adapt_dict(_validate_context),
+    "reachability": _adapt_optional_dict(validate_reachability),
     "runtime_test": _validate_runtime_test,
-    "discovery-ledger": validate_discovery_ledger,
-    "coverage-ledger": validate_coverage_ledger,
+    "discovery-ledger": _adapt_dict(validate_discovery_ledger),
+    "coverage-ledger": _adapt_dict(validate_coverage_ledger),
 }
 
 
