@@ -466,3 +466,11 @@ fnmatch-compatible patterns, brace-expanded from the OCR source's 34) drives a n
 generated → not-allowlisted; binary detection and the diff-line size cap land in a later task
 of the same plan. `fnmatch` approximates `doublestar`'s `**` (no true zero-or-more-segment
 matching) — the parametrised glob test in `tests/test_file_select.py` holds that gap honest.
+
+`file_select.py`'s `EXCLUSION_REASONS` is now enforced, not just documented: `ExcludedFile`
+raises `ValueError` in `__post_init__` for any reason outside the closed set. `partition` gained
+`diff_line_counts`, `binary_paths`, and `max_diff_lines` (default `DEFAULT_MAX_DIFF_LINES` =
+5000, D-11) keyword parameters, all defaulting to no-op values so the tracer's `partition(records)`
+call still works unchanged. The full check order is now deleted → binary → generated →
+not-allowlisted → too-large; a file at exactly the cap is reviewable. No `--max-diff-lines` CLI
+flag exists — a cap override is deferred to Phase 4.

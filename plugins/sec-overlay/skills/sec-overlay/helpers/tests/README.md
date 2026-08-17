@@ -435,9 +435,11 @@ emitted-order preservation, rename and copy records each carrying `old_path`, `f
 ever reaches a `diff` argv. `test_cli.py` gained two `review` exit-2 tests: a leading-dash `--base`
 and an empty `--base`, each asserting `rc == 2` and a single stderr line.
 
-`test_file_select.py` is new (57 tests): parametrised checks over ten representative
+`test_file_select.py` is new (63 tests): parametrised checks over ten representative
 `ALLOWED_EXTENSIONS` entries plus one absent extension, case-insensitive extension matching, a
 no-extension path, one parametrised test per `DEFAULT_EXCLUDE_GLOBS` entry matching its own
 documented example path directly with `fnmatch.fnmatch` (not the `_is_generated` aggregate,
 which would hide a broken pattern behind an overlapping one), generated-beats-allowlisted
-precedence, non-ASCII path-quoting normalization, and an empty-input case.
+precedence, non-ASCII path-quoting normalization, an empty-input case, deleted/binary exclusion,
+both sides of the `DEFAULT_MAX_DIFF_LINES` boundary, `ExcludedFile` rejecting a reason outside
+`EXCLUSION_REASONS`, and a fixture-set walk asserting every produced reason is in the enum.

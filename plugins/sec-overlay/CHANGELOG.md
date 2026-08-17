@@ -2,6 +2,18 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.42.0 - 2026-08-17
+
+### Added
+
+- `file_select.py`: `EXCLUSION_REASONS` is now enforced, not just documented — `ExcludedFile`
+  raises `ValueError` for any reason outside the closed set. `partition` gained
+  `diff_line_counts`, `binary_paths`, and `max_diff_lines` (default 5000, D-11) keyword
+  parameters, defaulting to no-op values so existing callers are unaffected. The check order is
+  now deleted, then binary, then generated, then not-allowlisted, then too-large (strictly over
+  the cap; exactly at the cap stays reviewable). No `--max-diff-lines` CLI flag — a cap override
+  is deferred to Phase 4.
+
 ## 1.41.0 - 2026-08-17
 
 ### Added

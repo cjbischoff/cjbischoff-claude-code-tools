@@ -10,6 +10,8 @@ from sec_overlay.diffscope import ChangedFile
 from sec_overlay.file_select import (
     ALLOWED_EXTENSIONS,
     DEFAULT_EXCLUDE_GLOBS,
+    DEFAULT_MAX_DIFF_LINES,
+    EXCLUSION_REASONS,
     ExcludedFile,
     Selection,
     _is_generated,
@@ -116,3 +118,55 @@ def test_quoted_and_unquoted_nonascii_paths_normalize_to_the_same_string() -> No
 
 def test_empty_record_list_returns_empty_selection() -> None:
     assert partition([]) == Selection(reviewable=[], excluded=[])
+
+
+def test_deleted_record_is_excluded_with_deleted_reason() -> None:
+    records = [ChangedFile(path="src/main.py", status="D")]
+    selection = partition(records)
+    assert selection.excluded == [ExcludedFile(path="src/main.py", reason="deleted")]
+
+
+def test_binary_path_is_excluded_even_with_an_allowlisted_extension() -> None:
+    records = [ChangedFile(path="src/main.py", status="M")]
+    selection = partition(records, binary_paths=frozenset({"src/main.py"}))
+    assert selection.excluded == [ExcludedFile(path="src/main.py", reason="binary")]
+    assert selection.reviewable == []
+
+
+def test_record_over_the_diff_line_cap_is_excluded_as_too_large() -> None:
+    records = [ChangedFile(path="src/main.py", status="M")]
+    selection = partition(
+        records, diff_line_counts={"src/main.py": DEFAULT_MAX_DIFF_LINES + 1}
+    )
+    assert selection.excluded == [ExcludedFile(path="src/main.py", reason="too-large")]
+    assert selection.reviewable == []
+
+
+def test_record_at_exactly_the_diff_line_cap_is_reviewable() -> None:
+    records = [ChangedFile(path="src/main.py", status="M")]
+    selection = partition(records, diff_line_counts={"src/main.py": DEFAULT_MAX_DIFF_LINES})
+    assert selection.reviewable == records
+    assert selection.excluded == []
+
+
+def test_excluded_file_construction_rejects_a_reason_outside_the_enum() -> None:
+    with pytest.raises(ValueError, match="nope"):
+        ExcludedFile(path="a.py", reason="nope")
+
+
+def test_every_excluded_file_across_the_fixture_set_has_an_enum_reason() -> None:
+    records = [
+        ChangedFile(path="src/deleted.py", status="D"),
+        ChangedFile(path="src/binary.bin", status="M"),
+        ChangedFile(path="sub/foo_test.py", status="M"),
+        ChangedFile(path="src/no_ext", status="M"),
+        ChangedFile(path="src/huge.py", status="M"),
+        ChangedFile(path="src/kept.py", status="M"),
+    ]
+    selection = partition(
+        records,
+        binary_paths=frozenset({"src/binary.bin"}),
+        diff_line_counts={"src/huge.py": DEFAULT_MAX_DIFF_LINES + 1},
+    )
+    assert {excluded.reason for excluded in selection.excluded} <= EXCLUSION_REASONS
+    assert selection.reviewable == [ChangedFile(path="src/kept.py", status="M")]

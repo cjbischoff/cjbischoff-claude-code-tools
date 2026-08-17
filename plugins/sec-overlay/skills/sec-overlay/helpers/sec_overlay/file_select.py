@@ -1,14 +1,14 @@
 """Partition changed files into reviewable and excluded sets — path-shaped, not finding-shaped.
 
 Deliberately distinct from `exclusions.py`, which filters findings (RESEARCH.md Pitfall 5):
-this module never imports `Finding`. The size cap ("too-large", D-11) and full enum enforcement
-land in 02-02 Task 3.
+this module never imports `Finding`.
 """
 
 from __future__ import annotations
 
 import fnmatch
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from sec_overlay.diffscope import ChangedFile
@@ -16,6 +16,10 @@ from sec_overlay.diffscope import ChangedFile
 EXCLUSION_REASONS: frozenset[str] = frozenset(
     {"deleted", "binary", "generated", "not-allowlisted", "too-large"}
 )
+
+# D-11: files larger than this many changed diff lines are excluded as "too-large" rather than
+# reviewed. No CLI override — a cap-override flag belongs to Phase 4, not this milestone.
+DEFAULT_MAX_DIFF_LINES: int = 5000
 
 # Ported from open-code-review's
 # internal/config/allowlist/supported_file_types.json, 2026-08-17 (86 extensions, D-09).
@@ -122,6 +126,18 @@ class ExcludedFile:
     path: str
     reason: str
 
+    def __post_init__(self) -> None:
+        """Reject a reason outside the closed vocabulary at construction time.
+
+        Raises:
+            ValueError: If `reason` is not a member of :data:`EXCLUSION_REASONS`.
+        """
+        if self.reason not in EXCLUSION_REASONS:
+            raise ValueError(
+                f"invalid exclusion reason {self.reason!r}; must be one of "
+                f"{sorted(EXCLUSION_REASONS)}"
+            )
+
 
 @dataclass(frozen=True)
 class Selection:
@@ -131,26 +147,44 @@ class Selection:
     excluded: list[ExcludedFile] = field(default_factory=list)
 
 
-def partition(records: list[ChangedFile]) -> Selection:
+def partition(
+    records: list[ChangedFile],
+    *,
+    diff_line_counts: Mapping[str, int] | None = None,
+    binary_paths: frozenset[str] = frozenset(),
+    max_diff_lines: int = DEFAULT_MAX_DIFF_LINES,
+) -> Selection:
     """Split changed-file records into reviewable and excluded.
 
-    Exclusion checks run in this order, first match wins: deleted status, then
-    the ported default-exclude globs ("generated"), then the extension allowlist
-    ("not-allowlisted"). Binary detection and the diff-line size cap land in Task 3.
+    Exclusion checks run in this order, first match wins: deleted status, then the
+    binary-path set, then the ported default-exclude globs ("generated"), then the
+    extension allowlist ("not-allowlisted"), then the diff-line size cap
+    ("too-large"). A file at exactly `max_diff_lines` is reviewable — the cap
+    excludes strictly more than the limit.
 
     Args:
         records: Changed-file records from :func:`sec_overlay.diffscope.changed_file_records`.
+        diff_line_counts: Changed-line count per path, from
+            :func:`sec_overlay.diffscope.file_diff_line_count`. A missing path counts as 0.
+        binary_paths: Paths git reports as binary, from
+            :func:`sec_overlay.diffscope.binary_paths`.
+        max_diff_lines: The size cap (D-11); a record strictly over this many changed
+            diff lines is excluded as "too-large".
 
     Returns:
         A Selection: a record lands in ``reviewable`` when it survives every check
         above; otherwise it lands in ``excluded`` with a reason from
         :data:`EXCLUSION_REASONS`.
     """
+    counts = diff_line_counts or {}
     reviewable: list[ChangedFile] = []
     excluded: list[ExcludedFile] = []
     for record in records:
         if record.status == "D":
             excluded.append(ExcludedFile(path=record.path, reason="deleted"))
+            continue
+        if record.path in binary_paths:
+            excluded.append(ExcludedFile(path=record.path, reason="binary"))
             continue
         normalized = _normalize_path(record.path).lower()
         if _is_generated(normalized):
@@ -159,6 +193,9 @@ def partition(records: list[ChangedFile]) -> Selection:
         suffix = f".{normalized.rsplit('.', 1)[-1]}" if "." in normalized else ""
         if suffix not in ALLOWED_EXTENSIONS:
             excluded.append(ExcludedFile(path=record.path, reason="not-allowlisted"))
+            continue
+        if counts.get(record.path, 0) > max_diff_lines:
+            excluded.append(ExcludedFile(path=record.path, reason="too-large"))
             continue
         reviewable.append(record)
     return Selection(reviewable=reviewable, excluded=excluded)
