@@ -1,16 +1,17 @@
 ---
 type: how-to-guide
 title: Running a sec-overlay Audit
-description: The deterministic smoke-scan command versus a full agentic audit, preflight tool checks, environment prerequisites and the two known env-only test failures, and how the harness upholds its never-execute-the-target invariant.
-tags: [sec-overlay, running-audit, preflight, smoke-scan]
+description: The deterministic smoke-scan command, the driven /sec-overlay:audit command (sec_overlay.run.drive/advance, fence + receipt), and the manual full agentic audit, plus preflight tool checks, environment prerequisites and the known env-only test failures, and how the harness upholds its never-execute-the-target invariant.
+tags: [sec-overlay, running-audit, preflight, smoke-scan, driver]
 ---
 
 # Running a sec-overlay audit
 
-There are two ways to run this harness: a fast deterministic **smoke scan** with no agents at
-all, and the **full agentic audit** described in [pipeline](pipeline.md). Both start from
-`skills/sec-overlay/helpers/` — inside an installed plugin, that is
-`${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay/helpers`.
+There are three ways to run this harness: a fast deterministic **smoke scan** with no agents at
+all, the **driven audit** behind the `/sec-overlay:audit` command (recommended for most of the
+phase order), and the **manual full agentic audit** described in [pipeline](pipeline.md) for the
+phases the driver does not yet cover. All start from `skills/sec-overlay/helpers/` — inside an
+installed plugin, that is `${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay/helpers`.
 
 ## Quick deterministic smoke scan (no agents)
 
@@ -36,9 +37,61 @@ adversarial validation, and no `risk_score`. The bundled `rules/smoke.yaml` is a
 ruleset; the semgrep-rules submodule (fuller semgrep coverage) is not part of the plugin — for
 a real audit, point `--config` (and the recon agent's `rulesets`) at your own semgrep ruleset.
 
-## Full agentic audit
+## The driven audit (`/sec-overlay:audit`)
 
-The main agent orchestrates the entire phase order in [pipeline](pipeline.md), substituting
+The recommended way to run most of the phase order is the plugin's slash command,
+[`/sec-overlay:audit <repo> [<repo> ...]`](/plugins/sec-overlay/commands/audit.md):
+
+- **One repo argument** drives that repo's audit and stops — no correlation, no output in the
+  current directory.
+- **Two or more repo arguments** drive each repo's audit, then correlate them (see
+  [cross-repo correlation](cross-repo-correlation.md)).
+
+Under the hood, from `skills/sec-overlay/helpers/`:
+
+```bash
+uv run python -c "from sec_overlay.run import drive; print(drive('<repo>', config='rules/smoke.yaml'))"
+```
+
+`sec_overlay.run.drive` opens (or resumes) the repo's sidecar workspace via `RepoMemory`, pins
+the pass SHA, snapshots `git status --porcelain` once as a **fence baseline**, writes `run.env`
+(the resolved `{{TARGET}}`/`{{WORKSPACE}}`/`{{SHA}}`/`{{SCAN_SCOPE}}`/`{{REPO_ROOT}}` tokens, so
+agent phases stop needing hand substitution), then walks `helpers/sec_overlay/phases.py`'s
+`PHASE_TABLE` via `sec_overlay.driver.run_audit` (see [pipeline](pipeline.md#the-driven-subset-vs-the-full-playbook)
+for exactly which phases that table covers). Before every stage is recorded done, it
+**fences** the audited tree against the baseline (`sec_overlay.run.fence` — any delta raises
+`WorkingTreeFenceError` naming the changed paths: the audit must never write into the tree it is
+auditing) and writes a **receipt** (`kb/receipts/<phase>.json`, with a `findings` count) so no
+stage advances without proof on disk. `drive` returns `"AUDIT COMPLETE"` or the dispatch block
+for the next agent phase.
+
+When `drive` prints a `NEXT AGENT PHASE` block, run that prompt, then close the phase with
+`advance` (fences, writes the receipt, records the stage) before re-invoking `drive`:
+
+```bash
+uv run python -c "from sec_overlay.run import advance; advance('<repo>', '<phase>')"
+```
+
+`python -m sec_overlay.cli audit --target <T> --config <rules> [--workspace <WS>] [--sha
+<sha>]` is the equivalent one-shot CLI entrypoint into `run_audit` for a phase that is already
+resolvable without the `run.py` fence/receipt wrapper. It does not call `state.begin_pass`
+itself — pass lifecycle is owned by whichever caller invokes `begin_pass` once before the first
+call (`drive` does this; a bare `cli audit` invocation assumes it already happened).
+
+For **multiple repos**, the orchestrator additionally infers each repo's correlation role from
+its `kb/scan-profile.json` (`sec_overlay.run.infer_role` — `rbac-source` for
+auth/authz-shaped subsystems, `service-enforcer` for network-handler surface, `infra` as the
+safe default on ambiguity), confirms the repo list and roles with the operator, then
+synthesizes a manifest (`sec_overlay.run.synthesize_manifest`) and calls
+`python -m sec_overlay.correlate --manifest <synth> --out <cwd>` — the same core described in
+[cross-repo correlation](cross-repo-correlation.md), now reachable without hand-authoring a
+manifest.
+
+## Full agentic audit (manual, `SKILL.md`)
+
+For the phases the driver above does not yet cover — preflight, `begin_pass`, C1 context-ingest,
+T1 graph build, the optional tuning loop, red team, and C2 postflight/selfscore — the main agent
+orchestrates the phase order in [pipeline](pipeline.md) by hand, substituting
 path/scope tokens before spawning each subagent (`{{TARGET}}`, `{{WORKSPACE}}`,
 `{{OVERLAY_ROOT}}`, `{{HELPERS_DIR}}`, `{{REPO_ROOT}}`, `{{SCAN_SCOPE}}`, `{{ATTACK_CLASS}}`,
 `{{PHASE}}`, `{{ROUND}}`). Every agent's final return is persisted with
@@ -75,7 +128,7 @@ coverage. If a language you will scan is not listed, run
 STOP and surface a setup error if `backends_run` is empty, or any planned backend appears in
 `failed` / `skipped_reasons` (e.g. `codeql: pack-missing`). A partial scan — semgrep ran, codeql
 failed — is a **coverage hole, not "no findings"**; never report it as clean. This rule is
-stated identically in `SKILL.md` and the skill's own [`CLAUDE.md`](/plugins/sec-overlay/skills/sec-overlay/CLAUDE.md) §3.
+stated identically in `SKILL.md` and the skill's own [`CLAUDE.md`](/plugins/sec-overlay/skills/sec-overlay/CLAUDE.md) §2.
 
 ## Environment prerequisites for a full run
 
@@ -97,7 +150,7 @@ A clean checkout is missing three things a full audit needs:
 "fix" them by committing the submodule contents or fabricating seed data:
 `tests/test_bench.py::test_seed_corpus_is_valid` (gitignored bench corpus) and
 `tests/test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd` (excluded semgrep
-submodule). The skill `CLAUDE.md` §2 states this explicitly.
+submodule). The skill `CLAUDE.md` §1 states this explicitly.
 
 ## The do-not-execute-the-target invariant
 
@@ -126,9 +179,12 @@ that touches code:
 
 ## Related pages
 
-- [Pipeline](pipeline.md) — the full phase order this audit runs.
+- [Pipeline](pipeline.md) — the full phase order this audit runs, and exactly which phases
+  `sec_overlay.run.drive` currently automates.
 - [Agents](agents.md) — the prompts spawned at each phase.
-- [Helpers](helpers.md) — `preflight.py`, `verify.py`, and the other deterministic modules
-  invoked above.
+- [Helpers](helpers.md) — `preflight.py`, `verify.py`, `driver.py`/`phases.py`/`run.py`, and the
+  other deterministic modules invoked above.
+- [Cross-repo correlation](cross-repo-correlation.md) — what the multi-repo branch of
+  `/sec-overlay:audit` reaches.
 - [Developing the skill](developing-the-skill.md) — the test suite, including the two env-only
   failures in more detail.

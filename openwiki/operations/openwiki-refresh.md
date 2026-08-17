@@ -80,6 +80,28 @@ though some of those paths are otherwise tracked in git. Both files are explicit
 the root README's Artifact inventory table and are not generated content — they are inputs to
 this process, not outputs of it.
 
+## `AGENTS.md`
+
+Root `AGENTS.md` holds only the generated `<!-- OPENWIKI:START -->`/`<!-- OPENWIKI:END -->`
+pointer block: a short note that this repository has a generated `openwiki/` evidence index,
+that it is optional just-in-time context rather than required startup reading, and that the
+scheduled workflow below keeps it refreshed. It is not itself a wiki page and is not hand-edited
+outside that managed block.
+
+## The change-evidence digest (`.openwiki-history.md`)
+
+While `.openwikiignore` has active rules, an OpenWiki run's shell access is restricted to
+`pwd`, `git rev-parse HEAD`, and deleting its own plan file — it cannot run `git log` or `git
+diff` to see what changed since the last update. `scripts/openwiki-history-digest.sh` closes
+that gap: it writes `.openwiki-history.md` at the repository root, a bounded digest (capped at
+`OPENWIKI_HISTORY_MAX_COMMITS`/`OPENWIKI_HISTORY_MAX_FILES`, 400 each by default) listing every
+non-merge commit subject and the net list of changed files between the wiki's last documented
+commit and `HEAD` — carrying no patches, and excluding `openwiki/` itself. It requires `jq`.
+The `OpenWiki Update` workflow (below) runs this script before invoking OpenWiki; a local
+`--update` run must run it by hand first. An update run reads the digest to decide **what
+changed**, then reads current source directly to establish **what the code does now** — a
+commit subject is a claim about intent, never evidence on its own.
+
 ## Related pages
 
 - [Commit governance](../governance/hooks-and-commits.md) — the PR-required ruleset this

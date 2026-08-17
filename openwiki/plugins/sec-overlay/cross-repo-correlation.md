@@ -21,6 +21,18 @@ real four-repo campaign (`docs/plans/2026-08-07-cross-repo-correlation-design.md
 motivating case: control→enforcement handoffs and shared-dependency CVEs that were, before this
 capability existed, correlated by hand).
 
+## Reaching it: `/sec-overlay:audit` or the manifest CLI directly
+
+`/sec-overlay:audit <repo> <repo> ...` (two or more repo arguments) drives this end to end: it
+audits each repo in turn (each resuming from its own recorded stages), infers each repo's
+correlation `role` from its `kb/scan-profile.json` (`sec_overlay.run.infer_role` —
+`rbac-source`/`service-enforcer`/`infra`, defaulting to `infra` on ambiguity since an
+over-eager `rbac-source` label fabricates a `control-enforces` edge), confirms the repo list and
+roles with the operator, then synthesizes the manifest (`sec_overlay.run.synthesize_manifest`)
+and calls the core below — so a manifest no longer needs to be hand-authored. See
+[running an audit](running-an-audit.md#the-driven-audit-sec-overlayaudit) for the exact
+commands. The manifest schema and CLI themselves are unchanged and remain callable directly:
+
 ## The correlation workspace and CLI
 
 ```bash
@@ -126,3 +138,6 @@ member repo plus one correlation run).
 - [Agents](agents.md) — the producer-vs-adversary pattern this subsystem reuses.
 - [Helpers](helpers.md) — where `correlate/` sits in the module map alongside the single-repo
   core.
+- [Running an audit](running-an-audit.md#the-driven-audit-sec-overlayaudit) — the
+  `/sec-overlay:audit` command and `sec_overlay.run` role-inference/manifest-synthesis helpers
+  that now reach this capability without a hand-authored manifest.

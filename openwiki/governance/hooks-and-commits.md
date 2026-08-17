@@ -49,36 +49,53 @@ unconventional header is rejected, and — the exact 50-character boundary —
 ## The doc-update guard (`pre-commit-check.sh`)
 
 `scripts/hooks/pre-commit-check.sh` is the single script that enforces the rest of commit
-governance. It runs on every `pre-commit` and does four things, in order:
+governance. It runs on every `pre-commit` and does the following, in order:
 
 1. **Blocks direct commits to `main`.** `git rev-parse --abbrev-ref HEAD` is checked first;
    if the current branch is `main`, the hook exits 1 immediately with a message to branch
    instead. This is the local backstop for the rule; the
    [GitHub ruleset on `main`](#the-github-ruleset-on-main) below is the server-side one.
-2. **Requires `README.md` and `CHANGELOG.md` on any non-doc change.** If the staged file set
-   contains anything other than `README.md`/`CHANGELOG.md`, both of those files must also be
-   staged, or the commit is rejected. This mirrors root `README.md`'s Governance rule: "Every
-   commit that changes tracked files updates `README.md` and `CHANGELOG.md` (Common Changelog
-   format) in the same commit."
-3. **A hard-coded check for the three Directory Guide folders** (`plugins`, `scripts`, `docs`):
-   if a staged file lives under one of these and that folder's own `README.md` is not also
-   staged, the commit is rejected naming the folder. This is a "stricter, redundant-but-harmless
-   special case" per `scripts/README.md` — it duplicates the general rule below for exactly the
-   three folders listed in the root README's Directory Guide table.
+2. **Routes the changelog/README requirement by scope**, splitting the staged file set into
+   plugin-internal changes (under `plugins/<name>/`) and everything else:
+   - **Repo-level or mixed-scope change** (anything staged outside `plugins/<name>/`, including
+     `plugins/README.md` itself) requires both root `README.md` and root `CHANGELOG.md` to be
+     staged too, or the commit is rejected. This mirrors root `README.md`'s Governance rule.
+   - **Plugin-only change** (every staged non-doc file lives under one `plugins/<name>/`)
+     requires that plugin's own `plugins/<name>/CHANGELOG.md` to be staged instead of the root
+     files — a per-plugin routing that replaced the old blanket "always update root
+     README/CHANGELOG" rule. A `safe_grep` helper fails the hook closed (exits 1) on a real
+     `grep` error rather than silently treating it as "no match," and plugin names are read
+     through a quoted `while read` loop so a name with unusual characters cannot split or expand.
+3. **A hard-coded check for two Directory Guide folders** (`scripts`, `docs`): if a staged file
+   lives under one of these and that folder's own `README.md` is not also staged, the commit is
+   rejected naming the folder. `plugins` is deliberately **excluded** from this hard-coded list
+   — the per-plugin changelog routing above and the generalized per-folder rule below already
+   cover it, per plugin, instead of one root `plugins/README.md` trigger firing for every change
+   anywhere in the tree.
 4. **The generalized per-folder rule.** For every staged file, the hook resolves its immediate
    directory and checks whether that directory has a *tracked* `README.md` (via
    `git ls-files --error-unmatch`). If it does, that `README.md` must also be staged, or the
    commit is rejected naming the specific file and folder. A folder with no tracked `README.md`
-   is simply not gated. This generalized rule is what actually enforces the "docs track code"
-   requirement for every nested folder inside the sec-overlay skill — see
+   is simply not gated. A plugin-root `CHANGELOG.md` is exempt from this rule specifically (its
+   own routing check in step 2 already gates it, and requiring the plugin's `README.md` too
+   would make a changelog-only plugin commit impossible). This generalized rule is what actually
+   enforces the "docs track code" requirement for every nested folder inside the sec-overlay
+   skill and every other plugin folder — see
    [developing the skill](../plugins/sec-overlay/developing-the-skill.md) for the full list of
-   folder READMEs this reaches.
+   folder READMEs this reaches inside sec-overlay.
 
-`scripts/hooks/test-pre-commit-check.sh` proves this behavior with three cases, each run inside
-a disposable temporary git repository (cleaned up via an `EXIT` trap): a change to a folder's
-file without restaging that folder's `README.md` blocks (exit 1); the same change with the
-`README.md` restaged passes (exit 0); and a change inside a folder that has no tracked
-`README.md` is not gated at all (exit 0).
+`scripts/hooks/test-pre-commit-check.sh` proves this behavior with a suite of cases, each run
+inside a disposable temporary git repository (cleaned up via an `EXIT` trap): a change to a
+folder's file without restaging that folder's `README.md` blocks (exit 1); the same change with
+the `README.md` restaged passes (exit 0); a change inside a folder with no tracked `README.md`
+is not gated at all (exit 0); a plugin-only change without that plugin's `CHANGELOG.md` blocks,
+and with it passes, even though the shared `plugins/README.md` is never staged (proving the
+per-plugin exemption from the old blanket trigger); a repo-level change without root
+`README.md`/`CHANGELOG.md` blocks, and with them passes; a file directly inside a plugin folder
+still requires that plugin's own immediate-folder `README.md` even though `plugins/` itself is
+no longer hard-coded; and a plugin `CHANGELOG.md`-only commit passes without its sibling
+`README.md` even when that `README.md` is tracked, while the same commit touching another
+plugin file too still requires it.
 
 ## Wiring: prek
 
@@ -125,17 +142,19 @@ this repository, including inside the skill** — its rule (§4 above) already c
 skill-local script. Treat `.githooks/pre-commit` as documentation of intent from an earlier
 layout rather than an active second gate to install.
 
-**Concretely:** a commit that touches only `skills/sec-overlay/helpers/some_module.py` — with
-neither the skill-local `.githooks/pre-commit` installed nor the root `README.md`/`CHANGELOG.md`
-staged — is rejected by prek's `doc-update-guard` (§2 above: any non-doc change requires both
-files) before the skill-local hook would ever be consulted. If someone *did* install the
-skill-local hook via `core.hooksPath`, the same commit would instead be checked only against
-that hook's narrower `agents`/`helpers`/`references` rule and would pass or fail solely on
-whether `helpers/README.md` was staged — it would never check `README.md`/`CHANGELOG.md` or the
-`main`-branch block at all, since installing it replaces prek's hooks path rather than adding to
-it. `git commit --no-verify` skips whichever hook is currently installed at `core.hooksPath` for
-that commit (prek's, if the documented, standard install was followed); it does not skip "the
-other" hook, because only one hooksPath is active at a time.
+**Concretely:** a commit that touches only `plugins/sec-overlay/skills/sec-overlay/helpers/some_module.py`
+— with neither the skill-local `.githooks/pre-commit` installed nor
+`plugins/sec-overlay/CHANGELOG.md` and `helpers/README.md` staged — is rejected by prek's
+`doc-update-guard` (§2 above: a plugin-only change requires that plugin's own `CHANGELOG.md`;
+§4 above: the immediate folder's `README.md` must also be staged) before the skill-local hook
+would ever be consulted. If someone *did* install the skill-local hook via `core.hooksPath`,
+the same commit would instead be checked only against that hook's narrower
+`agents`/`helpers`/`references` rule and would pass or fail solely on whether `helpers/README.md`
+was staged — it would never check the plugin's `CHANGELOG.md`, the root `README.md`/`CHANGELOG.md`,
+or the `main`-branch block at all, since installing it replaces prek's hooks path rather than
+adding to it. `git commit --no-verify` skips whichever hook is currently installed at
+`core.hooksPath` for that commit (prek's, if the documented, standard install was followed); it
+does not skip "the other" hook, because only one hooksPath is active at a time.
 
 ## The GitHub ruleset on `main`
 

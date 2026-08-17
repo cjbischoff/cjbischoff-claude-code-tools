@@ -46,11 +46,18 @@ literal install path documented in the root [`README.md`](/README.md).
 ## Plugin directory layout and the plugin manifest
 
 Each plugin lives entirely under `plugins/<name>/` (`plugins/README.md`'s Directory Guide
-entry: "one directory per distributed plugin"). For `sec-overlay`:
+entry: "one directory per distributed plugin"). Every plugin also carries a **plugin-root doc
+trio** — its own `README.md` (user-facing install/quick-start), `CHANGELOG.md` (Common
+Changelog; see [validation and versioning](validation-and-versioning.md)), and `CLAUDE.md`
+(maintainer manual, not a shipping file) — alongside the installable payload. For `sec-overlay`:
 
 ```
 plugins/sec-overlay/
   .claude-plugin/plugin.json      # plugin manifest
+  README.md                       # user-facing: install, prerequisites, quick start
+  CHANGELOG.md                    # Common Changelog for this plugin
+  CLAUDE.md                       # maintainer manual (not a shipping file)
+  commands/                       # slash commands, e.g. /sec-overlay:audit — shipping payload
   skills/sec-overlay/             # the skill Claude Code discovers and loads
     SKILL.md
     CLAUDE.md
@@ -66,7 +73,7 @@ plugins/sec-overlay/
 {
   "name": "sec-overlay",
   "description": "Agentic security-audit harness: runs SAST, investigates candidates with multi-agent gates, and emits SARIF + Markdown reports.",
-  "version": "0.2.0",
+  "version": "1.37.2",
   "author": { "name": "Christopher Bischoff" }
 }
 ```
@@ -80,6 +87,12 @@ plugins/sec-overlay/
   directory for skills automatically ("the default `skills/` directory scan handles
   discovery, strict mode stays at its default (`true`)"). There is nothing else to wire up —
   every subdirectory under `skills/` that contains a `SKILL.md` is a discoverable skill.
+
+A new plugin starts from the new-plugin skeleton at `docs/templates/plugin/` — a
+`{{PLACEHOLDER}}`-marked `plugin.json`/`README.md`/`CLAUDE.md`/`CHANGELOG.md`/`SKILL.md` copied
+into `plugins/<name>/` and filled in — rather than being hand-assembled; see the root
+[`CLAUDE.md`](/CLAUDE.md) "New plugin" checklist and
+[validation and versioning](validation-and-versioning.md) for the version to start it at.
 
 ## `${CLAUDE_PLUGIN_ROOT}` and the plugin-directory boundary
 

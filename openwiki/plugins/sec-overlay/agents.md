@@ -48,21 +48,22 @@ Read top to bottom — this is the order the orchestrator spawns them (see
 
 | Phase | Prompt | Model | Job |
 |---|---|---|---|
-| C1 context | `context-ingest.md` | sonnet | discovers repo docs/prior scans, verifies claimed controls against code |
-| C1 context | `context-adversary.md` | opus | pressure-checks that verification |
+| C1 context | `context-ingest.md` | sonnet | discovers repo docs/prior scans, verifies claimed controls against code; `docs_read` must literally list every doc opened — a stage validator rejects a citation absent from it |
+| C1 context | `context-adversary.md` | opus | pressure-checks that verification, including a diagram-consistency check against `CONTEXT.md`'s claimed-control diagram |
 | Analysis | `recon.md` | sonnet | surveys the repo → `kb/scan-profile.json` |
-| Analysis | `architecture.md` | sonnet | components/data-flows/trust-boundaries → `kb/architecture.md` |
-| Analysis | `threat-model.md` | sonnet | attacker profiles + hunt list → `kb/THREAT_MODEL.md` |
-| Analysis (each of the three) | `phase-adversary.md` | opus | re-derives each claim from code; verdicts → `kb/gates/<phase>.json` |
+| Analysis | `architecture.md` | sonnet | C4 diagrams + `arc42.md` → `architecture/` tree (replaces the old `kb/architecture.md`) — the standard it follows is in [references](references.md) |
+| Analysis | `threat-model.md` | sonnet | derived DFD + STRIDE findings (CVSS v4.0) + hunt list → `threat-model/` tree (replaces the old `kb/THREAT_MODEL.md`) |
+| Analysis (each of the three) | `phase-adversary.md` | opus | re-derives each claim from code; also checks diagram consistency and flags an architecture-vs-threat-model ownership-boundary violation; verdicts → `kb/gates/<phase>.json` — independent of, and in addition to, the deterministic arch-gate/tm-gate in [pipeline](pipeline.md#the-phase-adversary-gate) |
 | Investigate | `investigate.md` + `classes/<cls>.md` | sonnet, parallel per class | walks the [gate ladder](#the-investigate-gate-ladder) → `raw`/`rejected` |
 | FP ladder | `critic.md` | sonnet | production-viability filter (reject debug-only/dead/test-fixture code); demotes on doubt, never hard-rejects |
 | FP ladder | `judge.md` | cheap, no tools | severity-inflation adjudicator; uphold / downgrade / flag |
-| FP ladder | `validate.md` | opus, different family | assumes every finding is wrong and tries to refute it; survival = `confirmed` |
+| FP ladder | `validate.md` | opus, different family | assumes every finding is wrong and tries to refute it; survival = `confirmed`, which now also requires a real CVSS v4.0 `cvss_vector` and a non-empty `preconditions` list, or the finding routes to `needs-deployment-testing` instead |
 | Patch | `patch.md` | opus | proposes a minimal diff into `patch_diff`, applied only to a throwaway copy |
 | Patch | `validate-fix.md` | opus, two personas | security-architect + penetration-tester independently check the patch; `no_new_vulnerabilities` regression is non-waivable |
 | Red team | `trace.md` | opus | backward-traces each confirmed sink to an entry point; sets `reachability` |
 | Red team | `redteam.md` | sonnet | splits confirmed findings into `static-settled` vs `needs-runtime`; writes `runtime_test` |
-| Red team | `redteam-adversary.md` | opus | strips settleable-from-source or payload-mismatched items |
+| Red team | `redteam-adversary.md` | opus | strips settleable-from-source or payload-mismatched items; writes verdicts to its own `kb/gates/redteam-adversary.json` (a distinct path from `redteam.py`'s `kb/gates/redteam.json`, fixing a prior one-writer collision) |
+| Artifact review (§4.8) | `artifact-review.md` | opus | final adversary over the *rendered* output — claim-to-evidence, impact honesty, red-team coverage; can demote severity or flag `render_stale`/`open_questions`, never delete a tool-receipt-backed finding; runs after the deterministic `artifact_gate.py` self-check → `kb/gates/artifact-review.json` |
 | Postflight | `postflight.md` | sonnet | durable security-profile notes to `kb/prior_context.json` |
 
 **`judge` and `validate` must never run concurrently against the same finding file** — the last
@@ -163,6 +164,6 @@ repo's [doc-update-guard hook](../../governance/hooks-and-commits.md).
 - [Pipeline](pipeline.md) — where each phase above fits in the full audit sequence.
 - [Helpers](helpers.md) — the deterministic modules that enforce the tool-receipt gate these
   prompts cannot bypass.
-- [References](references.md) — `prompt-constants.md`'s twelve blocks every prompt imports.
+- [References](references.md) — `prompt-constants.md`'s fourteen blocks every prompt imports.
 - [Cross-repo correlation](cross-repo-correlation.md) — `correlate-combiner.md` and
   `cross-repo-adversary.md` in detail.

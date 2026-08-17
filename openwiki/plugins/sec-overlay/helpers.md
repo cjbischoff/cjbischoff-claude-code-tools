@@ -25,10 +25,10 @@ Two facts are true of every module here:
 ```
 helpers/
 ├── pyproject.toml       stdlib-only; dev deps pytest/ruff/ty; line-length 100
-├── sec_overlay/         ~70 modules — the pipeline (this page's main subject)
+├── sec_overlay/         ~90 modules — the pipeline (this page's main subject)
 │   └── correlate/       cross-repo correlation subpackage — see cross-repo-correlation.md
 ├── bench/               dev-only detection benchmark
-├── tests/               81 pytest files, 595 tests
+├── tests/               91 pytest files, 786 tests
 ├── fixtures/            golden JSON + a deliberately vulnerable test repo (excluded from this wiki)
 └── rules/               vendored semgrep rules (git submodule) + smoke.yaml
 ```
@@ -40,23 +40,26 @@ flowchart TD
     PF["preflight.py<br/>tools present?"] --> SS["scanscope.py<br/>pin repo_root + scan_scope"]
     SS --> GR["graph.py build<br/>Tier-1 substrate, LLM-free"]
     GR --> CTX["context.py<br/>ingest repo docs"]
-    CTX --> PROFILE["profile.py<br/>ScanProfile from recon"]
+    CTX --> ARCHA(("architecture / threat-model agents"))
+    ARCHA --> AGATE["diagram_gate.py + ste_lint.py<br/>arch-gate / tm-gate"]
+    AGATE --> PROFILE["profile.py<br/>ScanProfile from recon"]
     PROFILE --> PRE["prefilter.py<br/>run semgrep+codeql+sca+secrets concurrently"]
     PRE --> NORM["normalize.py<br/>dedup, assign F-#### ids"]
     NORM --> PART["partition.py<br/>group candidates by attack class"]
     PART --> INV(("investigate agents"))
     INV --> DED["dedupe.py<br/>refactor-resistant fingerprint"]
     DED --> CLUS["cluster.py<br/>systemic clustering"]
-    CLUS --> GATE1["findings_gate.py<br/>schema + tool-receipt gate"]
+    CLUS --> GATE1["findings_gate.py<br/>schema + tiered tool-receipt gate"]
     GATE1 --> LADDER(("critic / judge / validate agents"))
-    LADDER --> CAL["calibrate.py<br/>risk_score 1-10"]
+    LADDER --> CAL["calibrate.py<br/>risk_score 1-10, CVSS v4.0"]
     CAL --> CIT["citations.py<br/>attach ASVS/CodeGuard"]
     CIT --> PATCHV(("patch / validate-fix agents"))
     PATCHV --> VER["verify.py<br/>apply patch to COPY, re-scan"]
     VER --> GATE2["findings_gate.py"]
     GATE2 --> RT(("redteam agents")) --> RTR["redteam.py<br/>render redteam-plan.md"]
-    RTR --> REP["report.py<br/>report.sarif + report.md"]
-    REP --> POST["postflight.py<br/>prior_context.json, durable"]
+    RTR --> REP["report.py<br/>report.sarif + report.md + one file per finding"]
+    REP --> AGATE2["artifact_gate.py<br/>deterministic self-check"]
+    AGATE2 --> AREV(("artifact-review agent")) --> POST["postflight.py<br/>prior_context.json, durable"]
 ```
 *The deterministic spine of the pipeline in [pipeline.md](pipeline.md); the LLM agents plug in
 between the rectangles. Every step here records completion with
@@ -65,34 +68,42 @@ between the rectangles. Every step here records completion with
 ## The tool-receipt gate
 
 This is the mechanism behind the harness's core safety contract: **a finding reaches
-`confirmed`/`fixed` only with at least one mechanical tool receipt.**
+`confirmed`/`fixed` only with at least one Tier-1 mechanical tool receipt.**
 
-`helpers/sec_overlay/evidence.py` defines the whitelist:
+`helpers/sec_overlay/evidence.py` defines a **tiered** whitelist (a breaking change from the
+earlier flat "any mechanical receipt confirms" rule):
 
 ```python
 _MECHANICAL = {"semgrep", "codeql", "ast-grep", "tree-sitter", "ripgrep",
                "structural-index", "secrets", "sca"}
+TIER1_RECEIPTS = frozenset({"codeql", "semgrep", "sca", "secrets"})
+TIER2_RECEIPTS = frozenset({"ripgrep", "structural-index", "ast-grep", "tree-sitter"})
 ```
 
 `is_tool_receipt(source)` returns `False` for anything `llm`-prefixed and `True` only when the
 source's colon-delimited prefix (e.g. `codeql` in `codeql:dataflow`) is in `_MECHANICAL`.
-`as_llm_claim(source)` namespaces an LLM-asserted source as `llm-claimed:<source>` so it can
-never masquerade as a receipt, and `confidence_for(sources)` grades a finding HIGH if any
-source is a real receipt, MEDIUM if any is `llm-corroborated`, else LOW.
+`receipt_tier(source)` returns `1` for a Tier-1 source, `2` for Tier-2, `None` for an
+`llm-claimed:*` or unknown source; `confirms_alone(sources)` is `True` only when at least one
+source is Tier-1. **Tier-1 sources (a dataflow path, a vulnerable version, a live secret) confirm
+a finding alone; Tier-2 sources (a ripgrep hit, a structural-index match) only locate code and
+can corroborate but never confirm by themselves** — this is the change: a `ripgrep:`-only
+receipt that used to be sufficient for SAST-unsupported languages no longer confirms; such a
+finding must route to `needs-deployment-testing` instead. `as_llm_claim(source)` namespaces an
+LLM-asserted source as `llm-claimed:<source>` so it can never masquerade as a receipt.
 
 `helpers/sec_overlay/findings_gate.py`'s `validate_findings(ws)` enforces this at the schema
 level for every `findings/*.json` file: it parses each into a `Finding`, validates against
-`references/finding.schema.json`, and — the safety-contract check — for any finding with
-`status in ("confirmed", "fixed")`, requires `any(is_tool_receipt(s) for s in
-f.evidence_sources)`; if none qualify, it emits an error naming the finding id and its actual
-(non-qualifying) sources. It also forbids a `raw`/`confirmed` finding from carrying a
-`duplicate_of` (that combination must be `status=duplicate` instead). The CLI
+`references/finding.schema.json`, stamps `Finding.receipt_tier` (the strongest tier among
+`evidence_sources`, via `evidence.receipt_tier`), and — the safety-contract check — rejects a
+`confirmed`/`fixed` finding unless `evidence.confirms_alone(f.evidence_sources)` is true, naming
+the finding id and its actual (non-qualifying) sources. It also rejects a `runtime_disposition`
+outside `evidence.RUNTIME_DISPOSITIONS`, and forbids a `raw`/`confirmed` finding from carrying a
+`duplicate_of` (that combination must be `status=duplicate` instead). A resolver-backed sibling
+check, `validate_citations(ws, root, *, statuses=None)`, rejects any gated-status finding whose
+`file:line` does not resolve against the target, reusing `phase_gate.resolve_ref`. The CLI
 (`python -m sec_overlay.findings_gate --workspace <WS>`) exits 1 if any error exists — this is
-what phases 13 and 13.5 in the [pipeline](pipeline.md) call after every ladder pass.
-
-For SAST-unsupported languages, a `ripgrep:` receipt proving the sink literally exists is a
-valid mechanical ground — the gate does not require semgrep/codeql specifically, only *some*
-mechanical source.
+what phases 13 and 13.5 in the [pipeline](pipeline.md) call after every ladder pass, and what
+`driver._act_findings_gate` raises `PhaseHalt` on in the [driven audit](running-an-audit.md#the-driven-audit-sec-overlayaudit).
 
 ## The Finding / CampaignState schema contract
 
@@ -102,11 +113,14 @@ statuses: `candidate → raw → confirmed/rejected → fixed`, plus the termina
 `needs-deployment-testing` (real-but-unprovable-from-source; never confirmed and never folded
 into rejected) and `informational` (low-value vendored-rule hits, never re-run, never entering
 the confirmed report). Notable fields: `evidence_sources` (namespaced, feeds the gate above),
-`reachability` (the trace-phase verdict, `{reachable, blocker, chain}`), `runtime_disposition`
-/ `runtime_test` (red-team phase output), `cluster_id` / `affected_sites` (set by
-`cluster.py`), and `open_questions` (human-answerable unknowns a live test can't settle,
-populated by `trace`/`redteam` — unrelated to `coverage_ledger.py`'s differently-shaped,
-same-named list).
+`receipt_tier` (1 or 2, stamped by the gate), `cvss_vector` (**CVSS v4.0**, scored by
+`sec_overlay.cvss.cvss40_base` — never LLM arithmetic; a `CVSS:3.x` vector now raises
+`ValueError`), `impact` (the concrete consequence of exploitation; a blank `impact` on a
+shipping-status finding is a gate error), `reachability` (the trace-phase verdict, `{reachable,
+blocker, chain}`), `runtime_disposition` / `runtime_test` (red-team phase output), `cluster_id`
+/ `affected_sites` (set by `cluster.py`), and `open_questions` (human-answerable unknowns a live
+test can't settle, populated by `trace`/`redteam` — unrelated to `coverage_ledger.py`'s
+differently-shaped, same-named list).
 
 **`models.py` and `evidence.py` together define the serialization/schema contract.** Changing a
 `Finding`/`CampaignState` field or the `_MECHANICAL` set requires updating
@@ -116,22 +130,24 @@ drift: a `Finding` JSON example inside an agent prompt must parse against real `
 
 ## Module map, grouped by job
 
-~70 modules under `sec_overlay/`. Selected groups (see the module's own docstring for detail
+~90 modules under `sec_overlay/`. Selected groups (see the module's own docstring for detail
 not summarized here):
 
 | Group | Modules | Job |
 |---|---|---|
 | Data model & serialization | `models.py`, `evidence.py`, `schema.py` | the Finding contract, the tool-receipt gate, a stdlib-only JSON-Schema validator |
 | SAST backends & prefilter | `sast.py`, `codeql.py`, `sca.py`, `secrets.py`, `prefilter.py`, `exclusions.py` | run semgrep/CodeQL/osv-scanner/secrets concurrently; merge deterministically; never-silent backend accounting |
-| Attack-class routing | `clsmap.py`, `detection_coverage.py`, `rule_matcher.py`, `asvs.py`/`codeguard.py`, `citations.py`, `custom_checks.py` | CWE→class mapping, ASVS/CodeGuard citation attachment, in-repo custom-check discovery |
-| Graph & structural substrate | `graph.py`, `structural_index.py`, `entrypoints.py`, `astgrep.py`, `reachability.py` | the two-tier code graph answering reachability/attacker-control; ripgrep symbol index |
-| FP reduction & finding identity | `normalize.py`, `dedupe.py`, `fingerprint.py`, `cluster.py`, `findings_gate.py`, `partition.py`, `fp_feedback.py`, `factcheck.py`, `phase_gate.py`, `stage_validate.py` | dedup, fingerprinting, systemic clustering, the tool-receipt gate, phase-adversary pre-checks |
-| Scoring & prioritization | `calibrate.py`, `cvss.py`, `scoring.py`, `fix_disposition.py`, `crypto_policy.py`, `selfscore.py` | deterministic `risk_score`, CVSS 3.1 by formula (never LLM arithmetic), the per-run self-score |
-| Reporting | `report.py`, `sarif.py`, `render_util.py` | assemble `report.sarif` + `report.md`; shared rendering helpers for `expected_signal` (object/string/null) |
+| Attack-class routing | `clsmap.py`, `class_ext.py`, `detection_coverage.py`, `rule_matcher.py`, `asvs.py`/`codeguard.py`, `citations.py`, `custom_checks.py` | CWE→class mapping, `classes/*.md` extension-coverage gap tracking, ASVS/CodeGuard citation attachment, in-repo custom-check discovery |
+| Graph & structural substrate | `graph.py`, `structural_index.py`, `entrypoints.py`, `astgrep.py`, `reachability.py`, `mermaid_index.py` | the two-tier code graph answering reachability/attacker-control; ripgrep symbol index; line-oriented Mermaid structure extraction for the diagram gate |
+| FP reduction & finding identity | `normalize.py`, `dedupe.py`, `fingerprint.py`, `cluster.py`, `findings_gate.py`, `partition.py`, `fp_feedback.py`, `factcheck.py`, `phase_gate.py`, `stage_validate.py`, `route_control.py` | dedup, fingerprinting, systemic clustering, the tool-receipt gate, phase-adversary pre-checks, the recon-derived route-to-control coverage table |
+| Scoring & prioritization | `calibrate.py`, `cvss.py`, `cvss4_data.py`, `scoring.py`, `fix_disposition.py`, `crypto_policy.py`, `selfscore.py` | deterministic `risk_score`; **CVSS v4.0** MacroVector scoring (`cvss4_data.py` is the vendored FIRST lookup/interpolation data, `cvss.py` the ported algorithm) — never LLM arithmetic; the per-run self-score |
+| Reporting | `report.py`, `sarif.py`, `render_util.py` | assemble `report.sarif` + short `report.md` + per-finding `findings/<id>.md` detail files; shared rendering helpers for `expected_signal` (object/string/null) |
 | Campaign, state & memory | `campaign.py`, `state.py`, `repo_memory.py`, `workspace.py`, `scanscope.py`, `scope.py`, `kb.py`, `context.py`, `profile.py`, `diffscope.py`, `githist.py`, `postflight.py` | multi-pass supervision, the on-disk workspace layout, per-repo memory sidecar, context ingestion |
+| Audit driver | `phases.py`, `driver.py`, `run.py`, `prompts.py` | the ordered `PHASE_TABLE` + sequencer helpers, the deterministic-phase runner with loud halt, the fence/receipt/`drive`/`advance` wrapper behind `/sec-overlay:audit`, and `render_prompt`'s loud-on-unfilled-token substitution — see [running an audit](running-an-audit.md#the-driven-audit-sec-overlayaudit) |
+| Diagram & prose gates | `diagram_gate.py`, `ste_lint.py`, `artifact_gate.py` | mermaid-cap/label/derivation enforcement for `architecture/`/`threat-model/`; the ASD-STE100 structural prose linter; the deterministic `arch-gate`/`tm-gate`/`artifact-gate` self-checks (`check_duplication` for the arc42↔threat-model ownership boundary) |
 | Coverage & completeness | `coverage.py`, `coverage_ledger.py`, `coverage_guide.py`, `discovery_ledger.py` | per-language SAST coverage accounting, the completeness ledger, saturation state |
 | Hunting aids & tuning | `variant.py`, `bugchain.py`, `novelty.py`, `rule_gaps.py`, `tuning.py` | sibling-search seeds, finding chains, upstream-fix checks, adaptive-tuning scoreboard |
-| Verification, safety & plumbing | `verify.py`, `patch_status.py`, `preflight.py`, `redactor.py`, `envelope.py`, `redteam.py`, `parse.py`, `gates.py`, `cost.py` | apply a patch to a temp copy and re-scan, secret redaction, the untrusted-text envelope, fail-open JSON parsing |
+| Verification, safety & plumbing | `verify.py`, `patch_status.py`, `preflight.py`, `redactor.py`, `envelope.py`, `redteam.py`, `parse.py`, `gates.py`, `cost.py` | apply a patch to a temp copy and re-scan, secret redaction, the untrusted-text envelope, fail-open JSON parsing, per-phase wall-clock timing |
 
 `partition.py` is also the mechanism behind the "thoroughly review a codebase" principle's
 coverage guarantee: its `unrouted_candidate_classes(ws, agents_to_spawn)` compares the classes
@@ -158,12 +174,21 @@ cross-repo correlation subpackage with its own promote/demote invariant — see
 
 ## CLI-callable modules
 
-Seventeen modules expose `python -m sec_overlay.<module>` (a `__main__`) — the deterministic
-steps the orchestrator calls between agent phases: `cli` (scan/memory), `preflight`, `graph`,
-`structural_index`, `astgrep`, `dedupe`, `cluster`, `findings_gate`, `calibrate`, `citations`,
-`bugchain`, `rule_gaps`, `verify`, `redteam`, `report`, `redactor`, `postflight`. See
-[running an audit](running-an-audit.md) for how the orchestrator sequences these across a full
-pass, and `correlate`'s own dedicated CLI in [cross-repo correlation](cross-repo-correlation.md).
+Twenty modules expose `python -m sec_overlay.<module>` (a `__main__`) — the deterministic
+steps the orchestrator calls between agent phases: `cli` (scan/memory/**audit**), `preflight`,
+`graph`, `structural_index`, `astgrep`, `dedupe`, `cluster`, `findings_gate`, `calibrate`,
+`citations`, `bugchain`, `rule_gaps`, `verify`, `redteam`, `report`, `redactor`, `postflight`,
+plus the newer `artifact_gate`, `diagram_gate`, and `ste_lint` (the arch-gate/tm-gate/artifact-gate
+checks — see [pipeline](pipeline.md#the-full-phase-order)).
+
+`cli.py`'s `audit` subcommand (`python -m sec_overlay.cli audit --target <T> --config <rules>
+[--workspace <WS>] [--sha <sha>]`) is the newest entrypoint: it resolves the workspace the same
+way `scan` does and prints `driver.run_audit`'s return value, but — unlike `scan` — deliberately
+never calls `state.begin_pass` itself, since it is re-invoked repeatedly across one pass; pass
+lifecycle is owned by whichever caller (`run.drive`, or a campaign supervisor) calls
+`begin_pass` once up front. See [running an audit](running-an-audit.md#the-driven-audit-sec-overlayaudit)
+for how `sec_overlay.run.drive`/`advance` wrap this with a fence and a receipt, and
+`correlate`'s own dedicated CLI in [cross-repo correlation](cross-repo-correlation.md).
 
 ## Related pages
 

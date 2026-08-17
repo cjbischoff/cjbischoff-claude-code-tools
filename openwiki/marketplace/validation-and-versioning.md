@@ -18,10 +18,10 @@ claude plugin validate .
 from the repository root. This is the Claude Code CLI's own manifest validator — it checks
 `.claude-plugin/marketplace.json` and every plugin's `.claude-plugin/plugin.json` for schema
 correctness (valid JSON, required fields present, a marketplace entry existing for each plugin
-directory). The root [`README.md`](/README.md) lists this as the first Development command,
-and the root [`CLAUDE.md`](/CLAUDE.md) Desired outcome states plainly: "Each plugin passes
-`claude plugin validate .` before release." As of this writing the repository's Status section
-records that "plugin and marketplace manifests validate."
+directory). The root [`README.md`](/README.md) lists this as a Development command, and the
+root [`CLAUDE.md`](/CLAUDE.md) Desired outcome states plainly: "Each plugin passes
+`claude plugin validate .` before release." Release history (what shipped and when) lives in
+`CHANGELOG.md` and each plugin's own `version`, not in a README status section.
 
 CodeRabbit's `**/.claude-plugin/*.json` path instruction (see
 [code review](../governance/code-review.md)) performs a lighter-weight version of the same
@@ -32,13 +32,15 @@ gate.
 ## The shipping-file version-bump rule
 
 A **shipping file** is any tracked file a user actually receives when they install a plugin.
-For `sec-overlay` that is: `.claude-plugin/plugin.json`, `SKILL.md`, and everything under
-`skills/`, `agents/`, `helpers/`, and `references/` — including their folder `README.md`
-files. A plugin's own `CLAUDE.md` (its **operating manual**, read only when working *inside*
-the skill) is explicitly **not** a shipping file: editing it alone does not bump the version.
-This distinction is stated identically in the root [`CLAUDE.md`](/CLAUDE.md) Conventions
-section and the skill's own
-[`CLAUDE.md`](/plugins/sec-overlay/skills/sec-overlay/CLAUDE.md) §1.
+The root [`CLAUDE.md`](/CLAUDE.md) names the set explicitly: `plugin.json`, `SKILL.md`, and
+everything under `commands/`, `skills/`, `agents/`, `helpers/`, and `references/` — including
+their folder `README.md` files. `commands/` was added to this list alongside the new
+`/sec-overlay:audit` command, since a `commands/*.md` file is install payload and, without the
+bump, the update mechanism never ships a change to it. A plugin's own `CLAUDE.md` (its
+**operating manual**, read only when working *inside* the plugin/skill) is explicitly **not** a
+shipping file: editing it alone does not bump the version. This distinction is restated in the
+skill's own [`README.md`](/plugins/sec-overlay/skills/sec-overlay/README.md) ("Version bumps are
+automatic").
 
 The rule: **a commit that changes a shipping file in a plugin must bump that plugin's
 `version` in the same commit**, using the commit's own Conventional Commit type to pick the
@@ -54,12 +56,9 @@ The edit lands in `plugins/<name>/.claude-plugin/plugin.json`'s `version` field,
 commit as the shipping-file change. `marketplace.json` never needs an edit for this — it does
 not pin plugin versions.
 
-As a concrete example of the rule being applied: the plugin's `plugin.json` currently reads
-`"version": "0.2.0"`. The root README's Status section explains the jump from the prior
-`0.1.1` governance release: "Plugin versions bump automatically on shipping-file changes
-(Conventional-Commits semver); this review-improvements release ships sec-overlay as 0.2.0,
-above the 0.1.1 governance release on `main`" — a `feat`-driven minor bump accumulated across
-that branch's shipping-file changes.
+The plugin's `plugin.json` currently reads `"version": "1.37.2"` — the accumulated result of
+this rule applied across every shipping-file-touching commit since the plugin's initial
+release; see `plugins/sec-overlay/CHANGELOG.md` for the per-version history.
 
 ## Where this rule is (and is not) enforced — important nuance
 

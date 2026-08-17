@@ -55,7 +55,7 @@ flowchart TB
             A1["~30 LLM prompts:<br/>producer (sonnet) vs adversary (opus)"]
         end
         subgraph HP["helpers/ - the MACHINE"]
-            H1["~70 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
+            H1["~90 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
         end
     end
     TARGET[("target codebase<br/>read-only")]
@@ -87,6 +87,11 @@ orchestrator: it calls a Python step, spawns an agent, records the phase, calls 
 step. See [pipeline](pipeline.md) for the full phase-by-phase flow, and
 [running an audit](running-an-audit.md) for the exact commands.
 
+A fourth, plugin-root folder, [`commands/`](/plugins/sec-overlay/commands/), holds the
+`/sec-overlay:audit` slash command — a thin routing document over the same `skills/sec-overlay/`
+machinery (`sec_overlay.run.drive` for a single repo, `sec_overlay.correlate` for several). It
+carries no logic of its own; see [running an audit](running-an-audit.md#the-driven-audit-sec-overlayaudit).
+
 ## The four invariants
 
 These hold everywhere and are enforced in code where possible, in prompts otherwise:
@@ -100,10 +105,11 @@ These hold everywhere and are enforced in code where possible, in prompts otherw
    `<target>/.sec-overlay/<slug>/` directory (override the base with `$SEC_OVERLAY_HOME`, or the
    whole workspace with `--workspace`). A seeded `.sec-overlay/.gitignore` keeps output out of
    the reviewed repo's git tree.
-3. **Tool-receipt gate.** A finding reaches `confirmed`/`fixed` only with at least one
-   mechanical receipt (`semgrep` / `codeql` / `ast-grep` / `tree-sitter` / `ripgrep` /
-   `structural-index` / `secrets` / `sca`). LLM reasoning is namespaced `llm-claimed:` and can
-   corroborate but **never** confirm. Enforced in
+3. **Tool-receipt gate, tiered.** A finding reaches `confirmed`/`fixed` only with at least one
+   **Tier-1** mechanical receipt (`codeql` / `semgrep` / `sca` / `secrets`) — Tier-2 receipts
+   (`ripgrep` / `structural-index` / `ast-grep` / `tree-sitter`) locate code but no longer
+   confirm alone. LLM reasoning is namespaced `llm-claimed:` and can corroborate but **never**
+   confirm. Enforced in
    [`helpers/sec_overlay/findings_gate.py`](helpers.md#the-tool-receipt-gate).
 4. **Signal over noise.** Every load-bearing claim made by a Sonnet "producer" is attacked by
    an Opus "adversary" on a different model family; a false-positive ladder plus a
@@ -117,22 +123,27 @@ Everything a security engineer receives lands in `<target>/.sec-overlay/<slug>/`
 | Path | Contents |
 |---|---|
 | `kb/scan-profile.json` | recon output: languages, frameworks, `attack_surface`, `sast_plan`, `subsystems` |
-| `kb/architecture.md` + `kb/entities/*.md` | components, data flows, trust boundaries |
-| `kb/THREAT_MODEL.md` | attacker profiles + the prioritized hunt list |
+| `architecture/` | C4 diagrams (context/container/component) + `runtime-view/` sequences + `arc42.md` — replaces the old `kb/architecture.md` + `kb/entities/*.md` |
+| `threat-model/` | `dfd.mmd` (derived from the container diagram) + `attack-sequences/` + `threat-model.md` (STRIDE findings, CVSS v4.0, prioritized hunt list) — replaces the old `kb/THREAT_MODEL.md` |
 | `kb/context.json` | the repo's own docs distilled, trust-tagged (`untrusted-doc` / `prior-scan`) |
 | `kb/graph.json` | the Tier-1/Tier-2 code graph (reachability substrate) |
-| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase |
+| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase (recon/architecture/threat-model/context) |
+| `kb/gates/arch-gate.json`, `tm-gate.json` | deterministic diagram-cap/prose/duplication gates for architecture and threat-model, run before the opus phase-adversary sees them |
+| `kb/gates/artifact-gate.json`, `artifact-review.json` | deterministic self-check + opus adversary verdict on the rendered report itself (§4.8) |
 | `kb/coverage-ledger.json` | surface-completeness ledger; blocks `complete` while gaps remain |
 | `kb/discovery-ledger.json` | investigate saturation state (waves, `terminal_reason`) |
-| `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS, patch diff |
-| `report.sarif` | SARIF 2.1.0 (confirmed/fixed) |
-| `report.md` | human report, built from `finding-template.md`; links `redteam-plan.md` |
+| `findings/<id>.json` + `findings/<id>.md` | every finding, all statuses — evidence, reachability, CVSS v4.0, patch diff, plus a rendered per-finding detail file |
+| `report.sarif` | SARIF 2.1.0 (confirmed/fixed, plus suppressed needs-deployment-testing by default) |
+| `report.md` | short risk-ordered report linking to `findings/<id>.md` detail files and `redteam-plan.md` |
 | `redteam-plan.md` | manual runtime test plan — the engineer's follow-up |
-| `state.json` | campaign state (pass number, pinned SHA, stages) |
+| `state.json` | campaign state (pass number, pinned SHA, stages, per-phase timings) |
 | `MEMORY.md`, `learnings/` | durable per-repo memory across runs |
 
 This layout is the `Workspace` dataclass's contract (`helpers/sec_overlay/workspace.py`,
-described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §5.
+described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §4. A driven run
+(`sec_overlay.run.drive`, see [running an audit](running-an-audit.md#the-driven-audit-sec-overlayaudit))
+adds `run.env` (resolved template tokens) and `kb/receipts/<phase>.json` (one receipt per phase,
+proving it ran even when it printed nothing).
 
 ## Related pages
 
@@ -140,6 +151,7 @@ described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §5.
 - [Agents](agents.md) — every LLM prompt, its model tier, and the investigate gate ladder.
 - [Helpers](helpers.md) — the Python core, module map, and CLI-callable list.
 - [References](references.md) — the rule book: prompt constants, schemas, crypto policy.
-- [Running an audit](running-an-audit.md) — the smoke scan vs. the full agentic audit.
+- [Running an audit](running-an-audit.md) — the smoke scan, the driven `/sec-overlay:audit`
+  command, and the full manual agentic audit.
 - [Developing the skill](developing-the-skill.md) — tests, linting, and the dev-only bench harness.
 - [Cross-repo correlation](cross-repo-correlation.md) — the optional multi-repo capability.

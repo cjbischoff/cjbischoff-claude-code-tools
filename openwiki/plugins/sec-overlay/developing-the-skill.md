@@ -12,7 +12,7 @@ All commands below run from `skills/sec-overlay/helpers/`.
 ## Test and lint commands
 
 ```bash
-uv run pytest -q                                   # full suite (2 env-only failures, see below)
+uv run pytest -q                                   # full suite (env-only failures, see below)
 uv run pytest tests/test_fingerprint.py -q         # single file
 uv run pytest tests/test_x.py::test_name           # single test
 uv run ruff check sec_overlay/ bench/ tests/       # lint (line-length 100)
@@ -21,8 +21,8 @@ uv run ty check                                    # static types
 uv run python -m sec_overlay.preflight             # tool availability
 ```
 
-The suite is 81 pytest files, 595 tests (helpers/README.md's Test coverage & contracts
-section). Two failures on a clean checkout are environmental, not code defects — see
+The suite is 91 pytest files, 786 tests (`helpers/tests/README.md`). Two failures on a clean
+checkout are environmental, not code defects — see
 [running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run) for exactly
 which tests and why.
 
@@ -30,9 +30,11 @@ which tests and why.
 
 The core has **no runtime dependencies** in `pyproject.toml` — only dev deps (`pytest`, `ruff`,
 `ty`). External SAST binaries are shelled out to, never imported. "Do not add a dependency
-without a strong justification and user sign-off" (skill `CLAUDE.md` §7). This is a design
-constraint the [tool-receipt gate](helpers.md#the-tool-receipt-gate) and the rest of the
-deterministic core depend on staying auditable and portable.
+without a strong justification and user sign-off" — stated in the plugin's maintainer manual,
+[`plugins/sec-overlay/CLAUDE.md`](/plugins/sec-overlay/CLAUDE.md), "Developing the skill"
+section. This is a design constraint the
+[tool-receipt gate](helpers.md#the-tool-receipt-gate) and the rest of the deterministic core
+depend on staying auditable and portable.
 
 ## TDD and the structural guard tests
 
@@ -47,6 +49,8 @@ against silent drift rather than testing one module's behavior:
 | `test_finding_schema.py` | `models.py`'s `Finding` record staying consistent with `references/finding.schema.json` |
 | `test_wiring.py` | silent-backend regressions, `clsmap` routing gaps, dead links between `attack-classes.md` and its `hunting/` companions, and that `classes/*.md` prompts carry the proof tuple + anti-collapse rule |
 | `test_docs_invariants.py` | documentation contracts — `prompt-constants.md` block presence, `finding-template.md` section structure, agent-prompt rules (determinism, tool-receipt trust, evidence chains) |
+| `test_references_caps.py` | `references/mermaid-caps.md`'s stated caps staying in sync with `sec_overlay.diagram_gate`'s `CAPS`/`SEQ_CAPS` constants |
+| `test_cvss4_data.py` | the vendored CVSS v4.0 MacroVector/interpolation tables in `cvss4_data.py` staying internally consistent |
 
 Keep all four green when touching a schema, a class-routing table, or an agent prompt's
 structure — they are how prompt↔code drift gets caught before it reaches a real audit.
@@ -80,20 +84,23 @@ that has a *tracked* `README.md` — no skill-specific exception. Inside
 
 - [`agents/README.md`](/plugins/sec-overlay/skills/sec-overlay/agents/README.md) — every LLM
   prompt: role, model tier, inputs/outputs, the gate ladder, the `classes/` extensions.
-- [`helpers/README.md`](/plugins/sec-overlay/skills/sec-overlay/helpers/README.md) — the ~70
+- [`helpers/README.md`](/plugins/sec-overlay/skills/sec-overlay/helpers/README.md) — the ~90
   Python modules grouped by job, the CLI-callable list, the finding schema contract.
 - [`references/README.md`](/plugins/sec-overlay/skills/sec-overlay/references/README.md) — the
-  rule book: the 12 prompt-constants blocks, schemas, crypto YAMLs.
+  rule book: the 14 prompt-constants blocks, the C4/arc42 and DFD/STRIDE standards, schemas,
+  crypto YAMLs.
+- [`commands/README.md`](/plugins/sec-overlay/commands/README.md) — the `/sec-overlay:audit`
+  slash command, at the plugin root alongside the skill.
 - Plus the nested folder READMEs one level deeper:
   `helpers/sec_overlay/README.md`, `helpers/tests/README.md`, `helpers/bench/README.md`,
   `helpers/rules/README.md`, `references/asvs/README.md`, `references/codeguard/README.md`,
   `references/hunting/README.md`.
 
-The skill's own [`CLAUDE.md`](/plugins/sec-overlay/skills/sec-overlay/CLAUDE.md) §8 states the
-policy in human terms: these READMEs "over-explain what lives there and how it works, with
-mermaid diagrams and worked flows... the entry point for a person (not just an LLM)". A
-skill-local script, `.githooks/pre-commit`, also documents part of this same rule but is not
-the mechanism that actually enforces it — see
+The plugin's own maintainer manual, [`plugins/sec-overlay/CLAUDE.md`](/plugins/sec-overlay/CLAUDE.md)
+("Documentation — READMEs track code" section), states the policy in human terms: these READMEs
+"over-explain what lives there and how it works, with mermaid diagrams and worked flows... the
+entry point for a person (not just an LLM)". A skill-local script, `.githooks/pre-commit`, also
+documents part of this same rule but is not the mechanism that actually enforces it — see
 [commit governance](../../governance/hooks-and-commits.md#a-second-non-primary-hook-inside-the-sec-overlay-skill)
 for why the repo-root prek hook is the one that matters.
 
