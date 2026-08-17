@@ -464,8 +464,11 @@ CWD (artifacts/)", matching the corrected `audit.md`.
 leading-dash rejection with allowlisted rest, four shell-metacharacter rejections, an empty diff,
 emitted-order preservation, rename and copy records each carrying `old_path`, `file_diff_line_count`,
 `binary_paths`, and a call-order test proving `rev-parse` always precedes `diff` and no raw ref
-ever reaches a `diff` argv. `test_cli.py` gained two `review` exit-2 tests: a leading-dash `--base`
-and an empty `--base`, each asserting `rc == 2` and a single stderr line.
+ever reaches a `diff` argv, plus `resolve_ref_sha`'s own success and raise-on-nonzero-returncode
+cases (CR-02 regression: a syntactically valid but nonexistent ref used to resolve to `""` instead
+of raising). `test_cli.py` gained three `review` exit-2 tests: a leading-dash `--base`, an empty
+`--base`, and an unresolvable-but-valid `--base` fed through a fake runner returning
+`returncode=128` — each asserting `rc == 2` and a stderr line naming the ref.
 
 `test_file_select.py` is new (63 tests): parametrised checks over ten representative
 `ALLOWED_EXTENSIONS` entries plus one absent extension, case-insensitive extension matching, a

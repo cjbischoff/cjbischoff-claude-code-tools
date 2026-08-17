@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.48.2 - 2026-08-17
+
+### Fixed
+
+- `diffscope.py`: `resolve_ref_sha` now raises `ValueError` when `git rev-parse --verify` exits
+  non-zero. A syntactically valid but nonexistent ref (e.g. `does-not-exist-branch`) previously
+  resolved to `""` instead of raising, silently defeating `run_review`'s documented "exit 2 on an
+  invalid ref" contract (CR-02).
+
 ## 1.48.1 - 2026-08-17
 
 ### Fixed

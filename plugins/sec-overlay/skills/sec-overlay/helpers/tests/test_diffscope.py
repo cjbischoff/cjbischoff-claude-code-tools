@@ -8,6 +8,7 @@ from sec_overlay.diffscope import (
     changed_files,
     file_diff_line_count,
     head_sha,
+    resolve_ref_sha,
     validate_ref,
 )
 
@@ -46,6 +47,26 @@ def test_head_sha_strips(monkeypatch):
 )
 def test_validate_ref_accepts_allowlisted_refs(ref):
     assert validate_ref(ref) == ref
+
+
+def test_resolve_ref_sha_strips_stdout_on_success():
+    class R:
+        stdout = "abc1234\n"
+        returncode = 0
+
+    assert resolve_ref_sha("main", runner=lambda *a, **k: R()) == "abc1234"
+
+
+def test_resolve_ref_sha_raises_on_nonzero_returncode():
+    # Regression (CR-02): a syntactically valid but nonexistent ref makes
+    # `git rev-parse --verify` exit non-zero with empty stdout — this must raise,
+    # not silently resolve to "".
+    class R:
+        stdout = ""
+        returncode = 128
+
+    with pytest.raises(ValueError, match="does-not-exist-branch"):
+        resolve_ref_sha("does-not-exist-branch", runner=lambda *a, **k: R())
 
 
 def test_validate_ref_rejects_empty_string():

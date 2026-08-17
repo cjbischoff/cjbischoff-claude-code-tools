@@ -41,11 +41,17 @@ def resolve_ref_sha(ref: str, *, runner=subprocess.run) -> str:
 
     Returns:
         The stripped SHA `git rev-parse --verify` resolves ``ref`` to.
+
+    Raises:
+        ValueError: ``ref`` is syntactically valid but does not resolve (`git
+            rev-parse --verify` exits non-zero) — a nonexistent branch/tag/SHA.
     """
     validate_ref(ref)
     completed = runner(
         ["git", "rev-parse", "--verify", ref], capture_output=True, text=True, check=False
     )
+    if completed.returncode != 0:
+        raise ValueError(f"unresolvable ref: {ref!r}")
     return completed.stdout.strip()
 
 

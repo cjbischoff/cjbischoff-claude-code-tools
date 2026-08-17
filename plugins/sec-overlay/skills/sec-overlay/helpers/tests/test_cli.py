@@ -65,9 +65,9 @@ def test_memory_command_status_and_learn(tmp_path, monkeypatch, capsys):
 
 
 class _FakeResult:
-    def __init__(self, stdout=""):
+    def __init__(self, stdout="", returncode=0):
         self.stdout = stdout
-        self.returncode = 0
+        self.returncode = returncode
 
 
 def _make_review_runner(paths):
@@ -97,6 +97,21 @@ def _failing_parse_hunks(fail_paths):
         return real_parse_hunks(diff_text)
 
     return fake
+
+
+def test_review_exit_2_on_unresolvable_but_valid_ref(tmp_path, capsys):
+    # Regression (CR-02): a syntactically valid but nonexistent ref must exit 2,
+    # not silently proceed with an empty SHA.
+    from sec_overlay import cli
+
+    def runner(cmd, capture_output, text, check):
+        if cmd[1] == "rev-parse":
+            return _FakeResult("", returncode=128)
+        return _FakeResult("")
+
+    rc = cli.run_review("nonexistent-ref", "HEAD", str(tmp_path), runner=runner)
+    assert rc == 2
+    assert "nonexistent-ref" in capsys.readouterr().err
 
 
 def test_review_exit_0_on_complete_seal_with_no_drops(tmp_path):

@@ -456,7 +456,10 @@ full `--name-status` vocabulary including renames and copies (both carry `old_pa
 new functions — `file_diff_line_count` and `binary_paths` — give `file_select.partition` its
 size-cap and binary inputs. `cli.py`'s `review` branch now catches a `ValueError` from ref
 resolution and exits `2` with one stderr line naming the ref, without laundering any other
-`ValueError` in the run into the same exit code.
+`ValueError` in the run into the same exit code. `resolve_ref_sha` itself now raises that
+`ValueError` when `git rev-parse --verify` exits non-zero (CR-02): a syntactically valid but
+nonexistent ref used to resolve to `""` instead of raising, silently defeating the exit-2 path
+this paragraph describes.
 
 `file_select.py`'s `ALLOWED_EXTENSIONS` is now the full 86-extension allowlist ported from
 open-code-review's `supported_file_types.json`, and a new `DEFAULT_EXCLUDE_GLOBS` tuple (40
