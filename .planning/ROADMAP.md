@@ -68,7 +68,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `diffhunks.added_line_numbers()` and `line_in_hunk()` correctly classify added/context lines inside a hunk window, and `positioning.py` confirms a finding's location via hunk match → whole-file match → cross-file relocation, declining to `needs-position-review` (never guessing) on ambiguity or zero matches
   5. In review mode, `phase_gate.py` drops a finding whose confirmed line lies outside every changed hunk with reason `outside-diff`; the same finding is retained unchanged under the existing whole-file check in audit mode
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Tracer: one changed file reviewed end to end through every layer
+- [ ] 02-02-PLAN.md — Ref validation, SHA pinning, extension allowlist, exclusion reasons, size cap
+- [ ] 02-03-PLAN.md — Coverage manifest state machine and the unified-diff hunk parser
+- [ ] 02-04-PLAN.md — Never-guess positioning ladder and needs-position-review visibility
+- [ ] 02-05-PLAN.md — Review-mode position gate, drop ledger, and partial-seal exit code
+
 **Notes**: The spec's coverage-manifest module collides in name with the already-shipped `helpers/sec_overlay/coverage.py` (a different, existing module). The plan for this phase must name the new manifest module distinctly (e.g. `review_coverage.py`) or explicitly extend the existing module — never silently overwrite it.
 
 ### Phase 3: Rule Matching & Review Modes
