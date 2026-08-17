@@ -526,3 +526,13 @@ inside a hunk keeps the finding at that resolved position, outside drops it with
 a bare `finding_id`, and `DROP_REASONS` is a frozen set of the two reasons the gate can emit.
 The gate never mutates an input finding: a relocated keep copies the finding to its resolved
 position with `copy.copy`, so calling the gate twice on the same input is idempotent.
+
+Plan 02-05, task 2 wires those drops into the human and machine reports. `report.py` gained
+`DROPPED_FINDINGS_HEADING` and `render_dropped_findings_section(dropped)`, matching the heading
+level, table style, and none-dropped fallback `render_position_review_section` already used for
+declines. `to_markdown` now takes `dropped` and `position_reviews` arguments and renders both
+sections unconditionally, right after the findings body — an empty run states none-dropped
+rather than omitting the section, for the same reason a declined finding is never silently
+dropped. `write_report` takes the same two arguments and threads them into both `to_markdown`
+and `write_review_ledger` from a single call, so the markdown table and the JSON ledger can
+never disagree about what was dropped in one run.

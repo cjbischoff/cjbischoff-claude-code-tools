@@ -263,6 +263,8 @@ def to_markdown(
     has_redteam_plan: bool = False,
     patch_statuses: dict[str, PatchStatus] | None = None,
     economics: dict | None = None,
+    dropped: list | None = None,
+    position_reviews: list[PositionResult] | None = None,
 ) -> str:
     """Render findings and optional token accounting as Markdown.
 
@@ -289,6 +291,12 @@ def to_markdown(
         economics: Optional ``{"by_phase": dict, "by_model": dict, "by_phase_seconds": dict,
             "usd_estimate": float}`` from :func:`sec_overlay.cost`; renders a "Run economics"
             section and takes priority over ``token_spend`` when both are given.
+        dropped: Review-mode findings the position gate placed outside the diff
+            (``phase_gate.DroppedFinding``); rendered under ``DROPPED_FINDINGS_HEADING``
+            unconditionally, so an empty run states none-dropped rather than omitting the
+            section.
+        position_reviews: Review-mode declines (``needs-position-review``); rendered under
+            ``POSITION_REVIEW_HEADING`` the same way.
 
     Returns:
         A Markdown report string.
@@ -362,6 +370,10 @@ def to_markdown(
             ),
             "",
         ]
+
+    # Review-mode drop/decline sections — always rendered, even when empty (D-14, POS-03)
+    lines += ["", render_dropped_findings_section(dropped or [])]
+    lines += ["", render_position_review_section(position_reviews or [])]
 
     # External-unverifiable leads — sink crosses into an un-ingested dependency
     if external:
@@ -499,7 +511,14 @@ def select_reportable(findings: list[Finding]) -> list[Finding]:
     return sorted(reportable, key=_risk_sort_key)
 
 
-def write_report(ws: Workspace, *, target: str | None = None, confirmed_only: bool = False) -> dict:
+def write_report(
+    ws: Workspace,
+    *,
+    target: str | None = None,
+    confirmed_only: bool = False,
+    dropped: list | None = None,
+    position_reviews: list[PositionResult] | None = None,
+) -> dict:
     """Assemble the final SARIF + Markdown report from a workspace's findings.
 
     Overwrites ``report.sarif``, ``report.md``, and ``findings.json`` so they
@@ -518,10 +537,17 @@ def write_report(ws: Workspace, *, target: str | None = None, confirmed_only: bo
             implies a still-vulnerable finding's patch is deployed.
         confirmed_only: When true, SARIF excludes needs-deployment-testing findings
             entirely, matching the pre-suppression default output.
+        dropped: Review-mode findings the position gate placed outside the diff; rendered
+            into the markdown report and into ``artifacts/review_ledger.json`` from this one
+            argument, so the two outputs cannot disagree (D-14, POS-03).
+        position_reviews: Review-mode declines (``needs-position-review``); rendered and
+            ledgered the same way as ``dropped``.
 
     Returns:
         ``{"reported": <count>, "sarif": <path>, "report": <path>}``.
     """
+    dropped = dropped or []
+    position_reviews = position_reviews or []
     all_findings = read_findings(ws)
     reportable = select_reportable(all_findings)
     ndt = [f for f in all_findings if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING]
@@ -570,13 +596,44 @@ def write_report(ws: Workspace, *, target: str | None = None, confirmed_only: bo
             has_redteam_plan=has_redteam_plan,
             patch_statuses=patch_statuses,
             economics=economics,
+            dropped=dropped,
+            position_reviews=position_reviews,
         )
     )
     write_finding_details(ws, reportable + ndt, patch_statuses=patch_statuses)
     findings_out = reportable + ndt
     ws.findings_json_path.write_text(json.dumps([f.to_dict() for f in findings_out], indent=2))
+    write_review_ledger(ws, position_reviews=position_reviews, dropped=dropped)
     record_stage(ws, "report")
     return {"reported": len(reportable), "sarif": str(ws.sarif_path), "report": str(ws.report_path)}
+
+
+DROPPED_FINDINGS_HEADING = "## Dropped findings"
+
+
+def render_dropped_findings_section(dropped: list) -> str:
+    """Render every review-mode drop as a dedicated markdown section (D-14, POS-03).
+
+    Args:
+        dropped: ``phase_gate.DroppedFinding``s the review-mode gate placed outside every
+            diff hunk. Rendered in the order given — the gate owns the sort order, so this
+            function never re-sorts; the report and the ledger must not disagree.
+
+    Returns:
+        A markdown string starting with ``DROPPED_FINDINGS_HEADING``.
+    """
+    if not dropped:
+        return f"{DROPPED_FINDINGS_HEADING}\n\nNo finding was dropped.\n"
+    lines = [
+        DROPPED_FINDINGS_HEADING,
+        "",
+        "| Path | Line | Rule | Reason |",
+        "| --- | --- | --- | --- |",
+    ]
+    for d in dropped:
+        lines.append(f"| {d.path} | {d.line} | {d.rule_id} | {d.reason} |")
+    lines.append("")
+    return "\n".join(lines)
 
 
 POSITION_REVIEW_HEADING = "## Position review required"

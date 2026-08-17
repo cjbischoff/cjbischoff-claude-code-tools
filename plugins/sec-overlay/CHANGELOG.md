@@ -2,6 +2,18 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.47.0 - 2026-08-17
+
+### Added
+
+- `report.py`: `DROPPED_FINDINGS_HEADING` and `render_dropped_findings_section(dropped)`,
+  matching `render_position_review_section`'s heading level, table style, and empty-list
+  none-dropped fallback. `to_markdown` gained `dropped` and `position_reviews` arguments and
+  now renders both sections unconditionally, right after the findings body. `write_report`
+  gained the same two arguments and threads them into both `to_markdown` and
+  `write_review_ledger` from one call, so the markdown report and the JSON ledger are built
+  from a single source and cannot disagree about what a review-mode run dropped.
+
 ## 1.46.1 - 2026-08-17
 
 ### Added
