@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.37.8 - 2026-08-17
+
+### Fixed
+
+- `test_rule_matcher.py`, `test_bucket_b.py`, and `test_calibrate.py` add an explicit
+  `is not None` assertion before dereferencing a call result typed `X | None`
+  (`AsvsCatalog.get`, `emit_semgrep_rule`, `Finding.risk_score`) — each call is known to return
+  a non-`None` value at that point in the test, but `ty` cannot infer that without the guard.
+  Fixes 3 VAL-02 ledger rows (`unresolved-attribute` / `not-subscriptable` / `unsupported-operator`);
+  no behavior change.
+
 ## 1.37.7 - 2026-08-17
 
 ### Fixed

@@ -473,5 +473,5 @@ def test_external_boundary_finding_is_capped_and_tagged(tmp_path):
     write_findings(ws, [f])
     calibrate_findings(ws)
     out = read_findings(ws)[0]
-    assert out.risk_score <= 3  # below the medium floor of 4
+    assert out.risk_score is not None and out.risk_score <= 3  # below the medium floor of 4
     assert out.completeness_tier == "external-unverifiable"

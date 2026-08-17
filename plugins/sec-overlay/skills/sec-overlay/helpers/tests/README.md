@@ -4,6 +4,10 @@
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+`test_rule_matcher.py`, `test_bucket_b.py`, and `test_calibrate.py` add an explicit
+`is not None` assertion before dereferencing an `X | None` call result the test already
+knows is non-`None` at that point — `ty` needs the narrowing spelled out; no behavior change.
+
 `test_bench.py`'s `CorpusEntry` builder and `test_profile.py`'s `ScanProfile` roundtrip test
 apply the same `dataclasses.replace` fix as the `Finding` builders below, for the same
 `ty` reason — no behavior change.
