@@ -1,0 +1,29 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/plans/2026-08-07-process-review-hardening-design.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "sec-overlay — Process Review & Pipeline Hardening (Spec A)",
+  "summary": "Design spec hardening the sec-overlay single-repo pipeline: ScanScope path model, scoring correctness, gate strictness, coverage reporting, and issue reconciliation.",
+  "scope": [
+    "ScanScope abstraction (sec_overlay/scanscope.py, kb/scan-scope.json)",
+    "repo_slug monorepo identity",
+    "discover_context_files discovery scope",
+    "phase_gate citation parsing",
+    "calibrate_findings NDT scoring",
+    "judge_verdict severity write-back",
+    "findings_gate schema/evidence strictness",
+    "coverage-ledger population",
+    "report.md / findings.json / SARIF NDT reporting",
+    "ScanProfile methodology knobs",
+    "frozen-contract coordination (Severity.INFO, Go port)"
+  ],
+  "cross_refs": [
+    "docs/dogfooding/2026-08-07-run-observations.md",
+    "references/scan-profile.schema.json",
+    "SKILL.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Status frontmatter reads 'design (approved for spec write; awaiting user review)'. Not an ADR (no single decision/consequences structure) and not a PRD (no user stories). Dominant signals are implementation contracts: JSON artifact schema, module APIs, invariants, gate exit-code behavior, TDD acceptance tests -> SPEC. Confidence medium: path is docs/plans/ and status is pre-approval design, so content signals only. Filename suffix is a slug-based placeholder hash: no shell available to compute SHA-256 of the source path."
+}

@@ -1,0 +1,22 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/superpowers/plans/2026-08-08-correlation-core.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Correlation Core (Spec B · B-Plan 1 of 3) Implementation Plan",
+  "summary": "TDD implementation plan for a read-only multi-repo correlation core: manifest, workspace, ingest, two deterministic joins, and a correlate CLI writing edges.json.",
+  "scope": [
+    "sec_overlay.correlate package",
+    "product manifest (Member/Manifest)",
+    "CorrelationWorkspace",
+    "read-only ingest",
+    "shared-dependency edges",
+    "same-class recurrence edges",
+    "edges.json",
+    "correlate CLI"
+  ],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": null,
+  "notes": "Task-by-task implementation plan, not a pure spec, but it defines binding interface contracts (dataclasses, CLI, invariants) and hard constraints (stdlib-only, frozen models.py/evidence.py, immutability invariant) -> SPEC over DOC. References 'Spec B' and superpowers skills by name only; no file-path links, so cross_refs empty. Hash suffix omitted from filename: no shell available to compute SHA-256; date-prefixed slug is unique in this corpus."
+}

@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/plans/2026-08-02-clusterF-T7-calibrate-crash.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Cluster F / T7 — Calibrate crash on malformed CVSS (Implementation Plan)",
+  "summary": "Implementation plan making malformed CVSS vectors fall back to heuristic scoring instead of crashing batch risk calibration (O-029).",
+  "scope": ["sec-overlay", "cvss31_base", "calibrate_findings", "CVSS 3.1 validation", "per-finding error isolation", "SEVERITY_GUIDANCE prompt"],
+  "cross_refs": ["skills/sec-overlay/references/prompt-constants.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Task-list implementation plan with TDD steps and code snippets. No decision record (no Status/Consequences), no user stories, no API contract — supporting work-plan documentation, so DOC over SPEC/ADR. Ambiguity: contains technical constraints but they restate existing code behavior, not new contracts."
+}

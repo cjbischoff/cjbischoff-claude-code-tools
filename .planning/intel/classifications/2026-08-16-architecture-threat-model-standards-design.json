@@ -1,0 +1,29 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/docs/superpowers/specs/2026-08-16-architecture-threat-model-standards-design.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "sec-overlay: Architecture Documentation + Threat Model Standards — Design Spec",
+  "summary": "Design spec rebuilding sec-overlay architecture and threat-model phases with C4/arc42 artifacts, derived DFDs, CVSS v4.0 migration, and deterministic gates.",
+  "scope": [
+    "sec-overlay plugin",
+    "architecture phase",
+    "threat_model phase",
+    "C4 diagrams",
+    "arc42 document",
+    "DFD derivation",
+    "attack sequences",
+    "STRIDE/PASTA/LINDDUN methodology",
+    "CVSS v4.0 engine",
+    "diagram gate",
+    "mermaid_index.py",
+    "ste_lint.py",
+    "ASD-STE100 prose linting"
+  ],
+  "cross_refs": [
+    "2026-08-16-architecture-threat-model-standards-source.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

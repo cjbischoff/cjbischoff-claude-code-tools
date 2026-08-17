@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/docs/superpowers/plans/2026-08-15-sec-overlay-report-telemetry-artifact-review.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "sec-overlay Report / Telemetry / Artifact-Review Implementation Plan",
+  "summary": "Task-by-task implementation plan for sec-overlay report split, per-phase telemetry, and a new artifact-review gate phase.",
+  "scope": ["sec-overlay plugin", "report rendering (report.py)", "per-finding detail files", "telemetry (cost.py timings)", "artifact_gate phase", "artifact-review agent prompt", "findings gate / Finding.impact", "prefilter candidate ids", "coverage ledger", "stage validators"],
+  "cross_refs": ["docs/superpowers/specs/2026-08-15-sec-overlay-defect-remediation-design.md", "references/finding.schema.json", "references/finding-template.md", "agents/context-ingest.md", "agents/artifact-review.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Implementation plan with TDD task checklists; not an ADR/PRD/SPEC. Contains a 'Rulings' section recording decisions, but they implement an existing spec rather than lock architecture -> classified DOC (context). Hash suffix 'nohash00' used: no shell available to compute SHA-256 of the source path."
+}

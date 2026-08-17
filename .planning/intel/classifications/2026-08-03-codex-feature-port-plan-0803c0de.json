@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/plans/2026-08-03-codex-feature-port-plan.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Codex-Security Feature Port — Implementation Plan",
+  "summary": "Task-by-task TDD plan to port six signal/recall mechanisms from codex-security into sec-overlay without touching the frozen Go contract.",
+  "scope": ["sec-overlay skill", "codex-security port", "fingerprints", "graph.py", "kb/*.json state", "Python 3.13 stdlib"],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": null,
+  "notes": "Implementation plan with checkbox tasks, code snippets, and global constraints. Contains SPEC-like interface definitions (e.g. graph.symbol_at signature) but dominant structure is a step-by-step execution plan, not a contract document → DOC. No frontmatter, no status field, no user stories. Hash suffix in filename is a placeholder (no shell available to compute SHA-256)."
+}

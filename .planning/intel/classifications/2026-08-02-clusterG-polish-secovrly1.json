@@ -1,0 +1,29 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/plans/2026-08-02-clusterG-polish.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Cluster G — Report / Plan / Wiring Polish (Implementation Plan)",
+  "summary": "Implementation plan with TDD task steps to link redteam-plan in reports, add LEAD carrier for non-Finding leads, and reconcile SKILL/CLAUDE doc ordering.",
+  "scope": [
+    "sec-overlay report.py",
+    "sec-overlay context.py",
+    "manual_review_findings LEAD carrier",
+    "redteam-plan.md report linking",
+    "critic.md audit event",
+    "SKILL.md extractor wiring",
+    "C1 doc-ordering reconcile"
+  ],
+  "cross_refs": [
+    "helpers/sec_overlay/report.py",
+    "helpers/tests/test_report.py",
+    "helpers/sec_overlay/context.py",
+    "helpers/tests/test_context.py",
+    "skills/sec-overlay/agents/critic.md",
+    "skills/sec-overlay/SKILL.md",
+    "skills/sec-overlay/CLAUDE.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Task-list implementation plan (checklists, commit messages), not an ADR/PRD/SPEC. No frontmatter, no status field, no user stories, no API contracts. Classified DOC per taxonomy; PLAN is not a defined type. Filename suffix is a path-derived slug, not SHA-256 (no shell available to hash)."
+}

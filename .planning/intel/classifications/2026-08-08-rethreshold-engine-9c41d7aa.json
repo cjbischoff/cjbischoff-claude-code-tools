@@ -1,0 +1,21 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/superpowers/plans/2026-08-08-rethreshold-engine.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Re-thresholding Engine + Cross-Repo Edges (Spec B · B-Plan 2 of 3) Implementation Plan",
+  "summary": "Implementation plan defining interfaces, data model, and promotion-rule truth table for a cross-repo re-thresholding engine producing CorrelationVerdicts.",
+  "scope": [
+    "sec_overlay.correlate package",
+    "rethreshold engine",
+    "CorrelationVerdict dataclass",
+    "control_enforces edges",
+    "member coverage-ledger ingest",
+    "cross-repo-adversary prompt",
+    "correlate CLI"
+  ],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": null,
+  "notes": "Path under plans/ suggests DOC-style plan, but content is dominated by SPEC signals: function signatures, dataclass schema, edge contract, and a promotion truth table. Ambiguity resolved SPEC > DOC per precedence rule. No markdown links to other docs; references Spec B and B-Plan 1 by name only, so cross_refs is empty."
+}

@@ -1,0 +1,28 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/plans/2026-08-08-cross-repo-correlation-spec.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "Spec B — Multi-Repo Holistic Correlation",
+  "summary": "Technical spec for a read-only cross-repo correlation layer over sec-overlay scans: edge graph, re-thresholding engine, adversary gate, combined artifacts.",
+  "scope": [
+    "sec_overlay.correlate module",
+    "CorrelationWorkspace",
+    "product manifest (product.json)",
+    "cross-repo edge graph (edges.json)",
+    "re-thresholding engine (verdicts.json)",
+    "cross-repo adversary gate",
+    "combined artifacts (ARCHITECTURE.md, THREAT_MODEL.md, REDTEAM.md, FINDINGS.md)",
+    "cross-repo SARIF"
+  ],
+  "cross_refs": [
+    "docs/plans/2026-08-07-cross-repo-correlation-design.md",
+    "agents/cross-repo-adversary.md",
+    "agents/correlate-combiner.md",
+    "kb/scan-scope.json",
+    "kb/coverage-ledger.json"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

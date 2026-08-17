@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/plans/2026-08-03-codex-feature-port-design.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "Design spec: port codex-security signal/recall mechanisms into sec-overlay",
+  "summary": "Technical design for six additive mechanisms ported from codex-security into sec-overlay: fingerprints, feedback loop, discovery saturation, validation guidance, coverage ledger, cost tracking.",
+  "scope": ["sec-overlay skill", "fingerprint.py", "graph.py symbol_at", "fp_feedback.py", "discovery saturation loop", "coverage ledger", "cost.py", "agents/investigate.md", "agents/validate.md"],
+  "cross_refs": ["agents/investigate.md", "agents/critic.md", "agents/validate.md", "agents/classes/{injection,authz,crypto,config,resource}.md", "SKILL.md", "references/hunting/methodology.md", "references/hunting/anti-patterns.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Filename lacks source_hash suffix: no shell tool available to compute SHA-256; dated slug is unique so collision risk is nil. Title says 'Design spec', status 'Approved for planning'; content is implementation contracts (files, algorithms, frozen JSON contract constraints) -> SPEC, not ADR."
+}

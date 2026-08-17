@@ -1,0 +1,30 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/docs/superpowers/specs/2026-08-16-sec-overlay-invocation-design.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "Design — a driven invocation path for sec-overlay",
+  "summary": "Technical design for a sec-overlay audit command, driver module with receipts and fence, role inference, and multi-repo correlation output.",
+  "scope": [
+    "sec-overlay plugin",
+    "/sec-overlay:audit command",
+    "helpers/sec_overlay/run.py driver (write_env, receipt, fence)",
+    "sec_overlay.correlate correlation core",
+    "role inference from kb/scan-profile.json",
+    "manifest synthesis",
+    "agents/redteam-adversary.md path fix (O-65)",
+    "multi-repo CWD output artifacts"
+  ],
+  "cross_refs": [
+    "review_sec-overlay-harness_20260814_1258.md",
+    "spec_sec-overlay-invocation_20260815_0949.md",
+    "plugins/sec-overlay/skills/sec-overlay/commands/audit.md",
+    "plugins/sec-overlay/skills/sec-overlay/helpers/sec_overlay/run.py",
+    "plugins/sec-overlay/skills/sec-overlay/agents/redteam-adversary.md",
+    "SKILL.md",
+    "correlate/manifest.py"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

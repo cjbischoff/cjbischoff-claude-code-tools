@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/superpowers/specs/2026-08-08-report-readability-design.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "Report Readability — Design Spec",
+  "summary": "Presentation-layer design spec restructuring report.md, redteam-plan serialization, and finding-template views (triage line, NDT-view, dep-view).",
+  "scope": ["report.md rendering", "finding-template.md contract", "redteam-plan.md serializer", "helpers/sec_overlay/report.py", "helpers/sec_overlay/redteam.py", "triage table", "NDT-view", "dep-view"],
+  "cross_refs": ["references/finding-template.md", "~/Documents/Reports/2026-08-08-aem-report-artifact-critique.md", "helpers/sec_overlay/report.py", "helpers/sec_overlay/redteam.py"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

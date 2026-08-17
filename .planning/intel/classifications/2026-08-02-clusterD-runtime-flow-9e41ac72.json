@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/plans/2026-08-02-clusterD-runtime-flow.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Cluster D — needs-runtime Status Flow (Implementation Plan)",
+  "summary": "Implementation plan adding a runtime_dependent marker on Finding and a promote_runtime_dependent step routing runtime-only findings to needs-deployment-testing.",
+  "scope": ["Finding.runtime_dependent", "campaign.promote_runtime_dependent", "needs-deployment-testing status", "sec_overlay models.py", "sec_overlay campaign.py", "investigate/validate agent prompts", "SKILL.md Phase 5.5 wiring"],
+  "cross_refs": ["skills/sec-overlay/agents/investigate.md", "skills/sec-overlay/agents/validate.md", "skills/sec-overlay/SKILL.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Implementation plan, not a pure spec: TDD task checklist with concrete interface contracts (Finding.runtime_dependent: bool, promote_runtime_dependent(ws) -> int) and global constraints (stdlib-only, recall-safe promotion). SPEC signals (typed interfaces, contracts) dominate over DOC prose; no user stories (not PRD), no decision/consequences structure (not ADR). Filename slug hash is a stable placeholder, not a computed SHA-256 (no shell available)."
+}
