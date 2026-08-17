@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Mark Phase 1 (Baseline Health Verification) complete across the planning tracking files: check the phase off in `.planning/ROADMAP.md`, advance `.planning/STATE.md` to Phase 2, and move requirements VAL-01/VAL-02/VAL-03 to Validated in `.planning/PROJECT.md` with the recorded pytest override noted.
 - Record Phase 1 planning completion in `.planning/STATE.md`, annotate the Phase 1 roadmap entry with wave dependencies, and add the Phase 1 pattern map (`01-PATTERNS.md`) that maps contingent fix targets to their closest in-repo analogs.
 - Plan Phase 1 (Baseline Health Verification) as three sequential plans: capture receipts for all three gate families with a tool version block and a triage ledger, fix every triaged defect under governance without touching the frozen JSON contract, then re-run the gates green and record the fix ledger with a constraint proof. Update the Phase 1 roadmap entry with the plan list.
 - Capture Phase 1 (Baseline Health Verification) implementation decisions in `.planning/phases/01-baseline-health-verification/`: fix-in-phase failure policy with a frozen-file hard stop, VERIFICATION.md evidence format with version block and fix ledger, installed-tool versions recorded rather than pinned, and gate scopes for prek, ruff/ty, and plugin validation.

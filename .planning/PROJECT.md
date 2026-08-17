@@ -51,12 +51,10 @@ All items below shipped before this project started.
 - ✓ Defect remediation, 57 issues across T-themes (driver, vocab, coverage) — 2026-08-15
 - ✓ CVSS v4.0 migration, architecture/threat-model rebuild, diagram/STE gates — 2026-08-16
 - ✓ Driven invocation (/sec-overlay:audit, run.py, receipts, fence) — 2026-08-16
+- ✓ Baseline health verified: plugin validate, ruff/ty green, prek hooks (VAL-01/02/03) — Validated in Phase 1: Baseline Health Verification, 2026-08-17 (pytest carries a recorded maintainer override for two environmental failures)
 
 ### Active
 
-- [ ] `claude plugin validate .` passes for the marketplace and every plugin (VAL-01)
-- [ ] sec-overlay quality gates green: pytest, ruff, ty, zero warnings (VAL-02)
-- [ ] prek hooks installed and passing repo-wide (VAL-03)
 - [ ] Full driven audit run completes on a real target with receipts (AUD-01)
 - [ ] Confirmed findings are receipt-backed; Tier-2-only never confirms (AUD-02)
 - [ ] Runtime-dependent findings scored and visible, never hidden (AUD-03)
@@ -147,4 +145,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-16 after starting milestone v5.0 (Hybrid Diff-Review Architecture)*
+*Last updated: 2026-08-17 after completing Phase 1 (Baseline Health Verification) of milestone v5.0*
