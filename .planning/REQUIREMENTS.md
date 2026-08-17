@@ -1,14 +1,16 @@
-# Requirements: cjbischoff-claude-code-tools
+# Requirements: cjbischoff-claude-code-tools — Milestone v5.0
 
 **Defined:** 2026-08-16
 **Core Value:** The marketplace never ships an unverified claim: every plugin passes
 validation, every release follows governance, and every confirmed sec-overlay finding
 is receipt-backed.
 
-Note: the 50-doc ingest contained no PRD. These requirements derive from the
-user-supplied success metrics and the standing invariants in `.planning/intel/`.
+Source: the hybrid diff-review specification
+(`spec_sec-overlay-improvement_20260816_0920.md`) plus the carried-over verification
+goals from the superseded v4.0 milestone. Design invariants: stdlib-only core, frozen
+models.py/evidence.py contract, receipt gate as the sole authority on `confirmed`.
 
-## v1 Requirements
+## v5.0 Requirements
 
 ### Validation (VAL)
 
@@ -17,6 +19,79 @@ user-supplied success metrics and the standing invariants in `.planning/intel/`.
 - [ ] **VAL-02**: sec-overlay quality gates pass — pytest green, ruff and ty clean,
   zero warnings
 - [ ] **VAL-03**: prek hooks are installed and `prek run` passes repo-wide
+
+### Diff Pipeline (DIFF)
+
+- [ ] **DIFF-01**: A maintainer can run `python -m sec_overlay.cli review` against a
+  base/head ref pair; refs are validated against `^[A-Za-z0-9._/\-]+$` with leading
+  `-` rejected, and all reads pin to resolved commit SHAs
+- [ ] **DIFF-02**: `diffscope.py` returns per-file `ChangedFile` records carrying
+  path, old_path, status (A/M/D/R), and the raw unified-diff text
+- [ ] **DIFF-03**: `file_select.py` deterministically splits changed files into
+  reviewable and excluded (with reasons); deleted files are excluded as `deleted`,
+  and the agent cannot add or drop files from the list
+- [ ] **DIFF-04**: The coverage manifest holds one entry per reviewable file with
+  states pending → in_review → done|failed; a run cannot seal `complete` while any
+  entry is `pending`, and a `partial` terminal state names unreviewed files
+
+### Positioning (POS)
+
+- [ ] **POS-01**: `diffhunks.py` parses unified diffs with stdlib only and exposes
+  `added_line_numbers(file)` and `line_in_hunk(file, line)`
+- [ ] **POS-02**: `positioning.py` confirms a finding's location via hunk match, then
+  whole-file match, then cross-file relocation; ambiguity or zero matches yields a
+  decline routed to `needs-position-review`, never a guessed line
+- [ ] **POS-03**: In review mode, `phase_gate.py` drops a finding whose confirmed line
+  is outside every changed hunk with reason `outside-diff`; whole-repo audit mode
+  keeps the existing whole-file check
+
+### Rule Matching (RULE)
+
+- [ ] **RULE-01**: `rule_glob.py` matches lower-cased paths against ordered PathRules
+  with brace expansion and `**`-aware globbing; first match wins, else the default
+  rule
+- [ ] **RULE-02**: Rule resolution layers apply first-non-empty: `--rule` path →
+  project `.sec-overlay/rule.json` → global `~/.sec-overlay/rule.json` → built-in
+  rules; `--exclude` appends to the resolved exclude list
+- [ ] **RULE-03**: Rule-file reads resolve symlinks, require the resolved path under
+  repo root, restrict extensions to `.md`/`.txt`/`.markdown`, and cap size at 512 KB
+- [ ] **RULE-04**: A rule entry with `merge_system_rule: true` concatenates built-in
+  and user rule text under fixed headers instead of replacing
+- [ ] **RULE-05**: Per-language rule docs ship for go, java, python, php, rust,
+  ts/js/tsx/jsx, kotlin, swift, and default, each covering NPE, thread-safety,
+  injection (XSS/SQLi), resource leaks, and error-swallowing with explicit exclusions
+
+### Review Modes (REV)
+
+- [ ] **REV-01**: `review --profile security` reproduces current gate behavior
+  exactly; `--profile general` reports general defects the security gates A/B would
+  drop, with gates C/D/E still applied
+- [ ] **REV-02**: The reflection filter runs per file after positioning and the hunk
+  gate, retracts only, fails open on LLM error, and encodes the protected-subject
+  vetoes; it can never produce a `confirmed` disposition
+- [ ] **REV-03**: The mechanical-receipt gate remains the sole authority on
+  `confirmed`; general-defect findings without a Tier-1 receipt ship as
+  `unconfirmed`/`needs-deployment-testing`
+
+### Scale and Resume (SCALE)
+
+- [ ] **SCALE-01**: `bundle.py` deterministically groups locale/config siblings and
+  impl/test pairs into single review units, one file per unit as fallback, documented
+  as a sec-overlay addition beyond OCR
+- [ ] **SCALE-02**: `--concurrency` (default 8), per-bundle `--timeout` (default
+  10m), and `--max-git-procs` (default 16) bound execution; a timed-out bundle marks
+  its files `failed` and the run terminal state becomes `partial`
+- [ ] **SCALE-03**: Resume validates identity before any agent spawn — an implicit
+  model or profile change is rejected with nothing persisted, and file reads stay
+  pinned to sealed commit SHAs
+
+### Output (OUT)
+
+- [ ] **OUT-01**: Diff-review mode emits a diff-anchored comment payload
+  `{path, line, side, existing_code, content}` alongside the existing SARIF,
+  markdown, and per-finding files, with the coverage manifest included
+- [ ] **OUT-02**: SARIF fingerprints use `Path|Category|ExistingCode` excluding
+  message text
 
 ### Audit Integrity (AUD)
 
@@ -30,15 +105,19 @@ user-supplied success metrics and the standing invariants in `.planning/intel/`.
   (Mermaid caps, derivation headers, STE lint) and score with CVSS v4.0 only
 - [ ] **AUD-05**: The audit report states its coverage denominator; every
   attack-surface class without a finding has a logged coverage-ledger entry
+- [ ] **AUD-06**: A full `review` run (both profiles) completes end to end on a real
+  diff, with the coverage manifest sealed and positioning-confirmed line numbers
 
 ### Release Governance (REL)
 
-- [ ] **REL-01**: Every defect observed in the verification run is fixed or given a
+- [ ] **REL-01**: Every defect observed in the verification runs is fixed or given a
   written disposition, with models.py/evidence.py and `fingerprint()` identity
   unchanged, asserted by tests
-- [ ] **REL-02**: Every fix ships through governance — branch, Conventional Commit,
-  semver bump plus CHANGELOG entry in the same commit, PR merged only after
+- [ ] **REL-02**: Every change ships through governance — branch, Conventional
+  Commit, semver bump plus CHANGELOG entry in the same commit, PR merged only after
   CodeRabbit's walkthrough comment
+- [ ] **REL-03**: `helpers/pyproject.toml` dependencies stay empty — zero new runtime
+  dependencies across all new modules
 
 ## v2 Requirements
 
@@ -63,6 +142,16 @@ Explicitly excluded. Documented to prevent scope creep.
 | Edits to models.py / evidence.py | Frozen JSON contract, byte-mirrored by a Go port |
 | Mixing CVSS v3.1 and v4.0 | Ruling R2 pins v4.0 harness-wide, no mixing |
 | Re-implementing delivered baseline features | All 50 ingested docs are delivered work |
+| Reflection filter replacing the receipt ladder | Spec §6 pins compose-under, not replace |
+| Reusing content/regex `rule_matcher.py` for path globs | Spec §4.1 pins a separate module |
+
+## Open Design Notes
+
+- The spec names a new `coverage.py`, but `helpers/sec_overlay/coverage.py` already
+  exists. The roadmap or phase plan must rename the new module (for example
+  `review_coverage.py`) or extend the existing one.
+- `**`-aware globbing needs `pathlib.PurePath.full_match` (Python 3.13) or a small
+  custom matcher; the chosen floor must be stated in the plugin docs.
 
 ## Traceability
 
@@ -70,22 +159,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VAL-01 | Phase 1 | Pending |
-| VAL-02 | Phase 1 | Pending |
-| VAL-03 | Phase 1 | Pending |
-| AUD-01 | Phase 2 | Pending |
-| AUD-02 | Phase 2 | Pending |
-| AUD-03 | Phase 2 | Pending |
-| AUD-04 | Phase 2 | Pending |
-| AUD-05 | Phase 2 | Pending |
-| REL-01 | Phase 3 | Pending |
-| REL-02 | Phase 3 | Pending |
-
-**Coverage:**
-- v1 requirements: 10 total
-- Mapped to phases: 10
-- Unmapped: 0 ✓
+| (filled by roadmap) | | |
 
 ---
 *Requirements defined: 2026-08-16*
-*Last updated: 2026-08-16 after initial definition*
+*Last updated: 2026-08-16 for milestone v5.0*
