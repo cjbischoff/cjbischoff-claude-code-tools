@@ -250,3 +250,88 @@ plan's own action text names this as the one exception under which the phase sti
 fabricated `Exit code: 0` for pytest to satisfy a literal six-way count would itself violate the
 phase's own prohibition against manufacturing a green gate. See the Summary's Deviations section
 for the full account of this plan-text/verify-script tension.
+
+## Fix Ledger
+
+One row per fix that landed under Plan 02's `proceed-as-triaged` Remediation Route. The two
+VAL-02 pytest rows and the VAL-03 config row in the Triage Ledger above carry no fix — the
+maintainer's route left them as documented, unfixed gaps.
+
+| Gate | Failure | Fix summary | Commit SHA |
+| ---- | ------- | ------------ | ---------- |
+| VAL-02 ruff | `RUF015` `tests/test_postflight.py:26`; `FLY002` `tests/test_structural_index.py:115` | Replaced slice-then-index with `next()`; replaced `.join()` with adjacent-literal concatenation | b776e26 |
+| VAL-02 ruff | `C408` x2 `tests/test_citations.py:16`, `tests/test_factcheck_baseline_envelope.py:9` | Replaced `dict()` + `.update(kw)` + `Finding(**d)` builders with `dataclasses.replace(base, **kw)`, removing the flagged `dict()` literal call | 4fa044c |
+| VAL-02 ty | 3 `invalid-argument-type`, `tests/test_workspace.py` | `Workspace.__init__` now coerces a `str` path to `Path` directly | db095dd |
+| VAL-02 ty | 16 `invalid-argument-type`, `tests/test_prefilter.py` + `tests/test_wiring.py` | `Exclusions` test fixtures now pass sets instead of list/mixed literals | 381708c |
+| VAL-02 ty | 123 `invalid-argument-type` (34 `test_citations.py` + 34 `test_factcheck_baseline_envelope.py` + 55 `test_report.py`) | `dataclasses.replace` restores per-field `ty` checking on `Finding` test builders — `**d`'s inferred dict type had bypassed it | 4fa044c |
+| VAL-02 ty | 8 `invalid-argument-type` (5 `test_bench.py` + 3 `test_profile.py`) | Same `dataclasses.replace` builder fix applied to bench/profile test builders | 563079c |
+| VAL-02 ty | 3 (1 `unresolved-attribute` `test_rule_matcher.py`, 1 `not-subscriptable` `test_bucket_b.py`, 1 `unsupported-operator` `test_calibrate.py`) | Added `is not None` narrowing before dereferencing optional results | 7a38879 |
+| VAL-02 ty | 1 `unresolved-attribute`, `tests/test_patch_status.py` | Replaced ad hoc namespace test double with a real class for the fake runner | de805e3 |
+| VAL-02 ty | 4 `invalid-argument-type`, `sec_overlay/stage_validate.py` (production file) | Added `_adapt_dict`/`_adapt_optional_dict` adapters unifying the validator call signature (also closes a real crash-on-malformed-input gap, deviation Rule 2) | 609c421 |
+| VAL-02 ty | 3 `unresolved-reference` (2 `tests/fixtures/graph_target/app/db.py` + 1 `app/api.py`) | Stubbed the `cursor`/`app` bindings the fixture referenced but never defined | 74564a4 |
+
+Row diagnostic counts sum to 161 (3+16+123+8+3+1+4+3), matching the Triage Ledger's VAL-02 ty
+total exactly. No row in this table touches `sec_overlay/models.py` or `sec_overlay/evidence.py`.
+
+## Constraint Proof
+
+**1. Frozen-contract integrity.** Diffed the two D-02 modules from the phase-start commit
+(`a4731cb`, "docs(01): complete 01-01 plan") to `HEAD`:
+
+- Command: `git diff --name-only a4731cb..HEAD -- plugins/sec-overlay/skills/sec-overlay/helpers/sec_overlay/models.py plugins/sec-overlay/skills/sec-overlay/helpers/sec_overlay/evidence.py`
+- Exit code: 0
+- Output: (empty — no changes to either file across all of Plan 02 and Plan 03)
+
+**2. Governance compliance.** For each of the 9 shipping-file fix commits in the Fix Ledger,
+`git show --name-only <sha> | grep -E 'plugin\.json|CHANGELOG\.md'` confirms both files staged
+in the same commit:
+
+```
+db095dd: plugins/sec-overlay/.claude-plugin/plugin.json, plugins/sec-overlay/CHANGELOG.md
+381708c: plugins/sec-overlay/.claude-plugin/plugin.json, plugins/sec-overlay/CHANGELOG.md
+b776e26: plugins/sec-overlay/.claude-plugin/plugin.json, plugins/sec-overlay/CHANGELOG.md
+4fa044c: plugins/sec-overlay/.claude-plugin/plugin.json, plugins/sec-overlay/CHANGELOG.md
+563079c: plugins/sec-overlay/.claude-plugin/plugin.json, plugins/sec-overlay/CHANGELOG.md
+7a38879: plugins/sec-overlay/.claude-plugin/plugin.json, plugins/sec-overlay/CHANGELOG.md
+de805e3: plugins/sec-overlay/.claude-plugin/plugin.json, plugins/sec-overlay/CHANGELOG.md
+609c421: plugins/sec-overlay/.claude-plugin/plugin.json, plugins/sec-overlay/CHANGELOG.md
+74564a4: plugins/sec-overlay/.claude-plugin/plugin.json, plugins/sec-overlay/CHANGELOG.md
+```
+
+Nine fix commits, nine consecutive patch bumps (`1.37.3` through `1.37.11`), each with its own
+changelog entry — no fix landed without its version bump.
+
+**3. Ledger integrity.** `git cat-file -t <sha>` for every SHA in the Fix Ledger:
+
+```
+db095dd: commit
+381708c: commit
+b776e26: commit
+4fa044c: commit
+563079c: commit
+7a38879: commit
+de805e3: commit
+609c421: commit
+74564a4: commit
+```
+
+All nine resolve as real commits — no fabricated or dangling SHA in the ledger.
+
+## Phase Outcome
+
+Phase 1's baseline is trustworthy: both `claude plugin validate .` invocations, ruff, ty, and
+prek all exit 0 on the current tree, and ruff/ty's prior 165 combined findings (4 lint errors +
+161 type diagnostics) are gone, fixed across 9 commits without touching the frozen
+`models.py`/`evidence.py` contract or skipping a version bump. Two gaps remain by deliberate,
+documented choice rather than oversight. First, two pytest failures stay red —
+`test_seed_corpus_is_valid` and `test_report_finds_vendored_rules_regardless_of_cwd` — both
+because this checkout lacks environment-only data the plugin's own `CLAUDE.md` documents as a
+prerequisite (a gitignored labelled corpus under `bench/corpus_seed/`, and a `rules/semgrep/`
+vendored ruleset with no `.gitmodules` registered to fetch it), not because of a code defect;
+the maintainer's `proceed-as-triaged` Remediation Route left both unfixed on that basis. Second,
+prek's `--all-files` run structurally cannot exercise the `conventional-commit-msg` hook, since
+that hook is scoped to the `commit-msg` git stage and only fires on an actual commit — a config
+fact about how prek stages work, not a broken or missing hook. Anyone relying on this baseline
+should install the corpus/submodule data before trusting the pytest gate specifically, and should
+trust `conventional-commit-msg` from its per-commit enforcement history (visible in this repo's
+commit log) rather than from any `--all-files` receipt.
