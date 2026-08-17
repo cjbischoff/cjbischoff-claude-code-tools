@@ -6,15 +6,17 @@ import re
 import subprocess
 from dataclasses import dataclass
 
-_REF_RE = re.compile(r"^(?!-)[A-Za-z0-9._/-]+$")
+_REF_RE = re.compile(r"^(?!-)[A-Za-z0-9._/~-]+$")
 
 
 def validate_ref(ref: str) -> str:
     """Validate a git ref against a strict allowlist before it reaches a git command.
 
     Rejects a ref starting with ``-`` (git would parse it as an option — the
-    argument-injection vector D-06/D-07 close) and anything outside
-    ``[A-Za-z0-9._/-]``.
+    argument-injection vector D-06/D-07 close), an empty ref (the anchored
+    one-or-more pattern already rejects it), and anything outside
+    ``[A-Za-z0-9._/~-]`` — which excludes every shell metacharacter while still
+    allowing ``HEAD~1``-style ancestor refs.
 
     Args:
         ref: The candidate ref (branch, tag, or SHA).
@@ -77,12 +79,57 @@ def changed_file_records(base: str, head: str, *, runner=subprocess.run) -> list
         if not raw_line.strip():
             continue
         columns = raw_line.split("\t")
-        status = columns[0]
-        if status.startswith("R") and len(columns) == 3:
-            records.append(ChangedFile(path=columns[2], status="R", old_path=columns[1]))
+        kind = columns[0][0]
+        if kind in ("R", "C") and len(columns) == 3:
+            records.append(ChangedFile(path=columns[2], status=kind, old_path=columns[1]))
         else:
-            records.append(ChangedFile(path=columns[1], status=status))
+            records.append(ChangedFile(path=columns[1], status=kind))
     return records
+
+
+def file_diff_line_count(path: str, base: str, head: str, *, runner=subprocess.run) -> int:
+    """Return the diff body line count for one path — a size proxy for the exclusion cap.
+
+    Args:
+        path: Repo-relative file path.
+        base: Base revision, already resolved to a SHA.
+        head: Head revision, already resolved to a SHA.
+        runner: Injectable subprocess runner (for testing).
+
+    Returns:
+        The number of lines in the `git diff --unified=0` output for ``path``.
+    """
+    completed = runner(
+        ["git", "diff", "--unified=0", base, head, "--", path],
+        capture_output=True, text=True, check=False,
+    )
+    return len(completed.stdout.splitlines())
+
+
+def binary_paths(base: str, head: str, *, runner=subprocess.run) -> frozenset[str]:
+    """Return the paths git reports as binary between two resolved SHAs.
+
+    Args:
+        base: Base revision, already resolved to a SHA.
+        head: Head revision, already resolved to a SHA.
+        runner: Injectable subprocess runner (for testing).
+
+    Returns:
+        Repo-relative paths whose `git diff --numstat` line reads ``-\t-`` (git's
+        binary marker).
+    """
+    completed = runner(
+        ["git", "diff", "--numstat", base, head, "--"],
+        capture_output=True, text=True, check=False,
+    )
+    paths: set[str] = set()
+    for raw_line in completed.stdout.splitlines():
+        if not raw_line.strip():
+            continue
+        columns = raw_line.split("\t")
+        if len(columns) == 3 and columns[0] == "-" and columns[1] == "-":
+            paths.add(columns[2])
+    return frozenset(paths)
 
 
 def file_diff_text(path: str, base: str, head: str, *, runner=subprocess.run) -> str:

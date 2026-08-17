@@ -2,6 +2,18 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.40.0 - 2026-08-17
+
+### Added
+
+- `diffscope.py`: full ref-validation and `changed_file_records` behavior. The allowlist pattern
+  now permits `~` so `HEAD~1`-style ancestor refs validate; `changed_file_records` parses the
+  full `--name-status` vocabulary and carries `old_path` for renames and copies; two new
+  functions, `file_diff_line_count` and `binary_paths`, give `file_select.partition` its
+  size-cap and binary inputs (landing in the next release). The `review` CLI branch now catches
+  a `ValueError` from ref resolution and exits `2` with one actionable stderr line naming the
+  ref, without laundering any other `ValueError` into the same exit code.
+
 ## 1.39.0 - 2026-08-17
 
 ### Added

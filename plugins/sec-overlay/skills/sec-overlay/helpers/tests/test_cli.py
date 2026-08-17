@@ -33,6 +33,23 @@ def test_scan_defaults_to_repo_memory(tmp_path, monkeypatch):
     assert (slugs[0] / "findings").is_dir()
 
 
+def test_review_rejects_leading_dash_base_ref_with_exit_2(tmp_path, capsys):
+    from sec_overlay import cli
+
+    rc = cli.main(["review", "--base=-x", "--head", "HEAD", "--root", str(tmp_path)])
+    assert rc == 2
+    err = capsys.readouterr().err.strip()
+    assert err.count("\n") == 0
+    assert "-x" in err
+
+
+def test_review_rejects_empty_base_ref_with_exit_2(tmp_path, capsys):
+    from sec_overlay import cli
+
+    rc = cli.main(["review", "--base", "", "--head", "HEAD", "--root", str(tmp_path)])
+    assert rc == 2
+
+
 def test_memory_command_status_and_learn(tmp_path, monkeypatch, capsys):
     from sec_overlay import cli
     monkeypatch.setenv("SEC_OVERLAY_HOME", str(tmp_path / "mem"))

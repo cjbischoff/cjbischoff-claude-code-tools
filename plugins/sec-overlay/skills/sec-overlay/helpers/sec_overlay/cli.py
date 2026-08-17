@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 
 from sec_overlay.campaign import record_stage
 from sec_overlay.diffhunks import parse_hunks
@@ -97,7 +98,8 @@ def run_review(base: str, head: str, root: str, *, runner=None) -> int:
         runner: Injectable subprocess runner (tests); defaults to ``subprocess.run``.
 
     Returns:
-        0 when the coverage manifest seals ``complete``, 1 otherwise.
+        0 when the coverage manifest seals ``complete``, 2 on an invalid ``base``/
+        ``head`` ref (D-06), 1 otherwise.
     """
     import subprocess
     r = runner or subprocess.run
@@ -105,8 +107,12 @@ def run_review(base: str, head: str, root: str, *, runner=None) -> int:
     ws = Workspace(root)
     ws.ensure()
 
-    base_sha = resolve_ref_sha(base, runner=r)
-    head_sha = resolve_ref_sha(head, runner=r)
+    try:
+        base_sha = resolve_ref_sha(base, runner=r)
+        head_sha = resolve_ref_sha(head, runner=r)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     records = changed_file_records(base_sha, head_sha, runner=r)
     selection = partition(records)

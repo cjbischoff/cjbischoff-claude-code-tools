@@ -449,3 +449,11 @@ pre-existing symbol in both is unchanged. `cli.py` gained the `review` subparser
 batching, exit codes 2/3, the full extension allowlist, and the diff-line size cap land in a
 later plan. `coverage.py`, `models.py`, and `evidence.py` — the frozen milestone contracts —
 are untouched; no new runtime dependency. See the module map entries.
+
+`diffscope.py` and `cli.py` reached full ref-validation behavior: the allowlist pattern now
+also permits `~` (so `HEAD~1`-style ancestor refs validate), `changed_file_records` parses the
+full `--name-status` vocabulary including renames and copies (both carry `old_path`), and two
+new functions — `file_diff_line_count` and `binary_paths` — give `file_select.partition` its
+size-cap and binary inputs. `cli.py`'s `review` branch now catches a `ValueError` from ref
+resolution and exits `2` with one stderr line naming the ref, without laundering any other
+`ValueError` in the run into the same exit code.

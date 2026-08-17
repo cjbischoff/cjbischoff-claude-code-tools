@@ -426,3 +426,11 @@ call raises `WorkingTreeFenceError` against the still-persisted baseline. The de
 
 `test_command_audit.py`'s `--out` assertion comment now reads "correlation output lands under the
 CWD (artifacts/)", matching the corrected `audit.md`.
+
+`test_diffscope.py` grew from 2 to 22 tests, covering the full ref-validation and
+`changed_file_records` behavior: allowlisted refs including `HEAD~1`, an empty-ref rejection, a
+leading-dash rejection with allowlisted rest, four shell-metacharacter rejections, an empty diff,
+emitted-order preservation, rename and copy records each carrying `old_path`, `file_diff_line_count`,
+`binary_paths`, and a call-order test proving `rev-parse` always precedes `diff` and no raw ref
+ever reaches a `diff` argv. `test_cli.py` gained two `review` exit-2 tests: a leading-dash `--base`
+and an empty `--base`, each asserting `rc == 2` and a single stderr line.
