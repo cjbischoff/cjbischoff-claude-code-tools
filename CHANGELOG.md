@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Record Phase 1 planning completion in `.planning/STATE.md`, annotate the Phase 1 roadmap entry with wave dependencies, and add the Phase 1 pattern map (`01-PATTERNS.md`) that maps contingent fix targets to their closest in-repo analogs.
 - Plan Phase 1 (Baseline Health Verification) as three sequential plans: capture receipts for all three gate families with a tool version block and a triage ledger, fix every triaged defect under governance without touching the frozen JSON contract, then re-run the gates green and record the fix ledger with a constraint proof. Update the Phase 1 roadmap entry with the plan list.
 - Capture Phase 1 (Baseline Health Verification) implementation decisions in `.planning/phases/01-baseline-health-verification/`: fix-in-phase failure policy with a frozen-file hard stop, VERIFICATION.md evidence format with version block and fix ledger, installed-tool versions recorded rather than pinned, and gate scopes for prek, ruff/ty, and plugin validation.
 - Add `commands/` to the root `CLAUDE.md` shipping-file list, so a change to a plugin-root slash command bumps the plugin version; a `commands/*.md` file is install payload, and without the bump the update mechanism never ships it. Record the folder in the root README artifact inventory.
