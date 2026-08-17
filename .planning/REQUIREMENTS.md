@@ -24,31 +24,31 @@ models.py/evidence.py contract, receipt gate as the sole authority on `confirmed
 
 ### Diff Pipeline (DIFF)
 
-- [ ] **DIFF-01**: A maintainer can run `python -m sec_overlay.cli review` against a
+- [x] **DIFF-01**: A maintainer can run `python -m sec_overlay.cli review` against a
   base/head ref pair; refs are validated against `^[A-Za-z0-9._/\-]+$` with leading
   `-` rejected, and all reads pin to resolved commit SHAs
 
-- [ ] **DIFF-02**: `diffscope.py` returns per-file `ChangedFile` records carrying
+- [x] **DIFF-02**: `diffscope.py` returns per-file `ChangedFile` records carrying
   path, old_path, status (A/M/D/R), and the raw unified-diff text
 
-- [ ] **DIFF-03**: `file_select.py` deterministically splits changed files into
+- [x] **DIFF-03**: `file_select.py` deterministically splits changed files into
   reviewable and excluded (with reasons); deleted files are excluded as `deleted`,
   and the agent cannot add or drop files from the list
 
-- [ ] **DIFF-04**: The coverage manifest holds one entry per reviewable file with
+- [x] **DIFF-04**: The coverage manifest holds one entry per reviewable file with
   states pending → in_review → done|failed; a run cannot seal `complete` while any
   entry is `pending`, and a `partial` terminal state names unreviewed files
 
 ### Positioning (POS)
 
-- [ ] **POS-01**: `diffhunks.py` parses unified diffs with stdlib only and exposes
+- [x] **POS-01**: `diffhunks.py` parses unified diffs with stdlib only and exposes
   `added_line_numbers(file)` and `line_in_hunk(file, line)`
 
 - [ ] **POS-02**: `positioning.py` confirms a finding's location via hunk match, then
   whole-file match, then cross-file relocation; ambiguity or zero matches yields a
   decline routed to `needs-position-review`, never a guessed line
 
-- [ ] **POS-03**: In review mode, `phase_gate.py` drops a finding whose confirmed line
+- [x] **POS-03**: In review mode, `phase_gate.py` drops a finding whose confirmed line
   is outside every changed hunk with reason `outside-diff`; whole-repo audit mode
   keeps the existing whole-file check
 
@@ -187,13 +187,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VAL-01 | Phase 1 | Complete |
 | VAL-02 | Phase 1 | Complete |
 | VAL-03 | Phase 1 | Complete |
-| DIFF-01 | Phase 2 | Pending |
-| DIFF-02 | Phase 2 | Pending |
-| DIFF-03 | Phase 2 | Pending |
-| DIFF-04 | Phase 2 | Pending |
-| POS-01 | Phase 2 | Pending |
+| DIFF-01 | Phase 2 | Complete |
+| DIFF-02 | Phase 2 | Complete |
+| DIFF-03 | Phase 2 | Complete |
+| DIFF-04 | Phase 2 | Complete |
+| POS-01 | Phase 2 | Complete |
 | POS-02 | Phase 2 | Pending |
-| POS-03 | Phase 2 | Pending |
+| POS-03 | Phase 2 | Complete |
 | RULE-01 | Phase 3 | Pending |
 | RULE-02 | Phase 3 | Pending |
 | RULE-03 | Phase 3 | Pending |
