@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. sec-overlay's pytest suite passes, and ruff and ty report zero errors and zero warnings
   3. prek hooks are installed and `prek run` passes across the repo
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans executed
 **Wave 1**
 
 - [x] 01-01-PLAN.md — Run all three gate families and capture receipts, versions, and a triage ledger
@@ -53,7 +53,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-03-PLAN.md — Re-run the gates green, write the fix ledger, and prove the phase constraints held
+- [x] 01-03-PLAN.md — Re-run the gates green, write the fix ledger, and prove the phase constraints held
 
 ### Phase 2: Diff Pipeline & Positioning
 
@@ -139,7 +139,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Baseline Health Verification | 2/3 | In Progress|  |
+| 1. Baseline Health Verification | 3/3 | In Progress|  |
 | 2. Diff Pipeline & Positioning | 0/TBD | Not started | - |
 | 3. Rule Matching & Review Modes | 0/TBD | Not started | - |
 | 4. Scale, Resume & Diff Output | 0/TBD | Not started | - |
