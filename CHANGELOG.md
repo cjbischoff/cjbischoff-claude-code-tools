@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Research Phase 2 (Diff Pipeline & Positioning) in `.planning/phases/02-diff-pipeline-positioning/02-RESEARCH.md`: verified algorithm ports from the `open-code-review` reference (exact-match positioning, not fuzzy `difflib`), flagged that no whole-file `Finding.line` check exists today for audit mode to "keep," and flagged that `Workspace` needs a new `artifacts` property before the coverage manifest can be written.
 - Record the Phase 2 context-gathering session in `.planning/STATE.md` (stopped-at marker and resume file), pointing the next session at `02-CONTEXT.md`.
 - Capture Phase 2 (Diff Pipeline & Positioning) implementation decisions in `.planning/phases/02-diff-pipeline-positioning/`: a new `review_coverage.py` manifest module persisted at `artifacts/coverage_manifest.json` with strict module-enforced state transitions, an additive `ChangedFile` extension to `diffscope.py` with run-start SHA pinning and exit-2 ref validation, a closed five-reason exclusion vocabulary with a hardcoded OCR-mirror allowlist and a 5000-line size cap, and full report+JSON visibility for position declines, outside-diff drops, and nonzero-exit partial seals.
 - Mark Phase 1 (Baseline Health Verification) complete across the planning tracking files: check the phase off in `.planning/ROADMAP.md`, advance `.planning/STATE.md` to Phase 2, and move requirements VAL-01/VAL-02/VAL-03 to Validated in `.planning/PROJECT.md` with the recorded pytest override noted.
