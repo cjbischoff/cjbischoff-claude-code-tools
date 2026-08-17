@@ -26,6 +26,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Added
 
+- Start milestone v5.0 (Hybrid Diff-Review Architecture) in `.planning/`: update PROJECT.md with the milestone goal and target features, and reset STATE.md for the new cycle.
 - Add the onboarding summary at `.planning/onboarding/SUMMARY.md`: an index of the planning state, codebase map status, and the recommended next command.
 - Add the GSD planning setup under `.planning/`: PROJECT.md, REQUIREMENTS.md, ROADMAP.md, and STATE.md bootstrapped from 50 ingested design docs, with synthesized intel files and the ingest conflict report.
 - Add the sec-overlay invocation implementation plan: TDD tasks for the `run.py` driver (working-tree fence, per-phase receipt, token env, role inference, manifest synthesis, single-repo drive loop), the driver `on_complete` hook, the O-65 red-team gate path fix, and the `/sec-overlay:audit` command.

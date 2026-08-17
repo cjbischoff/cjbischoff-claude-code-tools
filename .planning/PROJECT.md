@@ -12,6 +12,27 @@ Conventional Commits, prek hooks, README/CHANGELOG routing, and automatic semver
 The marketplace never ships an unverified claim: every plugin passes validation, every
 release follows governance, and every confirmed sec-overlay finding is receipt-backed.
 
+## Current Milestone: v5.0 Hybrid Diff-Review Architecture
+
+**Goal:** Extend sec-overlay with diff-scoped review (security and general-defect
+profiles) that absorbs open-code-review capabilities, then prove the full pipeline
+end to end and ship through governance.
+
+**Target features:**
+- Baseline health verification: plugin validate, pytest/ruff/ty, prek hooks (from v4.0)
+- `review` verb with `--profile security|general` in `sec_overlay.cli`
+- Diff pipeline: `diffscope.py` extension, `file_select.py`, per-file coverage manifest
+- Hunk parser + deterministic positioning + position-vs-hunk gate in `phase_gate.py`
+- Glob rule matcher, 4-layer rule resolution, rule-file safety, per-language rule docs
+  (NPE, thread-safety, XSS, SQL injection)
+- Reflection filter: retract-only, fail-open, composed under the receipt gate
+- Semantic file bundling (sec-overlay addition beyond OCR) with concurrency limits
+- Diff-anchored output payload and per-file resume manifest
+- End-to-end verification run (audit and review) on a real target, receipt-backed
+- Remediation and governed release with CodeRabbit review
+
+**Spec source:** `/Users/christopher/Workspace/review_open-code-review/spec_sec-overlay-improvement_20260816_0920.md`
+
 ## Requirements
 
 ### Validated
@@ -43,6 +64,12 @@ All items below shipped before this project started.
 - [ ] Report states coverage denominator; gaps logged, never dropped (AUD-05)
 - [ ] Run defects fixed or dispositioned; frozen contract unchanged (REL-01)
 - [ ] Fixes ship through full governance with CodeRabbit review (REL-02)
+- [ ] `review` verb reviews a diff in `security` and `general` profiles (REV-01)
+- [ ] Coverage manifest blocks a `complete` seal while any file is pending (REV-02)
+- [ ] Positioning confirms or declines every finding location; no guesses (REV-03)
+- [ ] Glob rule matching selects per-language rule docs with safe rule-file reads (REV-04)
+- [ ] Reflection filter retracts only, fails open, never confirms (REV-05)
+- [ ] Bundling and concurrency bound sub-agent context on large changesets (REV-06)
 
 ### Out of Scope
 
@@ -102,5 +129,22 @@ No decision is ADR-locked. ADR-2026-08-04 is the only ADR and remains proposed.
 
 </decisions>
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-08-16 after ingest-driven project initialization*
+*Last updated: 2026-08-16 after starting milestone v5.0 (Hybrid Diff-Review Architecture)*
