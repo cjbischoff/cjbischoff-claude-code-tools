@@ -5,14 +5,18 @@ from pathlib import Path
 
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.patch_status import PatchStatus
+from sec_overlay.positioning import PositionResult
 from sec_overlay.report import (
+    POSITION_REVIEW_HEADING,
     _short_title,
     collapse_clusters,
     render_finding,
     render_ndt,
+    render_position_review_section,
     select_reportable,
     to_markdown,
     write_report,
+    write_review_ledger,
 )
 from sec_overlay.workspace import Workspace, write_findings
 
@@ -881,3 +885,102 @@ def test_economics_renders_timing():
         },
     )
     assert "Wall-clock by phase" in md and "1.25" in md
+
+
+# --- render_position_review_section / write_review_ledger (D-13, POS-02) ---
+
+
+def _declined(claimed_path="a.py", claimed_line=7, reason="no-hunk-match", snippet="os.system(cmd)"):
+    return PositionResult("needs-position-review", None, None, reason, claimed_path, claimed_line, snippet)
+
+
+def test_render_position_review_section_lists_three_declines():
+    results = [
+        _declined("a.py", 1, "no-hunk-match"),
+        _declined("b.py", 2, "ambiguous-multiple-matches"),
+        _declined("c.py", 3, "no-snippet"),
+    ]
+    md = render_position_review_section(results)
+    assert md.startswith(POSITION_REVIEW_HEADING)
+    for r in results:
+        assert r.claimed_path in md
+        assert str(r.claimed_line) in md
+        assert r.reason in md
+
+
+def test_render_position_review_section_heading_matches_report_top_level_level():
+    md = render_position_review_section([_declined()])
+    assert md.splitlines()[0] == "## Position review required"
+
+
+def test_render_position_review_section_empty_list_states_none_required():
+    md = render_position_review_section([])
+    assert md.startswith(POSITION_REVIEW_HEADING)
+    assert "no finding required position review" in md.lower()
+
+
+def test_render_position_review_section_escapes_pipe_in_snippet():
+    md = render_position_review_section([_declined(snippet="a | b")])
+    rows = [line for line in md.splitlines() if line.startswith("| a.py")]
+    assert len(rows) == 1
+    assert "a \\| b" in rows[0]  # snippet's pipe is escaped, not a raw cell delimiter
+    assert rows[0].count("|") == 6  # 5 cell delimiters + 1 escaped literal pipe
+
+
+def test_render_position_review_section_collapses_multiline_snippet_to_one_row():
+    md = render_position_review_section([_declined(snippet="line one\nline two\nline three")])
+    rows = [line for line in md.splitlines() if line.startswith("| a.py")]
+    assert len(rows) == 1
+    assert "\n" not in rows[0]
+    assert "line one" in rows[0] and "line three" in rows[0]
+
+
+def test_write_review_ledger_records_position_review_state_and_claim_fields(tmp_path: Path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    result = _declined("a.py", 7, "no-hunk-match", "os.system(cmd)")
+    path = write_review_ledger(ws, position_reviews=[result], dropped=[])
+    data = json.loads(path.read_text())
+    assert path == ws.artifacts / "review_ledger.json"
+    entry = data["position_reviews"][0]
+    assert entry["state"] == "needs-position-review"
+    assert entry["claimed_path"] == "a.py"
+    assert entry["claimed_line"] == 7
+    assert entry["snippet"] == "os.system(cmd)"
+    assert entry["reason"] == "no-hunk-match"
+
+
+def test_write_review_ledger_zero_position_reviews_writes_empty_list_not_absent(tmp_path: Path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    path = write_review_ledger(ws, position_reviews=[], dropped=[])
+    data = json.loads(path.read_text())
+    assert data["position_reviews"] == []
+    assert data["dropped"] == []
+
+
+def test_write_review_ledger_position_review_round_trips_every_field(tmp_path: Path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    result = _declined("b.py", 3, "cross-file-ambiguous", "needle")
+    path = write_review_ledger(ws, position_reviews=[result], dropped=[])
+    reloaded = json.loads(path.read_text())
+    entry = reloaded["position_reviews"][0]
+    assert entry == {
+        "state": "needs-position-review",
+        "claimed_path": "b.py",
+        "claimed_line": 3,
+        "snippet": "needle",
+        "reason": "cross-file-ambiguous",
+    }
+
+
+def test_write_review_ledger_twice_leaves_one_valid_file(tmp_path: Path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    write_review_ledger(ws, position_reviews=[_declined("a.py", 1)], dropped=[])
+    path = write_review_ledger(ws, position_reviews=[_declined("b.py", 2)], dropped=[])
+    files = list(ws.artifacts.glob("review_ledger*"))
+    assert files == [path]
+    data = json.loads(path.read_text())
+    assert data["position_reviews"][0]["claimed_path"] == "b.py"

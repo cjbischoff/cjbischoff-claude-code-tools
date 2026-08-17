@@ -482,4 +482,5 @@ cannot be read as a table delimiter, and a multi-line snippet collapses onto one
 `write_review_ledger` writes `artifacts/review_ledger.json` with a `position_reviews` entry per
 decline (`state: "needs-position-review"` plus claimed path/line, snippet, reason) and always
 carries the `position_reviews`/`dropped` keys, even when both are empty; the JSON round-trips
-every field, and calling it twice leaves one valid file holding the second call's data.
+every field, and calling it twice leaves one valid file holding the second call's data. Both
+symbols ship in plan 02-04, task 3.

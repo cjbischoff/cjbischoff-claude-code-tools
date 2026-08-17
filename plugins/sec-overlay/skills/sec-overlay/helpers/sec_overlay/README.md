@@ -514,4 +514,4 @@ renders the heading plus an explicit none-required line.
 with `position_reviews`/`dropped` keys always present, each `position_reviews` entry carrying
 `state: "needs-position-review"`. A separate artifact rather than a `findings.json` state,
 since `models.py`'s `FindingStatus` enum has no review-position member and adding one would
-break the Go port's byte mirror.
+break the Go port's byte mirror. Both functions ship in plan 02-04, task 3.

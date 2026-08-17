@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter
+from dataclasses import asdict, is_dataclass
+from pathlib import Path
 
 from sec_overlay import cost
 from sec_overlay.campaign import record_stage
@@ -12,10 +14,11 @@ from sec_overlay.coverage_ledger import render_markdown as render_coverage_ledge
 from sec_overlay.evidence import is_tool_receipt
 from sec_overlay.models import Finding, FindingStatus
 from sec_overlay.patch_status import PatchStatus, check_patch_applied, not_applied_caution
+from sec_overlay.positioning import PositionResult
 from sec_overlay.render_util import signal_lines
 from sec_overlay.sarif import to_sarif
 from sec_overlay.state import load_state
-from sec_overlay.workspace import Workspace, load_paths, read_findings
+from sec_overlay.workspace import Workspace, _atomic_write, load_paths, read_findings
 
 _ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 _REPORTABLE = {FindingStatus.CONFIRMED, FindingStatus.FIXED}
@@ -574,6 +577,86 @@ def write_report(ws: Workspace, *, target: str | None = None, confirmed_only: bo
     ws.findings_json_path.write_text(json.dumps([f.to_dict() for f in findings_out], indent=2))
     record_stage(ws, "report")
     return {"reported": len(reportable), "sarif": str(ws.sarif_path), "report": str(ws.report_path)}
+
+
+POSITION_REVIEW_HEADING = "## Position review required"
+
+
+def _escape_snippet_cell(snippet: str | None) -> str:
+    """Make a snippet safe for one markdown table cell.
+
+    Args:
+        snippet: The claimed snippet, or ``None``.
+
+    Returns:
+        The snippet with pipe characters escaped and newlines collapsed to spaces, so the
+        cell cannot restructure the table and hide a neighbouring row.
+    """
+    text = snippet or ""
+    return text.replace("\r\n", " ").replace("\n", " ").replace("|", "\\|")
+
+
+def render_position_review_section(results: list[PositionResult]) -> str:
+    """Render every declined finding as a dedicated markdown section (D-13, POS-02).
+
+    Args:
+        results: `PositionResult`s that need human review (typically every
+            `needs-position-review` decision from a run). Declines are otherwise easy to
+            miss, so this section — and its explicit none-required line when empty — makes
+            them impossible to omit from the report.
+
+    Returns:
+        A markdown string starting with `POSITION_REVIEW_HEADING`.
+    """
+    if not results:
+        return f"{POSITION_REVIEW_HEADING}\n\nNo finding required position review.\n"
+    lines = [
+        POSITION_REVIEW_HEADING,
+        "",
+        "| Claimed path | Claimed line | Snippet | Reason |",
+        "| --- | --- | --- | --- |",
+    ]
+    for r in results:
+        snippet_cell = _escape_snippet_cell(r.snippet)
+        lines.append(f"| {r.claimed_path} | {r.claimed_line} | {snippet_cell} | {r.reason} |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_review_ledger(ws: Workspace, *, position_reviews: list[PositionResult], dropped: list) -> Path:
+    """Write the machine-readable record of every position decline (D-13, POS-02).
+
+    A separate artifact rather than a `findings.json` state, because `models.py` is the
+    frozen milestone contract, its `FindingStatus` enum has no review-position member, and
+    adding one would break the Go port's byte mirror — do not "simplify" this back into
+    `findings.json`.
+
+    Args:
+        ws: Workspace to write `artifacts/review_ledger.json` into.
+        position_reviews: `PositionResult`s needing review; each becomes a `position_reviews`
+            entry carrying `state` `needs-position-review`.
+        dropped: Findings the review-mode gate dropped; plan 02-05 supplies its content.
+            Dataclass instances are converted to dicts; plain dicts pass through unchanged.
+
+    Returns:
+        The path written.
+    """
+    ledger = {
+        "position_reviews": [
+            {
+                "state": "needs-position-review",
+                "claimed_path": r.claimed_path,
+                "claimed_line": r.claimed_line,
+                "snippet": r.snippet,
+                "reason": r.reason,
+            }
+            for r in position_reviews
+        ],
+        "dropped": [asdict(d) if is_dataclass(d) else d for d in dropped],
+    }
+    path = ws.artifacts / "review_ledger.json"
+    _atomic_write(path, json.dumps(ledger, indent=2))
+    return path
 
 
 def main(argv: list[str] | None = None) -> int:

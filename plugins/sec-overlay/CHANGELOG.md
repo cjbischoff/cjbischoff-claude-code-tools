@@ -10,7 +10,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   markdown table, one row per declined finding, with pipe/newline escaping so a snippet cannot
   corrupt the table; `write_review_ledger(ws, *, position_reviews, dropped)` writes
   `artifacts/review_ledger.json` with `position_reviews`/`dropped` keys always present. Neither
-  function is wired into `to_markdown`/`write_report` yet.
+  function is wired into `to_markdown`/`write_report` yet — plan 02-05 wires them once the drop
+  ledger exists.
 
 ## 1.44.0 - 2026-08-17
 
