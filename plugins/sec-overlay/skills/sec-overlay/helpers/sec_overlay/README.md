@@ -435,3 +435,17 @@ auto-advances past them): it loads the persisted baseline, fences, writes a rece
 review-mode run state — the coverage manifest and review ledger the new `review` CLI mode writes.
 It is never routed through `reports_dir`: review-mode run state is not a report. `ensure()` now
 also creates it.
+
+Four new modules wire the `sec-overlay review` tracer path — one changed file, one hunk, one
+finding through the full pipeline: `diffhunks.py` (`parse_hunks`/`added_line_numbers`/
+`line_in_hunk`), `file_select.py` (`partition` — path-shaped, never imports `Finding`),
+`positioning.py` (`resolve_position` — decline discipline, never a fuzzy match presented as
+exact), and `review_coverage.py` (`CoverageManifest`, sealing `complete`/`partial`, raising
+rather than sealing over a `pending`/`in_review` entry). `diffscope.py` (additive:
+`validate_ref`/`resolve_ref_sha`/`changed_file_records`/`file_diff_text`) and `phase_gate.py`
+(additive: `review_position_gate`) gained the ref/file and gate layers respectively — every
+pre-existing symbol in both is unchanged. `cli.py` gained the `review` subparser and
+`run_review`, matching the existing `scan`/`memory`/`audit` structure. Tracer scope only:
+batching, exit codes 2/3, the full extension allowlist, and the diff-line size cap land in a
+later plan. `coverage.py`, `models.py`, and `evidence.py` — the frozen milestone contracts —
+are untouched; no new runtime dependency. See the module map entries.

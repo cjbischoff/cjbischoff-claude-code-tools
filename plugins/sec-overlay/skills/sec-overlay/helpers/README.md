@@ -21,7 +21,7 @@ helpers/
 ├── sec_overlay/              ~70 modules — the pipeline (this README's main subject)
 │   └── correlate/            cross-repo correlation subpackage (11 modules)
 ├── bench/                    dev-only detection benchmark — see bench/README.md
-├── tests/                    78 pytest files (575 tests)
+├── tests/                    95 pytest files (828 tests)
 ├── fixtures/                 golden JSON + a deliberately vulnerable_repo/ for tests
 └── rules/                    vendored semgrep rules (git submodule) + smoke.yaml
 ```
@@ -142,7 +142,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `partition.py` | Group candidates by attack class for parallel agent fan-out. |
 | `fp_feedback.py` | Recycle prior-pass rejections into the next pass's investigate/critic prompts as negative examples. |
 | `factcheck.py` | Post-investigation re-verification of citations/scope/severity against source. |
-| `phase_gate.py` | Deterministic pre-check for analysis phases (schema + `file:line` resolution) before the opus adversary runs; writes `kb/gates/<phase>.json`. Detects comment-only citations via `is_comment_line()` and appends a gate note flagging them for extra scrutiny (prose files — `.md`/`.rst`/`.txt` — are skipped, since every Markdown heading would otherwise read as a comment); the comment check and the basename-fallback note are independent, so a sloppy citation can raise both. |
+| `phase_gate.py` | Deterministic pre-check for analysis phases (schema + `file:line` resolution) before the opus adversary runs; writes `kb/gates/<phase>.json`. Detects comment-only citations via `is_comment_line()` and appends a gate note flagging them for extra scrutiny (prose files — `.md`/`.rst`/`.txt` — are skipped, since every Markdown heading would otherwise read as a comment); the comment check and the basename-fallback note are independent, so a sloppy citation can raise both. Also `review_position_gate(findings, hunks_by_path)` — the diff-pipeline gate: keeps a finding only when `positioning.resolve_position` calls it `exact`, else drops it with an `OUTSIDE_DIFF_REASON`-shaped `DroppedFinding`. Audit-mode symbols above are unchanged by this addition. |
 | `stage_validate.py` | Per-stage structured-output validation + repair contract. |
 
 ### Scoring & prioritization
@@ -183,7 +183,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `kb.py` | Paths to the KB files (profile/architecture/threat-model/entities). |
 | `context.py` | Deterministic context ingestion (docs/specs/runbooks + prior scans), trust-tagged. Also discovers IaC/deployment-config files (Pulumi, Terraform, Helm, k8s, docker-compose, serverless) as `deployment_config` items, carrying a `deployed_in` env tag. `Context.diagram` holds the C1 agent's claimed-control status map (a raw mermaid block); `render_markdown` writes it into `CONTEXT.md`, which is regenerated on every `save()` and never hand-edited. |
 | `profile.py` | The `ScanProfile` contract; validate/load `kb/scan-profile.json`. |
-| `diffscope.py` | `changed_files(base, head)` — scope incremental passes to changed code. |
+| `diffscope.py` | `changed_files(base, head)` — scope incremental passes to changed code. Also the diff-pipeline ref/file layer: `validate_ref`/`resolve_ref_sha` (reject a leading-dash ref before it reaches git as an option, then resolve to a SHA so every later call in a run is pinned — no ref-repoint TOCTOU window) and `changed_file_records`/`file_diff_text` (status+path records and per-file unified diff text between two resolved SHAs). |
 | `githist.py` | Mine git history for likely security-fix commits to seed recon/context. |
 | `postflight.py` | Distill a finished scan into durable `kb/prior_context.json` (accretes, drift-keyed by SHA). CLI-callable. |
 
@@ -196,11 +196,19 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `discovery_ledger.py` | Loop-until-dry saturation state: stop after K consecutive waves add no new fingerprints. |
 | `route_control.py` | One route-to-control table from `kb/scan-profile.json`; checks recon/architecture/threat-model output against it, logging a `needs_follow_up` gap (never dropping) via `record_route_gaps` into `coverage-ledger.json`. |
 
+### Diff-scoped review (`sec-overlay review` — tracer path)
+| Module | Purpose |
+|--------|---------|
+| `diffhunks.py` | `parse_hunks(diff_text)` — walk a unified diff into `Hunk` records (added/deleted/context lines, new-side range); `added_line_numbers(hunks)`; `line_in_hunk(hunks, line)`. |
+| `file_select.py` | `partition(records)` — split `diffscope.ChangedFile` records into `reviewable` and `excluded` (deleted / not-allowlisted, from the closed `EXCLUSION_REASONS` vocabulary). Path-shaped, not finding-shaped: never imports `Finding` — deliberately distinct from `exclusions.py`, which filters findings. Tracer scope only: a minimal `ALLOWED_EXTENSIONS`, no glob-based "generated" exclusion, no diff-line size cap — the full OCR allowlist and size cap land in a later plan. |
+| `positioning.py` | `resolve_position(claimed_path, claimed_line, hunks_by_path)` — confirm or decline a finding's claimed position against the diff. Never imports the stdlib sequence-matching helper: a fuzzy match presented as an exact location is the defect this module exists to prevent. Declines to `needs-position-review` rather than approximating; the relocation ladder lands later. |
+| `review_coverage.py` | `CoverageManifest` — per-file review coverage (`pending` → `in_review` → `done`/`failed`) persisted to `artifacts/coverage_manifest.json` after every transition. `seal()` returns `complete` only when every entry is `done`, `partial` when some are `failed`, and **raises** `CoverageTransitionError` if any entry is still `pending`/`in_review` — a run must never claim coverage it did not perform. Separate from the shipped `coverage.py`; only this class edits the manifest JSON. |
+
 ---
 
 ## Test coverage & contracts
 
-The `tests/` folder houses 81 files, 589 tests. Key structural guards:
+The `tests/` folder houses 95 files, 828 tests. Key structural guards:
 - `test_docs_invariants.py` enforces documentation contracts: prompt-constants block presence, `finding-template.md` sections (triage line, NDT-view, dep-view, reachability, renumber), and agent prompt rules (determinism, tool receipt trust, evidence chains). Regression-tested so template drift is caught early.
 
 ### Hunting aids & tuning
@@ -250,7 +258,7 @@ steps the orchestrator calls between agent phases:
 
 | Module | Command does |
 |--------|--------------|
-| `cli` | `scan` (deterministic prefilter → SARIF/MD) and `memory` (status / append a learning). |
+| `cli` | `scan` (deterministic prefilter → SARIF/MD), `memory` (status / append a learning), `audit` (deterministic audit driver), and `review --base <ref> --head <ref> --root <path>` (diff-scoped, position-verified review pass — tracer path, one changed file end to end). |
 | `preflight` | Report which SAST tools + CodeQL packs are installed; print setup commands. |
 | `graph` | Build/query the Tier-1/Tier-2 code graph → `kb/graph.json`. |
 | `structural_index` | Build the ripgrep symbol index. |

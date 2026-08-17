@@ -6,10 +6,15 @@ import argparse
 import json
 
 from sec_overlay.campaign import record_stage
+from sec_overlay.diffhunks import parse_hunks
+from sec_overlay.diffscope import changed_file_records, file_diff_text, resolve_ref_sha
+from sec_overlay.file_select import partition
 from sec_overlay.models import Finding
 from sec_overlay.normalize import normalize
+from sec_overlay.phase_gate import review_position_gate
 from sec_overlay.repo_memory import RepoMemory, repo_slug
 from sec_overlay.report import to_markdown
+from sec_overlay.review_coverage import MANIFEST_FILENAME, CoverageManifest
 from sec_overlay.sarif import to_sarif
 from sec_overlay.sast import run_semgrep
 from sec_overlay.scanscope import resolve as _resolve_scope
@@ -76,6 +81,51 @@ def run_scan(
     return findings
 
 
+def run_review(base: str, head: str, root: str, *, runner=None) -> int:
+    """Run one review pass end to end: resolve refs, select files, position, seal.
+
+    Wires exactly one changed file through every layer (the tracer path) —
+    batching over multiple files and exit codes 2/3 arrive in 02-02 and 02-05.
+    No finding source is wired into ``review`` mode yet (investigate integration
+    lands in a later plan); the gate runs against an empty finding list so its
+    wiring is exercised now.
+
+    Args:
+        base: Base ref. Validated and resolved to a SHA before any other git call.
+        head: Head ref, same treatment.
+        root: Target repo root; the workspace and its ``artifacts/`` dir live here.
+        runner: Injectable subprocess runner (tests); defaults to ``subprocess.run``.
+
+    Returns:
+        0 when the coverage manifest seals ``complete``, 1 otherwise.
+    """
+    import subprocess
+    r = runner or subprocess.run
+
+    ws = Workspace(root)
+    ws.ensure()
+
+    base_sha = resolve_ref_sha(base, runner=r)
+    head_sha = resolve_ref_sha(head, runner=r)
+
+    records = changed_file_records(base_sha, head_sha, runner=r)
+    selection = partition(records)
+
+    manifest = CoverageManifest(base_sha, head_sha, ws.artifacts / MANIFEST_FILENAME)
+    hunks_by_path: dict[str, list] = {}
+    for record in selection.reviewable:
+        manifest.add(record.path)
+        manifest.start(record.path)
+        hunks_by_path[record.path] = parse_hunks(
+            file_diff_text(record.path, base_sha, head_sha, runner=r)
+        )
+        manifest.finish(record.path)
+
+    review_position_gate([], hunks_by_path)
+
+    return 0 if manifest.seal() == "complete" else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point.
 
@@ -110,6 +160,11 @@ def main(argv: list[str] | None = None) -> int:
     audit.add_argument("--workspace")
     audit.add_argument("--config", required=True)
     audit.add_argument("--sha")
+
+    review = sub.add_parser("review", help="Run a diff-scoped review pass (tracer path).")
+    review.add_argument("--base", required=True)
+    review.add_argument("--head", default="HEAD")
+    review.add_argument("--root", default=".")
     args = parser.parse_args(argv)
 
     if args.cmd == "scan":
@@ -162,6 +217,9 @@ def main(argv: list[str] | None = None) -> int:
         ctx = AuditContext(ws=ws, target=args.target, config=args.config, sha=sha)
         print(run_audit(ctx))
         return 0
+
+    if args.cmd == "review":
+        return run_review(args.base, args.head, args.root)
     return 1
 
 

@@ -2,6 +2,22 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.39.0 - 2026-08-17
+
+### Added
+
+- New `sec-overlay review --base <ref> --head <ref> --root <path>` CLI verb: a diff-scoped,
+  position-verified review pass. Resolves both refs to SHAs before any other git call, selects
+  changed files (`file_select.partition`), parses their hunks (`diffhunks.parse_hunks`),
+  confirms or declines each finding's claimed position against the diff without fuzzy matching
+  (`positioning.resolve_position`), gates findings on that decision
+  (`phase_gate.review_position_gate`), and tracks per-file coverage to a terminal seal
+  (`review_coverage.CoverageManifest`, persisted to `artifacts/coverage_manifest.json`). Exits 0
+  only when the manifest seals `complete`. Wires exactly one changed file through every layer
+  (the tracer path) — batching, exit codes 2/3, the full extension allowlist, and the diff-line
+  size cap arrive in a later plan. No new runtime dependency; `coverage.py`, `models.py`, and
+  `evidence.py` are unchanged.
+
 ## 1.38.0 - 2026-08-17
 
 ### Added

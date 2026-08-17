@@ -18,6 +18,8 @@ import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from sec_overlay.positioning import resolve_position
+
 _REF_ANCHOR = re.compile(r"^(?P<path>.+?):(?P<start>\d+)(?:-\d+)?(?:\s.*)?$")
 
 
@@ -373,3 +375,41 @@ def write_gate_record(ws, phase: str, record: dict) -> Path:
     p = d / f"{phase}.json"
     p.write_text(json.dumps(record, indent=2))
     return p
+
+
+OUTSIDE_DIFF_REASON = "outside-diff"
+
+
+@dataclass(frozen=True)
+class DroppedFinding:
+    """A finding dropped by the review-mode position gate, with why."""
+
+    finding_id: str
+    reason: str
+
+
+def review_position_gate(findings: list, hunks_by_path: dict) -> tuple[list, list[DroppedFinding]]:
+    """Keep only findings whose claimed position resolves ``exact`` against the diff.
+
+    The audit-mode gate ladder (``run_phase_checks`` and friends) is untouched by this
+    function — it is a separate path for review mode's per-file position confirmation.
+
+    Args:
+        findings: Findings to gate, each carrying a claimed ``file``/``line``.
+        hunks_by_path: Parsed hunks for every reviewed file, keyed by path.
+
+    Returns:
+        ``(kept, dropped)`` — findings that resolve ``exact``, and a
+        :class:`DroppedFinding` record for each one that does not.
+    """
+    kept = []
+    dropped: list[DroppedFinding] = []
+    for finding in findings:
+        result = resolve_position(finding.file, finding.line, hunks_by_path)
+        if result.decision == "exact":
+            kept.append(finding)
+        else:
+            dropped.append(
+                DroppedFinding(finding_id=finding.id, reason=result.reason or OUTSIDE_DIFF_REASON)
+            )
+    return kept, dropped

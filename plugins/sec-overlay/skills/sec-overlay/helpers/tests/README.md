@@ -1,8 +1,16 @@
 # `tests/` — the deterministic test suite
 
-91 pytest files, 790 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+95 pytest files, 828 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New file `test_review_tracer.py` (6 tests) covers the `sec-overlay review` tracer path end to
+end: `main(["review", ...])` with a fake `subprocess.run` injected at the module level (`cli.py`
+looks up `subprocess.run` inline at call time, so a `monkeypatch.setattr(subprocess, "run", ...)`
+reaches it through every `runner=` default) exits 0 and seals `artifacts/coverage_manifest.json`
+`complete`; plus focused tests for `validate_ref`'s leading-dash rejection, `parse_hunks`/
+`added_line_numbers`, `resolve_position`'s exact match, `review_position_gate` keeping an
+in-hunk finding, and `changed_file_records`' `--name-status` parsing.
 
 `test_workspace.py` gained 4 tests for `Workspace.artifacts` (default path resolves under root,
 a `reports_dir` override does not redirect it, `ensure()` creates it, `ensure()` is idempotent).
