@@ -373,3 +373,16 @@ exists, `on_complete` is called with the phase name before `run_audit` returns `
 
 `test_run.py` keeps its import block sorted (ruff I001) — the local `sec_overlay` import in
 `test_synthesize_manifest_rejects_bad_role` is separated by a blank line.
+
+`test_run.py` gained `test_load_baseline_persists_and_fences_a_later_cross_invocation_write`,
+covering `sec_overlay.run._load_baseline`: the first call captures and persists the baseline to
+`<ws.kb>/fence-baseline`; a later call with a dirty runner still returns the persisted clean value,
+and fencing against it raises `WorkingTreeFenceError`. It also gained
+`test_advance_writes_receipt_records_stage_and_fences_persisted_baseline`, covering
+`sec_overlay.run.advance`: a clean-tree call writes a receipt and records the stage; a later dirty
+call raises `WorkingTreeFenceError` against the still-persisted baseline. The dead
+`monkeypatch.setattr(run_mod, "_PHASE_TABLE", ...)` line in `test_drive_writes_receipt_and_env_and_fences`
+(a `raising=False` no-op — `drive` takes `table=`, not `_PHASE_TABLE`) was removed.
+
+`test_command_audit.py`'s `--out` assertion comment now reads "correlation output lands under the
+CWD (artifacts/)", matching the corrected `audit.md`.

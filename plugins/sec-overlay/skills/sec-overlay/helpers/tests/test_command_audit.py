@@ -9,5 +9,5 @@ def test_command_documents_routing_and_correlate():
     assert "/sec-overlay:audit" in text
     assert "python -m sec_overlay.run" in text or "run.drive" in text
     assert "python -m sec_overlay.correlate" in text
-    assert "--out" in text  # correlation output lands in the CWD
+    assert "--out" in text  # correlation output lands under the CWD (artifacts/)
     assert "confirm" in text.lower()  # N-repo confirm step

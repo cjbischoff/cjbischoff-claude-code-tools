@@ -9,6 +9,7 @@ import json
 import subprocess
 from pathlib import Path
 
+from sec_overlay.campaign import record_stage
 from sec_overlay.correlate.manifest import ROLES, validate_manifest
 from sec_overlay.driver import AuditContext, run_audit
 from sec_overlay.phases import PHASE_TABLE
@@ -166,12 +167,32 @@ def _target_workspace(target) -> Workspace:
     return RepoMemory.for_target(str(target)).workspace
 
 
+def _load_baseline(ws: Workspace, target, runner) -> str:
+    """Return the pass fence baseline, capturing and persisting it once.
+
+    The baseline is the audited tree's porcelain status at pass start. It is
+    persisted so every resume invocation fences against the pre-audit tree, not
+    a fresh snapshot that would already contain an agent phase's write.
+    """
+    path = ws.kb / "fence-baseline"
+    if path.exists():
+        return path.read_text()
+    baseline = runner(
+        ["git", "-C", str(target), "status", "--porcelain"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(baseline)
+    return baseline
+
+
 def drive(target, config, *, scope=".", workspace=None, runner=subprocess.run, table=PHASE_TABLE):
     """Audit one repository, driving every phase with a fence and a receipt.
 
-    Opens (or resumes) the workspace, pins the SHA, snapshots the fence
-    baseline, writes ``run.env`` once, then walks the phase table. Before each
-    stage is recorded done, the tree is fenced and a receipt is written.
+    Opens (or resumes) the workspace, pins the SHA, loads the persisted fence
+    baseline (capturing it once at pass start), writes ``run.env`` once, then
+    walks the phase table. Before each stage is recorded done, the tree is
+    fenced and a receipt is written.
 
     Args:
         target: Path to the audited repository.
@@ -193,10 +214,9 @@ def drive(target, config, *, scope=".", workspace=None, runner=subprocess.run, t
     state = load_state(ws)
     if not state.stages:
         begin_pass(ws, sha)
-    baseline = runner(
-        ["git", "-C", str(target), "status", "--porcelain"],
-        capture_output=True, text=True, check=True,
-    ).stdout
+    else:
+        sha = state.active_sha or sha  # stay pinned to the pass SHA on resume
+    baseline = _load_baseline(ws, target, runner)
     write_env(ws, target, scope, sha)
     ctx = AuditContext(ws=ws, target=str(target), config=config, sha=sha)
 
@@ -209,3 +229,32 @@ def drive(target, config, *, scope=".", workspace=None, runner=subprocess.run, t
         )
 
     return run_audit(ctx, table=table, on_complete=on_complete)
+
+
+def advance(target, phase: str, *, workspace=None, runner=subprocess.run) -> Path:
+    """Fence, receipt, and record one agent phase the operator just ran.
+
+    Agent phases do not auto-advance in ``drive``: the orchestrator runs the
+    model, then calls this to close the fence (Goal 4) and the receipt (Goal 3)
+    for that phase. The tree is fenced against the persisted pass baseline, a
+    receipt is written, and the stage is recorded.
+
+    Args:
+        target: Path to the audited repository.
+        phase: The agent phase name just completed.
+        workspace: Explicit workspace root; ``None`` uses the target sidecar.
+        runner: Injectable process runner (git calls).
+
+    Returns:
+        The receipt path written.
+    """
+    ws = Workspace(root=workspace) if workspace else _target_workspace(target)
+    baseline = _load_baseline(ws, target, runner)
+    fence(target, baseline, runner=runner)
+    rcpt = receipt(
+        ws,
+        phase,
+        counts={"findings": len(list(ws.findings_dir.glob("F-*.json")))},
+    )
+    record_stage(ws, phase)
+    return rcpt

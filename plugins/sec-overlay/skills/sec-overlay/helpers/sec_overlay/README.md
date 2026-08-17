@@ -410,3 +410,12 @@ fences the tree (`fence`) and writes a receipt (`receipt`) before every `record_
 now accepts this `on_complete: Callable[[str], None] | None` hook on both `run_deterministic_phase`
 and `run_audit`, invoking it immediately before each stage is recorded so a receipt always exists
 before its stage counts as done (O-67 ordering).
+
+`run.py`'s baseline is now persisted at `<ws.kb>/fence-baseline` via the private
+`_load_baseline(ws, target, runner)`, captured once at pass start and read back on every resume —
+so a resumed `drive` fences against the pre-audit tree, not a fresh snapshot that would already
+contain an agent phase's write; `drive` also now stays pinned to `state.active_sha` on resume
+instead of re-reading HEAD. `run.py` gained `advance(target, phase, *, workspace=None,
+runner=subprocess.run) -> Path`, the closing call for the six agent phases (`drive` never
+auto-advances past them): it loads the persisted baseline, fences, writes a receipt, and calls
+`campaign.record_stage`.

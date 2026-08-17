@@ -142,7 +142,6 @@ def test_drive_writes_receipt_and_env_and_fences(tmp_path, monkeypatch):
 
     DETERMINISTIC_ACTIONS["noop"] = lambda ctx: None
     table = (PhaseSpec("noop", "deterministic", (), ()),)
-    monkeypatch.setattr(run_mod, "_PHASE_TABLE", table, raising=False)
 
     result = run_mod.drive(
         str(target), config="", workspace=str(ws_root), runner=fake_git, table=table
@@ -150,3 +149,41 @@ def test_drive_writes_receipt_and_env_and_fences(tmp_path, monkeypatch):
     assert result == "AUDIT COMPLETE"
     assert (ws_root / "run.env").exists()
     assert (ws_root / "kb" / "receipts" / "noop.json").exists()
+
+
+def test_load_baseline_persists_and_fences_a_later_cross_invocation_write(tmp_path):
+    from sec_overlay.run import WorkingTreeFenceError, _load_baseline, fence
+
+    ws = Workspace(root=tmp_path / "ws")
+    ws.ensure()
+    target = tmp_path / "repo"
+    target.mkdir()
+
+    baseline = _load_baseline(ws, target, _fake_runner(""))
+    assert baseline == ""
+    baseline_path = ws.kb / "fence-baseline"
+    assert baseline_path.exists()
+    assert baseline_path.read_text() == ""
+
+    # A resumed invocation loads the same persisted baseline, not a fresh snapshot.
+    reloaded = _load_baseline(ws, target, _fake_runner(" M app.py\n"))
+    assert reloaded == ""
+
+    with pytest.raises(WorkingTreeFenceError):
+        fence(target, reloaded, runner=_fake_runner(" M app.py\n"))
+
+
+def test_advance_writes_receipt_records_stage_and_fences_persisted_baseline(tmp_path):
+    from sec_overlay.run import WorkingTreeFenceError, advance
+    from sec_overlay.state import load_state
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    ws_root = tmp_path / "ws"
+
+    advance(str(target), "investigate", workspace=str(ws_root), runner=_fake_runner(""))
+    assert (ws_root / "kb" / "receipts" / "investigate.json").exists()
+    assert "investigate" in load_state(Workspace(root=ws_root)).stages
+
+    with pytest.raises(WorkingTreeFenceError):
+        advance(str(target), "critic", workspace=str(ws_root), runner=_fake_runner(" M app.py\n"))

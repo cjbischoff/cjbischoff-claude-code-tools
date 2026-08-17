@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.37.2 - 2026-08-16
+
+### Fixed
+
+- Persist the fence baseline so resume invocations catch agent-phase tree writes.
+- Add `run.advance` to fence, receipt, and record each agent phase.
+- Pin the pass SHA on resume instead of re-reading HEAD.
+- Correct `audit.md` resume steps and correlation output paths.
+
 ## 1.37.1 - 2026-08-16
 
 ### Fixed
