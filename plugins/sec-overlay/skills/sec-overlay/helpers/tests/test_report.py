@@ -5,11 +5,14 @@ from pathlib import Path
 
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.patch_status import PatchStatus
+from sec_overlay.phase_gate import DroppedFinding
 from sec_overlay.positioning import PositionResult
 from sec_overlay.report import (
+    DROPPED_FINDINGS_HEADING,
     POSITION_REVIEW_HEADING,
     _short_title,
     collapse_clusters,
+    render_dropped_findings_section,
     render_finding,
     render_ndt,
     render_position_review_section,
@@ -984,3 +987,99 @@ def test_write_review_ledger_twice_leaves_one_valid_file(tmp_path: Path):
     assert files == [path]
     data = json.loads(path.read_text())
     assert data["position_reviews"][0]["claimed_path"] == "b.py"
+
+
+# --- render_dropped_findings_section / to_markdown / write_report wiring (D-14, POS-03) ---
+
+
+def _dropped(path="a.py", line=9, rule_id="R1", reason="outside-diff"):
+    return DroppedFinding(path=path, line=line, rule_id=rule_id, reason=reason)
+
+
+def test_render_dropped_findings_section_lists_three_drops():
+    drops = [
+        _dropped("a.py", 9, "R1", "outside-diff"),
+        _dropped("b.py", 2, "R2", "outside-diff"),
+        _dropped("c.py", 3, "R3", "outside-diff"),
+    ]
+    md = render_dropped_findings_section(drops)
+    assert md.startswith(DROPPED_FINDINGS_HEADING)
+    for d in drops:
+        assert d.path in md
+        assert str(d.line) in md
+        assert d.rule_id in md
+        assert d.reason in md
+
+
+def test_render_dropped_findings_section_empty_list_states_none_dropped():
+    md = render_dropped_findings_section([])
+    assert md.startswith(DROPPED_FINDINGS_HEADING)
+    assert "no finding was dropped" in md.lower()
+
+
+def test_render_dropped_findings_section_preserves_input_order():
+    drops = [_dropped("z.py", 1), _dropped("a.py", 2), _dropped("m.py", 3)]
+    md = render_dropped_findings_section(drops)
+    rows = [line for line in md.splitlines() if line.startswith("|") and "Path" not in line and "---" not in line]
+    assert [row.split("|")[1].strip() for row in rows] == ["z.py", "a.py", "m.py"]
+
+
+def test_to_markdown_includes_dropped_and_position_review_sections_after_detail():
+    md = to_markdown([_full()], dropped=[_dropped()], position_reviews=[_declined()])
+    detail_pos = md.index("## Detail")
+    dropped_pos = md.index(DROPPED_FINDINGS_HEADING)
+    review_pos = md.index(POSITION_REVIEW_HEADING)
+    assert detail_pos < dropped_pos
+    assert detail_pos < review_pos
+
+
+def test_to_markdown_shows_both_headings_when_no_drops_or_declines():
+    md = to_markdown([_full()])
+    assert DROPPED_FINDINGS_HEADING in md
+    assert POSITION_REVIEW_HEADING in md
+
+
+def test_write_report_writes_ledger_with_dropped_and_position_reviews_from_same_run(
+    tmp_path: Path,
+):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    write_findings(ws, [_rf("F-0001", FindingStatus.CONFIRMED, risk=5)])
+    drops = [_dropped("a.py", 9, "R1", "outside-diff")]
+    declines = [_declined("b.py", 2, "no-hunk-match")]
+    write_report(ws, dropped=drops, position_reviews=declines)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
+    assert len(ledger["dropped"]) == 1
+    assert len(ledger["position_reviews"]) == 1
+    md = ws.report_path.read_text()
+    assert "a.py" in md and "outside-diff" in md
+    assert "b.py" in md and "no-hunk-match" in md
+
+
+def test_dropped_ledger_entry_carries_path_line_rule_and_reason(tmp_path: Path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    write_findings(ws, [_rf("F-0001", FindingStatus.CONFIRMED, risk=5)])
+    write_report(ws, dropped=[_dropped("a.py", 9, "R1", "outside-diff")])
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
+    entry = ledger["dropped"][0]
+    assert entry["path"] == "a.py"
+    assert entry["line"] == 9
+    assert entry["rule_id"] == "R1"
+    assert entry["reason"] == "outside-diff"
+
+
+def test_ledger_dropped_count_matches_markdown_row_count(tmp_path: Path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    write_findings(ws, [_rf("F-0001", FindingStatus.CONFIRMED, risk=5)])
+    drops = [_dropped("a.py", 9, "R1"), _dropped("b.py", 2, "R2"), _dropped("c.py", 3, "R3")]
+    write_report(ws, dropped=drops)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
+    md = ws.report_path.read_text()
+    section_start = md.index(DROPPED_FINDINGS_HEADING)
+    section = md[section_start : md.index(POSITION_REVIEW_HEADING)]
+    row_count = sum(
+        1 for line in section.splitlines() if line.startswith("|") and "---" not in line and "Path" not in line
+    )
+    assert row_count == len(ledger["dropped"]) == 3

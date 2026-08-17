@@ -1,8 +1,14 @@
 # `tests/` — the deterministic test suite
 
-98 pytest files, 1006 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+98 pytest files, 1014 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+`test_report.py` gained a `render_dropped_findings_section` block covering three drops, the
+empty-list none-dropped statement, input-order preservation, `to_markdown` wiring both the
+dropped-findings and position-review sections after the findings body, and `write_report`
+writing `review_ledger.json` once from the same `dropped`/`position_reviews` arguments it
+renders into the markdown report.
 
 `test_phase_gate.py` covers `review_position_gate`: a three-way kept/dropped/declines split of
 findings against diff hunks, using `diffhunks.hunk_for_line` on the resolved position — including

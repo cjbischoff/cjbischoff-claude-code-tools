@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.46.1 - 2026-08-17
+
+### Added
+
+- `tests/test_report.py`: failing tests for `render_dropped_findings_section`, `to_markdown`
+  wiring the dropped-findings and position-review sections after the findings body, and
+  `write_report` writing `review_ledger.json` once from the same `dropped`/`position_reviews`
+  arguments it renders into the markdown report. RED phase for the next `report.py` change —
+  no production code changed in this release.
+
 ## 1.46.0 - 2026-08-17
 
 ### Added
