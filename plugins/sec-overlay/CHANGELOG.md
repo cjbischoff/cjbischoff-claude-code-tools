@@ -2,6 +2,19 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.43.0 - 2026-08-17
+
+### Added
+
+- `review_coverage.py`: `CoverageManifest.seal()` now raises `CoverageTransitionError` (a
+  `RuntimeError`) on an empty manifest instead of vacuously returning `complete` — a run must
+  never claim coverage it did not perform (T-02-05). `cli.py`'s `run_review` returns 0 before
+  calling `seal()` when there is nothing to review, so a zero-file diff still exits cleanly.
+- `diffhunks.py`: `Hunk` is now a frozen dataclass with tuple-typed `added`/`deleted`/`context`
+  fields, so `parse_hunks` is provably pure. Line splitting moved to `str.splitlines()`, fixing a
+  bug where a diff ending in a newline produced a spurious trailing empty context line. New
+  `hunk_for_line(hunks, line)` returns the containing `Hunk` or `None`.
+
 ## 1.42.0 - 2026-08-17
 
 ### Added

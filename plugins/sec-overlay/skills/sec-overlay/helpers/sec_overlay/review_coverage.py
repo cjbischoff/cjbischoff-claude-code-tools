@@ -14,11 +14,21 @@ from pathlib import Path
 from sec_overlay.workspace import _atomic_write
 
 MANIFEST_FILENAME = "coverage_manifest.json"
+MANIFEST_VERSION = 1
 STATES: frozenset[str] = frozenset({"pending", "in_review", "done", "failed"})
 SEALS: frozenset[str] = frozenset({"complete", "partial"})
 
+# D-03: one table gates every transition, so "illegal transitions raise" is a property
+# of the module, not of four separate call sites.
+_ALLOWED_TRANSITIONS: dict[str, frozenset[str]] = {
+    "pending": frozenset({"in_review", "failed"}),
+    "in_review": frozenset({"done", "failed"}),
+    "done": frozenset(),
+    "failed": frozenset(),
+}
 
-class CoverageTransitionError(ValueError):
+
+class CoverageTransitionError(RuntimeError):
     """Raised for an unknown path or an illegal state transition."""
 
 
@@ -47,12 +57,16 @@ class CoverageManifest:
             head_sha: Resolved head SHA for this run.
             path: File the manifest persists to (``ws.artifacts / MANIFEST_FILENAME``).
         """
-        self.version = 1
+        self.version = MANIFEST_VERSION
         self.base_sha = base_sha
         self.head_sha = head_sha
         self.path = path
         self._seal: str | None = None
         self.files: list[FileCoverage] = []
+
+    def entries(self) -> list[FileCoverage]:
+        """Return every entry in first-seen order."""
+        return list(self.files)
 
     def _find(self, file_path: str) -> FileCoverage:
         for entry in self.files:
@@ -73,21 +87,19 @@ class CoverageManifest:
 
     def start(self, file_path: str) -> None:
         """Transition ``pending`` to ``in_review``."""
-        self._transition(file_path, {"pending"}, "in_review")
+        self._transition(file_path, "in_review")
 
     def finish(self, file_path: str) -> None:
         """Transition ``in_review`` to ``done``."""
-        self._transition(file_path, {"in_review"}, "done")
+        self._transition(file_path, "done")
 
     def fail(self, file_path: str, note: str | None = None) -> None:
         """Transition ``pending`` or ``in_review`` to ``failed``, recording ``note``."""
-        self._transition(file_path, {"pending", "in_review"}, "failed", note=note)
+        self._transition(file_path, "failed", note=note)
 
-    def _transition(
-        self, file_path: str, from_states: set[str], to_state: str, *, note: str | None = None
-    ) -> None:
+    def _transition(self, file_path: str, to_state: str, *, note: str | None = None) -> None:
         entry = self._find(file_path)
-        if entry.state not in from_states:
+        if to_state not in _ALLOWED_TRANSITIONS[entry.state]:
             raise CoverageTransitionError(
                 f"cannot move {file_path} from {entry.state!r} to {to_state!r}"
             )
@@ -113,10 +125,13 @@ class CoverageManifest:
 
         Raises:
             CoverageTransitionError: If any entry is still ``pending`` or
-                ``in_review``.
+                ``in_review``, or if the manifest has no entries.
         """
-        if any(entry.state in {"pending", "in_review"} for entry in self.files):
-            raise CoverageTransitionError("cannot seal: unfinished entries remain")
+        if not self.files:
+            raise CoverageTransitionError("cannot seal: manifest has no entries")
+        unfinished = [entry.path for entry in self.files if entry.state in {"pending", "in_review"}]
+        if unfinished:
+            raise CoverageTransitionError(f"cannot seal: unfinished entries remain: {unfinished}")
         self._seal = "complete" if all(entry.state == "done" for entry in self.files) else "partial"
         self._persist()
         return self._seal

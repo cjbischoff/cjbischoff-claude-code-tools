@@ -474,3 +474,17 @@ raises `ValueError` in `__post_init__` for any reason outside the closed set. `p
 call still works unchanged. The full check order is now deleted → binary → generated →
 not-allowlisted → too-large; a file at exactly the cap is reviewable. No `--max-diff-lines` CLI
 flag exists — a cap override is deferred to Phase 4.
+
+`review_coverage.py`'s `CoverageManifest` reached full behavior (DIFF-03): a single
+`_ALLOWED_TRANSITIONS` table gates every state change, `seal()` now raises `CoverageTransitionError`
+(a `RuntimeError`, per the plan's Artifacts spec) on an empty manifest — sealing `complete` with
+nothing reviewed is a T-02-05 violation, not a vacuous pass — and `cli.py`'s `run_review` gained an
+early `if not selection.reviewable: return 0` before `seal()` so a diff with zero reviewable files
+exits cleanly instead of hitting that new raise (Rule 1 fix, caused by this same change).
+
+`diffhunks.py` reached full behavior (DIFF-04): `Hunk` is now a frozen dataclass with
+`tuple`-typed `added`/`deleted`/`context` fields, built through an internal mutable `_MutableHunk`
+builder during the parse loop and frozen on hunk close, so `parse_hunks` is provably pure. Line
+splitting moved from `str.replace("\r\n", "\n").split("\n")` to `str.splitlines()`, fixing a real
+bug where a diff ending in a newline produced a spurious trailing empty context line. New
+`hunk_for_line(hunks, line) -> Hunk | None` and module constant `NO_NEWLINE_MARKER`.

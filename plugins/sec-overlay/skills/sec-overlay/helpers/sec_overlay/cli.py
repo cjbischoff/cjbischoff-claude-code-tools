@@ -129,6 +129,9 @@ def run_review(base: str, head: str, root: str, *, runner=None) -> int:
 
     review_position_gate([], hunks_by_path)
 
+    if not selection.reviewable:
+        return 0
+
     return 0 if manifest.seal() == "complete" else 1
 
 

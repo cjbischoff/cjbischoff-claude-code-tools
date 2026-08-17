@@ -1,8 +1,16 @@
 # `tests/` — the deterministic test suite
 
-95 pytest files, 828 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+98 pytest files, 954 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_review_coverage.py` (23 tests) and `test_diffhunks.py` (18 tests) bring
+`CoverageManifest` and `parse_hunks` to full behavior (DIFF-03, DIFF-04): every legal and
+illegal state transition, the empty-manifest seal refusal, atomic-write round-tripping through
+`load`, absent/zero hunk counts, CRLF and no-newline-marker handling, a frozen `Hunk` with tuple
+collections, and a three-path lifecycle plus a contiguous `line_in_hunk` sweep proving the parser
+and the membership check agree over a full hunk range. `test_review_tracer.py` is unchanged and
+still green.
 
 New file `test_review_tracer.py` (6 tests) covers the `sec-overlay review` tracer path end to
 end: `main(["review", ...])` with a fake `subprocess.run` injected at the module level (`cli.py`
