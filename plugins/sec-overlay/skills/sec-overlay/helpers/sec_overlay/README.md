@@ -515,3 +515,14 @@ with `position_reviews`/`dropped` keys always present, each `position_reviews` e
 `state: "needs-position-review"`. A separate artifact rather than a `findings.json` state,
 since `models.py`'s `FindingStatus` enum has no review-position member and adding one would
 break the Go port's byte mirror. Both functions ship in plan 02-04, task 3.
+
+Plan 02-05, task 1 replaced `phase_gate.py`'s `review_position_gate` with the shape POS-03
+needs: a three-way split into `(kept, dropped, declines)` instead of the earlier two-way
+`(kept, dropped)`. A finding declines (`needs-position-review`) when the ladder cannot resolve
+it at all; every other finding is checked against `diffhunks.hunk_for_line` at its RESOLVED
+position (not its claimed one, since a relocated match can land outside every hunk's range) —
+inside a hunk keeps the finding at that resolved position, outside drops it with reason
+`outside-diff`. `DroppedFinding` now carries `path`, `line`, `rule_id`, and `reason` instead of
+a bare `finding_id`, and `DROP_REASONS` is a frozen set of the two reasons the gate can emit.
+The gate never mutates an input finding: a relocated keep copies the finding to its resolved
+position with `copy.copy`, so calling the gate twice on the same input is idempotent.

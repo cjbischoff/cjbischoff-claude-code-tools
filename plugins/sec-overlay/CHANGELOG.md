@@ -2,6 +2,18 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.46.0 - 2026-08-17
+
+### Added
+
+- `phase_gate.py`: `review_position_gate` now splits findings three ways — `kept`, `dropped`,
+  and `declines` — instead of the earlier `(kept, dropped)` pair. A finding that the
+  positioning ladder cannot resolve at all is a decline, kept out of both other lists. Every
+  other finding is checked against `diffhunks.hunk_for_line` at its resolved position: inside a
+  hunk keeps the finding (moved there if relocated), outside drops it with reason
+  `outside-diff`. `DroppedFinding` now carries `path`, `line`, `rule_id`, `reason`; the drop
+  reasons are a frozen set, `DROP_REASONS`. The gate never mutates an input finding.
+
 ## 1.45.1 - 2026-08-17
 
 ### Added

@@ -86,9 +86,10 @@ def test_resolve_position_exact_for_added_line():
 def test_review_position_gate_keeps_finding_on_added_line():
     hunks_by_path = {"app.py": parse_hunks(_DIFF)}
     finding = _FakeFinding("app.py", 2)
-    kept, dropped = review_position_gate([finding], hunks_by_path)
+    kept, dropped, declines = review_position_gate([finding], hunks_by_path)
     assert kept == [finding]
     assert dropped == []
+    assert declines == []
 
 
 def test_changed_file_records_parses_name_status():

@@ -13,11 +13,13 @@ analysis/context phases that had none.
 
 from __future__ import annotations
 
+import copy
 import json
 import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from sec_overlay.diffhunks import hunk_for_line
 from sec_overlay.positioning import resolve_position
 
 _REF_ANCHOR = re.compile(r"^(?P<path>.+?):(?P<start>\d+)(?:-\d+)?(?:\s.*)?$")
@@ -378,26 +380,44 @@ def write_gate_record(ws, phase: str, record: dict) -> Path:
 
 
 OUTSIDE_DIFF_REASON = "outside-diff"
+UNRESOLVED_POSITION_REASON = "unresolved-position"
+DROP_REASONS: frozenset[str] = frozenset({OUTSIDE_DIFF_REASON, UNRESOLVED_POSITION_REASON})
 
 
 @dataclass(frozen=True)
 class DroppedFinding:
-    """A finding dropped by the review-mode position gate, with why."""
+    """A finding dropped by the review-mode position gate, with where and why."""
 
-    finding_id: str
+    path: str
+    line: int
+    rule_id: str
     reason: str
+
+
+def _with_position(finding, path: str, line: int):
+    """Return ``finding`` at ``path``/``line``, copying rather than mutating the input.
+
+    A relocated finding is kept at its resolved position, not its claimed one — the input
+    object is never touched, so calling the gate twice on the same findings is idempotent.
+    """
+    if finding.file == path and finding.line == line:
+        return finding
+    moved = copy.copy(finding)
+    moved.file = path
+    moved.line = line
+    return moved
 
 
 def review_position_gate(
     findings: list, hunks_by_path: dict, file_text_by_path: dict | None = None
-) -> tuple[list, list[DroppedFinding]]:
-    """Keep only findings whose claimed position resolves ``exact`` against the diff.
+) -> tuple[list, list[DroppedFinding], list]:
+    """Split findings into kept, dropped, and declined by their diff position.
 
     The audit-mode gate ladder (``run_phase_checks`` and friends) is untouched by this
     function — it is a separate path for review mode's per-file position confirmation.
-    A finding that resolves ``relocated`` is still dropped here: this gate keeps only an
-    exact match, the ladder's other rungs exist so the caller can report *why* a finding
-    moved instead of silently discarding it.
+    A finding resolves through :func:`resolve_position`'s four-rung ladder first; this gate
+    then checks the RESOLVED position (not the claimed one) against the diff's hunks, since
+    a relocated match can land outside every hunk's changed-line range.
 
     Args:
         findings: Findings to gate, each carrying a claimed ``file``/``line``/``evidence``.
@@ -406,11 +426,14 @@ def review_position_gate(
             to an empty mapping, which disables the ladder's whole-file and cross-file rungs.
 
     Returns:
-        ``(kept, dropped)`` — findings that resolve ``exact``, and a
-        :class:`DroppedFinding` record for each one that does not.
+        ``(kept, dropped, declines)`` — findings whose resolved position falls inside a
+        hunk (moved to that position if relocated), a :class:`DroppedFinding` record for
+        each one whose resolved position falls outside every hunk, and the findings the
+        positioning ladder could not resolve at all.
     """
-    kept = []
+    kept: list = []
     dropped: list[DroppedFinding] = []
+    declines: list = []
     for finding in findings:
         result = resolve_position(
             finding.file,
@@ -419,10 +442,23 @@ def review_position_gate(
             hunks_by_path,
             file_text_by_path or {},
         )
-        if result.decision == "exact":
-            kept.append(finding)
+        if result.decision == "needs-position-review":
+            declines.append(finding)
+            continue
+        # A non-decline result always carries a resolved path/line (positioning.py's
+        # PositionResult.__post_init__ enforces this contract).
+        assert result.path is not None
+        assert result.line is not None
+        if hunk_for_line(hunks_by_path.get(result.path, []), result.line) is not None:
+            kept.append(_with_position(finding, result.path, result.line))
         else:
             dropped.append(
-                DroppedFinding(finding_id=finding.id, reason=result.reason or OUTSIDE_DIFF_REASON)
+                DroppedFinding(
+                    path=result.path,
+                    line=result.line,
+                    rule_id=getattr(finding, "rule_id", ""),
+                    reason=OUTSIDE_DIFF_REASON,
+                )
             )
-    return kept, dropped
+    dropped.sort(key=lambda d: (d.path, d.line, d.rule_id))
+    return kept, dropped, declines

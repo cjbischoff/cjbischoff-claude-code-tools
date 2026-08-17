@@ -1,11 +1,12 @@
 # `tests/` — the deterministic test suite
 
-98 pytest files, 965 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+98 pytest files, 1006 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
 `test_phase_gate.py` covers `review_position_gate`: a three-way kept/dropped/declines split of
-findings against diff hunks, using `diffhunks.hunk_for_line` on the resolved position.
+findings against diff hunks, using `diffhunks.hunk_for_line` on the resolved position — including
+both hunk-boundary adjacency edges and drop-list sort/idempotency checks.
 
 New `test_review_coverage.py` (23 tests) and `test_diffhunks.py` (18 tests) bring
 `CoverageManifest` and `parse_hunks` to full behavior (DIFF-03, DIFF-04): every legal and

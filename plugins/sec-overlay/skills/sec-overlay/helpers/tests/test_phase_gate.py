@@ -345,21 +345,33 @@ def test_finding_outside_every_hunk_is_dropped_with_outside_diff():
     assert dropped[0].reason == "outside-diff"
 
 
-def test_first_changed_line_passes_line_immediately_before_is_dropped_boundary():
+def test_boundary_adjacent_first_changed_line_is_kept():
     first = _Finding("f.py", 10, "CHANGED_FIRST", id="F-first")
+    kept, dropped, _declines = review_position_gate([first], _HUNKS)
+    assert kept == [first]
+    assert dropped == []
+
+
+def test_boundary_adjacent_line_before_first_changed_is_dropped():
     before = _Finding("f.py", 9, "BEFORE_ONE", id="F-before")
     text = _file_text({9: "BEFORE_ONE"})
-    kept, dropped, declines = review_position_gate([first, before], _HUNKS, {"f.py": text})
-    assert first in kept
+    kept, dropped, _declines = review_position_gate([before], _HUNKS, {"f.py": text})
+    assert kept == []
     assert len(dropped) == 1 and dropped[0].line == 9
 
 
-def test_last_changed_line_passes_line_immediately_after_is_dropped_boundary():
+def test_boundary_adjacent_last_changed_line_is_kept():
     last = _Finding("f.py", 14, "CHANGED_LAST", id="F-last")
+    kept, dropped, _declines = review_position_gate([last], _HUNKS)
+    assert kept == [last]
+    assert dropped == []
+
+
+def test_boundary_adjacent_line_after_last_changed_is_dropped():
     after = _Finding("f.py", 15, "AFTER_ONE", id="F-after")
     text = _file_text({15: "AFTER_ONE"})
-    kept, dropped, declines = review_position_gate([last, after], _HUNKS, {"f.py": text})
-    assert last in kept
+    kept, dropped, _declines = review_position_gate([after], _HUNKS, {"f.py": text})
+    assert kept == []
     assert len(dropped) == 1 and dropped[0].line == 15
 
 
@@ -410,7 +422,7 @@ def test_drop_list_is_sorted_by_path_then_line_then_rule_id():
         _Finding("m.py", 3, "X_C", rule_id="R1", id="F-m"),
     ]
     text_by_path = {"z.py": text, "a.py": text, "m.py": text}
-    kept, dropped, declines = review_position_gate(findings, hunks, text_by_path)
+    _kept, dropped, declines = review_position_gate(findings, hunks, text_by_path)
     assert declines == []
     assert [(d.path, d.line) for d in dropped] == [
         ("a.py", 5), ("m.py", 3), ("z.py", 1),
