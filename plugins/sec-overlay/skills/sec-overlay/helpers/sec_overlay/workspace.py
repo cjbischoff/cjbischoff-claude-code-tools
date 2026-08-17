@@ -28,13 +28,20 @@ class Workspace:
     findings_dir_override: Path | None = None
     kb_dir_override: Path | None = None
 
-    def __post_init__(self) -> None:
+    def __init__(
+        self,
+        root: str | Path,
+        reports_dir: str | Path | None = None,
+        findings_dir_override: str | Path | None = None,
+        kb_dir_override: str | Path | None = None,
+    ) -> None:
         """Coerce str paths to Path so agent-authored ``Workspace('<path>')`` works."""
-        self.root = Path(self.root)
-        for attr in ("reports_dir", "findings_dir_override", "kb_dir_override"):
-            value = getattr(self, attr)
-            if value is not None:
-                setattr(self, attr, Path(value))
+        self.root = Path(root)
+        self.reports_dir = Path(reports_dir) if reports_dir is not None else None
+        self.findings_dir_override = (
+            Path(findings_dir_override) if findings_dir_override is not None else None
+        )
+        self.kb_dir_override = Path(kb_dir_override) if kb_dir_override is not None else None
 
     @property
     def kb(self) -> Path:

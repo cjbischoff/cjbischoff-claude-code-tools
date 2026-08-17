@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.37.3 - 2026-08-17
+
+### Fixed
+
+- `workspace.py`'s `Workspace` gains a hand-written `__init__` (replacing the dataclass
+  `__post_init__`) so the `str | Path` constructor argument type-checks under `ty` — fixes
+  three `invalid-argument-type` diagnostics in `test_workspace.py` without widening the
+  stored `Path`-typed fields (VAL-02 ty ledger row).
+
 ## 1.37.2 - 2026-08-16
 
 ### Fixed

@@ -16,6 +16,11 @@ entry point; read the parent map for the full inventory.
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
 
+`workspace.py`'s `Workspace` now coerces `str` path arguments via a hand-written `__init__`
+instead of a dataclass `__post_init__` — the stored fields stay `Path`-typed, but the
+constructor accepts `str | Path` so `Workspace('<path>')` (as agent-authored prompts write it)
+type-checks under `ty` as well as running correctly. No behavior change.
+
 `kb.py` gained the arc42/threat-model tree path helpers (`arch_dir`/`arc42_path`/
 `container_diagram_path`, `threat_dir`/`threat_model_path`/`dfd_path`), replacing the old
 `kb/architecture.md` and `kb/THREAT_MODEL.md` single-file paths; `kb_status` now reports
