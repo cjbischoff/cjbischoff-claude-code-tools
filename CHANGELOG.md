@@ -29,6 +29,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Added
 
+- Capture VAL-01 baseline receipts in `.planning/phases/01-baseline-health-verification/01-VERIFICATION.md`: a tool version block (ruff, ty, pytest, python, claude CLI) and two `claude plugin validate .` receipts, one at the repo root and one inside `plugins/sec-overlay/`, both exit 0.
 - Start milestone v5.0 (Hybrid Diff-Review Architecture) in `.planning/`: update PROJECT.md with the milestone goal and target features, and reset STATE.md for the new cycle.
 - Create the milestone v5.0 roadmap in `.planning/ROADMAP.md`: six phases from baseline health through diff pipeline, rule matching, scale, end-to-end verification, and governed release, with all 32 requirements mapped.
 - Define milestone v5.0 requirements in `.planning/REQUIREMENTS.md`: 24 requirements across validation, diff pipeline, positioning, rule matching, review modes, scale, output, audit integrity, and release governance.

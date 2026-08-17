@@ -56,7 +56,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | Path | Purpose |
 |------|---------|
 | `.claude-plugin/marketplace.json` | Marketplace manifest; lists all plugins |
-| `.planning/` | GSD planning setup: PROJECT.md, REQUIREMENTS.md, ROADMAP.md, STATE.md, synthesized intel from the 50 ingested design docs, the ingest conflict report, and the onboarding summary. Current milestone: v5.0 Hybrid Diff-Review Architecture (32 requirements, 6 phases). Phase 1 context, its pattern map, and its three execution plans are captured in `.planning/phases/01-baseline-health-verification/` |
+| `.planning/` | GSD planning setup: PROJECT.md, REQUIREMENTS.md, ROADMAP.md, STATE.md, synthesized intel from the 50 ingested design docs, the ingest conflict report, and the onboarding summary. Current milestone: v5.0 Hybrid Diff-Review Architecture (32 requirements, 6 phases). Phase 1 context, its pattern map, its three execution plans, and its baseline-gate evidence document (`01-VERIFICATION.md`) are captured in `.planning/phases/01-baseline-health-verification/` |
 | `plugins/sec-overlay/.claude-plugin/plugin.json` | sec-overlay plugin manifest |
 | `plugins/sec-overlay/README.md` | sec-overlay user-facing README: install, prerequisites, quick start |
 | `plugins/sec-overlay/CHANGELOG.md` | sec-overlay Common Changelog |
