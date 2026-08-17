@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Record the Phase 2 verification report at `.planning/phases/02-diff-pipeline-positioning/02-VERIFICATION.md` (status gaps_found, 6/9 must-haves verified; the 3 gaps mirror the code review's critical findings).
 - Record the Phase 2 code review report at `.planning/phases/02-diff-pipeline-positioning/02-REVIEW.md` (26 files at standard depth: 3 critical, 2 warning findings).
 - Mark Phase 2 Plan 5 (the review-mode position gate's three-way split, the dropped-findings report section and ledger, and the seal-to-exit-code mapping) complete: record `02-05-SUMMARY.md` and update the `.planning/ROADMAP.md` progress table (8/8 plans, 100%).
 - Mark Phase 2 Plan 4 (the never-guess four-rung positioning ladder plus the position-review markdown section and JSON ledger) complete: record `02-04-SUMMARY.md`, advance `.planning/STATE.md` to Plan 5, update the `.planning/ROADMAP.md` progress table (7/8 plans, 88%), and move POS-02 to Complete in `.planning/REQUIREMENTS.md`.
