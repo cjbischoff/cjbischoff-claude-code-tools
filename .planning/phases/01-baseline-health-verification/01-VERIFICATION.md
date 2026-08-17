@@ -137,3 +137,116 @@ unchanged from Plan 01's finding: the hook is `stages: [commit-msg]` and structu
 under `--all-files`, which only fires pre-commit-stage hooks. This is not a broken hook and the
 Remediation Route already dispositioned it as a documented, checkable gap rather than an
 actionable defect — Task 2 makes no commit against it.
+
+## Final Verification
+
+Captured 2026-08-17 after the last fix commit (`111f28e`, Plan 02's completion commit). Tool
+versions re-checked and unchanged from the block above: ruff 0.16.0, ty 0.0.64
+(5e64a131b 2026-07-27), pytest 9.1.1, python 3.13.14, claude 2.1.220 — no drift, no note needed
+(D-09).
+
+`git status --porcelain` before capture showed two untracked GSD orchestration files
+(`.gsd/dispatch-isolation-sentinel.json`, `.planning/config.json`) — execution-harness
+bookkeeping created by the phase orchestrator, not tracked project content, not touched by any
+gate, and outside this plan's `files_modified` scope. No tracked file was modified or staged.
+The tree was otherwise clean; these two files are noted here for full disclosure rather than
+omitted.
+
+- Command: `claude plugin validate .`
+- Directory: `.` (repo root)
+- Exit code: 0
+- Output (tail):
+
+```
+Validating marketplace manifest: ~/.claude-plugin/marketplace.json
+
+✔ Validation passed
+```
+
+- Command: `claude plugin validate .`
+- Directory: `plugins/sec-overlay`
+- Exit code: 0
+- Output (tail):
+
+```
+Validating plugin manifest: ~/plugins/sec-overlay/.claude-plugin/plugin.json
+
+Validating plugin: ~/plugins/sec-overlay/CLAUDE.md
+
+⚠ Found 1 warning:
+
+  ❯ root: CLAUDE.md at the plugin root is not loaded as project context. To ship context with your plugin, use a skill (skills/<name>/SKILL.md) instead.
+
+Validating command: ~/plugins/sec-overlay/commands/README.md
+
+⚠ Found 1 warning:
+
+  ❯ frontmatter: No frontmatter block found. Add YAML frontmatter between --- delimiters at the top of the file to set description and other metadata.
+
+Validating command: ~/plugins/sec-overlay/commands/audit.md
+
+⚠ Found 1 warning:
+
+  ❯ frontmatter: No frontmatter block found. Add YAML frontmatter between --- delimiters at the top of the file to set description and other metadata.
+
+✔ Validation passed with warnings
+```
+
+Same three informational warnings as the baseline receipt — unchanged, not regressions.
+
+- Command: `uv run --locked --directory plugins/sec-overlay/skills/sec-overlay/helpers pytest -q`
+- Directory: `.` (repo root; `--directory` resolves the target, no `cd`)
+- Exit code: 1
+- Output (tail):
+
+```
+FAILED tests/test_bench.py::test_seed_corpus_is_valid - assert (0 >= 5)
+FAILED tests/test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd
+2 failed, 816 passed in 27.00s
+```
+
+Both failures carry the `environmental` disposition from the Triage Ledger above, restated here:
+`test_seed_corpus_is_valid` fails because `bench/corpus_seed/` holds only `README.md` (the
+labelled corpus JSON is gitignored and absent in this checkout);
+`test_report_finds_vendored_rules_regardless_of_cwd` fails because `rules/semgrep/` is absent
+and no `.gitmodules` is registered. Both are unchanged since the phase's baseline run — not a
+regression introduced by Plan 02's fixes, and out of this plan's fix scope per the Remediation
+Route's `proceed-as-triaged` decision. `--locked` held; no lockfile drift.
+
+- Command: `uv run --locked --directory plugins/sec-overlay/skills/sec-overlay/helpers ruff check sec_overlay/ bench/ tests/`
+- Directory: `.` (repo root; `--directory` resolves the target, no `cd`)
+- Exit code: 0
+- Output (tail):
+
+```
+All checks passed!
+```
+
+- Command: `uv run --locked --directory plugins/sec-overlay/skills/sec-overlay/helpers ty check`
+- Directory: `.` (repo root; `--directory` resolves the target, no `cd`)
+- Exit code: 0
+- Output (tail):
+
+```
+All checks passed!
+```
+
+- Command: `prek run --all-files`
+- Directory: `.` (repo root)
+- Exit code: 0
+- Output (tail):
+
+```
+Require README.md and CHANGELOG.md updates...............................Passed
+```
+
+Only the `doc-update-guard` hook id appears, matching Plan 01's structural finding — unchanged.
+
+**Note on this section's exit-code count:** five of the six receipts above show `Exit code: 0`.
+The sixth (pytest) legitimately shows `Exit code: 1` — the two environmental failures the
+Triage Ledger dispositioned and the maintainer's Remediation Route explicitly left unfixed. The
+plan's own action text names this as the one exception under which the phase still seals
+("an environmental failure recorded in the triage ledger is the one exception"); recording a
+fabricated `Exit code: 0` for pytest to satisfy a literal six-way count would itself violate the
+phase's own prohibition against manufacturing a green gate. See the Summary's Deviations section
+for the full account of this plan-text/verify-script tension.

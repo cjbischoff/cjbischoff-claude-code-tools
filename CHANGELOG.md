@@ -31,6 +31,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Added
 
+- Record Phase 1's final gate verification in `.planning/phases/01-baseline-health-verification/01-VERIFICATION.md`: six post-fix receipts (both plugin validations, pytest, ruff, ty, prek) captured after Plan 2's last fix commit, appended alongside the baseline red without overwriting it.
 - Capture VAL-01 baseline receipts in `.planning/phases/01-baseline-health-verification/01-VERIFICATION.md`: a tool version block (ruff, ty, pytest, python, claude CLI) and two `claude plugin validate .` receipts, one at the repo root and one inside `plugins/sec-overlay/`, both exit 0.
 - Capture VAL-02 and VAL-03 baseline receipts in the same evidence document: pytest/ruff/ty against the sec-overlay helpers package, `prek run --all-files` at the repo root, and a triage ledger dispositioning the two pytest failures as environmental, the ruff and ty findings as code defects, and the untriggered `conventional-commit-msg` hook as a config characteristic of `--all-files`.
 - Record the `proceed-as-triaged` remediation route in `01-VERIFICATION.md`: the maintainer confirmed no triaged fix touches the frozen `models.py`/`evidence.py` contract, clearing Plan 02 to execute the ledger's ruff and ty fixes under normal governance.
