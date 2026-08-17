@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.37.7 - 2026-08-17
+
+### Fixed
+
+- `test_bench.py`'s `CorpusEntry` builder and `test_profile.py`'s `ScanProfile` roundtrip test
+  now build the base object with explicit fields and layer overrides with `dataclasses.replace`,
+  instead of a `dict()` + `.update(kw)` + `Cls(**d)` / `Cls(**base, notes=...)` splat — the same
+  `ty` per-field argument-checking bypass fixed for `Finding` builders in 1.37.6. Clears the
+  remaining VAL-02 `invalid-argument-type` rows for both files; no behavior change.
+
 ## 1.37.6 - 2026-08-17
 
 ### Fixed

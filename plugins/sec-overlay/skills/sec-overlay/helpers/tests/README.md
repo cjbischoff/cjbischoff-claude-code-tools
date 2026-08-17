@@ -4,6 +4,10 @@
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+`test_bench.py`'s `CorpusEntry` builder and `test_profile.py`'s `ScanProfile` roundtrip test
+apply the same `dataclasses.replace` fix as the `Finding` builders below, for the same
+`ty` reason — no behavior change.
+
 `test_citations.py`, `test_factcheck_baseline_envelope.py`, and `test_report.py`'s `Finding`
 test-builders (`_f`/`_tf`/`_full`) now build a base `Finding(...)` call and layer per-test
 overrides with `dataclasses.replace(base, **kw)`, instead of a `dict()` + `.update(kw)` +

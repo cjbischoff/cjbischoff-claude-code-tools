@@ -107,16 +107,18 @@ def test_non_dict_scan_options_rejected():
 
 def test_profile_notes_roundtrip_and_optional(tmp_path):
     import json as _json
+    from dataclasses import replace
 
     from sec_overlay.profile import ScanProfile, load_profile
     # notes optional: a profile without it still loads
-    base = {"languages": ["php"], "frameworks": ["Zend Framework 1"], "entrypoints": [],
-            "runnable": True, "attack_surface": ["crypto"], "sast_plan": {"semgrep": {"run": True}},
-            "agents_to_spawn": ["crypto"], "budget_hint": {}, "attack_surface_evidence": {}}
-    p = tmp_path / "p.json"; p.write_text(_json.dumps(base))
+    base = ScanProfile(languages=["php"], frameworks=["Zend Framework 1"], entrypoints=[],
+                        runnable=True, attack_surface=["crypto"],
+                        sast_plan={"semgrep": {"run": True}}, agents_to_spawn=["crypto"],
+                        budget_hint={}, attack_surface_evidence={})
+    p = tmp_path / "p.json"; p.write_text(_json.dumps(base.to_dict()))
     assert load_profile(str(p)).notes == {}
     # notes carried through round-trip
-    prof = ScanProfile(**base, notes={"eol_frameworks": ["Zend Framework 1"]})
+    prof = replace(base, notes={"eol_frameworks": ["Zend Framework 1"]})
     assert ScanProfile.from_dict(prof.to_dict()).notes == {"eol_frameworks": ["Zend Framework 1"]}
 
 
