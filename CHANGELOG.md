@@ -31,6 +31,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Added
 
+- Add the Phase 1 independent verification report (`.planning/phases/01-baseline-health-verification/01-VERIFICATION-REPORT.md`): an adversarial re-run of all six gate commands confirming 7/7 phase truths, with one recorded maintainer override accepting the two environmental pytest failures (missing local-only bench corpus and vendored semgrep rules) as provisioning gaps rather than code defects; mark the phase evidence document's status as passed.
 - Add the Phase 1 code-review report (`.planning/phases/01-baseline-health-verification/01-REVIEW.md`): a standard-depth review of the 22 files the phase changed, with a clean verdict (0 critical, 0 warning, 2 info) and confirmation the frozen `models.py`/`evidence.py` contract stayed untouched.
 - Complete Phase 1 Plan 3 (Baseline Health Verification): add `01-03-SUMMARY.md`, confirm requirements VAL-01/VAL-02/VAL-03 already complete in `.planning/REQUIREMENTS.md`, and advance `.planning/STATE.md` and `.planning/ROADMAP.md` to reflect Phase 1's completion — sealing the phase.
 - Add a fix ledger, constraint proof, and phase outcome to `.planning/phases/01-baseline-health-verification/01-VERIFICATION.md`: a per-commit table mapping all 165 baseline ruff/ty findings to their 9 fix commits, proof the frozen `models.py`/`evidence.py` contract stayed empty across every fix, proof each fix commit carried its own plugin-version bump and changelog entry, and a plain-language statement of the two residual environmental gaps.
