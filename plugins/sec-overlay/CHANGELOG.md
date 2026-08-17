@@ -2,6 +2,31 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.45.0 - 2026-08-17
+
+### Added
+
+- `report.py`: `render_position_review_section(results)` renders a `## Position review required`
+  markdown table, one row per declined finding, with pipe/newline escaping so a snippet cannot
+  corrupt the table; `write_review_ledger(ws, *, position_reviews, dropped)` writes
+  `artifacts/review_ledger.json` with `position_reviews`/`dropped` keys always present. Neither
+  function is wired into `to_markdown`/`write_report` yet.
+
+## 1.44.0 - 2026-08-17
+
+### Added
+
+- `positioning.py`: `resolve_position` now runs the full four-rung ladder — hunk match in the
+  claimed file (`exact`), whole-file match in the claimed file (`relocated`/`whole-file-match`),
+  match in exactly one other changed file (`relocated`/`cross-file-match`), else decline
+  (`needs-position-review`). Two or more matches at any rung decline instead of picking one.
+  `PositionResult` gained a `snippet` field, carried on every result including declines.
+
+### Fixed
+
+- `phase_gate.py`: `review_position_gate` gained an optional `file_text_by_path` parameter to
+  match `resolve_position`'s new five-argument signature.
+
 ## 1.43.0 - 2026-08-17
 
 ### Added

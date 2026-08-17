@@ -388,15 +388,22 @@ class DroppedFinding:
     reason: str
 
 
-def review_position_gate(findings: list, hunks_by_path: dict) -> tuple[list, list[DroppedFinding]]:
+def review_position_gate(
+    findings: list, hunks_by_path: dict, file_text_by_path: dict | None = None
+) -> tuple[list, list[DroppedFinding]]:
     """Keep only findings whose claimed position resolves ``exact`` against the diff.
 
     The audit-mode gate ladder (``run_phase_checks`` and friends) is untouched by this
     function — it is a separate path for review mode's per-file position confirmation.
+    A finding that resolves ``relocated`` is still dropped here: this gate keeps only an
+    exact match, the ladder's other rungs exist so the caller can report *why* a finding
+    moved instead of silently discarding it.
 
     Args:
-        findings: Findings to gate, each carrying a claimed ``file``/``line``.
+        findings: Findings to gate, each carrying a claimed ``file``/``line``/``evidence``.
         hunks_by_path: Parsed hunks for every reviewed file, keyed by path.
+        file_text_by_path: Whole file text for every changed file, keyed by path. Defaults
+            to an empty mapping, which disables the ladder's whole-file and cross-file rungs.
 
     Returns:
         ``(kept, dropped)`` — findings that resolve ``exact``, and a
@@ -405,7 +412,13 @@ def review_position_gate(findings: list, hunks_by_path: dict) -> tuple[list, lis
     kept = []
     dropped: list[DroppedFinding] = []
     for finding in findings:
-        result = resolve_position(finding.file, finding.line, hunks_by_path)
+        result = resolve_position(
+            finding.file,
+            finding.line,
+            getattr(finding, "evidence", None),
+            hunks_by_path,
+            file_text_by_path or {},
+        )
         if result.decision == "exact":
             kept.append(finding)
         else:

@@ -451,3 +451,35 @@ which would hide a broken pattern behind an overlapping one), generated-beats-al
 precedence, non-ASCII path-quoting normalization, an empty-input case, deleted/binary exclusion,
 both sides of the `DEFAULT_MAX_DIFF_LINES` boundary, `ExcludedFile` rejecting a reason outside
 `EXCLUSION_REASONS`, and a fixture-set walk asserting every produced reason is in the enum.
+
+`test_positioning.py` is new (30 tests), covering the never-guess positioning ladder in
+`positioning.py`: `_match_consecutive`'s exact whitespace-stripped consecutive-line matching
+(single/multiple/no occurrence, empty needle, needle longer than haystack, no case folding);
+`PositionResult.__post_init__` rejecting an `exact`/`relocated` result with no line, a
+`needs-position-review` result carrying a line, and an unknown decision or reason outside the
+closed vocabularies; and all four `resolve_position` rungs in order — hunk match (`exact`,
+declining to `ambiguous-multiple-matches` on two hits), whole-file match in the claimed file
+(`relocated`/`whole-file-match`), match in exactly one other changed file
+(`relocated`/`cross-file-match`, declining to `cross-file-ambiguous` on two hits), and the
+final no-match decline (`no-hunk-match`). Also covers an absent/whitespace-only snippet
+declining before any rung runs (`no-snippet`), an absent claimed path declining rather than
+raising, rung-order precedence (rung 1 beats rung 2 even when rung 2 would also match),
+determinism across repeated calls, and every result — including declines — carrying the
+original `claimed_path`/`claimed_line`/`snippet`.
+
+`test_review_tracer.py`'s `_FakeFinding` gained an `evidence` attribute (default
+`"os.system(cmd)"`, matching its fake diff's one added line) so
+`test_review_position_gate_keeps_finding_on_added_line` exercises a genuine rung-1 hunk match
+through `resolve_position`'s five-argument signature, instead of the position gate short-circuiting
+on a missing snippet.
+
+`test_report.py` gained coverage for the new additive `report.py` symbols (D-13, POS-02):
+`render_position_review_section` on three declined `PositionResult`s renders one
+`## Position review required` table row per result with claimed path, claimed line, snippet, and
+reason; on an empty list it still renders the heading plus an explicit
+"No finding required position review" line; a pipe character in the snippet is escaped so it
+cannot be read as a table delimiter, and a multi-line snippet collapses onto one row.
+`write_review_ledger` writes `artifacts/review_ledger.json` with a `position_reviews` entry per
+decline (`state: "needs-position-review"` plus claimed path/line, snippet, reason) and always
+carries the `position_reviews`/`dropped` keys, even when both are empty; the JSON round-trips
+every field, and calling it twice leaves one valid file holding the second call's data.

@@ -488,3 +488,30 @@ builder during the parse loop and frozen on hunk close, so `parse_hunks` is prov
 splitting moved from `str.replace("\r\n", "\n").split("\n")` to `str.splitlines()`, fixing a real
 bug where a diff ending in a newline produced a spurious trailing empty context line. New
 `hunk_for_line(hunks, line) -> Hunk | None` and module constant `NO_NEWLINE_MARKER`.
+
+`positioning.py` reached full behavior (POS-01, POS-02): `resolve_position` now runs a
+four-rung ladder in order — hunk match in the claimed file (`exact`), whole-file match in the
+claimed file (`relocated`/`whole-file-match`), match in exactly one other changed file
+(`relocated`/`cross-file-match`), else decline (`needs-position-review`/`no-hunk-match`) — and
+stops at the first rung producing exactly one match; two or more matches at any rung decline
+(`ambiguous-multiple-matches` or `cross-file-ambiguous`) instead of picking one. An absent or
+whitespace-only snippet declines (`no-snippet`) before any rung runs. `PositionResult` gained a
+`snippet` field (default `None`, backward-compatible), carried on every result including
+declines, so a report can show the claim without a second lookup. `phase_gate.py`'s
+`review_position_gate` gained an optional `file_text_by_path` parameter (default `None`, which
+disables the ladder's whole-file and cross-file rungs) to match `resolve_position`'s new
+five-argument signature — a Rule 3 fix for the signature this same plan's earlier task changed.
+
+`report.py` gained two additive functions (D-13, POS-02), wired into neither `to_markdown` nor
+`write_report` — plan 02-05 does that wiring once the drop ledger exists.
+`render_position_review_section(results: list[PositionResult]) -> str` renders one
+`## Position review required` markdown table, one row per declined result (claimed path,
+claimed line, snippet, reason), with pipe characters escaped and newlines collapsed in the
+snippet cell so a decline can never corrupt the table into a hidden row; an empty list still
+renders the heading plus an explicit none-required line.
+`write_review_ledger(ws, *, position_reviews, dropped) -> Path` writes
+`artifacts/review_ledger.json` (via the same `_atomic_write` shape as `review_coverage.py`)
+with `position_reviews`/`dropped` keys always present, each `position_reviews` entry carrying
+`state: "needs-position-review"`. A separate artifact rather than a `findings.json` state,
+since `models.py`'s `FindingStatus` enum has no review-position member and adding one would
+break the Go port's byte mirror.

@@ -41,10 +41,11 @@ def _fake_run(cmd, capture_output, text, check):
 
 
 class _FakeFinding:
-    def __init__(self, file: str, line: int):
+    def __init__(self, file: str, line: int, evidence: str = "os.system(cmd)"):
         self.id = "F-1"
         self.file = file
         self.line = line
+        self.evidence = evidence
 
 
 def test_review_one_changed_file_exits_zero_and_seals_complete(tmp_path, monkeypatch):
@@ -78,7 +79,7 @@ def test_parse_hunks_and_added_line_numbers():
 
 def test_resolve_position_exact_for_added_line():
     hunks_by_path = {"app.py": parse_hunks(_DIFF)}
-    result = resolve_position("app.py", 2, hunks_by_path)
+    result = resolve_position("app.py", 2, "os.system(cmd)", hunks_by_path, {})
     assert result.decision == "exact"
 
 
