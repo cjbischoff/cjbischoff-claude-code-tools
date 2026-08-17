@@ -30,6 +30,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 ### Added
 
 - Capture VAL-01 baseline receipts in `.planning/phases/01-baseline-health-verification/01-VERIFICATION.md`: a tool version block (ruff, ty, pytest, python, claude CLI) and two `claude plugin validate .` receipts, one at the repo root and one inside `plugins/sec-overlay/`, both exit 0.
+- Capture VAL-02 and VAL-03 baseline receipts in the same evidence document: pytest/ruff/ty against the sec-overlay helpers package, `prek run --all-files` at the repo root, and a triage ledger dispositioning the two pytest failures as environmental, the ruff and ty findings as code defects, and the untriggered `conventional-commit-msg` hook as a config characteristic of `--all-files`.
 - Start milestone v5.0 (Hybrid Diff-Review Architecture) in `.planning/`: update PROJECT.md with the milestone goal and target features, and reset STATE.md for the new cycle.
 - Create the milestone v5.0 roadmap in `.planning/ROADMAP.md`: six phases from baseline health through diff pipeline, rule matching, scale, end-to-end verification, and governed release, with all 32 requirements mapped.
 - Define milestone v5.0 requirements in `.planning/REQUIREMENTS.md`: 24 requirements across validation, diff pipeline, positioning, rule matching, review modes, scale, output, audit integrity, and release governance.
