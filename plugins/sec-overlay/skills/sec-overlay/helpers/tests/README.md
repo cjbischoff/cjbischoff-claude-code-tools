@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-98 pytest files, 1021 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+98 pytest files, 1026 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -10,6 +10,11 @@ returns 3 and prints one "unfinished file" line per non-`done` manifest entry na
 state, and note, and the same mapping holds through the `main()` entry point. A fake
 `parse_hunks` raises for chosen paths to force the `failed` transition that a `partial` seal
 requires — the production `file_diff_text`/`parse_hunks` pair never raises on its own.
+`test_review_excludes_oversized_diff_via_wired_diff_line_counts` spies on `cli.partition` to
+capture the `Selection` it returns and asserts a >5000-line fake diff lands in
+`selection.excluded` with reason `too-large`, not `selection.reviewable` (CR-03 regression:
+`run_review` used to call `partition(records)` with no `diff_line_counts`/`binary_paths`, so
+the size cap and binary exclusion never fired from the CLI).
 
 `test_report.py` covers `render_dropped_findings_section` (three drops, the empty-list
 none-dropped statement, input-order preservation), `to_markdown` wiring both the

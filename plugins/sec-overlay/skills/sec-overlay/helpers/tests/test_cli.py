@@ -114,6 +114,37 @@ def test_review_exit_2_on_unresolvable_but_valid_ref(tmp_path, capsys):
     assert "nonexistent-ref" in capsys.readouterr().err
 
 
+def test_review_excludes_oversized_diff_via_wired_diff_line_counts(tmp_path, monkeypatch):
+    # Regression (CR-03): run_review must compute diff_line_counts/binary_paths and pass
+    # them into partition(), or an oversized/binary file silently stays "reviewable".
+    from sec_overlay import cli
+    from sec_overlay.file_select import partition as real_partition
+
+    captured = {}
+
+    def spy_partition(records, **kwargs):
+        selection = real_partition(records, **kwargs)
+        captured["selection"] = selection
+        return selection
+
+    monkeypatch.setattr(cli, "partition", spy_partition)
+
+    def runner(cmd, capture_output, text, check):
+        if cmd[1] == "rev-parse":
+            return _FakeResult(f"sha-{cmd[-1]}\n")
+        if cmd[1] == "diff" and "--name-status" in cmd:
+            return _FakeResult("M\tbig.py\n")
+        if cmd[1] == "diff" and "--unified=0" in cmd:
+            return _FakeResult("\n".join(f"+line{i}" for i in range(5001)))
+        return _FakeResult("")
+
+    rc = cli.run_review("main", "develop", str(tmp_path), runner=runner)
+    assert rc == 0
+    selection = captured["selection"]
+    assert selection.reviewable == []
+    assert any(e.path == "big.py" and e.reason == "too-large" for e in selection.excluded)
+
+
 def test_review_exit_0_on_complete_seal_with_no_drops(tmp_path):
     from sec_overlay import cli
 

@@ -473,10 +473,15 @@ matching) — the parametrised glob test in `tests/test_file_select.py` holds th
 `file_select.py`'s `EXCLUSION_REASONS` is now enforced, not just documented: `ExcludedFile`
 raises `ValueError` in `__post_init__` for any reason outside the closed set. `partition` gained
 `diff_line_counts`, `binary_paths`, and `max_diff_lines` (default `DEFAULT_MAX_DIFF_LINES` =
-5000, D-11) keyword parameters, all defaulting to no-op values so the tracer's `partition(records)`
-call still works unchanged. The full check order is now deleted → binary → generated →
-not-allowlisted → too-large; a file at exactly the cap is reviewable. No `--max-diff-lines` CLI
-flag exists — a cap override is deferred to Phase 4.
+5000, D-11) keyword parameters, all defaulting to no-op values so a caller that omits them still
+works. The full check order is now deleted → binary → generated → not-allowlisted → too-large; a
+file at exactly the cap is reviewable. No `--max-diff-lines` CLI flag exists — a cap override is
+deferred to Phase 4.
+
+`cli.py`'s `run_review` now computes `diff_line_counts` (via `file_diff_line_count`, one call per
+changed file) and `binary_paths` before calling `partition`, and passes both through (CR-03): the
+tracer-path call left both kwargs at their no-op defaults, so an oversized or binary file stayed
+`reviewable` instead of landing in `selection.excluded` with reason `too-large`/`binary`.
 
 `review_coverage.py`'s `CoverageManifest` reached full behavior (DIFF-03): a single
 `_ALLOWED_TRANSITIONS` table gates every state change, `seal()` now raises `CoverageTransitionError`

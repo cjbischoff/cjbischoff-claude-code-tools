@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.48.3 - 2026-08-17
+
+### Fixed
+
+- `cli.py`: `run_review` now computes `diff_line_counts` and `binary_paths` and passes them into
+  `partition(...)`. The tracer-path call left both at their no-op defaults, so an oversized
+  (>5000-line) or binary changed file stayed `reviewable` instead of landing in
+  `selection.excluded` with reason `too-large`/`binary` (CR-03).
+
 ## 1.48.2 - 2026-08-17
 
 ### Fixed

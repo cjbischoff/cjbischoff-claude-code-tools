@@ -8,7 +8,13 @@ import sys
 
 from sec_overlay.campaign import record_stage
 from sec_overlay.diffhunks import parse_hunks
-from sec_overlay.diffscope import changed_file_records, file_diff_text, resolve_ref_sha
+from sec_overlay.diffscope import (
+    binary_paths,
+    changed_file_records,
+    file_diff_line_count,
+    file_diff_text,
+    resolve_ref_sha,
+)
 from sec_overlay.file_select import partition
 from sec_overlay.models import Finding
 from sec_overlay.normalize import normalize
@@ -116,7 +122,12 @@ def run_review(base: str, head: str, root: str, *, runner=None) -> int:
         return 2
 
     records = changed_file_records(base_sha, head_sha, runner=r)
-    selection = partition(records)
+    diff_line_counts = {
+        record.path: file_diff_line_count(record.path, base_sha, head_sha, runner=r)
+        for record in records
+    }
+    excluded_binary = binary_paths(base_sha, head_sha, runner=r)
+    selection = partition(records, diff_line_counts=diff_line_counts, binary_paths=excluded_binary)
 
     manifest = CoverageManifest(base_sha, head_sha, ws.artifacts / MANIFEST_FILENAME)
     hunks_by_path: dict[str, list] = {}
