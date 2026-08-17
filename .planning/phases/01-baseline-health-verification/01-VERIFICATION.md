@@ -123,3 +123,17 @@ Every VAL-01 receipt exited 0; no VAL-01 row is needed.
 **Selected: `proceed-as-triaged`**
 
 No row in the Triage Ledger touches `sec_overlay/models.py` or `sec_overlay/evidence.py` (confirmed against the full 161-line ty diagnostic output, not a tail sample). Plan 02 executes the ledger's two code-defect rows (VAL-02 ruff: 4 files; VAL-02 ty: 15 files) under normal governance, including the shipping-file version bump and changelog entry the sec-overlay plugin requires. The two environmental pytest rows and the one config row (VAL-03) carry no proposed fix and stay as documented, checkable gaps. Phase 1 completes with this plan; Plan 02 is scoped by this ledger, not by re-running the gates from scratch.
+
+## VAL-01 / VAL-03 Remediation
+
+No fix required; both gates green at baseline. Re-verified during Plan 02 execution:
+
+- `claude plugin validate .` at the repo root: exit 0 (`✔ Validation passed`).
+- `claude plugin validate .` inside `plugins/sec-overlay/`: exit 0 (`✔ Validation passed with warnings` — 3 pre-existing warnings on `CLAUDE.md` project-context loading and missing command frontmatter, none of them a VAL-01 failure and none touched by this plan).
+- `prek run --all-files` from the repo root: exit 0.
+
+The VAL-03 `config` row (`conventional-commit-msg` never appearing in `--all-files` output) is
+unchanged from Plan 01's finding: the hook is `stages: [commit-msg]` and structurally cannot run
+under `--all-files`, which only fires pre-commit-stage hooks. This is not a broken hook and the
+Remediation Route already dispositioned it as a documented, checkable gap rather than an
+actionable defect — Task 2 makes no commit against it.
