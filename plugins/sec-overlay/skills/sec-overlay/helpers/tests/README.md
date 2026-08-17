@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-98 pytest files, 1026 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+98 pytest files, 1028 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -15,6 +15,13 @@ capture the `Selection` it returns and asserts a >5000-line fake diff lands in
 `selection.excluded` with reason `too-large`, not `selection.reviewable` (CR-03 regression:
 `run_review` used to call `partition(records)` with no `diff_line_counts`/`binary_paths`, so
 the size cap and binary exclusion never fired from the CLI).
+`test_review_writes_ledger_and_report_with_zero_drops_and_declines` and
+`test_review_ledger_drop_count_matches_markdown_drop_rows` cover `run_review` wiring
+`review_position_gate`'s `(kept, dropped, declines)` into `report.write_report`: the
+zero-drop/zero-decline case still writes both `report.md`'s none-dropped/none-required
+sentences and an empty-list `review_ledger.json` (T-02-15), and a monkeypatched gate
+returning canned drops asserts the markdown drop-row count equals the ledger's drop count
+(T-02-18).
 
 `test_report.py` covers `render_dropped_findings_section` (three drops, the empty-list
 none-dropped statement, input-order preservation), `to_markdown` wiring both the

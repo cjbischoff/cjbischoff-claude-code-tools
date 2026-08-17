@@ -20,7 +20,7 @@ from sec_overlay.models import Finding
 from sec_overlay.normalize import normalize
 from sec_overlay.phase_gate import review_position_gate
 from sec_overlay.repo_memory import RepoMemory, repo_slug
-from sec_overlay.report import to_markdown
+from sec_overlay.report import to_markdown, write_report
 from sec_overlay.review_coverage import MANIFEST_FILENAME, CoverageManifest
 from sec_overlay.sarif import to_sarif
 from sec_overlay.sast import run_semgrep
@@ -94,7 +94,10 @@ def run_review(base: str, head: str, root: str, *, runner=None) -> int:
     Batches over every reviewable changed file and implements exit codes 2 and 3.
     No finding source is wired into ``review`` mode yet (investigate integration
     lands in a later plan); the gate runs against an empty finding list so its
-    wiring is exercised now.
+    wiring is exercised now. The gate's dropped/declined output is always written
+    to ``report.md`` and ``artifacts/review_ledger.json`` via :func:`report.write_report`
+    — including the zero-drop/zero-decline case — so "no finding was dropped" is
+    recorded, not just absent (T-02-15).
 
     Args:
         base: Base ref. Validated and resolved to a SHA before any other git call.
@@ -142,7 +145,8 @@ def run_review(base: str, head: str, root: str, *, runner=None) -> int:
             continue
         manifest.finish(record.path)
 
-    review_position_gate([], hunks_by_path)
+    _kept, dropped, declines = review_position_gate([], hunks_by_path)
+    write_report(ws, dropped=dropped, position_reviews=declines)
 
     if not selection.reviewable:
         return 0

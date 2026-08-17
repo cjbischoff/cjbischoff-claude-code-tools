@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.48.6 - 2026-08-17
+
+### Fixed
+
+- `cli.py`: `run_review` now wires `review_position_gate`'s dropped/declined output into
+  `report.write_report`, so a review run writes `report.md`'s drop/decline sections and
+  `artifacts/review_ledger.json` on every path, including the zero-drop/zero-decline case
+  (T-02-15, T-02-18). Previously the gate's return value was discarded and no review-mode
+  run ever produced these outputs.
+
 ## 1.48.5 - 2026-08-17
 
 ### Fixed

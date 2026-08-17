@@ -258,7 +258,7 @@ steps the orchestrator calls between agent phases:
 
 | Module | Command does |
 |--------|--------------|
-| `cli` | `scan` (deterministic prefilter → SARIF/MD), `memory` (status / append a learning), `audit` (deterministic audit driver), and `review --base <ref> --head <ref> --root <path>` (diff-scoped, position-verified review pass — tracer path, one changed file end to end). |
+| `cli` | `scan` (deterministic prefilter → SARIF/MD), `memory` (status / append a learning), `audit` (deterministic audit driver), and `review --base <ref> --head <ref> --root <path>` (diff-scoped, position-verified review pass — tracer path, one changed file end to end; `run_review` always calls `report.write_report` with the gate's dropped/declined output, so `report.md` and `artifacts/review_ledger.json` carry every run's drop/decline sections, including the zero-drop/zero-decline case). |
 | `preflight` | Report which SAST tools + CodeQL packs are installed; print setup commands. |
 | `graph` | Build/query the Tier-1/Tier-2 code graph → `kb/graph.json`. |
 | `structural_index` | Build the ripgrep symbol index. |

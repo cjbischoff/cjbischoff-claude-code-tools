@@ -561,3 +561,14 @@ line per non-`done` entry, read through `manifest.entries()`, naming its path, s
 then returns 3. The pre-existing exit-2 ref-validation path is unaffected — it runs before the
 manifest exists at all. No `--max-diff-lines` override flag and no `logging` import: both stay
 out of scope for this milestone.
+
+`cli.py`'s `run_review` closed the last gap in the drop/decline wiring (T-02-15, T-02-18):
+task 2/3 above wired the gate's output into `to_markdown`/`write_review_ledger`, but
+`run_review` itself still discarded `review_position_gate`'s returned `(kept, dropped,
+declines)` tuple and never called `report.write_report` — so no review-mode run actually
+produced `report.md`'s drop/decline sections or `artifacts/review_ledger.json`, in production
+or in the zero-drop/zero-decline case. `run_review` now captures `dropped`/`declines` and calls
+`write_report(ws, dropped=dropped, position_reviews=declines)` right after the gate call —
+before the reviewable/seal exit-code branches, so both a `0` (complete seal, including zero
+reviewable files) and a `3` (partial seal) run write both outputs from the same gate call. The
+exit-2 ref-validation path returns before the gate runs at all and is unaffected.

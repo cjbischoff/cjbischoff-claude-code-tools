@@ -3,6 +3,9 @@
 import json
 
 from sec_overlay.cli import run_scan
+from sec_overlay.phase_gate import DroppedFinding
+from sec_overlay.positioning import PositionResult
+from sec_overlay.report import DROPPED_FINDINGS_HEADING, POSITION_REVIEW_HEADING
 from sec_overlay.workspace import Workspace
 
 
@@ -219,3 +222,58 @@ def test_review_exit_3_via_main_entrypoint_on_partial_seal(tmp_path, monkeypatch
     monkeypatch.setattr(cli, "parse_hunks", _failing_parse_hunks(["a.py"]))
     rc = cli.main(["review", "--base", "main", "--head", "develop", "--root", str(tmp_path)])
     assert rc == 3
+
+
+# --- run_review: gate output wired into report.md + review_ledger.json (T-02-15/18) -----
+
+
+def test_review_writes_ledger_and_report_with_zero_drops_and_declines(tmp_path):
+    # No finding source is wired into review mode yet, so the real gate runs against an
+    # empty finding list — both outputs must still be emitted (T-02-15's "absent" vs "none").
+    from sec_overlay import cli
+
+    runner = _make_review_runner(["a.py"])
+    rc = cli.run_review("main", "develop", str(tmp_path), runner=runner)
+    assert rc == 0
+
+    ws = Workspace(str(tmp_path))
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
+    assert ledger["dropped"] == []
+    assert ledger["position_reviews"] == []
+
+    md = ws.report_path.read_text()
+    assert f"{DROPPED_FINDINGS_HEADING}\n\nNo finding was dropped." in md
+    assert f"{POSITION_REVIEW_HEADING}\n\nNo finding required position review." in md
+
+
+def test_review_ledger_drop_count_matches_markdown_drop_rows(tmp_path, monkeypatch):
+    # T-02-18 invariant: the markdown drop-row count must equal the ledger drop count —
+    # both come from the same gate output via write_report, so they cannot disagree.
+    from sec_overlay import cli
+
+    dropped = [
+        DroppedFinding(path="a.py", line=9, rule_id="R1", reason="outside-diff"),
+        DroppedFinding(path="b.py", line=2, rule_id="R2", reason="outside-diff"),
+    ]
+    declines = [
+        PositionResult("needs-position-review", None, None, "no-hunk-match", "c.py", 3, "snip"),
+    ]
+    monkeypatch.setattr(
+        cli, "review_position_gate", lambda findings, hunks_by_path: ([], dropped, declines)
+    )
+    runner = _make_review_runner(["a.py"])
+    rc = cli.run_review("main", "develop", str(tmp_path), runner=runner)
+    assert rc == 0
+
+    ws = Workspace(str(tmp_path))
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
+    assert len(ledger["dropped"]) == len(dropped)
+    assert len(ledger["position_reviews"]) == len(declines)
+
+    md = ws.report_path.read_text()
+    drop_section = md.split(DROPPED_FINDINGS_HEADING, 1)[1].split("## ", 1)[0]
+    drop_rows = [
+        line for line in drop_section.splitlines()
+        if line.startswith("|") and "Path" not in line and "---" not in line
+    ]
+    assert len(drop_rows) == len(ledger["dropped"])
