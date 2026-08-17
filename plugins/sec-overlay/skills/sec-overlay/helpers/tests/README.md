@@ -4,6 +4,10 @@
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+`test_patch_status.py`'s fake-runner helper is now a small `_Runner` class with `calls` as a
+real instance attribute, instead of monkey-patching an attribute onto a plain function object
+(`ty` cannot type a dynamically-added function attribute) — no behavior change.
+
 `test_rule_matcher.py`, `test_bucket_b.py`, and `test_calibrate.py` add an explicit
 `is not None` assertion before dereferencing an `X | None` call result the test already
 knows is non-`None` at that point — `ty` needs the narrowing spelled out; no behavior change.

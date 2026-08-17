@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.37.9 - 2026-08-17
+
+### Fixed
+
+- `test_patch_status.py`'s fake-runner helper monkey-patched a `calls` list onto a plain
+  function object, which `ty` cannot type (function objects have no declared attribute
+  namespace). Replaced with a small `_Runner` class holding `calls` as a real instance
+  attribute and a `__call__` method standing in for the function; fixes the remaining
+  `unresolved-attribute` VAL-02 row. No behavior change.
+
 ## 1.37.8 - 2026-08-17
 
 ### Fixed

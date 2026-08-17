@@ -3,17 +3,21 @@
 from sec_overlay.patch_status import PatchStatus, check_patch_applied, not_applied_caution
 
 
-def _runner(returncodes):
+class _Runner:
     """Fake subprocess.run: pops the next returncode from ``returncodes`` per call."""
-    calls = []
 
-    def run(*args, **kwargs):
-        calls.append(args)
-        rc = returncodes.pop(0)
+    def __init__(self, returncodes):
+        self._returncodes = returncodes
+        self.calls = []
+
+    def __call__(self, *args, **kwargs):
+        self.calls.append(args)
+        rc = self._returncodes.pop(0)
         return type("R", (), {"returncode": rc})()
 
-    run.calls = calls
-    return run
+
+def _runner(returncodes):
+    return _Runner(returncodes)
 
 
 def test_check_patch_applied_reverse_succeeds_means_applied():
