@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Close the Phase 2 decision-coverage gate and record planning state: cite D-05 (additive `diffscope.py` extension) in `02-02-PLAN.md`, commit the `02-PATTERNS.md` pattern map, annotate `.planning/ROADMAP.md` with the five-wave order, and advance `.planning/STATE.md` to "Ready to execute" (5 plans).
 - Add the five Phase 2 execution plans (`02-01-PLAN.md` through `02-05-PLAN.md`) covering DIFF-01 through DIFF-04 and POS-01 through POS-03, and record the plan list in `.planning/ROADMAP.md`. Plan 01 is a tracer that wires one changed file through every layer before any layer is built out; plans 02 through 05 expand file selection, the coverage manifest and hunk parser, the never-guess positioning ladder, and the review-mode drop gate with its exit codes.
 - Seed the Phase 2 validation strategy at `.planning/phases/02-diff-pipeline-positioning/02-VALIDATION.md` (status `draft`); planning fills the verification map before execution.
 - Research Phase 2 (Diff Pipeline & Positioning) in `.planning/phases/02-diff-pipeline-positioning/02-RESEARCH.md`: verified algorithm ports from the `open-code-review` reference (exact-match positioning, not fuzzy `difflib`), flagged that no whole-file `Finding.line` check exists today for audit mode to "keep," and flagged that `Workspace` needs a new `artifacts` property before the coverage manifest can be written.

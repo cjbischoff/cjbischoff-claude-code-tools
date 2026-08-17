@@ -71,10 +71,24 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 5 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 02-01-PLAN.md — Tracer: one changed file reviewed end to end through every layer
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 02-02-PLAN.md — Ref validation, SHA pinning, extension allowlist, exclusion reasons, size cap
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 02-03-PLAN.md — Coverage manifest state machine and the unified-diff hunk parser
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 02-04-PLAN.md — Never-guess positioning ladder and needs-position-review visibility
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 02-05-PLAN.md — Review-mode position gate, drop ledger, and partial-seal exit code
 
 **Notes**: The spec's coverage-manifest module collides in name with the already-shipped `helpers/sec_overlay/coverage.py` (a different, existing module). The plan for this phase must name the new manifest module distinctly (e.g. `review_coverage.py`) or explicitly extend the existing module — never silently overwrite it.
