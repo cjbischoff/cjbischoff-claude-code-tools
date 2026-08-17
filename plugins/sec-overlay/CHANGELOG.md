@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.48.4 - 2026-08-17
+
+### Fixed
+
+- `phase_gate.py`: removed the unused `UNRESOLVED_POSITION_REASON` constant. The gate never
+  assigned it — a finding it cannot position goes to `declines`, never `dropped` — so
+  `DROP_REASONS` now holds only `outside-diff`, the one reason the gate actually emits (WR-01).
+
 ## 1.48.3 - 2026-08-17
 
 ### Fixed

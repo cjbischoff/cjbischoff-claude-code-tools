@@ -380,8 +380,7 @@ def write_gate_record(ws, phase: str, record: dict) -> Path:
 
 
 OUTSIDE_DIFF_REASON = "outside-diff"
-UNRESOLVED_POSITION_REASON = "unresolved-position"
-DROP_REASONS: frozenset[str] = frozenset({OUTSIDE_DIFF_REASON, UNRESOLVED_POSITION_REASON})
+DROP_REASONS: frozenset[str] = frozenset({OUTSIDE_DIFF_REASON})
 
 
 @dataclass(frozen=True)

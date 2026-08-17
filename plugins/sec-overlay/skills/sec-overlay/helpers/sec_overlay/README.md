@@ -531,8 +531,10 @@ it at all; every other finding is checked against `diffhunks.hunk_for_line` at i
 position (not its claimed one, since a relocated match can land outside every hunk's range) —
 inside a hunk keeps the finding at that resolved position, outside drops it with reason
 `outside-diff`. `DroppedFinding` now carries `path`, `line`, `rule_id`, and `reason` instead of
-a bare `finding_id`, and `DROP_REASONS` is a frozen set of the two reasons the gate can emit.
-The gate never mutates an input finding: a relocated keep copies the finding to its resolved
+a bare `finding_id`, and `DROP_REASONS` is a frozen set of the reason(s) the gate can emit —
+currently just `outside-diff`; `UNRESOLVED_POSITION_REASON` was removed (WR-01) since the gate
+never assigned it — a decline goes to `declines`, never `dropped`, so there was no second reason
+to reserve. The gate never mutates an input finding: a relocated keep copies the finding to its resolved
 position with `copy.copy`, so calling the gate twice on the same input is idempotent. `declines`
 entries are the `positioning.PositionResult` `resolve_position` returned (not the raw `Finding`) —
 that is the shape `report.write_report(..., position_reviews=...)` already requires.
