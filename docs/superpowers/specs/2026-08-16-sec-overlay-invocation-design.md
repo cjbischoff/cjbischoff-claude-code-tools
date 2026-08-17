@@ -137,10 +137,11 @@ step, and correctable — not silent.
 1. Audit each repo in turn (Section 1); each resumes from its own receipts.
 2. After the last audit, infer each repo's role (Section 3).
 3. **Confirm.** Print: the repo count, each repo's inferred role, and that correlation will write unified
-   docs into the current directory. Wait for the operator. A wrong role is the cue to abort and correct.
+   docs under the current directory. Wait for the operator. A wrong role is the cue to abort and correct.
 4. On go, synthesize the manifest and run `correlate --out <cwd>`.
-5. Output lands in the current directory: `ARCHITECTURE.md`, `THREAT_MODEL.md`, `REDTEAM.md`,
-   `FINDINGS.md`, plus `edges.json`, `verdicts.json`, `report.sarif`. The narrative agents
+5. Output lands under the current directory. `ARCHITECTURE.md`, `THREAT_MODEL.md`, `REDTEAM.md`,
+   `FINDINGS.md`, and `report.sarif` go in `<cwd>/artifacts/`. The raw `edges.json`,
+   `verdicts.json`, and `product.json` go at `<cwd>` itself. The narrative agents
    (`correlate-combiner`, `cross-repo-adversary`) fill and adversary-check the narrative slots.
 6. Receipt and fence apply once for the correlation step too.
 
