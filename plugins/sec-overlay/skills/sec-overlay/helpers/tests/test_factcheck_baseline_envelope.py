@@ -1,4 +1,6 @@
 """Tests for F8 factcheck, F10 baseline cap, F15 envelope hardening."""
+from dataclasses import replace
+
 from sec_overlay.calibrate import calibrate_score
 from sec_overlay.envelope import attribution_banner, neutralize_markers, wrap_untrusted
 from sec_overlay.factcheck import apply_verdict, validate_verdict
@@ -6,10 +8,9 @@ from sec_overlay.models import Finding, FindingStatus, Severity
 
 
 def _f(**kw):
-    d = dict(id="F1", rule_id="r", cls="xss", status=FindingStatus.CONFIRMED,
-             severity=Severity.HIGH, file="a.py", line=5, message="m")
-    d.update(kw)
-    return Finding(**d)
+    base = Finding(id="F1", rule_id="r", cls="xss", status=FindingStatus.CONFIRMED,
+                    severity=Severity.HIGH, file="a.py", line=5, message="m")
+    return replace(base, **kw) if kw else base
 
 
 # F8

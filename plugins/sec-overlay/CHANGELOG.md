@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.37.6 - 2026-08-17
+
+### Fixed
+
+- `test_citations.py`, `test_factcheck_baseline_envelope.py`, and `test_report.py`'s `Finding`
+  test-builders now use `dataclasses.replace(base, **kw)` over per-test overrides instead of
+  `dict()` + `.update(kw)` + `Finding(**d)` — `**d`'s concrete inferred dict type bypassed `ty`'s
+  per-field argument checking, which `replace`'s `**changes: Any` typing restores; fixes the
+  bulk of the VAL-02 `invalid-argument-type` ledger rows; no behavior change.
+
 ## 1.37.5 - 2026-08-17
 
 ### Fixed

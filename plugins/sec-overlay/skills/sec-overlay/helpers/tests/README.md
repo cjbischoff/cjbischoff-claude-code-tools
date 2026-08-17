@@ -4,6 +4,14 @@
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+`test_citations.py`, `test_factcheck_baseline_envelope.py`, and `test_report.py`'s `Finding`
+test-builders (`_f`/`_tf`/`_full`) now build a base `Finding(...)` call and layer per-test
+overrides with `dataclasses.replace(base, **kw)`, instead of a `dict()` + `.update(kw)` +
+`Finding(**d)` construction — `**d`'s inferred concrete dict type tripped `ty`'s
+per-field argument checking that `replace`'s `**changes: Any` typing bypasses. Clears the bulk
+of the VAL-02 ty ledger (`invalid-argument-type` diagnostics across all three files); no
+behavior change — `Finding` is not frozen, so post-construction mutation still works.
+
 `test_postflight.py` and `test_structural_index.py` clear the last two VAL-02 ruff findings:
 a single-element list-slice becomes `next(...)` (`RUF015`), and a `"\n".join([...])` becomes
 adjacent string-literal concatenation (`FLY002`) — both no-op on behavior.

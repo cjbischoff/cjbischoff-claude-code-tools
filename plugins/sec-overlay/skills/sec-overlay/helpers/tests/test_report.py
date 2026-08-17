@@ -196,25 +196,26 @@ def test_write_report_writes_final_artifacts(tmp_path):
 
 
 def _tf(id_, sev, **kw):
+    from dataclasses import replace
+
     from sec_overlay.models import Finding, FindingStatus, Severity
 
-    d = {
-        "id": id_,
-        "rule_id": "r",
-        "cls": "xss",
-        "status": FindingStatus.CONFIRMED,
-        "severity": Severity(sev),
-        "file": "a.js",
-        "line": 5,
-        "message": "msg",
-        "dataflow": ["src @ a.js:1", "-> sink @ a.js:5"],
-        "evidence": "innerHTML=x",
-        "evidence_sources": ["ast-grep:sink", "llm-claimed:reach"],
-        "cvss_vector": "CVSS:4.0/AV:N",
-        "risk_score": 7,
-    }
-    d.update(kw)
-    return Finding(**d)
+    base = Finding(
+        id=id_,
+        rule_id="r",
+        cls="xss",
+        status=FindingStatus.CONFIRMED,
+        severity=Severity(sev),
+        file="a.js",
+        line=5,
+        message="msg",
+        dataflow=["src @ a.js:1", "-> sink @ a.js:5"],
+        evidence="innerHTML=x",
+        evidence_sources=["ast-grep:sink", "llm-claimed:reach"],
+        cvss_vector="CVSS:4.0/AV:N",
+        risk_score=7,
+    )
+    return replace(base, **kw) if kw else base
 
 
 def test_render_finding_full_for_high():
@@ -778,22 +779,22 @@ def test_write_report_defaults_to_suppressed_full_sarif(tmp_path):
 
 
 def _full(**kw):
-    return Finding(
-        **{
-            "id": "F-1",
-            "rule_id": "r",
-            "cls": "sqli",
-            "status": FindingStatus.CONFIRMED,
-            "severity": Severity.CRITICAL,
-            "file": "a.py",
-            "line": 3,
-            "message": "m",
-            "impact": "Unauthenticated DB read of all users",
-            "risk_score": 9,
-            "evidence_sources": ["semgrep:sqli"],
-            **kw,
-        }
+    from dataclasses import replace
+
+    base = Finding(
+        id="F-1",
+        rule_id="r",
+        cls="sqli",
+        status=FindingStatus.CONFIRMED,
+        severity=Severity.CRITICAL,
+        file="a.py",
+        line=3,
+        message="m",
+        impact="Unauthenticated DB read of all users",
+        risk_score=9,
+        evidence_sources=["semgrep:sqli"],
     )
+    return replace(base, **kw) if kw else base
 
 
 def test_render_finding_uses_real_impact_and_drops_constant_sections():

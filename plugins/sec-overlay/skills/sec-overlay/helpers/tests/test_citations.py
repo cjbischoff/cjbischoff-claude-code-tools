@@ -1,4 +1,6 @@
 """Tests for F1 citation auto-attach."""
+from dataclasses import replace
+
 from sec_overlay.asvs import AsvsCatalog, default_catalog_path
 from sec_overlay.citations import (
     CLASS_ASVS,
@@ -13,10 +15,9 @@ from sec_overlay.workspace import Workspace, read_findings, write_findings
 
 
 def _f(cls, status=FindingStatus.CONFIRMED, **kw):
-    d = dict(id="F1", rule_id="r", cls=cls, status=status, severity=Severity.HIGH,
-             file="a.py", line=1, message="m")
-    d.update(kw)
-    return Finding(**d)
+    base = Finding(id="F1", rule_id="r", cls=cls, status=status, severity=Severity.HIGH,
+                    file="a.py", line=1, message="m")
+    return replace(base, **kw) if kw else base
 
 
 def test_citations_for_crypto():
