@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Plan Phase 1 (Baseline Health Verification) as three sequential plans: capture receipts for all three gate families with a tool version block and a triage ledger, fix every triaged defect under governance without touching the frozen JSON contract, then re-run the gates green and record the fix ledger with a constraint proof. Update the Phase 1 roadmap entry with the plan list.
 - Capture Phase 1 (Baseline Health Verification) implementation decisions in `.planning/phases/01-baseline-health-verification/`: fix-in-phase failure policy with a frozen-file hard stop, VERIFICATION.md evidence format with version block and fix ledger, installed-tool versions recorded rather than pinned, and gate scopes for prek, ruff/ty, and plugin validation.
 - Add `commands/` to the root `CLAUDE.md` shipping-file list, so a change to a plugin-root slash command bumps the plugin version; a `commands/*.md` file is install payload, and without the bump the update mechanism never ships it. Record the folder in the root README artifact inventory.
 - Correct the sec-overlay invocation design spec's multi-repo output paths: the four unified docs and `report.sarif` land in `<cwd>/artifacts/`, and `edges.json`, `verdicts.json`, and `product.json` land at `<cwd>` itself.

@@ -38,7 +38,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. `claude plugin validate .` exits clean for the marketplace manifest and the sec-overlay plugin
   2. sec-overlay's pytest suite passes, and ruff and ty report zero errors and zero warnings
   3. prek hooks are installed and `prek run` passes across the repo
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 01-01-PLAN.md — Run all three gate families and capture receipts, versions, and a triage ledger
+- [ ] 01-02-PLAN.md — Fix every triaged defect under governance, leaving the frozen contract untouched
+- [ ] 01-03-PLAN.md — Re-run the gates green, write the fix ledger, and prove the phase constraints held
 
 ### Phase 2: Diff Pipeline & Positioning
 **Goal**: Given a base/head ref pair, the harness deterministically identifies every changed file, tracks per-file review coverage, and confirms exact hunk-anchored finding locations without ever guessing a line
