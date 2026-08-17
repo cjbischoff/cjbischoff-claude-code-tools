@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/plans/2026-08-02-clusterE-coverage.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Cluster E — Coverage Accounting (Implementation Plan)",
+  "summary": "Implementation plan adding per-language SAST coverage accounting, coverage persistence, report section, and a must_investigate invariant to sec-overlay.",
+  "scope": ["coverage.py", "prefilter", "report.py", "partition.must_investigate", "kb/coverage.json", "SAST coverage tiers"],
+  "cross_refs": ["SKILL.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Path is docs/plans/, not a spec/ convention. Content defines concrete interface contracts (compute_coverage signature, coverage JSON schema, must_investigate) plus TDD task steps — SPEC signals dominate over prose-only DOC. No ADR/PRD signals. Ambiguity plan-vs-SPEC resolved toward SPEC per precedence rule."
+}

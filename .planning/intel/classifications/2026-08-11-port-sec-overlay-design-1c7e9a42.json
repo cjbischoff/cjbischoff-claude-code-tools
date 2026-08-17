@@ -1,0 +1,20 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/docs/superpowers/specs/2026-08-11-port-sec-overlay-design.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "Design: port `sec-harness` into the `sec-overlay` plugin",
+  "summary": "Technical design for porting the sec-harness skill into a sec-overlay plugin, with rename rules, target structure, and verification gates.",
+  "scope": [
+    "sec-overlay plugin",
+    "sec-harness skill port",
+    "sec_harness to sec_overlay rename",
+    "plugin path adaptation (CLAUDE_PLUGIN_ROOT)",
+    "semgrep submodule handling",
+    "verification gates (pytest, ruff, ty, plugin validate)"
+  ],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

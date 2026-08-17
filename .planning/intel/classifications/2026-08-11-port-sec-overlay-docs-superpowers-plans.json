@@ -1,0 +1,28 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/docs/superpowers/plans/2026-08-11-port-sec-overlay.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Port sec-harness → sec-overlay Plugin — Implementation Plan",
+  "summary": "Task-by-task implementation plan to port the sec-harness skill into the sec-overlay plugin with rename, validation, and merge gates.",
+  "scope": [
+    "sec-overlay plugin",
+    "sec-harness skill port",
+    "identifier rename (sec_harness → sec_overlay)",
+    "SKILL.md path anchors",
+    "pytest/ruff/ty verification",
+    "plugin.json and marketplace.json manifests"
+  ],
+  "cross_refs": [
+    "plugins/sec-overlay/skills/sec-overlay/SKILL.md",
+    "plugins/sec-overlay/skills/sec-overlay/README.md",
+    "plugins/sec-overlay/.claude-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    "README.md",
+    "CHANGELOG.md",
+    "plugins/README.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Implementation plan: procedural steps with commands and checkboxes. No ADR status/decision sections, no user stories or acceptance criteria, no API/schema contracts. Contains fixed constraints (four rename tokens, no version bump) but framed as execution steps, not a decision record → DOC. No SHA-256 tooling available in this environment; filename uses a path-derived slug suffix instead of a hash."
+}

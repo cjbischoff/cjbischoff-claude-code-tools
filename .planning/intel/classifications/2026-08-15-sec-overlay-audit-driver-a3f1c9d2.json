@@ -1,0 +1,19 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/docs/superpowers/plans/2026-08-15-sec-overlay-audit-driver.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "sec-overlay audit driver (Plan A) Implementation Plan",
+  "summary": "Implementation plan for a deterministic sec-overlay audit phase-driver: frozen phase table, stdlib sequencer, CLI wiring, TDD tasks.",
+  "scope": ["sec-overlay plugin", "audit phase driver", "phases.py", "driver.py", "cli.py audit subcommand", "verify.py static-only routing"],
+  "cross_refs": [
+    "docs/superpowers/specs/2026-08-15-sec-overlay-defect-remediation-design.md",
+    "plugins/sec-overlay/skills/sec-overlay/SKILL.md",
+    "plugins/sec-overlay/skills/sec-overlay/CLAUDE.md",
+    "plugins/sec-overlay/CHANGELOG.md",
+    "plugins/sec-overlay/.claude-plugin/plugin.json"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Implementation plan, not a pure spec, but dominant signals are technical contracts (frozen dataclass schema, function signatures, file responsibilities) that the system must honor -> SPEC over DOC. No ADR status field, no user stories."
+}

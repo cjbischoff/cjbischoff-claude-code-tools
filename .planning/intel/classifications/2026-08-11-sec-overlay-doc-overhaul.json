@@ -1,0 +1,30 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/docs/superpowers/plans/2026-08-11-sec-overlay-doc-overhaul.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "sec-overlay Documentation Overhaul Implementation Plan",
+  "summary": "Six-task implementation plan to remove stale Go-rewrite prose, fix test counts, add per-folder READMEs, and generalize the pre-commit README hook.",
+  "scope": [
+    "sec-overlay skill documentation",
+    "root marketplace README",
+    "skill CLAUDE.md",
+    "per-folder READMEs",
+    "scripts/hooks/pre-commit-check.sh",
+    "commit governance"
+  ],
+  "cross_refs": [
+    "plugins/sec-overlay/skills/sec-overlay/CLAUDE.md",
+    "plugins/sec-overlay/skills/sec-overlay/README.md",
+    "plugins/sec-overlay/skills/sec-overlay/helpers/README.md",
+    "plugins/sec-overlay/skills/sec-overlay/references/README.md",
+    "scripts/README.md",
+    "README.md",
+    "CHANGELOG.md",
+    "references/finding.schema.json",
+    ".pre-commit-config.yaml"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Implementation plan with task/step checkboxes and verbatim edit content. No ADR status/decision-consequences structure, no user stories, no API contracts. Contains a 'Deviations from the approved spec' section referencing an external spec, but this file itself is planning context, not the spec -> DOC. No Bash tool available, so filename omits the SHA-256 suffix; the date-stamped slug is unique in this ingest set."
+}

@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/dogfooding/2026-08-07-run-observations.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "sec-overlay run observations — AEM 4-repo campaign (2026-08-07)",
+  "summary": "Live log of correctness bugs, doc drift, efficiency issues, and wins observed while dogfooding sec-overlay audit campaigns on four repos.",
+  "scope": ["sec-overlay", "phase_gate", "calibrate", "repo_slug", "dedupe", "verify", "report.md", "redteam", "findings_gate", "SKILL.md"],
+  "cross_refs": ["SKILL.md", "recon.md", "finding.schema.json"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

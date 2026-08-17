@@ -1,0 +1,28 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/docs/superpowers/specs/2026-08-11-sec-overlay-doc-overhaul-design.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "sec-overlay Documentation Overhaul — Design",
+  "summary": "Design for overhauling sec-overlay documentation: remove stale Go prose, rewrite READMEs and CLAUDE.md, add per-folder READMEs, extend pre-commit hook.",
+  "scope": [
+    "sec-overlay documentation",
+    "root marketplace README",
+    "skill CLAUDE.md",
+    "skill overview README",
+    "per-folder READMEs",
+    "pre-commit hook README-freshness check"
+  ],
+  "cross_refs": [
+    "plugins/sec-overlay/skills/sec-overlay/CLAUDE.md",
+    "plugins/sec-overlay/skills/sec-overlay/README.md",
+    "plugins/sec-overlay/skills/sec-overlay/helpers/README.md",
+    "plugins/sec-overlay/skills/sec-overlay/references/README.md",
+    "scripts/hooks/pre-commit-check.sh",
+    "README.md",
+    "https://github.com/cjbischoff/security-harness/tree/main/skills/sec-harness"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

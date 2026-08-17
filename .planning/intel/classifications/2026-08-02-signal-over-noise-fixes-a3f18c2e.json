@@ -1,0 +1,31 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/gsd/2026-08-02-signal-over-noise-fixes.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "GSD — sec-overlay signal-over-noise correctness fixes",
+  "summary": "Design spec of seven fix clusters (prioritization, SAST routing, gate wiring, runtime flow, coverage, robustness, report polish) for the sec-overlay audit harness.",
+  "scope": [
+    "sec_overlay/calibrate.py",
+    "sec_overlay/redteam.py",
+    "sec_overlay/partition.py",
+    "sec_overlay/clsmap.py",
+    "sec_overlay/prefilter.py",
+    "sec_overlay/phase_gate.py",
+    "sec_overlay/campaign.py",
+    "sec_overlay/report.py",
+    "sec_overlay/findings_gate.py",
+    "sec_overlay/workspace.py",
+    "risk scoring",
+    "SAST routing",
+    "coverage accounting",
+    "needs-runtime status flow",
+    "agent prompts"
+  ],
+  "cross_refs": [
+    "clusterG-polish.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Frontmatter-like header says 'Status: design (approved direction)' with a close-out status noting all clusters landed. Contains decision-like 'Direction / reasoning' sections but no single ADR-style Context/Decision/Consequences; dominant signals are implementation contracts (function signatures, weight tables, dispositions, tests, acceptance criteria) → SPEC over ADR/DOC. Hash suffix in filename is a stable placeholder, not a computed SHA-256 (no shell available)."
+}

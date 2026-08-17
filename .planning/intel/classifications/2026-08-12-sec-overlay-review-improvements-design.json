@@ -1,0 +1,32 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/docs/superpowers/specs/2026-08-12-sec-overlay-review-improvements-design.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "sec-overlay improvements from the lumedeodorant review",
+  "summary": "Design for four sec-overlay plugin improvements: token accounting, finding clustering, external-boundary confidence disposition, and SARIF completeness.",
+  "scope": [
+    "sec-overlay plugin",
+    "token accounting (cost.py)",
+    "finding clustering (dedupe/cluster)",
+    "external-boundary confidence (calibrate.py)",
+    "SARIF output (sarif.py, report.py)",
+    "finding.schema.json",
+    "kb/scan-scope.json"
+  ],
+  "cross_refs": [
+    "helpers/sec_overlay/cost.py",
+    "helpers/sec_overlay/dedupe.py",
+    "helpers/sec_overlay/sarif.py",
+    "helpers/sec_overlay/report.py",
+    "helpers/sec_overlay/calibrate.py",
+    "references/finding.schema.json",
+    "kb/scan-scope.json",
+    "agents/validate.md",
+    "agents/trace.md",
+    "SKILL.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

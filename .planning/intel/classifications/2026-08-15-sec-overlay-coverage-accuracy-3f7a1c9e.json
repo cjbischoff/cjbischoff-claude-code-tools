@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/docs/superpowers/plans/2026-08-15-sec-overlay-coverage-accuracy.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "sec-overlay Coverage + Accuracy (T4/T5) Implementation Plan",
+  "summary": "Task-by-task implementation plan closing sec-overlay T4 coverage-table and T5 accuracy/provenance defects across 18 issues with TDD steps.",
+  "scope": ["sec-overlay plugin", "route-to-control table (route_control.py)", "findings_gate citation check", "class-extension alias map", "semgrep prefilter sidecar exclusion", "same-line dedupe", "CodeQL receipt regression", "red-team payload reachability", "regression pins in test_wiring.py"],
+  "cross_refs": ["docs/superpowers/specs/2026-08-15-sec-overlay-defect-remediation-design.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Implementation plan with checkbox tasks, code, and commit steps. Not an ADR/PRD/SPEC: no status field, no user stories, no API contract doc; it references the SPEC at docs/superpowers/specs/. Contains user-decision 'Rulings' sections, but they are execution constraints, not a standalone decision record. Classified DOC (context) with medium confidence. Filename hash suffix is a deterministic placeholder; no shell available to compute SHA-256 of the path."
+}

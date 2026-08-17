@@ -1,0 +1,30 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/docs/superpowers/specs/2026-08-14-marketplace-doc-structure-design.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Marketplace documentation structure — design",
+  "summary": "Design for splitting marketplace-level and plugin-level documentation, per-plugin changelogs, plugin template skeleton, and pre-commit hook routing changes.",
+  "scope": [
+    "root CLAUDE.md",
+    "plugin CLAUDE.md/README.md/CHANGELOG.md structure",
+    "sec-overlay plugin docs",
+    "docs/templates/plugin/ skeleton",
+    "scripts/hooks/pre-commit-check.sh",
+    "changelog routing"
+  ],
+  "cross_refs": [
+    "scripts/hooks/pre-commit-check.sh",
+    "docs/templates/plugin/",
+    "plugins/sec-overlay/README.md",
+    "plugins/sec-overlay/CHANGELOG.md",
+    "plugins/sec-overlay/CLAUDE.md",
+    "skills/sec-overlay/CLAUDE.md",
+    "skills/sec-overlay/README.md",
+    ".claude-plugin/plugin.json",
+    "marketplace.json"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Path convention (specs/) is a strong SPEC signal and content defines structural contracts (file layout, hook rules, commit sequence). Also contains an ADR-like 'Status: approved' and a Decisions table, but no ADR filename/frontmatter convention; ambiguity resolved toward SPEC per directory convention. Contains no code schemas or APIs, hence medium confidence."
+}

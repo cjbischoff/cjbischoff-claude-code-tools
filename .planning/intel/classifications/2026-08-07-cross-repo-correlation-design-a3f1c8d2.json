@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/plans/2026-08-07-cross-repo-correlation-design.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Cross-repo correlation — feature design",
+  "summary": "Design for a cross-repo correlation capability in sec-overlay: correlation workspace, cross-repo edge model, contract-consistency checks, dedupe, and report.",
+  "scope": ["sec-overlay", "CorrelationWorkspace", "cross_repo edge model", "contract-consistency checks", "monorepo dedupe", "correlation report", "cross-repo SARIF"],
+  "cross_refs": ["cross-repo-adversary.md", "correlation/REPORT.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Status field reads 'design' (draft), not an accepted decision, so not ADR/locked. Dominant signals are implementation contracts: edge data model {type, from, to, evidence, confidence}, CLI sketch, deterministic join keys, output artifacts -> SPEC. Path 'docs/plans/' hints DOC/plan, hence medium confidence. cross_refs are filename mentions, not resolvable links."
+}

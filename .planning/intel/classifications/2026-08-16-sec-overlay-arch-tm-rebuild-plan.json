@@ -1,0 +1,31 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/docs/superpowers/plans/2026-08-16-sec-overlay-arch-tm-rebuild.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "sec-overlay Architecture/Threat-Model Phase Rebuild Implementation Plan (Plan 3 of 3)",
+  "summary": "Task-by-task implementation plan rebuilding sec-overlay architecture and threat_model phases on C4/arc42 and DFD/STRIDE, wiring gates and re-pointing consumers.",
+  "scope": [
+    "sec-overlay plugin",
+    "architecture phase",
+    "threat_model phase",
+    "diagram gate",
+    "STE prose linter",
+    "agent prompts (agents/architecture.md, agents/threat-model.md)",
+    "kb.py path helpers",
+    "phases.py / driver.py wiring",
+    "reference files (architecture-standards, threat-model-standards, mermaid-caps)"
+  ],
+  "cross_refs": [
+    "docs/superpowers/specs/2026-08-16-architecture-threat-model-standards-design.md",
+    "references/architecture-standards.md",
+    "references/threat-model-standards.md",
+    "references/mermaid-caps.md",
+    "references/prompt-constants.md",
+    "agents/architecture.md",
+    "agents/threat-model.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Implementation plan with checkbox tasks — no ADR/PRD signals, no status field. Contains SPEC-like interface contracts (path helper signatures, gate JSON schema) but the dominant form is procedural task steps referencing an authoritative spec doc, so classified DOC (context) rather than SPEC. Note: no hash tool available in this environment; filename uses the date-prefixed slug (already unique) plus a '-plan' suffix instead of a source-path SHA."
+}

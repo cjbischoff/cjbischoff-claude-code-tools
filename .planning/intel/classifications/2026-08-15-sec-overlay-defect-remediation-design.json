@@ -1,0 +1,36 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/docs/superpowers/specs/2026-08-15-sec-overlay-defect-remediation-design.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "sec-overlay defect remediation — design",
+  "summary": "Technical design to fix 57 audited defects in the sec-overlay plugin across seven themes plus a new artifact-review phase.",
+  "scope": [
+    "sec-overlay plugin",
+    "sec_overlay.cli audit driver",
+    "phase-state table",
+    "reference parser and finding schema",
+    "shipping-status set and receipt-tier model",
+    "route-to-control coverage table",
+    "fact-check and reachability pre-check",
+    "report split and per-finding detail",
+    "per-phase timing and token telemetry",
+    "artifact-review phase and artifact_gate",
+    "redteam-plan.md",
+    "report.md and report.sarif"
+  ],
+  "cross_refs": [
+    "review_agentgateway/brainstorming/review_sec-overlay-issues_20260814_1507.md",
+    "plugins/sec-overlay/skills/sec-overlay/",
+    "SKILL.md",
+    "CLAUDE.md",
+    "references/prompt-constants.md",
+    "agents/artifact-review.md",
+    "tests/test_contracts.py",
+    "tests/test_wiring.py",
+    "helpers/bench/"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

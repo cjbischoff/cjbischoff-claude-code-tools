@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/dogfooding/2026-08-03-dogfooding-run-design.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Design spec: instrumented dogfooding run of sec-overlay",
+  "summary": "Approved design spec for an instrumented dogfooding run of sec-overlay across three target repos, defining method, watch checklist, issue taxonomy, and fix gates.",
+  "scope": ["sec-overlay agentic pipeline", "dogfooding run", "ai-platform", "accounting-integrations", "ai-scheduler", "runtime-issues report", "audit artifacts"],
+  "cross_refs": ["SKILL.md", "agents/*.md", "runtime-issues_20260803.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Self-titled 'Design spec' with Status: Approved. Defines execution contract (method, per-phase checks, constraints) rather than a single ADR decision or user-facing PRD requirements → SPEC. No frontmatter; content signals only. No Bash tool available, so filename suffix is a path-derived slug, not a SHA-256 prefix."
+}

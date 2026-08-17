@@ -1,0 +1,28 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/plans/2026-08-02-artifact-substrate-design.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Design: Analysis Artifacts + Shared Evidence Substrate",
+  "summary": "Approved pre-implementation design for a shared evidence substrate (kb/graph.json) and gated analysis artifacts across sec-overlay audit phases.",
+  "scope": [
+    "kb/graph.json shared evidence substrate",
+    "structural_index",
+    "reachability queries",
+    "C4 security-design document",
+    "threat model (Application/Deployment/Build)",
+    "attack surface analysis",
+    "attack tree",
+    "artifact lifecycle draft/refine/reconcile",
+    "phase gates and adversarial review",
+    "redteam-plan.md static-to-runtime bridge"
+  ],
+  "cross_refs": [
+    "helpers/sec_overlay/models.py",
+    "helpers/sec_overlay/evidence.py",
+    "references/DETECTION_COVERAGE.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Header reads 'Status: Approved design (pre-implementation)' — ADR-like status but the doc defines system contracts (substrate schema, query surface, per-phase matrix) rather than one decision, so SPEC per dominant signals; ambiguity resolved ADR-vs-SPEC toward content shape. Section 9 lists open questions, so not fully settled. No manifest type provided. Filename uses slug only: SHA-256 hashing tool unavailable in this environment."
+}

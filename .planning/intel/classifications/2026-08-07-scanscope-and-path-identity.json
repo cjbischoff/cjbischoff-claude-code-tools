@@ -1,0 +1,27 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/superpowers/plans/2026-08-07-scanscope-and-path-identity.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "ScanScope Spine + Path/Identity (Spec A · Plan 1 of 3) Implementation Plan",
+  "summary": "TDD implementation plan defining ScanScope dataclass, kb/scan-scope.json persistence, scope-aware repo_slug, context discovery, and repo-root-relative citation contract.",
+  "scope": [
+    "sec_overlay/scanscope.py",
+    "kb/scan-scope.json",
+    "repo_slug (repo_memory.py)",
+    "discover_context_files (context.py)",
+    "claims_from_markdown (phase_gate.py)",
+    "cli.py pass-start wiring",
+    "{{REPO_ROOT}}/{{SCAN_SCOPE}} token contract",
+    "monorepo sub-service scans"
+  ],
+  "cross_refs": [
+    "skills/sec-overlay/SKILL.md",
+    "skills/sec-overlay/references/prompt-constants.md",
+    "skills/sec-overlay/agents/context-ingest.md",
+    "CLAUDE.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "An implementation plan, not a classic API spec, but it defines concrete technical contracts (ScanScope schema, function signatures, JSON persistence format, path-base invariant) that the system must honor -> SPEC over DOC. No ADR status/decision structure, no PRD user stories. Output filename omits the 8-char SHA-256 path hash (no shell available to compute it); date-prefixed slug is collision-safe."
+}

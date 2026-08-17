@@ -1,0 +1,26 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/superpowers/plans/2026-08-07-reporting-and-methodology.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Reporting Completeness + Methodology Knobs (Spec A · Plan 3 of 3) Implementation Plan",
+  "summary": "Implementation plan making coverage completeness machine-enforced, adding NDT findings to findings.json, and exposing methodology knobs via a validated scan_options config.",
+  "scope": [
+    "coverage_ledger.build_coverage_ledger",
+    "kb/coverage-ledger.json",
+    "write_report / findings.json NDT findings",
+    "ScanProfile scan_options",
+    "scan-profile.schema.json",
+    "SKILL.md methodology playbook"
+  ],
+  "cross_refs": [
+    "references/scan-profile.schema.json",
+    "skills/sec-overlay/SKILL.md",
+    "helpers/sec_overlay/coverage_ledger.py",
+    "helpers/sec_overlay/report.py",
+    "helpers/sec_overlay/profile.py"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Ambiguity: implementation-plan format (task checkboxes) suggests DOC, but document self-identifies as 'Spec A' and defines interface contracts (Consumes/Produces), schema changes, and hard invariants ('gaps logged, never silently dropped'; adversary_depth never bypasses tool-receipt bar) → SPEC per highest-precedence-signal rule. Filename hash omitted: no shell available to compute SHA-256; slug-only filename used."
+}

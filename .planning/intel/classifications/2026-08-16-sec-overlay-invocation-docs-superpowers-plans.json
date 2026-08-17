@@ -1,0 +1,16 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/docs/superpowers/plans/2026-08-16-sec-overlay-invocation.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "sec-overlay Driven Invocation Implementation Plan",
+  "summary": "Task-by-task TDD implementation plan for a /sec-overlay:audit command, run.py drive loop, per-phase receipts, working-tree fence, and O-65 gate fix.",
+  "scope": ["sec-overlay plugin", "/sec-overlay:audit command", "run.py driver", "working-tree fence", "phase receipts", "run.env token writer", "role inference", "correlation manifest synthesis", "redteam gate path (O-65)"],
+  "cross_refs": [
+    "docs/superpowers/specs/2026-08-16-sec-overlay-invocation-design.md",
+    "docs/superpowers/plans/2026-08-16-sec-overlay-invocation.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Implementation plan with executable steps and interface contracts. Contains SPEC-like interface signatures, but the document is a task checklist implementing a separate spec (linked in cross_refs), not the contract itself; no frontmatter, no decision/consequences, no user stories. Classified DOC (context) with ambiguity vs SPEC noted. Filename suffix uses path-derived slug instead of SHA-256 (no hashing tool available in this environment)."
+}

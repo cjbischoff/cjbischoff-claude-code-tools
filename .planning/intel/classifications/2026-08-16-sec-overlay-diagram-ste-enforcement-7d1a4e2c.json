@@ -1,0 +1,24 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/docs/superpowers/plans/2026-08-16-sec-overlay-diagram-ste-enforcement.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "sec-overlay Diagram + STE Enforcement Implementation Plan (Plan 2 of 3)",
+  "summary": "Implementation plan for deterministic enforcement modules: Mermaid indexer, diagram gate, STE prose linter, and arc42/threat-model duplication check.",
+  "scope": [
+    "sec-overlay plugin",
+    "mermaid_index.py",
+    "diagram_gate.py",
+    "ste_lint.py",
+    "artifact_gate.py",
+    "diagram caps and provenance rules",
+    "ASD-STE100 prose linting"
+  ],
+  "cross_refs": [
+    "docs/superpowers/specs/2026-08-16-architecture-threat-model-standards-design.md",
+    "2026-08-16-sec-overlay-cvss4-migration.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Implementation plan (task/step checklist) — no plan type in taxonomy. Contains strong SPEC signals: exact module interfaces, function signatures, hard caps (CAPS dict, SEQ_CAPS), derivation-header format, and CLI contracts that downstream Plan 3 depends on. SPEC chosen over DOC per precedence rule; prose/tutorial signals absent. No ADR status field or PRD user-story signals. One deviation from the parent spec is recorded in the Self-Review section."
+}

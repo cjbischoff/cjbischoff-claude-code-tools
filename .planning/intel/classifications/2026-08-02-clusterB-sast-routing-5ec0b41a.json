@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/plans/2026-08-02-clusterB-sast-routing.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Cluster B — SAST Routing & Noise (Implementation Plan)",
+  "summary": "Task-by-task TDD implementation plan adding an informational finding status, noise-class demotion, and plan reconciliation for SAST candidate routing.",
+  "scope": ["FindingStatus.INFORMATIONAL", "clsmap NOISE_CLASSES", "partition.demote_noise", "partition.reconcile_plan", "SKILL.md wiring", "agents/investigate.md"],
+  "cross_refs": ["helpers/sec_overlay/models.py", "helpers/sec_overlay/campaign.py", "helpers/sec_overlay/clsmap.py", "helpers/sec_overlay/partition.py", "skills/sec-overlay/SKILL.md", "skills/sec-overlay/agents/investigate.md", "helpers/tests/test_models.py", "helpers/tests/test_clsmap.py", "helpers/tests/test_partition.py"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Implementation plan with defined interfaces (SPEC-like signals: function signatures, constraints) but dominant structure is step-by-step task checklist with commit instructions -> DOC. No ADR status/decision-consequences sections, no user stories. No Bash tool available in this session; the filename hash suffix is a synthetic 8-hex token, not a computed SHA-256 of the source path."
+}

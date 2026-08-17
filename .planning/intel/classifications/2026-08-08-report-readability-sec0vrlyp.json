@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/superpowers/plans/2026-08-08-report-readability.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Report Readability Implementation Plan",
+  "summary": "Task-by-task TDD implementation plan restructuring the sec-overlay human report: triage table, NDT view, dep view, markdown redteam serializer.",
+  "scope": ["sec-overlay report.py", "sec-overlay redteam.py", "finding-template.md", "triage table", "NDT view", "dep-view", "report readability"],
+  "cross_refs": ["references/finding-template.md", "redteam-plan.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Implementation plan with checkbox tasks, code, and tests. No ADR status/decision-consequences structure, no user stories, no API contract spec. Global Constraints section has SPEC-like invariants (epistemic honesty, determinism) but the dominant form is a work plan -> DOC. Filename hash suffix is a path-derived slug, not SHA-256 (no shell available to this classifier)."
+}

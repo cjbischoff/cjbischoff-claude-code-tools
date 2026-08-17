@@ -1,0 +1,26 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/dogfooding/runtime-issues_20260803.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "sec-overlay runtime-issues log — 2026-08-03",
+  "summary": "Dogfooding runtime-issue log for the sec-overlay pipeline: 27 numbered issues with severity, evidence, fixes, and results of three audit runs.",
+  "scope": [
+    "sec-overlay pipeline",
+    "graph build",
+    "context-ingest",
+    "recon",
+    "phase gates",
+    "prefilter/clsmap",
+    "investigate agents",
+    "dedupe",
+    "validate/report",
+    "redteam",
+    "verify",
+    "crypto_policy"
+  ],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": null,
+  "notes": "Issue/observation log with triage status — no decision records, requirements, or implementation contracts; proposed fixes are candidates awaiting triage, not accepted decisions. No markdown links to other docs; filename mentions (context-ingest.md, recon.md, SKILL.md, etc.) are code artifacts, not planning-doc cross-refs. Hash suffix omitted from output filename: no shell available to compute SHA-256."
+}

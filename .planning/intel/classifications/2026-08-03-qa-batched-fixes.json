@@ -1,0 +1,36 @@
+{
+  "source_path": "/Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools/plugins/sec-overlay/skills/sec-overlay/docs/superpowers/plans/2026-08-03-qa-batched-fixes.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "sec-overlay QA Batched-Fixes Implementation Plan",
+  "summary": "Implementation plan closing 22 batched QA issues across sec-overlay subsystems with TDD tasks, interface contracts, and Go-safe frozen-contract constraints.",
+  "scope": [
+    "sec-overlay skill",
+    "agent prompts (recon, investigate, patch, context-ingest)",
+    "partition/prefilter",
+    "structural_index",
+    "dedupe",
+    "phase gates",
+    "verify",
+    "calibrate",
+    "report/redteam",
+    "crypto_policy"
+  ],
+  "cross_refs": [
+    "docs/dogfooding/runtime-issues_20260803.md",
+    "agents/context-ingest.md",
+    "agents/recon.md",
+    "agents/investigate.md",
+    "agents/patch.md",
+    "agents/judge.md",
+    "agents/validate.md",
+    "references/hunting/ai-agent.md",
+    "references/attack-classes.md",
+    "agents/classes/authz.md",
+    "SKILL.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Ambiguous between DOC (implementation plan / checklist) and SPEC. Dominant signals are per-task Interfaces (Consumes/Produces contracts), global technical constraints (frozen models, stdlib-only, fingerprint identity), and schema-level behavior definitions -> SPEC per precedence rule. No ADR status field, no user stories."
+}
