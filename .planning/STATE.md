@@ -5,15 +5,15 @@ milestone_name: Hybrid Diff-Review Architecture
 current_phase: 02
 current_phase_name: diff-pipeline-positioning
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-08-17T18:02:57.888Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-08-17T18:24:23.910Z"
 last_activity: 2026-08-17
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 8
-  completed_plans: 5
+  completed_plans: 6
   percent: 17
 ---
 
@@ -30,11 +30,11 @@ governed releases, receipt-backed findings.
 ## Current Position
 
 Phase: 02 (diff-pipeline-positioning) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-08-17 — Phase 02 execution started
 
-Progress: [██████░░░░] 63%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [██████░░░░] 63%
 | Phase 01 P03 | 14min | 2 tasks | 3 files |
 | Phase 02 P01 | 2h35m | 3 tasks | 15 files |
 | Phase 02 P02 | 1 session | 3 tasks | 6 files |
+| Phase 02 P03 | 1 session | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,8 @@ Recent decisions affecting current work:
 - [Phase ?]: PositionResult kept as phase-owned dataclass, not a models.FindingStatus member — models.py stays frozen
 - [Phase ?]: positioning.py uses exact consecutive-string matching only; no difflib, no fuzzy-match-as-exact risk
 - [Phase ?]: partition's new keyword params (diff_line_counts, binary_paths, max_diff_lines) default to no-op values so cli.py's call site needs no change
+- [Phase ?]: CoverageTransitionError extends RuntimeError (plan spec), not ValueError
+- [Phase ?]: seal() raises on empty manifest instead of vacuously returning complete (T-02-05)
 
 ### Pending Todos
 
@@ -120,6 +123,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-17T18:02:57.875Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-08-17T18:24:23.897Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None

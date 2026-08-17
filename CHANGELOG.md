@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Mark Phase 2 Plan 3 (the `CoverageManifest` state machine and unified-diff hunk parser) complete: record `02-03-SUMMARY.md`, advance `.planning/STATE.md` to Plan 4, and update the `.planning/ROADMAP.md` progress table (6/8 plans, 75%).
 - Mark Phase 2 Plan 2 (the `file_select.py` allowlist, exclude-glob, and exclusion-reason enum) complete: record `02-02-SUMMARY.md`, advance `.planning/STATE.md` to Plan 3, and update the `.planning/ROADMAP.md` progress table (5/8 plans, 63%).
 - Mark Phase 2 Plan 1 (the end-to-end review tracer) complete: record `02-01-SUMMARY.md`, advance `.planning/STATE.md` to Plan 2, update the `.planning/ROADMAP.md` progress table (4/8 plans, 50%), and move DIFF-01 through DIFF-04 and POS-01/POS-03 to Complete in `.planning/REQUIREMENTS.md`.
 - Close the Phase 2 decision-coverage gate and record planning state: cite D-05 (additive `diffscope.py` extension) in `02-02-PLAN.md`, commit the `02-PATTERNS.md` pattern map, annotate `.planning/ROADMAP.md` with the five-wave order, and advance `.planning/STATE.md` to "Ready to execute" (5 plans).

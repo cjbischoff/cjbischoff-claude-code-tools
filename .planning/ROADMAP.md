@@ -68,7 +68,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `diffhunks.added_line_numbers()` and `line_in_hunk()` correctly classify added/context lines inside a hunk window, and `positioning.py` confirms a finding's location via hunk match → whole-file match → cross-file relocation, declining to `needs-position-review` (never guessing) on ambiguity or zero matches
   5. In review mode, `phase_gate.py` drops a finding whose confirmed line lies outside every changed hunk with reason `outside-diff`; the same finding is retained unchanged under the existing whole-file check in audit mode
 
-**Plans**: 2/5 plans executed
+**Plans**: 3/5 plans executed
 
 Plans:
 **Wave 1**
@@ -81,7 +81,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 02-03-PLAN.md — Coverage manifest state machine and the unified-diff hunk parser
+- [x] 02-03-PLAN.md — Coverage manifest state machine and the unified-diff hunk parser
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -162,7 +162,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Baseline Health Verification | 3/3 | Complete    | 2026-08-17 |
-| 2. Diff Pipeline & Positioning | 2/5 | In Progress|  |
+| 2. Diff Pipeline & Positioning | 3/5 | In Progress|  |
 | 3. Rule Matching & Review Modes | 0/TBD | Not started | - |
 | 4. Scale, Resume & Diff Output | 0/TBD | Not started | - |
 | 5. End-to-End Verification (Audit & Review) | 0/TBD | Not started | - |
