@@ -4,6 +4,10 @@
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+`test_postflight.py` and `test_structural_index.py` clear the last two VAL-02 ruff findings:
+a single-element list-slice becomes `next(...)` (`RUF015`), and a `"\n".join([...])` becomes
+adjacent string-literal concatenation (`FLY002`) — both no-op on behavior.
+
 `test_prefilter.py` and `test_wiring.py`'s `Exclusions([], [], [])` fixture calls now pass
 `Exclusions(set(), [], set())` — `Exclusions.rule_ids`/`classes` are `set[str]` fields, so the
 prior `list` literals type-checked incorrectly under `ty` even though the runtime behavior

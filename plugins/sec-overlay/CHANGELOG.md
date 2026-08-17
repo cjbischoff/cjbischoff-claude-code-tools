@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.37.5 - 2026-08-17
+
+### Fixed
+
+- `test_postflight.py` replaces a single-element list-slice with `next(...)`, and
+  `test_structural_index.py` replaces a `"\n".join([...])` with adjacent string literals —
+  fixes the two remaining VAL-02 ruff findings (`RUF015`, `FLY002`); no behavior change.
+
 ## 1.37.4 - 2026-08-17
 
 ### Fixed
