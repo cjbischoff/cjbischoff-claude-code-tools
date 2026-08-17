@@ -13,6 +13,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Add `commands/` to the root `CLAUDE.md` shipping-file list, so a change to a plugin-root slash command bumps the plugin version; a `commands/*.md` file is install payload, and without the bump the update mechanism never ships it. Record the folder in the root README artifact inventory.
+- Correct the sec-overlay invocation design spec's multi-repo output paths: the four unified docs and `report.sarif` land in `<cwd>/artifacts/`, and `edges.json`, `verdicts.json`, and `product.json` land at `<cwd>` itself.
 - Rewrite the root `CLAUDE.md` around marketplace governance, new-plugin scaffolding, and release process; replace the single changelog rule with routing (plugin-only changes update the plugin's changelog, other changes update the root changelog), note the doc split in the root README, and keep the OpenWiki hand-edit rule's "unless explicitly asked" exception through the section merge.
 - Make `pre-commit-check.sh` enforce the changelog routing rule: a commit touching only one plugin's files requires that plugin's `CHANGELOG.md`, and a commit touching anything else requires the root `README.md` and `CHANGELOG.md`; drop `plugins` from the blanket Directory Guide check since the per-plugin routing and the existing immediate-folder README rule already cover it, and add invocation tests for the new routing.
 - Direct the OpenWiki brief to read the change digest first on an update run and to mine `docs/superpowers/` under an explicit budget (specs in full, plans by summary only), and drop its reference to a README status section that no longer exists.
