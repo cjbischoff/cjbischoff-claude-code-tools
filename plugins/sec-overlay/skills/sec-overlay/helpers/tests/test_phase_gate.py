@@ -2,11 +2,13 @@
 
 from typing import ClassVar
 
+from sec_overlay.diffhunks import Hunk
 from sec_overlay.phase_gate import (
     GateDecision,
     build_gate_record,
     is_comment_line,
     ref_resolves,
+    review_position_gate,
     run_phase_checks,
     write_gate_record,
 )
@@ -290,3 +292,153 @@ def test_surface_with_no_evidence_is_rejected(tmp_path):
     prof = ScanProfile(attack_surface=["http"], attack_surface_evidence={})
     errors = attack_surface_gate(prof, repo)
     assert any("http" in e for e in errors)
+
+
+# --- review_position_gate (POS-03) --------------------------------------------------------
+
+class _Finding:
+    """Minimal finding stand-in: a plain mutable object, not a dataclass."""
+
+    def __init__(self, file: str, line: int, evidence: str | None, rule_id: str = "R1",
+                 id: str = "F-1"):
+        self.id = id
+        self.file = file
+        self.line = line
+        self.evidence = evidence
+        self.rule_id = rule_id
+
+
+def _hunk(new_start: int, new_count: int, added: dict[int, str]) -> Hunk:
+    return Hunk(
+        old_start=new_start, old_count=new_count, new_start=new_start, new_count=new_count,
+        added=tuple(sorted(added.items())),
+    )
+
+
+def _file_text(overrides: dict[int, str], total: int = 20) -> str:
+    lines = [f"line{i}" for i in range(1, total + 1)]
+    for ln, content in overrides.items():
+        lines[ln - 1] = content
+    return "\n".join(lines) + "\n"
+
+
+# One hunk spanning lines 10-14; only the first and last row are "added" (changed),
+# matching a synthetic hunk boundary that coincides with the changed-line boundary.
+_HUNKS = {"f.py": [_hunk(10, 5, {10: "CHANGED_FIRST", 14: "CHANGED_LAST"})]}
+
+
+def test_finding_inside_hunk_is_kept():
+    finding = _Finding("f.py", 10, "CHANGED_FIRST")
+    kept, dropped, declines = review_position_gate([finding], _HUNKS)
+    assert kept == [finding]
+    assert dropped == []
+    assert declines == []
+
+
+def test_finding_outside_every_hunk_is_dropped_with_outside_diff():
+    text = _file_text({9: "BEFORE_ONE"})
+    finding = _Finding("f.py", 9, "BEFORE_ONE")
+    kept, dropped, declines = review_position_gate([finding], _HUNKS, {"f.py": text})
+    assert kept == []
+    assert declines == []
+    assert len(dropped) == 1
+    assert dropped[0].reason == "outside-diff"
+
+
+def test_first_changed_line_passes_line_immediately_before_is_dropped_boundary():
+    first = _Finding("f.py", 10, "CHANGED_FIRST", id="F-first")
+    before = _Finding("f.py", 9, "BEFORE_ONE", id="F-before")
+    text = _file_text({9: "BEFORE_ONE"})
+    kept, dropped, declines = review_position_gate([first, before], _HUNKS, {"f.py": text})
+    assert first in kept
+    assert len(dropped) == 1 and dropped[0].line == 9
+
+
+def test_last_changed_line_passes_line_immediately_after_is_dropped_boundary():
+    last = _Finding("f.py", 14, "CHANGED_LAST", id="F-last")
+    after = _Finding("f.py", 15, "AFTER_ONE", id="F-after")
+    text = _file_text({15: "AFTER_ONE"})
+    kept, dropped, declines = review_position_gate([last, after], _HUNKS, {"f.py": text})
+    assert last in kept
+    assert len(dropped) == 1 and dropped[0].line == 15
+
+
+def test_relocated_finding_is_kept_at_relocated_path_and_line():
+    hunks = {"a.py": [_hunk(1, 1, {1: "MOVED_LINE"})]}
+    finding = _Finding("b.py", 5, "MOVED_LINE")
+    text_by_path = {"a.py": _file_text({1: "MOVED_LINE"})}
+    kept, dropped, declines = review_position_gate([finding], hunks, text_by_path)
+    assert dropped == []
+    assert declines == []
+    assert len(kept) == 1
+    assert kept[0].file == "a.py"
+    assert kept[0].line == 1
+    # the original finding is untouched — the gate never mutates its input.
+    assert finding.file == "b.py"
+    assert finding.line == 5
+
+
+def test_needs_position_review_is_a_decline_not_a_drop_or_keep():
+    finding = _Finding("f.py", 10, None)  # no snippet -> declines
+    kept, dropped, declines = review_position_gate([finding], _HUNKS)
+    assert kept == []
+    assert dropped == []
+    assert declines == [finding]
+
+
+def test_empty_findings_returns_three_empty_lists():
+    kept, dropped, declines = review_position_gate([], _HUNKS)
+    assert (kept, dropped, declines) == ([], [], [])
+
+
+def test_empty_hunks_by_path_drops_every_resolvable_finding():
+    finding = _Finding("f.py", 10, "CHANGED_FIRST")
+    text = _file_text({10: "CHANGED_FIRST"})
+    kept, dropped, declines = review_position_gate([finding], {}, {"f.py": text})
+    assert kept == []
+    assert declines == []
+    assert len(dropped) == 1
+    assert dropped[0].reason == "outside-diff"
+
+
+def test_drop_list_is_sorted_by_path_then_line_then_rule_id():
+    text = _file_text({1: "X_A", 5: "X_B", 3: "X_C"})
+    hunks = {"z.py": [], "a.py": [], "m.py": []}
+    findings = [
+        _Finding("z.py", 1, "X_A", rule_id="R2", id="F-z"),
+        _Finding("a.py", 5, "X_B", rule_id="R1", id="F-a"),
+        _Finding("m.py", 3, "X_C", rule_id="R1", id="F-m"),
+    ]
+    text_by_path = {"z.py": text, "a.py": text, "m.py": text}
+    kept, dropped, declines = review_position_gate(findings, hunks, text_by_path)
+    assert declines == []
+    assert [(d.path, d.line) for d in dropped] == [
+        ("a.py", 5), ("m.py", 3), ("z.py", 1),
+    ]
+
+
+def test_drop_order_is_deterministic_regardless_of_input_order():
+    text = _file_text({1: "X_A", 5: "X_B", 3: "X_C"})
+    hunks = {"z.py": [], "a.py": [], "m.py": []}
+    findings = [
+        _Finding("z.py", 1, "X_A", rule_id="R2", id="F-z"),
+        _Finding("a.py", 5, "X_B", rule_id="R1", id="F-a"),
+        _Finding("m.py", 3, "X_C", rule_id="R1", id="F-m"),
+    ]
+    text_by_path = {"z.py": text, "a.py": text, "m.py": text}
+    result_a = review_position_gate(findings, hunks, text_by_path)
+    result_b = review_position_gate(list(reversed(findings)), hunks, text_by_path)
+    assert [(d.path, d.line, d.rule_id) for d in result_a[1]] == [
+        (d.path, d.line, d.rule_id) for d in result_b[1]
+    ]
+
+
+def test_repeated_calls_on_identical_inputs_return_equal_results():
+    finding = _Finding("f.py", 10, "CHANGED_FIRST")
+    first_call = review_position_gate([finding], _HUNKS)
+    second_call = review_position_gate([finding], _HUNKS)
+    kept1, dropped1, declines1 = first_call
+    kept2, dropped2, declines2 = second_call
+    assert [(f.file, f.line) for f in kept1] == [(f.file, f.line) for f in kept2]
+    assert dropped1 == dropped2
+    assert declines1 == declines2

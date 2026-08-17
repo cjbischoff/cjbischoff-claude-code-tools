@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.45.1 - 2026-08-17
+
+### Added
+
+- `tests/test_phase_gate.py`: failing tests for the plan 02-05 shape of
+  `review_position_gate` — a three-way kept/dropped/declines split, sorted drop order, and
+  hunk-boundary adjacency checks. The implementation change lands in a follow-up commit.
+
 ## 1.45.0 - 2026-08-17
 
 ### Added
