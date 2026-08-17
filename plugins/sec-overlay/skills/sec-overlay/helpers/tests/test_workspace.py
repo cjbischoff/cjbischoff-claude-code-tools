@@ -194,3 +194,29 @@ def test_ensure_creates_trees(tmp_path):
     ws.ensure()
     assert (tmp_path / "architecture" / "runtime-view").is_dir()
     assert (tmp_path / "threat-model" / "attack-sequences").is_dir()
+
+
+def test_artifacts_is_root_relative(tmp_path):
+    """artifacts lives under root, regardless of reports_dir/kb overrides."""
+    ws = Workspace(tmp_path)
+    assert ws.artifacts == tmp_path / "artifacts"
+
+
+def test_artifacts_not_routed_through_reports_dir(tmp_path):
+    """A reports_dir override must not redirect artifacts."""
+    ws = Workspace(tmp_path, reports_dir=tmp_path / "R")
+    assert ws.artifacts == tmp_path / "artifacts"
+
+
+def test_ensure_creates_artifacts_dir(tmp_path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    assert ws.artifacts.is_dir()
+
+
+def test_ensure_artifacts_dir_idempotent(tmp_path):
+    """Calling ensure() twice must not raise (dir already exists)."""
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    ws.ensure()
+    assert ws.artifacts.is_dir()

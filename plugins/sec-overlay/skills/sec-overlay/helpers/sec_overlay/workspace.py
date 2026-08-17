@@ -69,6 +69,11 @@ class Workspace:
         return self.reports
 
     @property
+    def artifacts(self) -> Path:
+        """Review-mode run artifacts directory (coverage manifest, review ledger)."""
+        return self.root / "artifacts"
+
+    @property
     def state_path(self) -> Path:
         """Path to the campaign state file."""
         return self.root / "state.json"
@@ -93,6 +98,7 @@ class Workspace:
         self.kb.mkdir(parents=True, exist_ok=True)
         self.findings_dir.mkdir(parents=True, exist_ok=True)
         self.runs.mkdir(parents=True, exist_ok=True)
+        self.artifacts.mkdir(parents=True, exist_ok=True)
         self._reports.mkdir(parents=True, exist_ok=True)
         (self.root / "architecture" / "runtime-view").mkdir(parents=True, exist_ok=True)
         (self.root / "threat-model" / "attack-sequences").mkdir(parents=True, exist_ok=True)

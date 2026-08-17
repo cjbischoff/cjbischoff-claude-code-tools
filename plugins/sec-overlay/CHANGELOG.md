@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.38.0 - 2026-08-17
+
+### Added
+
+- `Workspace` gained an `artifacts` property (`root/artifacts`) for review-mode run state — the
+  coverage manifest and review ledger the upcoming `review` CLI mode writes. Never routed through
+  `reports_dir`. `ensure()` creates it.
+
 ## 1.37.11 - 2026-08-17
 
 ### Fixed

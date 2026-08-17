@@ -1,8 +1,11 @@
 # `tests/` — the deterministic test suite
 
-91 pytest files, 786 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+91 pytest files, 790 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+`test_workspace.py` gained 4 tests for `Workspace.artifacts` (default path resolves under root,
+a `reports_dir` override does not redirect it, `ensure()` creates it, `ensure()` is idempotent).
 
 `test_patch_status.py`'s fake-runner helper is now a small `_Runner` class with `calls` as a
 real instance attribute, instead of monkey-patching an attribute onto a plain function object

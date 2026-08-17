@@ -430,3 +430,8 @@ instead of re-reading HEAD. `run.py` gained `advance(target, phase, *, workspace
 runner=subprocess.run) -> Path`, the closing call for the six agent phases (`drive` never
 auto-advances past them): it loads the persisted baseline, fences, writes a receipt, and calls
 `campaign.record_stage`.
+
+`workspace.py`'s `Workspace` gained an `artifacts` property (`self.root / "artifacts"`) for
+review-mode run state — the coverage manifest and review ledger the new `review` CLI mode writes.
+It is never routed through `reports_dir`: review-mode run state is not a report. `ensure()` now
+also creates it.
