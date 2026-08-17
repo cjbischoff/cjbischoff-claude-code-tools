@@ -4,17 +4,17 @@ milestone: v5.0
 milestone_name: Hybrid Diff-Review Architecture
 current_phase: 02
 current_phase_name: diff-pipeline-positioning
-status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-08-17T18:58:14.759Z"
+status: verifying
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-08-17T19:54:56.012Z"
 last_activity: 2026-08-17
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 7
-  percent: 17
+  completed_plans: 8
+  percent: 33
 ---
 
 # Project State
@@ -31,10 +31,10 @@ governed releases, receipt-backed findings.
 
 Phase: 02 (diff-pipeline-positioning) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-17 — Phase 02 execution started
 
-Progress: [█████████░] 88%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [█████████░] 88%
 | Phase 02 P02 | 1 session | 3 tasks | 6 files |
 | Phase 02 P03 | 1 session | 3 tasks | 10 files |
 | Phase 02 P04 | one session | 3 tasks | 10 files |
+| Phase 02 P05 | 1 session | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,7 @@ Recent decisions affecting current work:
 - [Phase ?]: seal() raises on empty manifest instead of vacuously returning complete (T-02-05)
 - [Phase ?]: review_ledger.json is a separate artifact from findings.json because models.py is the frozen milestone contract and a new FindingStatus member would break the Go port's byte mirror
 - [Phase ?]: PositionResult carries the original claimed snippet on every result, including declines, so the report can show the claim without a second file lookup
+- [Phase ?]: Partial coverage seal isolated via try/except around parse_hunks; no organic trigger exists today, so tests drive it by monkeypatching parse_hunks (D-15)
 
 ### Pending Todos
 
@@ -126,6 +128,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-17T18:58:14.685Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-08-17T19:54:55.997Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None

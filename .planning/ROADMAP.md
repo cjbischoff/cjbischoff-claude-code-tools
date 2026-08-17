@@ -68,7 +68,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `diffhunks.added_line_numbers()` and `line_in_hunk()` correctly classify added/context lines inside a hunk window, and `positioning.py` confirms a finding's location via hunk match → whole-file match → cross-file relocation, declining to `needs-position-review` (never guessing) on ambiguity or zero matches
   5. In review mode, `phase_gate.py` drops a finding whose confirmed line lies outside every changed hunk with reason `outside-diff`; the same finding is retained unchanged under the existing whole-file check in audit mode
 
-**Plans**: 4/5 plans executed
+**Plans**: 5/5 plans executed
 
 Plans:
 **Wave 1**
@@ -89,7 +89,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 02-05-PLAN.md — Review-mode position gate, drop ledger, and partial-seal exit code
+- [x] 02-05-PLAN.md — Review-mode position gate, drop ledger, and partial-seal exit code
 
 **Notes**: The spec's coverage-manifest module collides in name with the already-shipped `helpers/sec_overlay/coverage.py` (a different, existing module). The plan for this phase must name the new manifest module distinctly (e.g. `review_coverage.py`) or explicitly extend the existing module — never silently overwrite it.
 
@@ -162,7 +162,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Baseline Health Verification | 3/3 | Complete    | 2026-08-17 |
-| 2. Diff Pipeline & Positioning | 4/5 | In Progress|  |
+| 2. Diff Pipeline & Positioning | 5/5 | In Progress|  |
 | 3. Rule Matching & Review Modes | 0/TBD | Not started | - |
 | 4. Scale, Resume & Diff Output | 0/TBD | Not started | - |
 | 5. End-to-End Verification (Audit & Review) | 0/TBD | Not started | - |

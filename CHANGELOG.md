@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Mark Phase 2 Plan 5 (the review-mode position gate's three-way split, the dropped-findings report section and ledger, and the seal-to-exit-code mapping) complete: record `02-05-SUMMARY.md` and update the `.planning/ROADMAP.md` progress table (8/8 plans, 100%).
 - Mark Phase 2 Plan 4 (the never-guess four-rung positioning ladder plus the position-review markdown section and JSON ledger) complete: record `02-04-SUMMARY.md`, advance `.planning/STATE.md` to Plan 5, update the `.planning/ROADMAP.md` progress table (7/8 plans, 88%), and move POS-02 to Complete in `.planning/REQUIREMENTS.md`.
 - Mark Phase 2 Plan 3 (the `CoverageManifest` state machine and unified-diff hunk parser) complete: record `02-03-SUMMARY.md`, advance `.planning/STATE.md` to Plan 4, and update the `.planning/ROADMAP.md` progress table (6/8 plans, 75%).
 - Mark Phase 2 Plan 2 (the `file_select.py` allowlist, exclude-glob, and exclusion-reason enum) complete: record `02-02-SUMMARY.md`, advance `.planning/STATE.md` to Plan 3, and update the `.planning/ROADMAP.md` progress table (5/8 plans, 63%).
