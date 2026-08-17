@@ -5,15 +5,15 @@ milestone_name: Hybrid Diff-Review Architecture
 current_phase: 02
 current_phase_name: diff-pipeline-positioning
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-08-17T18:24:23.910Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-08-17T18:58:14.759Z"
 last_activity: 2026-08-17
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
   percent: 17
 ---
 
@@ -30,11 +30,11 @@ governed releases, receipt-backed findings.
 ## Current Position
 
 Phase: 02 (diff-pipeline-positioning) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-08-17 — Phase 02 execution started
 
-Progress: [████████░░] 75%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [████████░░] 75%
 | Phase 02 P01 | 2h35m | 3 tasks | 15 files |
 | Phase 02 P02 | 1 session | 3 tasks | 6 files |
 | Phase 02 P03 | 1 session | 3 tasks | 10 files |
+| Phase 02 P04 | one session | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,8 @@ Recent decisions affecting current work:
 - [Phase ?]: partition's new keyword params (diff_line_counts, binary_paths, max_diff_lines) default to no-op values so cli.py's call site needs no change
 - [Phase ?]: CoverageTransitionError extends RuntimeError (plan spec), not ValueError
 - [Phase ?]: seal() raises on empty manifest instead of vacuously returning complete (T-02-05)
+- [Phase ?]: review_ledger.json is a separate artifact from findings.json because models.py is the frozen milestone contract and a new FindingStatus member would break the Go port's byte mirror
+- [Phase ?]: PositionResult carries the original claimed snippet on every result, including declines, so the report can show the claim without a second file lookup
 
 ### Pending Todos
 
@@ -123,6 +126,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-17T18:24:23.897Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-08-17T18:58:14.685Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None

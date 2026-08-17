@@ -44,7 +44,7 @@ models.py/evidence.py contract, receipt gate as the sole authority on `confirmed
 - [x] **POS-01**: `diffhunks.py` parses unified diffs with stdlib only and exposes
   `added_line_numbers(file)` and `line_in_hunk(file, line)`
 
-- [ ] **POS-02**: `positioning.py` confirms a finding's location via hunk match, then
+- [x] **POS-02**: `positioning.py` confirms a finding's location via hunk match, then
   whole-file match, then cross-file relocation; ambiguity or zero matches yields a
   decline routed to `needs-position-review`, never a guessed line
 
@@ -192,7 +192,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DIFF-03 | Phase 2 | Complete |
 | DIFF-04 | Phase 2 | Complete |
 | POS-01 | Phase 2 | Complete |
-| POS-02 | Phase 2 | Pending |
+| POS-02 | Phase 2 | Complete |
 | POS-03 | Phase 2 | Complete |
 | RULE-01 | Phase 3 | Pending |
 | RULE-02 | Phase 3 | Pending |
