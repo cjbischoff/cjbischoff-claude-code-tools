@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.37.11 - 2026-08-17
+
+### Fixed
+
+- `tests/fixtures/graph_target/app/{db,api}.py` reference `cursor`/`app` names that only exist
+  at runtime through the fixture's structural-scan contract (`sec_overlay.graph` parses these
+  files without importing them). `ty` flagged both as unresolved references. Added a stub
+  binding for each (`cursor: Any = None`, `app: Any = None`) placed to preserve every line
+  number `test_graph.py` pins (`app/db.py:1:run_query`, `app/api.py:4:handler`,
+  `app/api.py:10:get_widget`). No behavior change — these files are never executed.
+
 ## 1.37.10 - 2026-08-17
 
 ### Fixed
