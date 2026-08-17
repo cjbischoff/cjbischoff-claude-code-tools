@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.48.5 - 2026-08-17
+
+### Fixed
+
+- `cli.py`: `run_review`'s docstring no longer claims batching and exit codes 2/3 are future
+  work — both were already implemented. Kept the accurate note that finding-source integration
+  is still pending (WR-02).
+
 ## 1.48.4 - 2026-08-17
 
 ### Fixed

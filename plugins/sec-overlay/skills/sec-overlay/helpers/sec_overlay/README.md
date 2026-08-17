@@ -482,6 +482,8 @@ deferred to Phase 4.
 changed file) and `binary_paths` before calling `partition`, and passes both through (CR-03): the
 tracer-path call left both kwargs at their no-op defaults, so an oversized or binary file stayed
 `reviewable` instead of landing in `selection.excluded` with reason `too-large`/`binary`.
+`run_review`'s docstring now states plainly that batching and exit codes 2/3 are implemented,
+not future work (WR-02) — only finding-source integration remains pending.
 
 `review_coverage.py`'s `CoverageManifest` reached full behavior (DIFF-03): a single
 `_ALLOWED_TRANSITIONS` table gates every state change, `seal()` now raises `CoverageTransitionError`

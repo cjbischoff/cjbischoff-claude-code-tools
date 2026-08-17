@@ -91,8 +91,7 @@ def run_scan(
 def run_review(base: str, head: str, root: str, *, runner=None) -> int:
     """Run one review pass end to end: resolve refs, select files, position, seal.
 
-    Wires exactly one changed file through every layer (the tracer path) —
-    batching over multiple files and exit codes 2/3 arrive in 02-02 and 02-05.
+    Batches over every reviewable changed file and implements exit codes 2 and 3.
     No finding source is wired into ``review`` mode yet (investigate integration
     lands in a later plan); the gate runs against an empty finding list so its
     wiring is exercised now.
