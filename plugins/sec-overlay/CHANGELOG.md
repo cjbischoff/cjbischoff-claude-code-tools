@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.37.4 - 2026-08-17
+
+### Fixed
+
+- `test_prefilter.py` and `test_wiring.py`'s `Exclusions([], [], [])` fixture calls now pass
+  `Exclusions(set(), [], set())`, matching the dataclass's `set[str]`-typed `rule_ids`/`classes`
+  fields — fixes 16 `invalid-argument-type` diagnostics (VAL-02 ty ledger row); no runtime
+  behavior change.
+
 ## 1.37.3 - 2026-08-17
 
 ### Fixed

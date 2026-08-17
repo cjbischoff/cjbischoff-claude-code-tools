@@ -4,6 +4,11 @@
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+`test_prefilter.py` and `test_wiring.py`'s `Exclusions([], [], [])` fixture calls now pass
+`Exclusions(set(), [], set())` — `Exclusions.rule_ids`/`classes` are `set[str]` fields, so the
+prior `list` literals type-checked incorrectly under `ty` even though the runtime behavior
+(both accept iteration) was unaffected.
+
 New `test_command_audit.py` covers the load-bearing content of `/sec-overlay:audit`: the command file documents routing (`/sec-overlay:audit`), single-repo driver (`run.drive`), multi-repo confirmation step, and the `correlate` CLI with required `--out` flag.
 
 `test_kb.py` gained `test_new_tree_paths` for `kb.py`'s new arc42/threat-model tree path helpers;
