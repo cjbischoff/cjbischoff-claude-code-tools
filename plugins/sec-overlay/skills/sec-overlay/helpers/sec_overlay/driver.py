@@ -62,12 +62,16 @@ class PhaseHalt(RuntimeError):
 DETERMINISTIC_ACTIONS: dict[str, Callable[[AuditContext], None]] = {}
 
 
-def run_deterministic_phase(phase: PhaseSpec, ctx: AuditContext) -> None:
+def run_deterministic_phase(
+    phase: PhaseSpec, ctx: AuditContext, *, on_complete: Callable[[str], None] | None = None
+) -> None:
     """Run one deterministic phase, gating on inputs and outputs.
 
     Args:
         phase: The phase to run.
         ctx: The audit context the phase's action operates against.
+        on_complete: Optional callback invoked with ``phase.name`` right before the
+            stage is recorded done (e.g. to fence the tree and write a receipt).
 
     Raises:
         PhaseHalt: An input artifact is missing, no action is registered, or the
@@ -91,6 +95,8 @@ def run_deterministic_phase(phase: PhaseSpec, ctx: AuditContext) -> None:
     state = load_state(ctx.ws)
     cost.record_timing(state, phase.name, elapsed)
     save_state(ctx.ws, state)
+    if on_complete is not None:
+        on_complete(phase.name)
     record_stage(ctx.ws, phase.name)
 
 
@@ -295,7 +301,12 @@ DETERMINISTIC_ACTIONS.update(
 )
 
 
-def run_audit(ctx: AuditContext, *, table: tuple[PhaseSpec, ...] = PHASE_TABLE) -> str:
+def run_audit(
+    ctx: AuditContext,
+    *,
+    table: tuple[PhaseSpec, ...] = PHASE_TABLE,
+    on_complete: Callable[[str], None] | None = None,
+) -> str:
     """Walk the phase table from the first phase not yet recorded ``done``.
 
     Runs each deterministic phase in place. On an agent phase, auto-advances
@@ -316,6 +327,9 @@ def run_audit(ctx: AuditContext, *, table: tuple[PhaseSpec, ...] = PHASE_TABLE) 
     Args:
         ctx: The audit context threaded through every phase action.
         table: The phase table to walk (defaults to ``PHASE_TABLE``).
+        on_complete: Optional callback invoked with a phase's name right before
+            that phase's stage is recorded done (deterministic phases and the
+            auto-advance agent-phase branch only; not the dispatch-and-stop path).
 
     Returns:
         ``"AUDIT COMPLETE"`` once every phase is recorded ``done``, or the
@@ -326,10 +340,12 @@ def run_audit(ctx: AuditContext, *, table: tuple[PhaseSpec, ...] = PHASE_TABLE) 
         if phase is None:
             return "AUDIT COMPLETE"
         if phase.kind == "deterministic":
-            run_deterministic_phase(phase, ctx)
+            run_deterministic_phase(phase, ctx, on_complete=on_complete)
             continue
         distinct_outputs = tuple(p for p in phase.outputs if p not in phase.inputs)
         if distinct_outputs and all(p(ctx.ws).exists() for p in distinct_outputs):
+            if on_complete is not None:
+                on_complete(phase.name)
             record_stage(ctx.ws, phase.name)
             continue
         if phase.name in ("investigate", "patch"):

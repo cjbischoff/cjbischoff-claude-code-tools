@@ -2,6 +2,75 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.37.2 - 2026-08-16
+
+### Fixed
+
+- Persist the fence baseline so resume invocations catch agent-phase tree writes.
+- Add `run.advance` to fence, receipt, and record each agent phase.
+- Pin the pass SHA on resume instead of re-reading HEAD.
+- Correct `audit.md` resume steps and correlation output paths.
+
+## 1.37.1 - 2026-08-16
+
+### Fixed
+
+- Sort import block in test_run.py to clear ruff I001.
+
+## 1.37.0 - 2026-08-16
+
+### Added
+
+- Add /sec-overlay:audit command.
+
+## 1.36.1 - 2026-08-16
+
+### Fixed
+
+- Fix red-team gate path collision (O-65): the adversary writes redteam-adversary.json. Added test to verify old path absent.
+
+## 1.36.0 - 2026-08-16
+
+### Added
+
+- Add single-repo drive loop with per-phase fence and receipt.
+
+## 1.35.0 - 2026-08-16
+
+### Added
+
+- Add manifest synthesis for correlation.
+
+## 1.34.0 - 2026-08-16
+
+### Added
+
+- Add scan-profile role inference.
+
+## 1.33.0 - 2026-08-16
+
+### Added
+
+- Add run.env token writer.
+
+## 1.32.0 - 2026-08-16
+
+### Added
+
+- Add per-phase receipt writer.
+
+## 1.31.1 - 2026-08-16
+
+### Fixed
+
+- Remove unused `pathlib.Path` import from `helpers/tests/test_run.py` (ruff F401).
+
+## 1.31.0 - 2026-08-16
+
+### Added
+
+- Add run.py driver working-tree fence.
+
 ## 1.30.3 - 2026-08-16
 
 ### Changed

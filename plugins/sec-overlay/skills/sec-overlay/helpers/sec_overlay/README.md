@@ -380,3 +380,42 @@ bracket label over 4 words is now an error (bare-id nodes with no bracket label 
 `run_diagram_gate` takes a keyword-only `require_threat_model` flag — when set, a missing
 `dfd.mmd` becomes a gate error instead of a silently-skipped optional diagram (CLI:
 `--require-threat-model`).
+
+New module `run.py` — driver helpers for a sec-overlay audit run; first addition is `fence(target,
+baseline, *, runner=subprocess.run)`, which raises `WorkingTreeFenceError` naming the delta lines
+when `git status --porcelain` output differs from the captured baseline.
+
+`run.py` gained `receipt(ws, phase, *, stdout="", artifacts=None, counts=None)`, which writes
+`<ws.kb>/receipts/<phase>.json` (keys `phase`, `stdout`, `artifacts`, `counts`) and returns the
+path — so no stage advances without a receipt on disk.
+
+`run.py` gained `write_env(ws, target, scope, sha)`, which writes `<ws.root>/run.env` with
+`TARGET`, `WORKSPACE`, `SHA`, `SCAN_SCOPE`, and `REPO_ROOT` resolved once — agent phases read the
+tokens from this file instead of the orchestrator re-substituting them by hand on every spawn.
+
+`run.py` gained `infer_role(profile: ScanProfile) -> str`, which maps a `ScanProfile`'s
+`subsystems`/`frameworks`/`attack_surface` to one of `sec_overlay.correlate.manifest.ROLES`
+(`rbac-source` → `service-enforcer` → `infra` default) for correlation-manifest synthesis.
+
+`run.py` gained `synthesize_manifest(product, members) -> dict`, which wraps `members` under
+`product` and raises `ValueError` when `sec_overlay.correlate.manifest.validate_manifest` rejects
+the result — building the `product.json`-shaped dict `python -m sec_overlay.correlate` consumes.
+
+`run.py` gained `drive(target, config, *, scope=".", workspace=None, runner=subprocess.run,
+table=PHASE_TABLE) -> str`, the single-repo audit loop. It opens or resumes the sidecar
+`Workspace` (via `_target_workspace`, which delegates to `RepoMemory.for_target`), pins the SHA,
+calls `state.begin_pass` on a fresh workspace, snapshots the `git status --porcelain` baseline,
+writes `run.env` once, then calls `driver.run_audit` with an `on_complete` callback. That callback
+fences the tree (`fence`) and writes a receipt (`receipt`) before every `record_stage` — `driver.py`
+now accepts this `on_complete: Callable[[str], None] | None` hook on both `run_deterministic_phase`
+and `run_audit`, invoking it immediately before each stage is recorded so a receipt always exists
+before its stage counts as done (O-67 ordering).
+
+`run.py`'s baseline is now persisted at `<ws.kb>/fence-baseline` via the private
+`_load_baseline(ws, target, runner)`, captured once at pass start and read back on every resume —
+so a resumed `drive` fences against the pre-audit tree, not a fresh snapshot that would already
+contain an agent phase's write; `drive` also now stays pinned to `state.active_sha` on resume
+instead of re-reading HEAD. `run.py` gained `advance(target, phase, *, workspace=None,
+runner=subprocess.run) -> Path`, the closing call for the six agent phases (`drive` never
+auto-advances past them): it loads the persisted baseline, fences, writes a receipt, and calls
+`campaign.record_stage`.

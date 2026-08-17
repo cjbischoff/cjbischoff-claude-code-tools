@@ -1,8 +1,10 @@
 # `tests/` — the deterministic test suite
 
-90 pytest files, 785 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+91 pytest files, 786 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_command_audit.py` covers the load-bearing content of `/sec-overlay:audit`: the command file documents routing (`/sec-overlay:audit`), single-repo driver (`run.drive`), multi-repo confirmation step, and the `correlate` CLI with required `--out` flag.
 
 `test_kb.py` gained `test_new_tree_paths` for `kb.py`'s new arc42/threat-model tree path helpers;
 `test_workspace.py` gained `test_ensure_creates_trees`, pinning that `Workspace.ensure()` creates
@@ -40,6 +42,10 @@ finding each produce an error string; the gate always writes `kb/gates/artifact-
 covers `check_duplication`: a duplicated heading and a threat-model-owned structure heading each
 fail, distinct headings pass, and the gate skips the check silently when the arc42/threat-model
 trees are absent.
+
+New `test_redteam_gate_paths.py` verifies the red-team gate path split (O-65): `redteam-adversary.md`
+declares `kb/gates/redteam-adversary.json` and does not contain the old `kb/gates/redteam.json`,
+avoiding collision with `redteam.py:357`'s gate path.
 
 `test_stage_validate.py` gained `test_unknown_stage_raises` (ISSUE-034): `validate_stage` now
 raises `ValueError` for an unregistered stage instead of silently passing. `test_bucket_c.py`'s
@@ -333,3 +339,50 @@ existing unhyphenated forms (`a->>b`, `a--)b`, `a-xb`). `test_diagram_gate.py` g
 `test_empty_threat_model_passes_by_default` / `test_empty_threat_model_fails_when_required` for
 the new `require_threat_model` gate flag, and `test_node_label_over_four_words_fails` /
 `test_bare_id_node_label_not_flagged` for the new node-label word-count check.
+
+New `test_run.py` covers `sec_overlay.run.fence`: passes when the current `git status --porcelain`
+output matches the captured baseline, raises `WorkingTreeFenceError` naming the delta lines
+otherwise.
+
+`test_run.py`'s unused `pathlib.Path` import (leftover from the initial draft) was removed to
+satisfy ruff F401; `tmp_path` already provides a `Path` instance via the pytest fixture.
+
+`test_run.py` gained `test_receipt_writes_counts_even_when_stdout_empty`, covering
+`sec_overlay.run.receipt`: writes `<ws.kb>/receipts/<phase>.json` with the `phase`, `stdout`,
+`artifacts`, and `counts` keys, and returns that path.
+
+`test_run.py` gained `test_write_env_writes_all_tokens`, covering `sec_overlay.run.write_env`:
+writes `<ws.root>/run.env` with `TARGET`, `WORKSPACE`, `SHA`, `SCAN_SCOPE`, and `REPO_ROOT` lines
+and returns that path.
+
+`test_run.py` gained three `infer_role` tests, covering `sec_overlay.run.infer_role`: a dict-form
+`subsystems` entry named `rbac-policy`/`identity` returns `rbac-source`, a network `attack_surface`
+returns `service-enforcer`, and an ambiguous profile defaults to `infra`.
+
+`test_run.py` gained two `synthesize_manifest` tests, covering `sec_overlay.run.synthesize_manifest`:
+a valid two-member call passes `validate_manifest` with distinct `slug#scan_scope` keys, and a
+member with a role outside `ROLES` raises `ValueError`.
+
+`test_run.py` gained `test_drive_writes_receipt_and_env_and_fences`, covering `sec_overlay.run.drive`:
+with a fake git runner reporting a clean tree at every call, one deterministic `noop` phase runs,
+`run.env` and `kb/receipts/noop.json` both exist afterward, and the result is `"AUDIT COMPLETE"`.
+
+`test_driver.py` gained `test_run_audit_calls_on_complete_before_recording`, covering the new
+`on_complete` parameter on `driver.run_audit`: for a single deterministic phase whose output already
+exists, `on_complete` is called with the phase name before `run_audit` returns `"AUDIT COMPLETE"`.
+
+`test_run.py` keeps its import block sorted (ruff I001) — the local `sec_overlay` import in
+`test_synthesize_manifest_rejects_bad_role` is separated by a blank line.
+
+`test_run.py` gained `test_load_baseline_persists_and_fences_a_later_cross_invocation_write`,
+covering `sec_overlay.run._load_baseline`: the first call captures and persists the baseline to
+`<ws.kb>/fence-baseline`; a later call with a dirty runner still returns the persisted clean value,
+and fencing against it raises `WorkingTreeFenceError`. It also gained
+`test_advance_writes_receipt_records_stage_and_fences_persisted_baseline`, covering
+`sec_overlay.run.advance`: a clean-tree call writes a receipt and records the stage; a later dirty
+call raises `WorkingTreeFenceError` against the still-persisted baseline. The dead
+`monkeypatch.setattr(run_mod, "_PHASE_TABLE", ...)` line in `test_drive_writes_receipt_and_env_and_fences`
+(a `raising=False` no-op — `drive` takes `table=`, not `_PHASE_TABLE`) was removed.
+
+`test_command_audit.py`'s `--out` assertion comment now reads "correlation output lands under the
+CWD (artifacts/)", matching the corrected `audit.md`.

@@ -35,7 +35,7 @@ confidence — note the fix), `INVALIDATED` (remove from plan; set `static-settl
 ## Output
 Return a verdict table (id, verdict, one-line reason) with one row per `needs-runtime` item,
 then the corrections. The orchestrator applies dispositions and re-renders `redteam-plan.md`;
-record verdicts into `kb/gates/redteam.json`.
+record verdicts into `kb/gates/redteam-adversary.json`.
 
 ## Rules
 - Default to removing an item from the plan under uncertainty — an operator's action list is
