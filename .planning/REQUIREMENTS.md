@@ -159,8 +159,41 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by roadmap) | | |
+| VAL-01 | Phase 1 | Pending |
+| VAL-02 | Phase 1 | Pending |
+| VAL-03 | Phase 1 | Pending |
+| DIFF-01 | Phase 2 | Pending |
+| DIFF-02 | Phase 2 | Pending |
+| DIFF-03 | Phase 2 | Pending |
+| DIFF-04 | Phase 2 | Pending |
+| POS-01 | Phase 2 | Pending |
+| POS-02 | Phase 2 | Pending |
+| POS-03 | Phase 2 | Pending |
+| RULE-01 | Phase 3 | Pending |
+| RULE-02 | Phase 3 | Pending |
+| RULE-03 | Phase 3 | Pending |
+| RULE-04 | Phase 3 | Pending |
+| RULE-05 | Phase 3 | Pending |
+| REV-01 | Phase 3 | Pending |
+| REV-02 | Phase 3 | Pending |
+| REV-03 | Phase 3 | Pending |
+| SCALE-01 | Phase 4 | Pending |
+| SCALE-02 | Phase 4 | Pending |
+| SCALE-03 | Phase 4 | Pending |
+| OUT-01 | Phase 4 | Pending |
+| OUT-02 | Phase 4 | Pending |
+| AUD-01 | Phase 5 | Pending |
+| AUD-02 | Phase 5 | Pending |
+| AUD-03 | Phase 5 | Pending |
+| AUD-04 | Phase 5 | Pending |
+| AUD-05 | Phase 5 | Pending |
+| AUD-06 | Phase 5 | Pending |
+| REL-01 | Phase 6 | Pending |
+| REL-02 | Phase 6 | Pending |
+| REL-03 | Phase 6 | Pending |
+
+Coverage: 32/32 v1 requirements mapped. No orphans, no duplicates.
 
 ---
 *Requirements defined: 2026-08-16*
-*Last updated: 2026-08-16 for milestone v5.0*
+*Last updated: 2026-08-16 for milestone v5.0 roadmap creation*

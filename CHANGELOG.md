@@ -27,6 +27,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 ### Added
 
 - Start milestone v5.0 (Hybrid Diff-Review Architecture) in `.planning/`: update PROJECT.md with the milestone goal and target features, and reset STATE.md for the new cycle.
+- Create the milestone v5.0 roadmap in `.planning/ROADMAP.md`: six phases from baseline health through diff pipeline, rule matching, scale, end-to-end verification, and governed release, with all 32 requirements mapped.
 - Define milestone v5.0 requirements in `.planning/REQUIREMENTS.md`: 24 requirements across validation, diff pipeline, positioning, rule matching, review modes, scale, output, audit integrity, and release governance.
 - Add the onboarding summary at `.planning/onboarding/SUMMARY.md`: an index of the planning state, codebase map status, and the recommended next command.
 - Add the GSD planning setup under `.planning/`: PROJECT.md, REQUIREMENTS.md, ROADMAP.md, and STATE.md bootstrapped from 50 ingested design docs, with synthesized intel files and the ingest conflict report.

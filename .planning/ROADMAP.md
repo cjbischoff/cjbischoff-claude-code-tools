@@ -1,13 +1,17 @@
 # Roadmap: cjbischoff-claude-code-tools
 
+## Milestone: v5.0 Hybrid Diff-Review Architecture
+
 ## Overview
 
-The 50-doc ingest delivered a complete sec-overlay baseline through 2026-08-16, but no
-end-to-end run of the current pipeline exists — the dogfooding evidence predates the
-audit driver, CVSS v4.0, and the architecture/threat-model rebuild. This milestone
-proves the delivered baseline: verify marketplace health and quality gates, drive a
-full receipt-backed audit on a real target, then remediate what the run surfaces and
-ship every fix through the repo's own governance without contract regressions.
+v4.0 (Baseline Health / Receipt-Backed Audit / Remediation) is superseded with zero
+phases executed; its verification and release goals are absorbed below as Phases 1, 5,
+and 6. This milestone first proves the delivered baseline is healthy, then builds the
+diff-review pipeline in the spec's build order — diff acquisition and coverage,
+positioning, rule matching, review verb and reflection filter, scale and output — and
+finally proves both the whole-repo audit and the new diff review end to end before
+remediating and shipping through governance. Every new module is stdlib-only and
+TDD failing-test-first; models.py, evidence.py, and `fingerprint()` stay frozen.
 
 ## Phases
 
@@ -18,13 +22,16 @@ ship every fix through the repo's own governance without contract regressions.
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Baseline Health Verification** - Prove the delivered marketplace and plugin baseline is healthy: validation, tests, hooks
-- [ ] **Phase 2: Receipt-Backed Audit Verification** - Drive a full /sec-overlay:audit run on a real target and verify honest, receipt-backed output
-- [ ] **Phase 3: Remediation and Governed Release** - Fix what the run surfaced and ship through governance with the frozen contract intact
+- [ ] **Phase 2: Diff Pipeline & Positioning** - Deterministic diff acquisition, per-file coverage tracking, and hunk-anchored finding positioning
+- [ ] **Phase 3: Rule Matching & Review Modes** - Per-language rule selection, the `review` verb's security/general profiles, and the retract-only reflection filter
+- [ ] **Phase 4: Scale, Resume & Diff Output** - Semantic bundling, concurrency/resume limits, and the diff-anchored output payload
+- [ ] **Phase 5: End-to-End Verification (Audit & Review)** - Drive full audit and review runs on a real target and verify honest, receipt-backed output
+- [ ] **Phase 6: Remediation and Governed Release** - Fix what the runs surfaced and ship through governance with the frozen contract intact
 
 ## Phase Details
 
 ### Phase 1: Baseline Health Verification
-**Goal**: The maintainer can trust the delivered baseline — marketplace validation, quality gates, and governance hooks all pass today
+**Goal**: The maintainer can trust the delivered baseline — marketplace validation, quality gates, and governance hooks all pass today, before any new module is added
 **Depends on**: Nothing (first phase)
 **Requirements**: VAL-01, VAL-02, VAL-03
 **Success Criteria** (what must be TRUE):
@@ -33,36 +40,78 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. prek hooks are installed and `prek run` passes across the repo
 **Plans**: TBD
 
-### Phase 2: Receipt-Backed Audit Verification
-**Goal**: A current-pipeline audit run on a real target proves the harness produces verified, receipt-backed findings that never mislead the engineer reading them
+### Phase 2: Diff Pipeline & Positioning
+**Goal**: Given a base/head ref pair, the harness deterministically identifies every changed file, tracks per-file review coverage, and confirms exact hunk-anchored finding locations without ever guessing a line
 **Depends on**: Phase 1
-**Requirements**: AUD-01, AUD-02, AUD-03, AUD-04, AUD-05
+**Requirements**: DIFF-01, DIFF-02, DIFF-03, DIFF-04, POS-01, POS-02, POS-03
 **Success Criteria** (what must be TRUE):
-  1. `/sec-overlay:audit` drives a run start to finish on a real target repo; per-phase receipts exist in the run workspace and the working-tree fence holds
-  2. Every finding with status `confirmed` cites a mechanical tool receipt; no Tier-2-only or syntactic-match finding is confirmed
-  3. Runtime-dependent findings appear as `needs-deployment-testing` with real risk scores, and headline counts do not hide them
-  4. The architecture/ and threat-model/ artifacts pass the diagram gate and STE lint, with every score CVSS v4.0
-  5. The report states its coverage denominator, and every attack-surface class without a finding has a logged coverage-ledger entry
+  1. Ref arguments are validated against `^[A-Za-z0-9._/\-]+$` (leading `-` rejected) before any git subprocess call, and `diffscope.py` returns per-file `ChangedFile` records (path, old_path, status A/M/D/R, raw unified-diff text) pinned to resolved commit SHAs
+  2. `file_select.py` deterministically splits changed files into reviewable and excluded-with-reason sets, excludes deleted files as `deleted`, and the agent cannot add or drop files from that list
+  3. The coverage manifest carries one entry per reviewable file transitioning pending → in_review → done|failed, and a run cannot seal `complete` while any entry is `pending`; a `partial` terminal state names every unreviewed file
+  4. `diffhunks.added_line_numbers()` and `line_in_hunk()` correctly classify added/context lines inside a hunk window, and `positioning.py` confirms a finding's location via hunk match → whole-file match → cross-file relocation, declining to `needs-position-review` (never guessing) on ambiguity or zero matches
+  5. In review mode, `phase_gate.py` drops a finding whose confirmed line lies outside every changed hunk with reason `outside-diff`; the same finding is retained unchanged under the existing whole-file check in audit mode
+**Plans**: TBD
+**Notes**: The spec's coverage-manifest module collides in name with the already-shipped `helpers/sec_overlay/coverage.py` (a different, existing module). The plan for this phase must name the new manifest module distinctly (e.g. `review_coverage.py`) or explicitly extend the existing module — never silently overwrite it.
+
+### Phase 3: Rule Matching & Review Modes
+**Goal**: The review verb selects the right per-language checklist for every file, runs in security or general-defect scope on command, and never lets an LLM judgment override the mechanical receipt gate
+**Depends on**: Phase 2
+**Requirements**: RULE-01, RULE-02, RULE-03, RULE-04, RULE-05, REV-01, REV-02, REV-03
+**Success Criteria** (what must be TRUE):
+  1. `rule_glob.py` resolves a file's rule via ordered, brace-expanded, `**`-aware PathRules (first match wins, else the default rule), through four-layer resolution (`--rule` path → project `.sec-overlay/rule.json` → global `~/.sec-overlay/rule.json` → built-in), with `--exclude` appended to the resolved exclude list and `merge_system_rule: true` concatenating built-in and user text under fixed headers instead of replacing
+  2. Rule-file reads resolve symlinks, require the resolved path under repo root, restrict extensions to `.md`/`.txt`/`.markdown`, and reject files over 512 KB
+  3. Per-language rule docs exist for go, java, python, php, rust, ts/js/tsx/jsx, kotlin, swift, and default, each naming NPE, thread-safety, injection (XSS/SQLi), resource-leak, and error-swallowing checks with explicit exclusions
+  4. `review --profile security` on a diff reproduces existing gate A-E behavior exactly; `--profile general` on the same diff additionally surfaces NPE/thread-safety/XSS/SQLi findings that gates A/B would have dropped, with gates C/D/E still enforced
+  5. The reflection filter runs once per file after positioning and the hunk gate, retracts findings only, fails open on LLM error, and cannot itself produce a `confirmed` disposition; a general-defect finding without a Tier-1 mechanical receipt ships as `unconfirmed`/`needs-deployment-testing`, never `confirmed`
+**Plans**: TBD
+**Notes**: `**`-aware globbing needs `pathlib.PurePath.full_match` (Python 3.13) or a small custom matcher. State the chosen floor explicitly in the plugin docs — check the plugin's actual supported interpreter range before assuming Python 3.13 is available; if it is not, ship the custom matcher.
+
+### Phase 4: Scale, Resume & Diff Output
+**Goal**: Large changesets stay bounded and resumable, and every shipped finding carries a diff-anchored, positioning-confirmed location
+**Depends on**: Phase 3
+**Requirements**: SCALE-01, SCALE-02, SCALE-03, OUT-01, OUT-02
+**Success Criteria** (what must be TRUE):
+  1. `bundle.py` deterministically groups locale/config siblings and impl/test pairs into single review units (one file per unit as fallback), documented in the skill docs as a sec-overlay addition beyond OCR
+  2. `--concurrency` (default 8), per-bundle `--timeout` (default 10m), and `--max-git-procs` (default 16) bound execution; a timed-out bundle marks its files `failed` and the run's terminal state becomes `partial`
+  3. Resume validates model/profile identity before spawning any agent — an implicit change is rejected with nothing persisted — and every file read stays pinned to the sealed commit SHAs
+  4. Diff-review mode emits a diff-anchored comment payload (`path, line, side, existing_code, content`) per finding alongside the existing SARIF, markdown, and per-finding files, with the coverage manifest included
+  5. SARIF fingerprints key on `Path|Category|ExistingCode`, excluding message text
 **Plans**: TBD
 
-### Phase 3: Remediation and Governed Release
-**Goal**: Defects the verification run surfaced are fixed and shipped through the repo's own governance, with zero frozen-contract regressions
-**Depends on**: Phase 2
-**Requirements**: REL-01, REL-02
+### Phase 5: End-to-End Verification (Audit & Review)
+**Goal**: Both pipelines — whole-repo audit and diff review — prove themselves end to end on a real target, with every claim receipt-backed and every gap logged rather than hidden
+**Depends on**: Phase 4
+**Requirements**: AUD-01, AUD-02, AUD-03, AUD-04, AUD-05, AUD-06
 **Success Criteria** (what must be TRUE):
-  1. Every defect logged during the Phase 2 run has a merged fix or a written disposition
+  1. A full `/sec-overlay:audit` run completes end to end on a real target repo; per-phase receipts are written and the working-tree fence holds throughout
+  2. Every finding with status `confirmed` cites a mechanical tool receipt; no Tier-2-only or syntactic-match finding reaches `confirmed`
+  3. Runtime-dependent findings land in `needs-deployment-testing` with a real risk score, visible in report headline counts rather than hidden
+  4. Architecture and threat-model artifacts pass the deterministic gates (Mermaid caps, derivation headers, STE lint) and score with CVSS v4.0 only
+  5. The audit report states its coverage denominator, and every attack-surface class without a finding has a logged coverage-ledger entry
+  6. A full `review` run in both profiles completes end to end on a real diff, with the coverage manifest sealed and every reported line positioning-confirmed
+**Plans**: TBD
+
+### Phase 6: Remediation and Governed Release
+**Goal**: Every defect the verification runs surfaced is fixed or dispositioned, and every fix ships through the repo's own governance with zero frozen-contract regressions
+**Depends on**: Phase 5
+**Requirements**: REL-01, REL-02, REL-03
+**Success Criteria** (what must be TRUE):
+  1. Every defect logged during Phase 5's verification runs has a merged fix or a written disposition
   2. models.py, evidence.py, and `fingerprint()` identity are unchanged after fixes, asserted by the test suite
-  3. Each fix landed on a branch with a Conventional Commit, semver bump, and CHANGELOG entry in the same commit
-  4. Each PR merged only after CodeRabbit's walkthrough comment posted
+  3. Each fix lands on a branch with a Conventional Commit, semver bump, and CHANGELOG entry in the same commit, merged only after CodeRabbit's walkthrough comment posts
+  4. `helpers/pyproject.toml` dependencies stay empty across every new module — zero new runtime dependencies
 **Plans**: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Baseline Health Verification | 0/TBD | Not started | - |
-| 2. Receipt-Backed Audit Verification | 0/TBD | Not started | - |
-| 3. Remediation and Governed Release | 0/TBD | Not started | - |
+| 2. Diff Pipeline & Positioning | 0/TBD | Not started | - |
+| 3. Rule Matching & Review Modes | 0/TBD | Not started | - |
+| 4. Scale, Resume & Diff Output | 0/TBD | Not started | - |
+| 5. End-to-End Verification (Audit & Review) | 0/TBD | Not started | - |
+| 6. Remediation and Governed Release | 0/TBD | Not started | - |
