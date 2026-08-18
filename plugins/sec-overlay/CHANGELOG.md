@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.50.1 - 2026-08-18
+
+### Added
+
+- `tests/test_rule_glob.py`: 10 failing tests (RED, Phase 3 Plan 2) for the not-yet-implemented
+  four-layer rule resolver (`ProjectRuleEntry`/`ProjectRule`/`RuleResolution`, custom > project >
+  global > built-in per-path fallthrough) and `merge_with_system_rule`'s header concatenation.
+
 ## 1.50.0 - 2026-08-18
 
 ### Added
