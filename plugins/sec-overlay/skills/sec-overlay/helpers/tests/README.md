@@ -72,8 +72,13 @@ covers the four-layer rule resolver: per-path fallthrough (`ProjectRuleEntry`/`P
 `RuleResolution`, custom > project > global > built-in, first-match-wins per path),
 `merge_with_system_rule`'s header concatenation and its three empty-input cases, and
 `load_project_rule` preserving JSON array match order and idempotent repeated resolution. Task 2
-adds the structurally separate whole-layer exclude-filter selection and the `--rule`/`--exclude`
-CLI wiring; Task 3 adds the rule-file safety gate — landing as one green suite once all three land.
+(9 tests, RED) covers the structurally separate whole-layer first-non-empty `build_file_filter`
+(skips an empty layer, never merges two non-empty layers, lower-cases patterns at build time),
+`build_resolution` assembling the three layers and appending CLI `--exclude` values, a case
+proving the custom/global layers resolve a relative `rule` field against their own config
+directory (not `repo_root`, unlike the project layer), the `--rule`/`--exclude` CLI wiring
+reaching `run_review`, and an excluded file never entering the coverage manifest. Task 3 adds
+the rule-file safety gate — landing as one green suite once all three land.
 
 `test_workspace.py` gained 4 tests for `Workspace.artifacts` (default path resolves under root,
 a `reports_dir` override does not redirect it, `ensure()` creates it, `ensure()` is idempotent).

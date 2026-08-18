@@ -2,6 +2,20 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.51.1 - 2026-08-18
+
+### Added
+
+- `tests/test_rule_glob.py`: 9 failing tests (RED, Phase 3 Plan 2, Task 2) for the
+  not-yet-implemented whole-layer first-non-empty file filter (`build_file_filter`,
+  `build_resolution`) and the `--rule`/`--exclude` flags on the `review` subparser, including
+  a case proving the custom/global layers resolve a relative `rule` field against their own
+  config directory (unlike the project layer, which resolves against `repo_root`).
+
+### Changed
+
+- `tests/test_rule_glob.py`: removed an unused `subprocess` import left over from Task 1.
+
 ## 1.51.0 - 2026-08-18
 
 ### Added
