@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.48.7 - 2026-08-18
+
+### Added
+
+- `test_review_tracer.py`: 7 failing tests (RED, Phase 3 Plan 1) for the not-yet-implemented
+  `rule_glob` (brace-expand and `**`-aware glob-based rule-doc resolution) and `reflection`
+  (retract-only LLM-verdict filter) modules.
+
 ## 1.48.6 - 2026-08-17
 
 ### Fixed
