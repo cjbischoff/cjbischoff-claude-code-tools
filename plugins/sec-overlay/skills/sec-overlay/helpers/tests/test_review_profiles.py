@@ -152,7 +152,7 @@ def _serialize(kept: list[ReviewFinding], dropped: list[DroppedFinding]) -> dict
     }
 
 
-def test_security_profile_output_matches_committed_baseline_no_regression():
+def test_dual_run_security_profile_matches_committed_baseline_no_regression():
     """D-10: security-profile output on the dual-run fixture must never drift.
 
     The baseline was captured from this same fixture at commit
@@ -168,7 +168,7 @@ def test_security_profile_output_matches_committed_baseline_no_regression():
     assert actual == expected
 
 
-def test_general_profile_is_a_strict_superset_of_the_security_baseline():
+def test_dual_run_general_profile_is_a_strict_superset_of_the_security_baseline():
     """D-10: general output is the security superset plus rule-doc classes."""
     security_kept, _ = apply_profile(_dual_run_fixture(), "security")
     general_kept, _ = apply_profile(_dual_run_fixture(), "general")

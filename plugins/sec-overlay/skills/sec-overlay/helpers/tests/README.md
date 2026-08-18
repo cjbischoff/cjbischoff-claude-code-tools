@@ -586,4 +586,7 @@ the point — and the `general` profile's kept set must be a strict superset of 
 profile's kept set on the same fixture, with every added finding carrying a
 `defect_class` in `GENERAL_DEFECT_CLASSES`. The baseline-provenance docstring on the first of
 these two tests cites `245d9e7`, the commit that added
-`fixtures/review_profiles_security_baseline.json`.
+`fixtures/review_profiles_security_baseline.json`. Both tests carry `dual_run` in their name
+(`test_dual_run_security_profile_matches_committed_baseline_no_regression` and
+`test_dual_run_general_profile_is_a_strict_superset_of_the_security_baseline`) so `pytest -k
+dual_run` selects exactly the D-10 pair.

@@ -2,6 +2,13 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.55.2 - 2026-08-18
+
+### Fixed
+
+- `tests/test_review_profiles.py`: renamed the two D-10 dual-run tests to carry `dual_run` in
+  their name, matching the plan's `-k dual_run` acceptance criterion.
+
 ## 1.55.1 - 2026-08-18
 
 ### Fixed
