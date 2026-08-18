@@ -5,15 +5,15 @@ milestone_name: Hybrid Diff-Review Architecture
 current_phase: 03
 current_phase_name: rule-matching-review-modes
 status: executing
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-08-18T18:56:01.206Z"
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-08-18T19:32:00.249Z"
 last_activity: 2026-08-18
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 14
-  completed_plans: 10
+  completed_plans: 11
   percent: 33
 ---
 
@@ -30,11 +30,11 @@ governed releases, receipt-backed findings.
 ## Current Position
 
 Phase: 03 (rule-matching-review-modes) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-08-18 — Phase 03 execution started
 
-Progress: [███████░░░] 71%
+Progress: [████████░░] 79%
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Progress: [███████░░░] 71%
 | Phase 02 P05 | 1 session | 3 tasks | 6 files |
 | Phase 03 P01 | 1h31m | 2 tasks | 14 files |
 | Phase 03 P02 | 1h10m | 3 tasks | 7 files |
+| Phase 03 P03 | 55min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,8 @@ Recent decisions affecting current work:
 - [Phase ?]: read_rule_file_safe's repo_root is the per-layer resolution base, not a separately threaded true project root
 - [Phase ?]: Rule-file safety gate hard-raises on any violation; no OCR-style warn-and-fallthrough (D-08)
 - [Phase ?]: Boundary check runs against the symlink-resolved path, stronger than OCR's pre-resolution check
+- [Phase ?]: BUILTIN_PATH_RULE_MAP trailing **/* catch-all makes default.md a reachable, testable map value
+- [Phase ?]: default.md rewritten to five-family/exclusion-block structure to satisfy the parametrized conformance test (Rule 2)
 
 ### Pending Todos
 
@@ -135,6 +138,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-18T18:56:01.190Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-08-18T19:32:00.232Z
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None
