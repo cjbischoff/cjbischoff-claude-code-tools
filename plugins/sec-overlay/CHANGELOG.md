@@ -2,6 +2,22 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.50.0 - 2026-08-18
+
+### Added
+
+- `rules/rule_docs/README.md`: what the directory is (per-language LLM prompt payloads), which
+  file covers which pattern, and the rule that adding a doc means adding its pattern to
+  `rule_glob.BUILTIN_PATH_RULE_MAP` in the same commit.
+
+### Changed
+
+- `helpers/pyproject.toml`: recorded the D-01 decision above `requires-python` — the floor
+  stays 3.12 because `rule_glob.glob_match` hand-rolls `**`-aware matching instead of the
+  3.13-only whole-path matcher.
+- `helpers/README.md`: added `rule_glob.py` and `reflection.py` to the diff-scoped review
+  module map.
+
 ## 1.49.0 - 2026-08-18
 
 ### Added
