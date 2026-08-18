@@ -156,8 +156,9 @@ def test_security_profile_output_matches_committed_baseline_no_regression():
     """D-10: security-profile output on the dual-run fixture must never drift.
 
     The baseline was captured from this same fixture at commit
-    15cb180 (docs(03): wire review finding source and fill validation) — the
-    tip of this branch when Task 3 was written. Any future diff to
+    245d9e7 (test(03-04): add failing tests for review profile gating) — the
+    commit that first committed ``review_profiles_security_baseline.json``.
+    Any future diff to
     ``apply_profile`` that changes the security profile's kept/dropped split
     fails this test; that is the point (REV-01's no-regression guarantee).
     """

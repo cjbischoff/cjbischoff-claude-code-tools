@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.55.1 - 2026-08-18
+
+### Fixed
+
+- `tests/test_review_profiles.py`: docstring cited the wrong commit for the committed
+  security-profile baseline (`15cb180` instead of `245d9e7`, the commit that actually added
+  `review_profiles_security_baseline.json`).
+
 ## 1.55.0 - 2026-08-18
 
 ### Added

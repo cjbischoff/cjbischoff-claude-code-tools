@@ -584,4 +584,6 @@ last two tests are the D-10 dual-run no-regression proof: a synthetic seven-find
 `apply_profile` that moves the security profile's kept/dropped split fails this test, which is
 the point — and the `general` profile's kept set must be a strict superset of the `security`
 profile's kept set on the same fixture, with every added finding carrying a
-`defect_class` in `GENERAL_DEFECT_CLASSES`.
+`defect_class` in `GENERAL_DEFECT_CLASSES`. The baseline-provenance docstring on the first of
+these two tests cites `245d9e7`, the commit that added
+`fixtures/review_profiles_security_baseline.json`.
