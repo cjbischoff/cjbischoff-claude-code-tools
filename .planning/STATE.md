@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Diff-Review Architecture
-current_phase: 02
-current_phase_name: diff-pipeline-positioning
+current_phase: 03
+current_phase_name: rule-matching-review-modes
 status: executing
-stopped_at: Phase 3 context gathered
-last_updated: "2026-08-18T13:52:43.666Z"
-last_activity: 2026-08-17
-last_activity_desc: Phase 01 execution started
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-08-18T17:49:30.940Z"
+last_activity: 2026-08-18
+last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 14
-  completed_plans: 8
+  completed_plans: 9
   percent: 33
 ---
 
@@ -25,16 +25,16 @@ See: .planning/PROJECT.md (updated 2026-08-16)
 
 **Core value:** The marketplace never ships an unverified claim — validated plugins,
 governed releases, receipt-backed findings.
-**Current focus:** Phase 02 — diff-pipeline-positioning
+**Current focus:** Phase 03 — rule-matching-review-modes
 
 ## Current Position
 
-Phase: 02 (diff-pipeline-positioning) — EXECUTING
-Plan: 5 of 5
+Phase: 03 (rule-matching-review-modes) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-08-17 — Phase 02 execution started
+Last activity: 2026-08-18 — Phase 03 execution started
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 64%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [██████████] 100%
 | Phase 02 P03 | 1 session | 3 tasks | 10 files |
 | Phase 02 P04 | one session | 3 tasks | 10 files |
 | Phase 02 P05 | 1 session | 3 tasks | 6 files |
+| Phase 03 P01 | 1h31m | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,8 @@ Recent decisions affecting current work:
 - [Phase ?]: review_ledger.json is a separate artifact from findings.json because models.py is the frozen milestone contract and a new FindingStatus member would break the Go port's byte mirror
 - [Phase ?]: PositionResult carries the original claimed snippet on every result, including declines, so the report can show the claim without a second file lookup
 - [Phase ?]: Partial coverage seal isolated via try/except around parse_hunks; no organic trigger exists today, so tests drive it by monkeypatching parse_hunks (D-15)
+- [Phase ?]: Kept Python floor at 3.12 (D-01): rule_glob.glob_match hand-rolls a **-aware segment matcher instead of the 3.13-only pathlib.PurePath.full_match
+- [Phase ?]: reflection.apply_verdict is retract-only: a verdict can remove only a finding the code submitted, never add/rank/rewrite; PROTECTED_SUBJECT_CLASSES is a hardcoded veto (D-16)
 
 ### Pending Todos
 
@@ -128,6 +131,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-18T01:34:18.091Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-rule-matching-review-modes/03-CONTEXT.md
+Last session: 2026-08-18T17:49:30.927Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: None
