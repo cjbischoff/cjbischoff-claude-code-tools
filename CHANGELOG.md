@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Complete Phase 3 Plan 4 (the `security`/`general` review profiles and the general-defect-class allowlist bypass, proven a strict superset by a committed dual-run baseline fixture): record its summary in `.planning/phases/03-rule-matching-review-modes/03-04-SUMMARY.md`, advance `.planning/STATE.md` and `.planning/ROADMAP.md` to Plan 4 of 6 done, and mark REV-01 Complete in `.planning/REQUIREMENTS.md`.
 - Complete Phase 3 Plan 3 (seven per-language rule docs and a data-driven conformance test): record its summary in `.planning/phases/03-rule-matching-review-modes/03-03-SUMMARY.md`, advance `.planning/STATE.md` and `.planning/ROADMAP.md` to Plan 3 of 6 done, and confirm RULE-05 Complete in `.planning/REQUIREMENTS.md`.
 - Complete Phase 3 Plan 2 (four-layer rule resolution and the RULE-03 safety gate): record its summary in `.planning/phases/03-rule-matching-review-modes/03-02-SUMMARY.md`, advance `.planning/STATE.md` and `.planning/ROADMAP.md` to Plan 2 of 6 done, and mark RULE-02, RULE-03, and RULE-04 Complete in `.planning/REQUIREMENTS.md`.
 - Complete Phase 3 Plan 1 (the review-mode tracer): record its summary in `.planning/phases/03-rule-matching-review-modes/03-01-SUMMARY.md`, advance `.planning/STATE.md` and `.planning/ROADMAP.md` to Plan 1 of 6 done, and mark RULE-01, RULE-05, and REV-02 Complete in `.planning/REQUIREMENTS.md`.

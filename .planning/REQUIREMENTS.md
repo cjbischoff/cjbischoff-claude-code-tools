@@ -74,7 +74,7 @@ models.py/evidence.py contract, receipt gate as the sole authority on `confirmed
 
 ### Review Modes (REV)
 
-- [ ] **REV-01**: `review --profile security` reproduces current gate behavior
+- [x] **REV-01**: `review --profile security` reproduces current gate behavior
   exactly; `--profile general` reports general defects the security gates A/B would
   drop, with gates C/D/E still applied
 
@@ -199,7 +199,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RULE-03 | Phase 3 | Complete |
 | RULE-04 | Phase 3 | Complete |
 | RULE-05 | Phase 3 | Complete |
-| REV-01 | Phase 3 | Pending |
+| REV-01 | Phase 3 | Complete |
 | REV-02 | Phase 3 | Complete |
 | REV-03 | Phase 3 | Pending |
 | SCALE-01 | Phase 4 | Pending |

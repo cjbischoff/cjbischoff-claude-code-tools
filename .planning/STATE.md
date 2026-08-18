@@ -5,15 +5,15 @@ milestone_name: Hybrid Diff-Review Architecture
 current_phase: 03
 current_phase_name: rule-matching-review-modes
 status: executing
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-08-18T19:32:00.249Z"
+stopped_at: Completed 03-04-PLAN.md
+last_updated: "2026-08-18T23:47:17.677Z"
 last_activity: 2026-08-18
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 14
-  completed_plans: 11
+  completed_plans: 12
   percent: 33
 ---
 
@@ -30,11 +30,11 @@ governed releases, receipt-backed findings.
 ## Current Position
 
 Phase: 03 (rule-matching-review-modes) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-08-18 — Phase 03 execution started
 
-Progress: [████████░░] 79%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Progress: [████████░░] 79%
 | Phase 03 P01 | 1h31m | 2 tasks | 14 files |
 | Phase 03 P02 | 1h10m | 3 tasks | 7 files |
 | Phase 03 P03 | 55min | 3 tasks | 15 files |
+| Phase 03 P04 | 40min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Boundary check runs against the symlink-resolved path, stronger than OCR's pre-resolution check
 - [Phase ?]: BUILTIN_PATH_RULE_MAP trailing **/* catch-all makes default.md a reachable, testable map value
 - [Phase ?]: default.md rewritten to five-family/exclusion-block structure to satisfy the parametrized conformance test (Rule 2)
+- [Phase ?]: REV-01: option-a — new review_findings.py module wraps findings in ReviewFinding, keeping models.py/evidence.py frozen (D-11)
+- [Phase ?]: apply_profile returns a 2-tuple (kept, dropped), deliberately diverging from review_position_gate's 3-tuple since profile gating cannot produce a decline
+- [Phase ?]: Security-profile baseline captured as a committed JSON fixture, not recomputed inline, so a future regression fails the comparison
 
 ### Pending Todos
 
@@ -138,6 +142,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-18T19:32:00.232Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-08-18T23:47:17.657Z
+Stopped at: Completed 03-04-PLAN.md
 Resume file: None
