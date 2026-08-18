@@ -595,7 +595,7 @@ an ordered `entries` list (`path` glob, `rule` text, `merge_system_rule` bool) p
 `exclude` lists Task 2's whole-layer filter selection consumes — never per-path resolution.
 `load_project_rule(path, repo_root)` reads a layer defensively (`None` when absent, following
 `exclusions.load_exclusions`'s idiom) and resolves each entry's `rule` file at load time through
-a placeholder reader Task 3 replaces with `read_rule_file_safe`. `match_project_rule_entry(layer,
+`read_rule_file_safe` (Task 3's safety gate, below). `match_project_rule_entry(layer,
 path)` is the per-path fallthrough building block — first entry in JSON array order whose pattern
 matches wins. `resolve_rule_doc` now takes an optional `RuleResolution` and walks
 `[custom, project, global]` before falling back to the built-in map, deciding independently per
@@ -621,3 +621,24 @@ subparser gained `--rule` (single path) and `--exclude` (repeatable); `run_revie
 file, and narrows `selection.reviewable` by the resulting `FileFilter` before the manifest loop —
 `dataclasses.replace` rebuilds the frozen `Selection` rather than mutating it — so an excluded
 file never enters coverage accounting.
+
+Task 3 adds RULE-03's hard-reject rule-file safety gate. `read_rule_file_safe(path, repo_root)`
+runs a fixed check order — `Path.resolve(strict=True)` to collapse symlinks, extension check
+against `ALLOWED_RULE_EXTENSIONS` (`.md`/`.txt`/`.markdown`) on the RESOLVED path's suffix so a
+`.md` symlink pointing at a `.yaml` target is caught, `Path.is_relative_to` containment against
+the resolved `repo_root`, then a capped `open("rb")` read of at most `MAX_RULE_FILE_BYTES + 1`
+(524288 + 1) bytes rejecting anything over the cap before any UTF-8 decode — and raises
+`RuleSafetyError` naming the path and reason on any violation, never falling through to another
+layer. `_entry_rule_path(rule, repo_root)` joins a layer's relative `rule` field the same way
+`build_resolution` already did in Task 2; `read_rule_file_safe` itself does no relative-path
+resolution, only symlink resolution. Three deliberate divergences from OCR's `system_rules.go`,
+documented in the function's docstring: the boundary check runs against the RESOLVED path
+(stronger than OCR's pre-resolution check, closing a symlink-escape gap OCR has), a violation is
+always a hard raise rather than OCR's warn-and-fallthrough, and the size cap is enforced on the
+read itself (TOCTOU-safe) rather than via a separate `stat` call, measured in bytes not
+characters. `cli.py`'s `run_review` catches `RuleSafetyError` around both `build_resolution` and
+the per-file `resolve_rule_doc` call, prints the message to stderr, and returns exit code 2 — the
+gate's `repo_root` is exactly whatever base `load_project_rule` was already passed for that layer
+(true `repo_root` for the project layer, the layer's own config file's parent directory for
+custom/global), not a separately threaded true project root, since a global config under
+`~/.sec-overlay/` is essentially never nested under an arbitrary project's `repo_root`.

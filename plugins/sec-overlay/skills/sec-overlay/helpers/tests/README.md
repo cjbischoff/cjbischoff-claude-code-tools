@@ -81,7 +81,7 @@ reaching `run_review`, and an excluded file never entering the coverage manifest
 dereferences an `X | None` call result now carries the explicit `is not None` assertion `ty`
 needs to narrow the type (same idiom as `test_rule_matcher.py`/`test_bucket_b.py` below) — no
 behavior change, but it took `ty check`'s diagnostics on this file from 12 to 0. Task 3 (6 tests,
-RED) covers the rule-file safety gate (`read_rule_file_safe`, `RuleSafetyError`): the 512 KB
+green) covers the rule-file safety gate (`read_rule_file_safe`, `RuleSafetyError`): the 512 KB
 boundary at 524288/524289 bytes, a symlink escaping the repo root, a disallowed extension on the
 resolved path (a plain `.yaml` file and a `.md` symlink pointing at one), trailing-newline
 stripping with inner blank lines preserved, byte- not character-based sizing on multi-byte UTF-8

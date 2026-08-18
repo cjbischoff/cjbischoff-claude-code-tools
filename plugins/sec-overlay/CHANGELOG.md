@@ -2,6 +2,23 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.53.0 - 2026-08-18
+
+### Added
+
+- `rule_glob.py`: `read_rule_file_safe(path, repo_root)`, RULE-03's hard-reject rule-file safety
+  gate — resolves symlinks, rejects a resolved extension outside `.md`/`.txt`/`.markdown`, checks
+  containment of the resolved path under `repo_root`, and rejects a read over 512 KB
+  (`MAX_RULE_FILE_BYTES`) enforced on the read itself, before any UTF-8 decode. Raises the new
+  `RuleSafetyError` naming the path and reason, with no fallback to another layer. Diverges from
+  OCR's `system_rules.go` on purpose: boundary check runs on the resolved path (closes a
+  symlink-escape gap), a violation always hard-raises instead of warn-and-fallthrough, and the
+  size cap is TOCTOU-safe (checked on the read, not a separate `stat`).
+- `rule_glob.py`: `_entry_rule_path(rule, repo_root)`, joining a layer's relative `rule` field
+  before it reaches `read_rule_file_safe`; replaces the deleted Task 1 placeholder reader.
+- `cli.py`: catches `RuleSafetyError` around `build_resolution` and the per-file
+  `resolve_rule_doc` call in `run_review`, printing the message to stderr and exiting 2.
+
 ## 1.52.1 - 2026-08-18
 
 ### Added

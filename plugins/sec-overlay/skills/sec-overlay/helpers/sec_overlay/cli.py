@@ -25,7 +25,7 @@ from sec_overlay.reflection import SKIPPED_REASON, ReflectionSkip, apply_verdict
 from sec_overlay.repo_memory import RepoMemory, repo_slug
 from sec_overlay.report import to_markdown, write_report
 from sec_overlay.review_coverage import MANIFEST_FILENAME, CoverageManifest
-from sec_overlay.rule_glob import build_resolution, glob_match, resolve_rule_doc
+from sec_overlay.rule_glob import RuleSafetyError, build_resolution, glob_match, resolve_rule_doc
 from sec_overlay.sarif import to_sarif
 from sec_overlay.sast import run_semgrep
 from sec_overlay.scanscope import resolve as _resolve_scope
@@ -132,8 +132,10 @@ def run_review(
 
     Returns:
         0 when the coverage manifest seals ``complete`` (including a diff with no
-        reviewable files), 2 on an invalid ``base``/``head`` ref (D-06), 3 when
-        the seal is ``partial`` (D-15) — one or more files could not be reviewed.
+        reviewable files), 2 on an invalid ``base``/``head`` ref (D-06) or a
+        ``RuleSafetyError`` from the RULE-03 rule-file safety gate (no fallback
+        to another layer), 3 when the seal is ``partial`` (D-15) — one or more
+        files could not be reviewed.
     """
     import subprocess
     r = runner or subprocess.run
@@ -148,7 +150,11 @@ def run_review(
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    resolution = build_resolution(rule_path, excludes or [], Path(root))
+    try:
+        resolution = build_resolution(rule_path, excludes or [], Path(root))
+    except RuleSafetyError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     records = changed_file_records(base_sha, head_sha, runner=r)
     diff_line_counts = {
@@ -185,9 +191,12 @@ def run_review(
             manifest.fail(record.path, note=str(exc))
             continue
         manifest.finish(record.path)
-        rule_docs.append(
-            {"path": record.path, "text": resolve_rule_doc(record.path, resolution)}
-        )
+        try:
+            rule_text = resolve_rule_doc(record.path, resolution)
+        except RuleSafetyError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        rule_docs.append({"path": record.path, "text": rule_text})
 
     _kept, dropped, declines = review_position_gate([], hunks_by_path)
 

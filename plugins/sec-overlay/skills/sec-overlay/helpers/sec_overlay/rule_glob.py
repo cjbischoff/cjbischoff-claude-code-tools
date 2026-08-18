@@ -21,9 +21,12 @@ share a code path:
 
 RULE-04's :func:`merge_with_system_rule` concatenates built-in and user rule
 text under fixed headers instead of replacing. RULE-03's
-:func:`read_rule_file_safe` (Task 3) is the sole entry point for reading a
-rule file off disk, diverging from OCR's ``readRuleFileSafe`` in three ways
-mandated by this project's requirements — documented on that function.
+:func:`read_rule_file_safe` is the sole entry point for reading a rule file
+off disk — every layer's entries route through it — diverging from OCR's
+``readRuleFileSafe`` in three ways mandated by this project's requirements
+(stronger resolved-path boundary check, hard reject instead of a warn-and-
+fallthrough, and a capped read instead of stat-then-read); documented in
+full on that function.
 
 All resolver functions take their config as an argument and hold no
 module-level mutable state, so parallel resolution in Phase 4 cannot
@@ -41,11 +44,26 @@ BUILTIN_DEFAULT_RULE = "default.md"
 SYSTEM_RULE_HEADER = "## System-Specific Rules (Mandatory)"
 USER_RULE_HEADER = "## User-Specific Rules (Mandatory)"
 
+# RULE-03: the rule-file safety gate's hard limits (see `read_rule_file_safe`).
+MAX_RULE_FILE_BYTES = 524288
+ALLOWED_RULE_EXTENSIONS = frozenset({".md", ".txt", ".markdown"})
+
 # Ordered: first matching glob wins. New entries append before default's
 # catch-all is implied by resolve_rule_doc's fallback (no `**/*` entry here).
 BUILTIN_PATH_RULE_MAP: dict[str, str] = {
     "**/*.py": "python.md",
 }
+
+
+class RuleSafetyError(Exception):
+    """Raised by `read_rule_file_safe` on a symlink escape, bad extension, or oversize file.
+
+    A hard reject (D-08): unlike OCR's soft warn-and-fallthrough, `sec-overlay` never
+    silently reviews with the wrong (or no) rule doc after a safety violation. The
+    message names the offending path and the specific reason so the error is
+    actionable from stderr alone (T-03-07 accepts this as low-severity disclosure —
+    the path is one the operator supplied or their own repo already contains).
+    """
 
 
 @dataclass
@@ -198,9 +216,9 @@ def load_project_rule(path: Path, repo_root: Path) -> ProjectRule | None:
 
     Follows `exclusions.load_exclusions`'s defensive-load idiom: a missing
     file contributes nothing rather than raising. Each entry's `rule` field
-    is read from disk at load time (a placeholder read until Task 3 lands
-    `read_rule_file_safe` — see that function's docstring), so by the time
-    `match_project_rule_entry` runs, `entry.rule` already holds file *content*.
+    is read from disk at load time through `read_rule_file_safe` (RULE-03),
+    so by the time `match_project_rule_entry` runs, `entry.rule` already
+    holds file *content* that has already passed the safety gate.
 
     Args:
         path: Path to the layer's `rule.json` file.
@@ -217,7 +235,7 @@ def load_project_rule(path: Path, repo_root: Path) -> ProjectRule | None:
     entries = [
         ProjectRuleEntry(
             path=raw["path"],
-            rule=_read_entry_rule_placeholder(raw.get("rule", ""), repo_root),
+            rule=read_rule_file_safe(_entry_rule_path(raw.get("rule", ""), repo_root), repo_root),
             merge_system_rule=bool(raw.get("merge_system_rule", False)),
         )
         for raw in data.get("rules", [])
@@ -229,20 +247,94 @@ def load_project_rule(path: Path, repo_root: Path) -> ProjectRule | None:
     )
 
 
-def _read_entry_rule_placeholder(rule: str, repo_root: Path) -> str:
-    """Read a rule-json entry's `rule` file (Task 1 placeholder for the safety gate).
+def _entry_rule_path(rule: str, repo_root: Path) -> Path:
+    """Join a rule.json entry's `rule` field against `repo_root` when relative.
 
-    Resolves a relative `rule` value against `repo_root`, per OCR's
-    `resolveRuleEntries`. Task 3 replaces every call site of this function
-    with `read_rule_file_safe`, so every layer's rule file passes the same
-    symlink/extension/boundary/size gate — this placeholder has none of that
-    and exists only to keep Task 1's `load_project_rule` runnable before
-    Task 3 lands.
+    Mirrors OCR's `resolveRuleEntries`; the joined path is then validated and
+    read by `read_rule_file_safe`, which does no relative-path resolution of
+    its own.
     """
-    file_path = Path(rule)
-    if not file_path.is_absolute():
-        file_path = repo_root / rule
-    return file_path.read_text().rstrip("\n")
+    candidate = Path(rule)
+    return candidate if candidate.is_absolute() else repo_root / rule
+
+
+def read_rule_file_safe(path: str | Path, repo_root: Path) -> str:
+    """Read one rule file after the RULE-03 safety gate, or raise `RuleSafetyError`.
+
+    The sole entry point for reading a rule file off disk (RULE-03) — every
+    layer's entries route through this, so a symlink escape, a disallowed
+    extension, or an oversize file rejects the whole run instead of silently
+    reviewing with the wrong (or no) rule doc.
+
+    Check order (D-02): resolve symlinks first via `Path.resolve(strict=True)`,
+    then the resolved path's suffix against `ALLOWED_RULE_EXTENSIONS`, then
+    containment under the resolved `repo_root` via `Path.is_relative_to`, then
+    the `MAX_RULE_FILE_BYTES` cap enforced on the read itself, then a UTF-8
+    decode that strips only trailing newlines (`rstrip("\\n")`) so inner blank
+    lines survive.
+
+    Three deliberate divergences from OCR's `readRuleFileSafe`, each mandated
+    by a sec-overlay requirement rather than a port defect (D-02):
+
+    1. OCR boundary-checks the cleaned join before resolving symlinks; RULE-03
+       requires the RESOLVED path to be under the repo root, which is
+       strictly stronger and closes the symlink-escape path OCR leaves open.
+    2. OCR warns to stderr and returns `nil`, letting resolution fall through
+       to the next layer; D-08 requires a hard reject, so every violation
+       here raises `RuleSafetyError` naming the offending path and the
+       specific reason — a typo'd rule path must never silently review with
+       the wrong checklist.
+    3. OCR stats then reads, leaving a window where a file can grow between
+       the two calls; the cap is enforced on the read itself by reading at
+       most `MAX_RULE_FILE_BYTES + 1` bytes and rejecting when that much
+       comes back, so the cap holds regardless of concurrent writes. Size is
+       measured in bytes via the binary length, never in decoded characters.
+
+    Args:
+        path: The rule file's path, already joined against its layer's base
+            directory (see `_entry_rule_path`) — this function performs no
+            relative-path resolution of its own, only symlink resolution.
+        repo_root: The boundary the resolved path must fall under. Callers
+            pass whatever base their own layer already resolves relative
+            `rule` fields against (`load_project_rule`'s `repo_root`
+            parameter) — the true project root for the project layer, a
+            layer's own config directory for the custom/global layers — so
+            every layer is checked against the same root it trusts for its
+            own relative paths (T-03-09).
+
+    Returns:
+        The file's text, UTF-8 decoded, with trailing newlines stripped.
+
+    Raises:
+        RuleSafetyError: On an unresolvable path, a resolved path outside
+            `repo_root`, a disallowed extension, or a read exceeding
+            `MAX_RULE_FILE_BYTES`.
+    """
+    candidate = Path(path)
+    try:
+        resolved = candidate.resolve(strict=True)
+    except OSError as exc:
+        raise RuleSafetyError(f"cannot resolve rule file {candidate}: {exc}") from exc
+
+    if resolved.suffix.lower() not in ALLOWED_RULE_EXTENSIONS:
+        raise RuleSafetyError(
+            f"rule file {resolved} has disallowed extension {resolved.suffix!r}; "
+            f"allowed: {sorted(ALLOWED_RULE_EXTENSIONS)}"
+        )
+
+    resolved_root = Path(repo_root).resolve(strict=False)
+    if not resolved.is_relative_to(resolved_root):
+        raise RuleSafetyError(f"rule file {resolved} resolves outside repo root {resolved_root}")
+
+    with resolved.open("rb") as fh:
+        data = fh.read(MAX_RULE_FILE_BYTES + 1)
+    if len(data) > MAX_RULE_FILE_BYTES:
+        raise RuleSafetyError(
+            f"rule file {resolved} exceeds {MAX_RULE_FILE_BYTES} bytes "
+            f"(read at least {len(data)} bytes)"
+        )
+
+    return data.decode("utf-8").rstrip("\n")
 
 
 def match_project_rule_entry(layer: ProjectRule | None, path: str) -> ProjectRuleEntry | None:
