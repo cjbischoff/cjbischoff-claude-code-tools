@@ -642,3 +642,15 @@ gate's `repo_root` is exactly whatever base `load_project_rule` was already pass
 (true `repo_root` for the project layer, the layer's own config file's parent directory for
 custom/global), not a separately threaded true project root, since a global config under
 `~/.sec-overlay/` is essentially never nested under an arbitrary project's `repo_root`.
+
+Phase 3 plan 03 (Task 1) extends `BUILTIN_PATH_RULE_MAP` from its single `python.md` entry to
+nine, mirroring OCR's `system_rules.json` pattern strings and doc filenames exactly (D-02): one
+entry per built-in language plus a trailing `"**/*": "default.md"` catch-all, so `default.md` is
+a reachable, testable map value like every other doc instead of a fallback living outside the
+map (`_resolve_builtin_or_default`'s post-loop fallback keeps working unchanged, since the
+catch-all matches everything the fallback did). `REQUIRED_RULE_SECTIONS` names the five defect
+families every built-in doc must cover, in the fixed order `python.md` established; a sibling
+`RULE_SECTION_SYNONYMS` dict carries the accepted per-language heading wording for each family
+(a Rust doc says panic/unwrap where a Java doc says null pointer) as data, not scattered test
+logic — `tests/test_rule_docs.py` drives every assertion from these two constants and the map
+itself, never a hardcoded filename list.

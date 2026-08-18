@@ -554,3 +554,15 @@ decline (`state: "needs-position-review"` plus claimed path/line, snippet, reaso
 carries the `position_reviews`/`dropped` keys, even when both are empty; the JSON round-trips
 every field, and calling it twice leaves one valid file holding the second call's data. Both
 symbols ship in plan 02-04, task 3.
+
+`test_rule_docs.py` (phase 3 plan 03, RULE-05) is a conformance suite over the nine built-in
+rule docs, driven entirely from `BUILTIN_PATH_RULE_MAP`, `BUILTIN_DEFAULT_RULE`, and
+`REQUIRED_RULE_SECTIONS`/`RULE_SECTION_SYNONYMS` — no filename is hardcoded, so a language added
+later needs a map entry and a doc file, never a test edit. It checks every map value (plus
+`default.md`) exists and is non-empty, that no doc on disk is an orphan the map never points at,
+that every doc's five `####` sections match the five required families in order and each carries
+a "Do not report" exclusion block, that the four TS/JS extensions all resolve to
+`ts_js_tsx_jsx.md`, that a representative path per language resolves to its own doc, that an
+extensionless or unmatched-extension path resolves to `default.md`, that a two-entry map
+collision resolves to the first entry (`monkeypatch` on `BUILTIN_PATH_RULE_MAP` and
+`builtin_rule_docs_dir`, not real files), and that `resolve_rule_doc` is idempotent.

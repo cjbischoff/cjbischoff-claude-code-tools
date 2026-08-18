@@ -48,10 +48,43 @@ USER_RULE_HEADER = "## User-Specific Rules (Mandatory)"
 MAX_RULE_FILE_BYTES = 524288
 ALLOWED_RULE_EXTENSIONS = frozenset({".md", ".txt", ".markdown"})
 
-# Ordered: first matching glob wins. New entries append before default's
-# catch-all is implied by resolve_rule_doc's fallback (no `**/*` entry here).
+# Ordered: first matching glob wins. Language entries mirror OCR's
+# system_rules.json pattern strings and doc filenames exactly (D-02),
+# restricted to the languages this project actually ships a doc for. The
+# trailing `**/*` catch-all makes default.md a reachable, testable map value
+# like every other doc (RULE-05) instead of a fallback outside the map.
 BUILTIN_PATH_RULE_MAP: dict[str, str] = {
+    "**/*.java": "java.md",
+    "**/*.go": "go.md",
+    "**/*.{ts,js,tsx,jsx}": "ts_js_tsx_jsx.md",
+    "**/*.{kt}": "kotlin.md",
+    "**/*.rs": "rust.md",
     "**/*.py": "python.md",
+    "**/*.{php,phtml}": "php.md",
+    "**/*.swift": "swift.md",
+    "**/*": "default.md",
+}
+
+# RULE-05: the five defect families every built-in rule doc must cover, in
+# the fixed order established by python.md. Accepted heading synonyms live
+# alongside the family keys (test_rule_docs.py drives every assertion from
+# this data, not a hardcoded per-language doc list) because the same family
+# is named differently across languages — a Rust doc says "panic"/"unwrap"
+# where a Java doc says "null pointer".
+REQUIRED_RULE_SECTIONS: tuple[str, ...] = (
+    "null_or_nil_dereference",
+    "thread_safety",
+    "injection",
+    "resource_leaks",
+    "swallowed_errors",
+)
+
+RULE_SECTION_SYNONYMS: dict[str, tuple[str, ...]] = {
+    "null_or_nil_dereference": ("null", "nil", "optional", "unwrap", "panic"),
+    "thread_safety": ("thread safety", "concurrency", "race", "synchroniz"),
+    "injection": ("injection",),
+    "resource_leaks": ("resource leak", "resource management", "resource"),
+    "swallowed_errors": ("swallowed error", "error handling", "exception handling", "error"),
 }
 
 

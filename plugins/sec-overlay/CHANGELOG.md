@@ -2,6 +2,22 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.53.1 - 2026-08-18
+
+### Added
+
+- `rule_glob.py`: `REQUIRED_RULE_SECTIONS`, the five defect families every built-in rule doc
+  must cover in `python.md`'s fixed order, and `RULE_SECTION_SYNONYMS`, the accepted per-language
+  heading wording for each family — data `tests/test_rule_docs.py` drives its assertions from,
+  not scattered test logic (RULE-05).
+- `rule_glob.py`: `BUILTIN_PATH_RULE_MAP` extended from one entry to nine, mirroring OCR's
+  `system_rules.json` pattern strings and doc filenames (D-02), including a trailing
+  `"**/*": "default.md"` catch-all so `default.md` is a reachable map value like every other doc.
+- `tests/test_rule_docs.py`: a conformance suite driven entirely from `BUILTIN_PATH_RULE_MAP`,
+  `BUILTIN_DEFAULT_RULE`, and the two new constants — no hardcoded doc filename. Currently red:
+  seven of the nine mapped docs (go, java, kotlin, php, rust, swift, ts_js_tsx_jsx) do not exist
+  on disk yet; plan 03-03 task 2 adds them.
+
 ## 1.53.0 - 2026-08-18
 
 ### Added
