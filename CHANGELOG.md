@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Record the Phase 3 context-gathering session in `.planning/STATE.md` (stopped-at marker and resume file), pointing the next session at `03-CONTEXT.md`.
 - Capture Phase 3 (Rule Matching & Review Modes) implementation decisions in `.planning/phases/03-rule-matching-review-modes/`: a custom `**`-aware glob matcher that keeps the Python 3.12 floor and byte-mirrors OCR `system_rules.go` semantics, OCR-ported per-language rule docs kept in machine-optimized prompt-payload format under `rules/rule_docs/` with fail-fast rule-file safety, a class-allowlist bypass of gates A/B for `--profile general` proven by a same-fixture dual-run regression test, and a skill-dispatched reflection filter with per-retraction ledger entries, logged fail-open events, and code-enforced protected-subject vetoes.
 - Record the milestone v5.0 audit at `.planning/v5.0-MILESTONE-AUDIT.md` (status gaps_found: 6/32 requirements satisfied, 22 belong to unstarted Phases 3–6; one new integration blocker — the `review` subcommand writes artifacts into the target repo root instead of the `.sec-overlay/<slug>/` sidecar — plus a `ty` regression in `tests/test_review_tracer.py` and a stale `02-VERIFICATION.md`).
 - Fill and approve the Phase 2 validation strategy at `.planning/phases/02-diff-pipeline-positioning/02-VALIDATION.md` (status validated, nyquist_compliant true, 0 gaps; all 7 requirements map to green tests, 304 phase tests pass).
