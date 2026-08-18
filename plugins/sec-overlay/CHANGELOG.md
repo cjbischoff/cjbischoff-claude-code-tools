@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.54.1 - 2026-08-18
+
+### Added
+
+- `tests/test_review_profiles.py`: failing tests for review-profile gating (REV-01) — the
+  `sec_overlay.review_findings` module the tests import does not exist yet.
+- `tests/fixtures/review_profiles_security_baseline.json`: the committed dual-run baseline
+  (D-10) the `security` profile's output must never drift from.
+
 ## 1.54.0 - 2026-08-18
 
 ### Added

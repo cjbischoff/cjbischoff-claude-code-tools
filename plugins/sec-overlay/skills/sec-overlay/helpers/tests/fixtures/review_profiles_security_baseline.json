@@ -1,0 +1,11 @@
+{
+  "kept_ids": ["F-1"],
+  "dropped": [
+    {"path": "f2.py", "line": 2, "rule_id": "R2", "reason": "gate-a"},
+    {"path": "f3.py", "line": 3, "rule_id": "R3", "reason": "gate-a"},
+    {"path": "f4.py", "line": 4, "rule_id": "R4", "reason": "gate-b"},
+    {"path": "f5.py", "line": 5, "rule_id": "R5", "reason": "gate-c"},
+    {"path": "f6.py", "line": 6, "rule_id": "R6", "reason": "gate-d"},
+    {"path": "f7.py", "line": 7, "rule_id": "R7", "reason": "gate-e"}
+  ]
+}

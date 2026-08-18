@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-98 pytest files, 1028 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+102 pytest files, 1112 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -566,3 +566,22 @@ a "Do not report" exclusion block, that the four TS/JS extensions all resolve to
 extensionless or unmatched-extension path resolves to `default.md`, that a two-entry map
 collision resolves to the first entry (`monkeypatch` on `BUILTIN_PATH_RULE_MAP` and
 `builtin_rule_docs_dir`, not real files), and that `resolve_rule_doc` is idempotent.
+
+`test_review_profiles.py` (phase 3 plan 04, REV-01) covers `sec_overlay.review_findings`:
+`classify` returns `None` for a non-allowlisted `Finding.cls` and the class itself for each of
+the five `GENERAL_DEFECT_CLASSES`; `apply_profile` raises `ValueError` on an unknown profile
+name or an unknown gate marking; an unmarked finding is always kept, under both profiles, with
+`disposition == UNCONFIRMED_DISPOSITION`; the `security` profile drops every gate-marked
+finding regardless of class; the `general` profile bypasses gates A/B for an allowlisted class
+but still drops a non-allowlisted gate-A finding and drops gates C/D/E unconditionally even for
+an allowlisted class; `apply_profile` never assigns a `confirmed` disposition; dropped findings
+sort by `(path, line, rule_id)` independent of input order; and
+`EXCLUSION_BLOCK_BY_PROFILE` names the two `prompt-constants.md` blocks a profile selects. The
+last two tests are the D-10 dual-run no-regression proof: a synthetic seven-finding fixture
+(`_dual_run_fixture`, one finding per gate letter A–E plus one unmarked) run through the
+`security` profile must match the committed
+`fixtures/review_profiles_security_baseline.json` byte-for-byte — any future change to
+`apply_profile` that moves the security profile's kept/dropped split fails this test, which is
+the point — and the `general` profile's kept set must be a strict superset of the `security`
+profile's kept set on the same fixture, with every added finding carrying a
+`defect_class` in `GENERAL_DEFECT_CLASSES`.
