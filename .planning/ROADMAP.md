@@ -107,12 +107,28 @@ Plans:
   5. The reflection filter runs once per file after positioning and the hunk gate, retracts findings only, fails open on LLM error, and cannot itself produce a `confirmed` disposition; a general-defect finding without a Tier-1 mechanical receipt ships as `unconfirmed`/`needs-deployment-testing`, never `confirmed`
 
 **Plans**: 6 plans
+**Wave 1**
 
 - [ ] 03-01-PLAN.md — Wave 1 (tracer): end-to-end review of one Python file through its rule doc and the reflection filter
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 03-02-PLAN.md — Wave 2: four-layer rule resolution, merge_system_rule, file filter, and the rule-file safety gate
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 03-03-PLAN.md — Wave 3: the seven remaining per-language rule docs and their conformance test
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 03-04-PLAN.md — Wave 4: security and general profiles with the same-fixture no-regression proof (has a decision checkpoint)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 03-05-PLAN.md — Wave 5: reflection prompt, protected-subject veto, never-silent ledger, and the receipt-gate disposition ladder
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 03-06-PLAN.md — Wave 6: per-file review-agent dispatch that feeds the resolved rule doc in and real findings out
 
 **Notes**: `**`-aware globbing needs `pathlib.PurePath.full_match` (Python 3.13) or a small custom matcher. State the chosen floor explicitly in the plugin docs — check the plugin's actual supported interpreter range before assuming Python 3.13 is available; if it is not, ship the custom matcher.
