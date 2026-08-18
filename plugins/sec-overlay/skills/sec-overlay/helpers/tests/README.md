@@ -80,8 +80,12 @@ directory (not `repo_root`, unlike the project layer), the `--rule`/`--exclude` 
 reaching `run_review`, and an excluded file never entering the coverage manifest. Every test that
 dereferences an `X | None` call result now carries the explicit `is not None` assertion `ty`
 needs to narrow the type (same idiom as `test_rule_matcher.py`/`test_bucket_b.py` below) — no
-behavior change, but it took `ty check`'s diagnostics on this file from 12 to 0. Task 3 adds
-the rule-file safety gate — landing as one green suite once all three land.
+behavior change, but it took `ty check`'s diagnostics on this file from 12 to 0. Task 3 (6 tests,
+RED) covers the rule-file safety gate (`read_rule_file_safe`, `RuleSafetyError`): the 512 KB
+boundary at 524288/524289 bytes, a symlink escaping the repo root, a disallowed extension on the
+resolved path (a plain `.yaml` file and a `.md` symlink pointing at one), trailing-newline
+stripping with inner blank lines preserved, byte- not character-based sizing on multi-byte UTF-8
+text, and `run_review` exiting 2 with the message on stderr and no fallback to another layer.
 
 `test_workspace.py` gained 4 tests for `Workspace.artifacts` (default path resolves under root,
 a `reports_dir` override does not redirect it, `ensure()` creates it, `ensure()` is idempotent).

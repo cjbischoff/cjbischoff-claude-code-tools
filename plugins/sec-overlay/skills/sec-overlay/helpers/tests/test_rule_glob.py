@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from sec_overlay import rule_glob
 from sec_overlay.rule_glob import (
     ProjectRule,
@@ -253,3 +255,88 @@ def test_run_review_excludes_filtered_files_from_reviewable_set(tmp_path):
     paths = [f["path"] for f in manifest["files"]]
     assert "src/a.py" in paths
     assert "vendor/lib.py" not in paths
+
+
+# --- Task 3: rule-file safety gate (RULE-03) --------------------------------------
+
+
+def test_rule_safety_gate_accepts_cap_rejects_one_byte_over(tmp_path):
+    ok_file = tmp_path / "ok.md"
+    ok_file.write_bytes(b"a" * rule_glob.MAX_RULE_FILE_BYTES)
+    assert rule_glob.read_rule_file_safe(ok_file, tmp_path) == "a" * rule_glob.MAX_RULE_FILE_BYTES
+
+    big_file = tmp_path / "big.md"
+    big_file.write_bytes(b"a" * (rule_glob.MAX_RULE_FILE_BYTES + 1))
+    with pytest.raises(rule_glob.RuleSafetyError) as exc_info:
+        rule_glob.read_rule_file_safe(big_file, tmp_path)
+    message = str(exc_info.value)
+    assert str(big_file.resolve()) in message
+    assert str(rule_glob.MAX_RULE_FILE_BYTES) in message
+    assert str(rule_glob.MAX_RULE_FILE_BYTES + 1) in message
+
+
+def test_rule_safety_gate_rejects_symlink_escaping_repo_root(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    outside = tmp_path / "outside.md"
+    outside.write_text("secret")
+    link = repo / "link.md"
+    link.symlink_to(outside)
+
+    with pytest.raises(rule_glob.RuleSafetyError) as exc_info:
+        rule_glob.read_rule_file_safe(link, repo)
+    assert str(outside.resolve()) in str(exc_info.value)
+
+
+def test_rule_safety_gate_rejects_disallowed_extension_on_resolved_path(tmp_path):
+    yaml_file = tmp_path / "rule.yaml"
+    yaml_file.write_text("text: value")
+    with pytest.raises(rule_glob.RuleSafetyError):
+        rule_glob.read_rule_file_safe(yaml_file, tmp_path)
+
+    target = tmp_path / "target.yaml"
+    target.write_text("text: value")
+    link = tmp_path / "alias.md"
+    link.symlink_to(target)
+    with pytest.raises(rule_glob.RuleSafetyError):
+        rule_glob.read_rule_file_safe(link, tmp_path)
+
+
+def test_rule_safety_gate_strips_trailing_newlines_preserves_inner_blanks(tmp_path):
+    rule_file = tmp_path / "rule.md"
+    rule_file.write_text("first\n\nsecond\n\n\n")
+    assert rule_glob.read_rule_file_safe(rule_file, tmp_path) == "first\n\nsecond"
+
+
+def test_rule_safety_gate_measures_size_in_bytes_not_characters(tmp_path):
+    # "e-acute" is 1 char but 2 bytes in UTF-8; 300000 chars = 600000 bytes, over cap.
+    over_cap_text = "é" * 300000
+    over_cap_file = tmp_path / "over.md"
+    over_cap_file.write_text(over_cap_text, encoding="utf-8")
+    with pytest.raises(rule_glob.RuleSafetyError):
+        rule_glob.read_rule_file_safe(over_cap_file, tmp_path)
+
+    under_cap_text = "é" * 100
+    under_cap_file = tmp_path / "under.md"
+    under_cap_file.write_text(under_cap_text, encoding="utf-8")
+    assert rule_glob.read_rule_file_safe(under_cap_file, tmp_path) == under_cap_text
+
+
+def test_run_review_exits_2_on_rule_safety_error_with_no_fallback(tmp_path, capsys):
+    from sec_overlay import cli
+
+    project_dir = tmp_path / ".sec-overlay"
+    project_dir.mkdir()
+    bad_rule = tmp_path / "bad.yaml"
+    bad_rule.write_text("nope")
+    (project_dir / "rule.json").write_text(
+        json.dumps({"rules": [{"path": "**/*.py", "rule": str(bad_rule)}]})
+    )
+    runner = _review_runner(["src/a.py"])
+
+    rc = cli.run_review("main", "develop", str(tmp_path), runner=runner)
+
+    assert rc == 2
+    captured = capsys.readouterr()
+    assert str(bad_rule.resolve()) in captured.err
+    assert not (tmp_path / "artifacts" / "coverage_manifest.json").exists()

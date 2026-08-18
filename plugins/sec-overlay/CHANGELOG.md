@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.52.1 - 2026-08-18
+
+### Added
+
+- `tests/test_rule_glob.py`: 6 failing tests (RED, Phase 3 Plan 2, Task 3) for the
+  not-yet-implemented rule-file safety gate (`read_rule_file_safe`, `RuleSafetyError`):
+  the 512 KB boundary at 524288/524289 bytes, a symlink escaping the repo root, a
+  disallowed extension on the resolved path (direct and via a `.md` symlink to
+  `.yaml`), trailing-newline stripping with inner blank lines preserved, byte-based
+  sizing on multi-byte UTF-8 text, and exit code 2 with no fallback from `run_review`.
+
 ## 1.52.0 - 2026-08-18
 
 ### Added
