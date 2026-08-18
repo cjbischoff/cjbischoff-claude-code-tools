@@ -2,6 +2,26 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.54.0 - 2026-08-18
+
+### Added
+
+- `rule_docs/go.md`, `java.md`, `php.md`, `rust.md`, `ts_js_tsx_jsx.md`, `kotlin.md`,
+  `swift.md`: the seven previously-missing per-language rule docs, each covering the same
+  five defect families in `python.md`'s fixed order (null/nil dereference, thread safety,
+  injection, resource leaks, swallowed errors) with a "Do not report in the following cases:"
+  exclusion block per section, ported from OCR's per-language checklists (D-02) and
+  restructured into this plan's fixed five-family contract (RULE-05).
+
+### Changed
+
+- `rule_docs/default.md`: rewritten to the same five-family/exclusion-block structure as the
+  other eight docs, replacing its prior generic Correctness/Security/Resource
+  Handling/Concurrency/Maintainability sections. Out of the plan's originally scoped task
+  list — added because `BUILTIN_PATH_RULE_MAP`'s trailing catch-all routes any unmatched
+  path to `default.md`, and `tests/test_rule_docs.py::test_doc_covers_required_families_with_exclusion_blocks`
+  is parametrized over every mapped doc, `default.md` included (deviation, Rule 2).
+
 ## 1.53.1 - 2026-08-18
 
 ### Added
