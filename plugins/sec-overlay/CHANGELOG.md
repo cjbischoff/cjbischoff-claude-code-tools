@@ -2,6 +2,25 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.55.0 - 2026-08-18
+
+### Added
+
+- `sec_overlay.review_findings`: the review-profile gate (REV-01). `apply_profile` reproduces
+  the security profile's gate ladder (A-E) byte-for-byte and adds a `general` profile that
+  bypasses gates A/B for a finding in one of five general-defect classes (null-dereference,
+  thread-safety, resource-leak, error-swallowing, injection) — a strict superset, proven by a
+  dual-run regression test against a committed baseline.
+- `references/prompt-constants.md`: `GENERAL_PROFILE_EXCLUSION_RULES`, the `general` profile's
+  gate wording, alongside the existing `EXCLUSION_RULES`.
+- `cli.py review --profile security|general`: wires `apply_profile` into `run_review`'s
+  position-gate output.
+
+### Changed
+
+- `report.write_report`/`write_review_ledger` gained a `review_findings` argument; the review
+  ledger now carries a `review_findings` key alongside `dropped`/`position_reviews`.
+
 ## 1.54.1 - 2026-08-18
 
 ### Added

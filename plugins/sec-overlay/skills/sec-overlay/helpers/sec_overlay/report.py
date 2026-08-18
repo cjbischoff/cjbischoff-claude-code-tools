@@ -16,6 +16,7 @@ from sec_overlay.models import Finding, FindingStatus
 from sec_overlay.patch_status import PatchStatus, check_patch_applied, not_applied_caution
 from sec_overlay.positioning import PositionResult
 from sec_overlay.render_util import signal_lines
+from sec_overlay.review_findings import ReviewFinding
 from sec_overlay.sarif import to_sarif
 from sec_overlay.state import load_state
 from sec_overlay.workspace import Workspace, _atomic_write, load_paths, read_findings
@@ -525,6 +526,7 @@ def write_report(
     rule_docs: list[dict] | None = None,
     reflection_retractions: list | None = None,
     reflection_skips: list | None = None,
+    review_findings: list[ReviewFinding] | None = None,
 ) -> dict:
     """Assemble the final SARIF + Markdown report from a workspace's findings.
 
@@ -553,6 +555,9 @@ def write_report(
         reflection_retractions: Findings the reflection filter retracted; rendered and
             ledgered the same way as ``dropped`` (D-14).
         reflection_skips: Files whose reflection pass failed open; ledgered only (D-15).
+        review_findings: :func:`review_findings.apply_profile`'s kept output (REV-01);
+            ledgered only, no markdown rendering — present as an empty list when
+            no finding survived profile gating.
 
     Returns:
         ``{"reported": <count>, "sarif": <path>, "report": <path>}``.
@@ -562,6 +567,7 @@ def write_report(
     rule_docs = rule_docs or []
     reflection_retractions = reflection_retractions or []
     reflection_skips = reflection_skips or []
+    review_findings = review_findings or []
     all_findings = read_findings(ws)
     reportable = select_reportable(all_findings)
     ndt = [f for f in all_findings if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING]
@@ -625,6 +631,7 @@ def write_report(
         rule_docs=rule_docs,
         reflection_retractions=reflection_retractions,
         reflection_skips=reflection_skips,
+        review_findings=review_findings,
     )
     record_stage(ws, "report")
     return {"reported": len(reportable), "sarif": str(ws.sarif_path), "report": str(ws.report_path)}
@@ -737,6 +744,7 @@ def write_review_ledger(
     rule_docs: list[dict] | None = None,
     reflection_retractions: list | None = None,
     reflection_skips: list | None = None,
+    review_findings: list[ReviewFinding] | None = None,
 ) -> Path:
     """Write the machine-readable record of every position decline (D-13, POS-02).
 
@@ -757,6 +765,8 @@ def write_review_ledger(
             present as an empty list even when nothing was retracted (D-14).
         reflection_skips: `reflection.ReflectionSkip`s recorded for a file whose reflection
             pass failed open; present as an empty list even when nothing was skipped (D-15).
+        review_findings: `review_findings.apply_profile`'s kept output (REV-01); present as
+            an empty list even when nothing survived profile gating.
 
     Returns:
         The path written.
@@ -779,6 +789,18 @@ def write_review_ledger(
         ],
         "reflection_skipped": [
             asdict(s) if is_dataclass(s) else s for s in (reflection_skips or [])
+        ],
+        "review_findings": [
+            {
+                "id": rf.finding.id,
+                "path": rf.finding.file,
+                "line": rf.finding.line,
+                "rule_id": rf.finding.rule_id,
+                "profile": rf.profile,
+                "defect_class": rf.defect_class,
+                "disposition": rf.disposition,
+            }
+            for rf in (review_findings or [])
         ],
     }
     path = ws.artifacts / "review_ledger.json"

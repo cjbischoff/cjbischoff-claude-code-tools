@@ -70,6 +70,24 @@ Outputs, under the workspace directory:
 - `report.md` — human-readable report.
 - `state.json` — campaign state (pass number, pinned SHA).
 
+## Diff-scoped review (`review`)
+
+```bash
+cd "${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay/helpers"
+uv run python -m sec_overlay.cli review \
+  --base <base-ref> --head <head-ref> --root <path-to-code> \
+  --profile security   # or: general
+```
+
+`--profile security` (the default) reproduces the pre-REV-01 gate ladder byte-for-byte — every
+finding gates A-E (`references/prompt-constants.md`'s `EXCLUSION_RULES`) mark is dropped.
+`--profile general` relaxes gates A and B for a finding whose rule-doc defect class is one of
+`null-dereference`, `thread-safety`, `resource-leak`, `error-swallowing`, `injection`
+(`GENERAL_PROFILE_EXCLUSION_RULES`) — a strict superset of the security profile's output, never
+a change to it. `sec_overlay.review_findings.apply_profile` is the gate; `security` and
+`general` never mix rule sets. Exit 0 on a `complete` coverage seal, 2 on an invalid ref or an
+unsafe rule file, 3 when one or more files could not be reviewed.
+
 ## Running a full audit
 
 Read [`CLAUDE.md`](CLAUDE.md) first for environment prerequisites, hard operating rules, and

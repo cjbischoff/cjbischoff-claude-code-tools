@@ -25,6 +25,7 @@ from sec_overlay.reflection import SKIPPED_REASON, ReflectionSkip, apply_verdict
 from sec_overlay.repo_memory import RepoMemory, repo_slug
 from sec_overlay.report import to_markdown, write_report
 from sec_overlay.review_coverage import MANIFEST_FILENAME, CoverageManifest
+from sec_overlay.review_findings import GatedFinding, apply_profile
 from sec_overlay.rule_glob import RuleSafetyError, build_resolution, glob_match, resolve_rule_doc
 from sec_overlay.sarif import to_sarif
 from sec_overlay.sast import run_semgrep
@@ -122,8 +123,9 @@ def run_review(
         base: Base ref. Validated and resolved to a SHA before any other git call.
         head: Head ref, same treatment.
         root: Target repo root; the workspace and its ``artifacts/`` dir live here.
-        profile: Review profile (``"security"`` or ``"general"``); reserved for a later
-            plan's rule-doc/finding-source selection — accepted and validated here.
+        profile: Review profile (``"security"`` or ``"general"``); gates the position
+            gate's kept findings through :func:`review_findings.apply_profile` (REV-01).
+            A later plan still owes the rule-doc selection this value also drives.
         rule_path: Path to a custom rule.json (``--rule``); resolved as the highest-priority
             layer via :func:`rule_glob.build_resolution`. ``None`` skips the custom layer.
         excludes: Raw ``--exclude`` glob values, appended (lower-cased) to whichever layer's
@@ -200,6 +202,15 @@ def run_review(
 
     _kept, dropped, declines = review_position_gate([], hunks_by_path)
 
+    try:
+        review_findings, profile_dropped = apply_profile(
+            [GatedFinding(finding=f, gate=None) for f in _kept], profile
+        )
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    dropped = [*dropped, *profile_dropped]
+
     reflection_retractions: list = []
     reflection_skips: list[ReflectionSkip] = []
     for record in selection.reviewable:
@@ -217,6 +228,7 @@ def run_review(
         rule_docs=rule_docs,
         reflection_retractions=reflection_retractions,
         reflection_skips=reflection_skips,
+        review_findings=review_findings,
     )
 
     if not selection.reviewable:

@@ -24,6 +24,19 @@ A candidate is NOT a reportable finding when any holds (cite file:line for the r
 - (D) Handled elsewhere with proof: a control on EVERY path to the sink, verified by reading it.
 - (E) Noise floor: test/fixture/example/vendored code not shipped (verify it is not imported by production).
 
+## GENERAL_PROFILE_EXCLUSION_RULES
+A candidate is NOT a reportable finding when any holds (cite file:line for the reason).
+Gates A and B are qualified: a candidate tagged with a general-defect class (null
+dereference, thread safety, resource leak, error swallowing, injection) SKIPS gates A and
+B — its lack of an attacker or a security impact does not exclude it. Every other
+candidate still faces gates A and B unqualified. Gates C, D, and E apply to every
+candidate, general-defect class or not:
+- (A) No real attacker: input is not attacker-controllable / not reachable from an untrusted boundary. Does not apply to a general-defect class.
+- (B) No security impact: memory-corruption class in a managed language without unsafe/JNI/cgo; pure availability of a non-critical local tool. Does not apply to a general-defect class.
+- (C) Wrong layer: the sink is not dangerous as used (parameterized query, framework auto-escaping).
+- (D) Handled elsewhere with proof: a control on EVERY path to the sink, verified by reading it.
+- (E) Noise floor: test/fixture/example/vendored code not shipped (verify it is not imported by production).
+
 ## SEVERITY_GUIDANCE
 State preconditions, required access level, and blast radius BEFORE choosing a tier.
 When uncertain between two tiers, choose the LOWER — a mislabeled HIGH burns reviewer

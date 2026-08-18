@@ -16,6 +16,11 @@ entry point; read the parent map for the full inventory.
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
 
+`review_findings.py` (new, REV-01) adds the review-profile gate `apply_profile` — see the
+module map entry in [`../README.md`](../README.md) for the full contract; `cli.py`'s
+`run_review` and `report.py`'s `write_report`/`write_review_ledger` now thread its
+`ReviewFinding` output through, both documented at the same map entries.
+
 `workspace.py`'s `Workspace` now coerces `str` path arguments via a hand-written `__init__`
 instead of a dataclass `__post_init__` — the stored fields stay `Path`-typed, but the
 constructor accepts `str | Path` so `Workspace('<path>')` (as agent-authored prompts write it)
