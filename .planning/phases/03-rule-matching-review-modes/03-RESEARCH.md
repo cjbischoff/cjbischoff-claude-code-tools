@@ -447,7 +447,10 @@ state, secret/env-var renames, or stale build artifacts are implicated by adding
 
 **If this table is empty:** N/A — see rows above.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All three questions were resolved during planning on 2026-08-18. Each carries its
+resolution inline below. No question remains open for execution.
 
 1. **Where exactly does the `"unconfirmed"` disposition value live?**
    - What we know: `models.py`'s `FindingStatus` enum, `evidence.py`'s
@@ -461,6 +464,10 @@ state, secret/env-var renames, or stale build artifacts are implicated by adding
    - Recommendation: Planner should surface this as an explicit design decision in the first
      plan touching D-11/D-12 (likely the REV-03 task), naming the exact field/module before
      implementation, rather than let each task guess independently.
+   - **RESOLVED** (2026-08-18): Plan 03-04 Task 1 is a `checkpoint:decision` that names the
+     exact module and field before any code is written, with the candidate placements as its
+     options. Plan 03-05 Task 3 then implements the chosen name in the receipt-gate
+     disposition ladder. `models.py` stays frozen either way, per D-11.
 
 2. **Has OCR's rule-file safety-check implementation itself been read for exact ordering?**
    - What we know: `system_rules.go`'s MATCHING/resolution logic was read directly and
@@ -473,6 +480,12 @@ state, secret/env-var renames, or stale build artifacts are implicated by adding
      (not just the matcher), read OCR's rule-file-loading Go source before finalizing
      `rule_glob.py`'s check order; otherwise D-08's four checks in any order satisfy RULE-03
      as currently worded.
+   - **RESOLVED** (2026-08-18): Byte-mirroring is required for the matcher only (D-02), not
+     for the safety check. Plan 03-02 Task 3 fixes the order as symlink resolve → repo-root
+     boundary → extension allowlist → size cap, documents that ordering and its divergences
+     from OCR in the module docstring, and covers the symlink-to-oversized-file edge case with
+     a test. Any correct ordering satisfies RULE-03; this one is now locked so tasks do not
+     each pick their own.
 
 3. **What finding source feeds `review_position_gate` once Phase 3 lands?**
    - What we know: `run_review` currently calls `review_position_gate([], hunks_by_path)` with
@@ -486,6 +499,13 @@ state, secret/env-var renames, or stale build artifacts are implicated by adding
      finding before planning; if ambiguous, ask the milestone owner directly — this changes
      whether Phase 3 needs an end-to-end `run_review` integration task or can stop at
      unit-tested modules.
+   - **RESOLVED** (2026-08-18): Phase 3 is the wiring phase. ROADMAP Phase 3 success criterion
+     4 requires `--profile general` to surface findings that `--profile security` drops on the
+     same diff, which is unreachable while the call site passes an empty list. Plan 03-06
+     (wave 6) adds the finding source: `review_agent.py` renders the resolved rule doc into a
+     per-file prompt at `{{system_rule}}`, SKILL.md dispatches one review-file subagent per
+     file and records each return to disk, and `run_review` parses those returns into findings
+     that enter `review_position_gate`. Phase 4/5 build on that seam rather than creating it.
 
 ## Environment Availability
 

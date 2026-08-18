@@ -106,13 +106,14 @@ Plans:
   4. `review --profile security` on a diff reproduces existing gate A-E behavior exactly; `--profile general` on the same diff additionally surfaces NPE/thread-safety/XSS/SQLi findings that gates A/B would have dropped, with gates C/D/E still enforced
   5. The reflection filter runs once per file after positioning and the hunk gate, retracts findings only, fails open on LLM error, and cannot itself produce a `confirmed` disposition; a general-defect finding without a Tier-1 mechanical receipt ships as `unconfirmed`/`needs-deployment-testing`, never `confirmed`
 
-**Plans**: 5 plans
+**Plans**: 6 plans
 
 - [ ] 03-01-PLAN.md — Wave 1 (tracer): end-to-end review of one Python file through its rule doc and the reflection filter
 - [ ] 03-02-PLAN.md — Wave 2: four-layer rule resolution, merge_system_rule, file filter, and the rule-file safety gate
 - [ ] 03-03-PLAN.md — Wave 3: the seven remaining per-language rule docs and their conformance test
 - [ ] 03-04-PLAN.md — Wave 4: security and general profiles with the same-fixture no-regression proof (has a decision checkpoint)
 - [ ] 03-05-PLAN.md — Wave 5: reflection prompt, protected-subject veto, never-silent ledger, and the receipt-gate disposition ladder
+- [ ] 03-06-PLAN.md — Wave 6: per-file review-agent dispatch that feeds the resolved rule doc in and real findings out
 
 **Notes**: `**`-aware globbing needs `pathlib.PurePath.full_match` (Python 3.13) or a small custom matcher. State the chosen floor explicitly in the plugin docs — check the plugin's actual supported interpreter range before assuming Python 3.13 is available; if it is not, ship the custom matcher.
 
@@ -170,7 +171,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Baseline Health Verification | 3/3 | Complete    | 2026-08-17 |
 | 2. Diff Pipeline & Positioning | 5/5 | In Progress|  |
-| 3. Rule Matching & Review Modes | 0/5 | Not started | - |
+| 3. Rule Matching & Review Modes | 0/6 | Not started | - |
 | 4. Scale, Resume & Diff Output | 0/TBD | Not started | - |
 | 5. End-to-End Verification (Audit & Review) | 0/TBD | Not started | - |
 | 6. Remediation and Governed Release | 0/TBD | Not started | - |
