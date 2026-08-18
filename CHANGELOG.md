@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Complete Phase 3 Plan 2 (four-layer rule resolution and the RULE-03 safety gate): record its summary in `.planning/phases/03-rule-matching-review-modes/03-02-SUMMARY.md`, advance `.planning/STATE.md` and `.planning/ROADMAP.md` to Plan 2 of 6 done, and mark RULE-02, RULE-03, and RULE-04 Complete in `.planning/REQUIREMENTS.md`.
 - Complete Phase 3 Plan 1 (the review-mode tracer): record its summary in `.planning/phases/03-rule-matching-review-modes/03-01-SUMMARY.md`, advance `.planning/STATE.md` and `.planning/ROADMAP.md` to Plan 1 of 6 done, and mark RULE-01, RULE-05, and REV-02 Complete in `.planning/REQUIREMENTS.md`.
 - Append a passed self-check to `03-01-SUMMARY.md` confirming its created files and its four commits resolve in the repo.
 - Close Phase 3 planning: record plan-checker approval (6/6 plans valid, 8/8 requirement IDs and 16/16 context decisions covered), annotate `.planning/ROADMAP.md` with the six-wave order, and advance `.planning/STATE.md` to "Ready to execute" (6 plans).

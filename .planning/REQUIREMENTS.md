@@ -58,14 +58,14 @@ models.py/evidence.py contract, receipt gate as the sole authority on `confirmed
   with brace expansion and `**`-aware globbing; first match wins, else the default
   rule
 
-- [ ] **RULE-02**: Rule resolution layers apply first-non-empty: `--rule` path →
+- [x] **RULE-02**: Rule resolution layers apply first-non-empty: `--rule` path →
   project `.sec-overlay/rule.json` → global `~/.sec-overlay/rule.json` → built-in
   rules; `--exclude` appends to the resolved exclude list
 
-- [ ] **RULE-03**: Rule-file reads resolve symlinks, require the resolved path under
+- [x] **RULE-03**: Rule-file reads resolve symlinks, require the resolved path under
   repo root, restrict extensions to `.md`/`.txt`/`.markdown`, and cap size at 512 KB
 
-- [ ] **RULE-04**: A rule entry with `merge_system_rule: true` concatenates built-in
+- [x] **RULE-04**: A rule entry with `merge_system_rule: true` concatenates built-in
   and user rule text under fixed headers instead of replacing
 
 - [x] **RULE-05**: Per-language rule docs ship for go, java, python, php, rust,
@@ -195,9 +195,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | POS-02 | Phase 2 | Complete |
 | POS-03 | Phase 2 | Complete |
 | RULE-01 | Phase 3 | Complete |
-| RULE-02 | Phase 3 | Pending |
-| RULE-03 | Phase 3 | Pending |
-| RULE-04 | Phase 3 | Pending |
+| RULE-02 | Phase 3 | Complete |
+| RULE-03 | Phase 3 | Complete |
+| RULE-04 | Phase 3 | Complete |
 | RULE-05 | Phase 3 | Complete |
 | REV-01 | Phase 3 | Pending |
 | REV-02 | Phase 3 | Complete |

@@ -5,15 +5,15 @@ milestone_name: Hybrid Diff-Review Architecture
 current_phase: 03
 current_phase_name: rule-matching-review-modes
 status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-08-18T17:49:30.940Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-08-18T18:56:01.206Z"
 last_activity: 2026-08-18
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 14
-  completed_plans: 9
+  completed_plans: 10
   percent: 33
 ---
 
@@ -30,11 +30,11 @@ governed releases, receipt-backed findings.
 ## Current Position
 
 Phase: 03 (rule-matching-review-modes) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-08-18 — Phase 03 execution started
 
-Progress: [██████░░░░] 64%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [██████░░░░] 64%
 | Phase 02 P04 | one session | 3 tasks | 10 files |
 | Phase 02 P05 | 1 session | 3 tasks | 6 files |
 | Phase 03 P01 | 1h31m | 2 tasks | 14 files |
+| Phase 03 P02 | 1h10m | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Partial coverage seal isolated via try/except around parse_hunks; no organic trigger exists today, so tests drive it by monkeypatching parse_hunks (D-15)
 - [Phase ?]: Kept Python floor at 3.12 (D-01): rule_glob.glob_match hand-rolls a **-aware segment matcher instead of the 3.13-only pathlib.PurePath.full_match
 - [Phase ?]: reflection.apply_verdict is retract-only: a verdict can remove only a finding the code submitted, never add/rank/rewrite; PROTECTED_SUBJECT_CLASSES is a hardcoded veto (D-16)
+- [Phase ?]: read_rule_file_safe's repo_root is the per-layer resolution base, not a separately threaded true project root
+- [Phase ?]: Rule-file safety gate hard-raises on any violation; no OCR-style warn-and-fallthrough (D-08)
+- [Phase ?]: Boundary check runs against the symlink-resolved path, stronger than OCR's pre-resolution check
 
 ### Pending Todos
 
@@ -131,6 +135,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-18T17:49:30.927Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-08-18T18:56:01.190Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
