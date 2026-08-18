@@ -163,7 +163,10 @@ def test_review_python_file_resolves_python_rule_doc(tmp_path, monkeypatch):
 
 
 def test_review_unmatched_file_resolves_default_rule_doc(tmp_path, monkeypatch):
-    path = "docs/notes.rst"
+    # An allowlisted extension (D-09) that BUILTIN_PATH_RULE_MAP has no entry for, so
+    # resolution falls through to default.md. `.rst` would never reach rule_glob at all —
+    # file_select's ALLOWED_EXTENSIONS excludes it as "not-allowlisted" upstream (D-09).
+    path = "src/App/Handler.rb"
     monkeypatch.setattr(subprocess, "run", _make_fake_run(path, _make_diff(path)))
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc == 0

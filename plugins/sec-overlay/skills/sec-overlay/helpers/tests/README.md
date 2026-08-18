@@ -48,19 +48,24 @@ collections, and a three-path lifecycle plus a contiguous `line_in_hunk` sweep p
 and the membership check agree over a full hunk range. `test_review_tracer.py` is unchanged and
 still green.
 
-`test_review_tracer.py` (13 tests) covers the `sec-overlay review` tracer path end to
+`test_review_tracer.py` (15 tests) covers the `sec-overlay review` tracer path end to
 end: `main(["review", ...])` with a fake `subprocess.run` injected at the module level (`cli.py`
 looks up `subprocess.run` inline at call time, so a `monkeypatch.setattr(subprocess, "run", ...)`
 reaches it through every `runner=` default) exits 0 and seals `artifacts/coverage_manifest.json`
 `complete`; plus focused tests for `validate_ref`'s leading-dash rejection, `parse_hunks`/
 `added_line_numbers`, `resolve_position`'s exact match, `review_position_gate` keeping an
-in-hunk finding, and `changed_file_records`' `--name-status` parsing. Seven more tests (RED,
-Phase 3 Plan 1) drive the not-yet-implemented `rule_glob`/`reflection` modules: a `.py` file
-resolving `rule_docs/python.md` and an unmatched file falling back to `default.md` through
-`run_review(..., profile="security")`'s `review_ledger.json["rule_docs"]`; `expand_braces`
-(first-group-only) and `glob_match` (`**` and case-insensitive) unit cases; `resolve_rule_doc`
-first-match-wins against a monkeypatched map; and `reflection.apply_verdict` retracting a
-submitted id, ignoring an unsubmitted one, and refusing to retract a protected subject class.
+in-hunk finding, and `changed_file_records`' `--name-status` parsing. Nine more tests (Phase 3
+Plan 1) cover the `rule_glob`/`reflection` wiring: a `.py` file resolving `rule_docs/python.md`
+and an allowlisted-but-unmatched `.rb` file falling back to `default.md` (an `.rst` path would
+never reach `rule_glob` at all — `file_select`'s `ALLOWED_EXTENSIONS` excludes it upstream,
+D-09) through `run_review(..., profile="security")`'s `review_ledger.json["rule_docs"]`;
+`expand_braces` (first-group-only) and `glob_match` (`**` and case-insensitive) unit cases;
+`resolve_rule_doc` first-match-wins against a monkeypatched map; `reflection.apply_verdict`
+retracting a submitted id, ignoring an unsubmitted one, and refusing to retract a protected
+subject class; and `test_review_zero_findings_still_renders_reflection_sections`, pinning that
+a zero-finding run still writes `reflection_retractions`/`reflection_skipped` as empty lists
+(never omitted) in the ledger and renders the "## Reflection retractions" heading in
+`report.md` (D-14/D-15 never-silent discipline).
 
 `test_workspace.py` gained 4 tests for `Workspace.artifacts` (default path resolves under root,
 a `reports_dir` override does not redirect it, `ensure()` creates it, `ensure()` is idempotent).

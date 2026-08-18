@@ -2,6 +2,25 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.49.0 - 2026-08-18
+
+### Added
+
+- `rule_glob.py`: brace-expansion (`expand_braces`) plus a stdlib-only `**`-aware segment
+  glob matcher (`glob_match`), resolving a changed file's path to its per-language rule doc
+  (`resolve_rule_doc`), case-insensitive, first-match-wins, falling back to `default.md`.
+- `reflection.py`: a retract-only LLM-verdict filter (`apply_verdict`, `build_payload`) — a
+  verdict can only remove a finding the code submitted, never add or rank one;
+  `PROTECTED_SUBJECT_CLASSES` is a hardcoded veto no verdict can override.
+- `rules/rule_docs/default.md` and `rules/rule_docs/python.md`: built-in rule docs consumed
+  by `rule_glob.resolve_rule_doc`.
+- `cli.py`: `run_review` gained `--profile` (`security`/`general`, reserved for a later plan),
+  resolves each reviewable file's rule doc, and runs kept findings through
+  `reflection.apply_verdict`, recording a `ReflectionSkip` and failing open on a per-file error.
+- `report.py`: `write_review_ledger`/`write_report` gained keyword-only
+  `reflection_retractions`/`reflection_skips`, rendered into the same `review_ledger.json`
+  (`reflection_retractions`, `reflection_skipped` keys) — no second artifact file.
+
 ## 1.48.7 - 2026-08-18
 
 ### Added

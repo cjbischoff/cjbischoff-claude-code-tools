@@ -265,6 +265,7 @@ def to_markdown(
     economics: dict | None = None,
     dropped: list | None = None,
     position_reviews: list[PositionResult] | None = None,
+    reflection_retractions: list | None = None,
 ) -> str:
     """Render findings and optional token accounting as Markdown.
 
@@ -297,6 +298,8 @@ def to_markdown(
             section.
         position_reviews: Review-mode declines (``needs-position-review``); rendered under
             ``POSITION_REVIEW_HEADING`` the same way.
+        reflection_retractions: Findings the reflection filter retracted; rendered under
+            ``REFLECTION_RETRACTIONS_HEADING`` unconditionally, same as ``dropped``.
 
     Returns:
         A Markdown report string.
@@ -371,9 +374,10 @@ def to_markdown(
             "",
         ]
 
-    # Review-mode drop/decline sections — always rendered, even when empty (D-14, POS-03)
+    # Review-mode drop/decline/retraction sections — always rendered, even when empty (D-14, POS-03)
     lines += ["", render_dropped_findings_section(dropped or [])]
     lines += ["", render_position_review_section(position_reviews or [])]
+    lines += ["", render_reflection_retractions_section(reflection_retractions or [])]
 
     # External-unverifiable leads — sink crosses into an un-ingested dependency
     if external:
@@ -518,6 +522,9 @@ def write_report(
     confirmed_only: bool = False,
     dropped: list | None = None,
     position_reviews: list[PositionResult] | None = None,
+    rule_docs: list[dict] | None = None,
+    reflection_retractions: list | None = None,
+    reflection_skips: list | None = None,
 ) -> dict:
     """Assemble the final SARIF + Markdown report from a workspace's findings.
 
@@ -542,12 +549,19 @@ def write_report(
             argument, so the two outputs cannot disagree (D-14, POS-03).
         position_reviews: Review-mode declines (``needs-position-review``); rendered and
             ledgered the same way as ``dropped``.
+        rule_docs: Per-file resolved rule-doc records; ledgered only, no markdown rendering.
+        reflection_retractions: Findings the reflection filter retracted; rendered and
+            ledgered the same way as ``dropped`` (D-14).
+        reflection_skips: Files whose reflection pass failed open; ledgered only (D-15).
 
     Returns:
         ``{"reported": <count>, "sarif": <path>, "report": <path>}``.
     """
     dropped = dropped or []
     position_reviews = position_reviews or []
+    rule_docs = rule_docs or []
+    reflection_retractions = reflection_retractions or []
+    reflection_skips = reflection_skips or []
     all_findings = read_findings(ws)
     reportable = select_reportable(all_findings)
     ndt = [f for f in all_findings if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING]
@@ -598,12 +612,20 @@ def write_report(
             economics=economics,
             dropped=dropped,
             position_reviews=position_reviews,
+            reflection_retractions=reflection_retractions,
         )
     )
     write_finding_details(ws, reportable + ndt, patch_statuses=patch_statuses)
     findings_out = reportable + ndt
     ws.findings_json_path.write_text(json.dumps([f.to_dict() for f in findings_out], indent=2))
-    write_review_ledger(ws, position_reviews=position_reviews, dropped=dropped)
+    write_review_ledger(
+        ws,
+        position_reviews=position_reviews,
+        dropped=dropped,
+        rule_docs=rule_docs,
+        reflection_retractions=reflection_retractions,
+        reflection_skips=reflection_skips,
+    )
     record_stage(ws, "report")
     return {"reported": len(reportable), "sarif": str(ws.sarif_path), "report": str(ws.report_path)}
 
@@ -680,7 +702,42 @@ def render_position_review_section(results: list[PositionResult]) -> str:
     return "\n".join(lines)
 
 
-def write_review_ledger(ws: Workspace, *, position_reviews: list[PositionResult], dropped: list) -> Path:
+REFLECTION_RETRACTIONS_HEADING = "## Reflection retractions"
+
+
+def render_reflection_retractions_section(retractions: list) -> str:
+    """Render every reflection-filter retraction as a dedicated markdown section (D-14, D-15).
+
+    Args:
+        retractions: ``reflection.ReflectionRetraction``s the filter removed. Rendered in the
+            order given — ``reflection.apply_verdict`` owns the sort order.
+
+    Returns:
+        A markdown string starting with ``REFLECTION_RETRACTIONS_HEADING``.
+    """
+    if not retractions:
+        return f"{REFLECTION_RETRACTIONS_HEADING}\n\nNo finding was retracted.\n"
+    lines = [
+        REFLECTION_RETRACTIONS_HEADING,
+        "",
+        "| Path | Line | Rule | Reason |",
+        "| --- | --- | --- | --- |",
+    ]
+    for r in retractions:
+        lines.append(f"| {r.path} | {r.line} | {r.rule_id} | {r.reason} |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_review_ledger(
+    ws: Workspace,
+    *,
+    position_reviews: list[PositionResult],
+    dropped: list,
+    rule_docs: list[dict] | None = None,
+    reflection_retractions: list | None = None,
+    reflection_skips: list | None = None,
+) -> Path:
     """Write the machine-readable record of every position decline (D-13, POS-02).
 
     A separate artifact rather than a `findings.json` state, because `models.py` is the
@@ -694,6 +751,12 @@ def write_review_ledger(ws: Workspace, *, position_reviews: list[PositionResult]
             entry carrying `state` `needs-position-review`.
         dropped: Findings the review-mode gate dropped; plan 02-05 supplies its content.
             Dataclass instances are converted to dicts; plain dicts pass through unchanged.
+        rule_docs: Per-file resolved rule-doc records (``{"path": ..., "text": ...}``);
+            present as an empty list when no reviewable file was resolved.
+        reflection_retractions: `reflection.ReflectionRetraction`s the filter removed;
+            present as an empty list even when nothing was retracted (D-14).
+        reflection_skips: `reflection.ReflectionSkip`s recorded for a file whose reflection
+            pass failed open; present as an empty list even when nothing was skipped (D-15).
 
     Returns:
         The path written.
@@ -710,6 +773,13 @@ def write_review_ledger(ws: Workspace, *, position_reviews: list[PositionResult]
             for r in position_reviews
         ],
         "dropped": [asdict(d) if is_dataclass(d) else d for d in dropped],
+        "rule_docs": rule_docs or [],
+        "reflection_retractions": [
+            asdict(r) if is_dataclass(r) else r for r in (reflection_retractions or [])
+        ],
+        "reflection_skipped": [
+            asdict(s) if is_dataclass(s) else s for s in (reflection_skips or [])
+        ],
     }
     path = ws.artifacts / "review_ledger.json"
     _atomic_write(path, json.dumps(ledger, indent=2))

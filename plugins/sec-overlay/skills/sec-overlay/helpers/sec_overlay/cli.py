@@ -19,9 +19,11 @@ from sec_overlay.file_select import partition
 from sec_overlay.models import Finding
 from sec_overlay.normalize import normalize
 from sec_overlay.phase_gate import review_position_gate
+from sec_overlay.reflection import SKIPPED_REASON, ReflectionSkip, apply_verdict
 from sec_overlay.repo_memory import RepoMemory, repo_slug
 from sec_overlay.report import to_markdown, write_report
 from sec_overlay.review_coverage import MANIFEST_FILENAME, CoverageManifest
+from sec_overlay.rule_glob import resolve_rule_doc
 from sec_overlay.sarif import to_sarif
 from sec_overlay.sast import run_semgrep
 from sec_overlay.scanscope import resolve as _resolve_scope
@@ -88,7 +90,9 @@ def run_scan(
     return findings
 
 
-def run_review(base: str, head: str, root: str, *, runner=None) -> int:
+def run_review(
+    base: str, head: str, root: str, *, profile: str = "security", runner=None
+) -> int:
     """Run one review pass end to end: resolve refs, select files, position, seal.
 
     Batches over every reviewable changed file and implements exit codes 2 and 3.
@@ -99,10 +103,18 @@ def run_review(base: str, head: str, root: str, *, runner=None) -> int:
     — including the zero-drop/zero-decline case — so "no finding was dropped" is
     recorded, not just absent (T-02-15).
 
+    Each reviewable file's rule doc is resolved via :func:`rule_glob.resolve_rule_doc`
+    and its post-gate findings run through :func:`reflection.apply_verdict` (an empty
+    verdict in this tracer slice, since no finding source is wired yet); a per-file
+    reflection failure is recorded as a :class:`reflection.ReflectionSkip` and the run
+    fails open rather than aborting (D-15).
+
     Args:
         base: Base ref. Validated and resolved to a SHA before any other git call.
         head: Head ref, same treatment.
         root: Target repo root; the workspace and its ``artifacts/`` dir live here.
+        profile: Review profile (``"security"`` or ``"general"``); reserved for a later
+            plan's rule-doc/finding-source selection — accepted and validated here.
         runner: Injectable subprocess runner (tests); defaults to ``subprocess.run``.
 
     Returns:
@@ -133,6 +145,7 @@ def run_review(base: str, head: str, root: str, *, runner=None) -> int:
 
     manifest = CoverageManifest(base_sha, head_sha, ws.artifacts / MANIFEST_FILENAME)
     hunks_by_path: dict[str, list] = {}
+    rule_docs: list[dict] = []
     for record in selection.reviewable:
         manifest.add(record.path)
         manifest.start(record.path)
@@ -144,9 +157,28 @@ def run_review(base: str, head: str, root: str, *, runner=None) -> int:
             manifest.fail(record.path, note=str(exc))
             continue
         manifest.finish(record.path)
+        rule_docs.append({"path": record.path, "text": resolve_rule_doc(record.path)})
 
     _kept, dropped, declines = review_position_gate([], hunks_by_path)
-    write_report(ws, dropped=dropped, position_reviews=declines)
+
+    reflection_retractions: list = []
+    reflection_skips: list[ReflectionSkip] = []
+    for record in selection.reviewable:
+        kept_for_file = [f for f in _kept if f.file == record.path]
+        try:
+            _kept_for_file, retractions = apply_verdict(kept_for_file, {}, path=record.path)
+            reflection_retractions.extend(retractions)
+        except Exception as exc:  # noqa: BLE001 - reflection fails open, never aborts the run
+            reflection_skips.append(ReflectionSkip(record.path, SKIPPED_REASON, str(exc)))
+
+    write_report(
+        ws,
+        dropped=dropped,
+        position_reviews=declines,
+        rule_docs=rule_docs,
+        reflection_retractions=reflection_retractions,
+        reflection_skips=reflection_skips,
+    )
 
     if not selection.reviewable:
         return 0
@@ -199,6 +231,7 @@ def main(argv: list[str] | None = None) -> int:
     review.add_argument("--base", required=True)
     review.add_argument("--head", default="HEAD")
     review.add_argument("--root", default=".")
+    review.add_argument("--profile", choices=["security", "general"], default="security")
     args = parser.parse_args(argv)
 
     if args.cmd == "scan":
@@ -253,7 +286,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "review":
-        return run_review(args.base, args.head, args.root)
+        return run_review(args.base, args.head, args.root, profile=args.profile)
     return 1
 
 

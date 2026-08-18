@@ -572,3 +572,19 @@ or in the zero-drop/zero-decline case. `run_review` now captures `dropped`/`decl
 before the reviewable/seal exit-code branches, so both a `0` (complete seal, including zero
 reviewable files) and a `3` (partial seal) run write both outputs from the same gate call. The
 exit-2 ref-validation path returns before the gate runs at all and is unaffected.
+
+Two new modules wire rule-doc resolution and reflection into the review tracer (Phase 3 plan
+01). `rule_glob.py` (`expand_braces`, `glob_match`, `resolve_rule_doc`, `builtin_rule_docs_dir`)
+ports OCR's brace-expansion + `**`-aware segment matcher to stdlib-only Python (case-insensitive,
+first-match-wins over `BUILTIN_PATH_RULE_MAP`, falling back to `rules/rule_docs/default.md`); the
+docs dir resolves from `Path(__file__)`, never cwd. `reflection.py` (`apply_verdict`,
+`build_payload`) is a retract-only LLM-verdict filter mirroring `evidence.py`'s "code decides, not
+the LLM's claim" discipline — a verdict can only remove a finding the code submitted, never add or
+rank one, and `PROTECTED_SUBJECT_CLASSES` is a hardcoded veto no verdict can override. `report.py`
+gained `reflection_retractions`/`reflection_skips` keyword params on `write_review_ledger`/
+`write_report`, added to the same ledger dict (`reflection_retractions`, `reflection_skipped`) —
+no second artifact file. `cli.py`'s `run_review` gained `--profile` (`security`/`general`,
+reserved for a later plan), resolves each reviewable file's rule doc, and runs its kept findings
+through `apply_verdict` (an always-empty verdict in this tracer slice — no finding source is wired
+into review mode yet) inside a `try`/`except` that records a `ReflectionSkip` and fails open on
+error rather than aborting the run.
