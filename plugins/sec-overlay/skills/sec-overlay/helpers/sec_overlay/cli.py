@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import replace
+from pathlib import Path
 
 from sec_overlay.campaign import record_stage
 from sec_overlay.diffhunks import parse_hunks
@@ -23,7 +25,7 @@ from sec_overlay.reflection import SKIPPED_REASON, ReflectionSkip, apply_verdict
 from sec_overlay.repo_memory import RepoMemory, repo_slug
 from sec_overlay.report import to_markdown, write_report
 from sec_overlay.review_coverage import MANIFEST_FILENAME, CoverageManifest
-from sec_overlay.rule_glob import resolve_rule_doc
+from sec_overlay.rule_glob import build_resolution, glob_match, resolve_rule_doc
 from sec_overlay.sarif import to_sarif
 from sec_overlay.sast import run_semgrep
 from sec_overlay.scanscope import resolve as _resolve_scope
@@ -91,7 +93,14 @@ def run_scan(
 
 
 def run_review(
-    base: str, head: str, root: str, *, profile: str = "security", runner=None
+    base: str,
+    head: str,
+    root: str,
+    *,
+    profile: str = "security",
+    rule_path: str | None = None,
+    excludes: list[str] | None = None,
+    runner=None,
 ) -> int:
     """Run one review pass end to end: resolve refs, select files, position, seal.
 
@@ -115,6 +124,10 @@ def run_review(
         root: Target repo root; the workspace and its ``artifacts/`` dir live here.
         profile: Review profile (``"security"`` or ``"general"``); reserved for a later
             plan's rule-doc/finding-source selection — accepted and validated here.
+        rule_path: Path to a custom rule.json (``--rule``); resolved as the highest-priority
+            layer via :func:`rule_glob.build_resolution`. ``None`` skips the custom layer.
+        excludes: Raw ``--exclude`` glob values, appended (lower-cased) to whichever layer's
+            file filter wins, or used alone when no layer defines one.
         runner: Injectable subprocess runner (tests); defaults to ``subprocess.run``.
 
     Returns:
@@ -135,6 +148,8 @@ def run_review(
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
+    resolution = build_resolution(rule_path, excludes or [], Path(root))
+
     records = changed_file_records(base_sha, head_sha, runner=r)
     diff_line_counts = {
         record.path: file_diff_line_count(record.path, base_sha, head_sha, runner=r)
@@ -142,6 +157,19 @@ def run_review(
     }
     excluded_binary = binary_paths(base_sha, head_sha, runner=r)
     selection = partition(records, diff_line_counts=diff_line_counts, binary_paths=excluded_binary)
+
+    file_filter = resolution.file_filter
+    if file_filter is not None:
+        kept = [
+            record
+            for record in selection.reviewable
+            if (
+                not file_filter.include
+                or any(glob_match(p, record.path) for p in file_filter.include)
+            )
+            and not any(glob_match(p, record.path) for p in file_filter.exclude)
+        ]
+        selection = replace(selection, reviewable=kept)
 
     manifest = CoverageManifest(base_sha, head_sha, ws.artifacts / MANIFEST_FILENAME)
     hunks_by_path: dict[str, list] = {}
@@ -157,7 +185,9 @@ def run_review(
             manifest.fail(record.path, note=str(exc))
             continue
         manifest.finish(record.path)
-        rule_docs.append({"path": record.path, "text": resolve_rule_doc(record.path)})
+        rule_docs.append(
+            {"path": record.path, "text": resolve_rule_doc(record.path, resolution)}
+        )
 
     _kept, dropped, declines = review_position_gate([], hunks_by_path)
 
@@ -232,6 +262,11 @@ def main(argv: list[str] | None = None) -> int:
     review.add_argument("--head", default="HEAD")
     review.add_argument("--root", default=".")
     review.add_argument("--profile", choices=["security", "general"], default="security")
+    review.add_argument("--rule", default=None, help="Path to a custom rule.json layer.")
+    review.add_argument(
+        "--exclude", action="append", default=[],
+        help="Glob pattern to exclude (repeatable); appends to the resolved layer's excludes.",
+    )
     args = parser.parse_args(argv)
 
     if args.cmd == "scan":
@@ -286,7 +321,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "review":
-        return run_review(args.base, args.head, args.root, profile=args.profile)
+        return run_review(
+            args.base, args.head, args.root,
+            profile=args.profile, rule_path=args.rule, excludes=args.exclude,
+        )
     return 1
 
 

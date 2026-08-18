@@ -293,6 +293,82 @@ def merge_with_system_rule(builtin_text: str, user_text: str) -> str:
     )
 
 
+def build_file_filter(layers: list[ProjectRule | None]) -> FileFilter | None:
+    """Return the whole-run filter from the first layer with a non-empty include or exclude.
+
+    Whole-layer first-non-empty selection (RULE-02, Task 2). Structurally separate
+    from :func:`match_project_rule_entry`'s per-path fallthrough — this walks a
+    list of layers looking for one whole-layer answer, never merging two layers'
+    patterns together. Neither function calls the other.
+
+    Args:
+        layers: Ordered layers to consider (e.g. `[custom, project, global]`).
+            `None` entries (an absent layer) are skipped.
+
+    Returns:
+        A `FileFilter` copied from the first layer whose `include` or `exclude`
+        is non-empty, with every pattern lower-cased (D-04); `None` when no
+        layer has either list populated, including an empty `layers` list.
+    """
+    for layer in layers:
+        if layer is None:
+            continue
+        if not layer.include and not layer.exclude:
+            continue
+        return FileFilter(
+            include=[p.lower() for p in layer.include],
+            exclude=[p.lower() for p in layer.exclude],
+        )
+    return None
+
+
+def _global_rule_path() -> Path:
+    """Return the fixed global rule.json location (``~/.sec-overlay/rule.json``).
+
+    A separate function so tests substitute it directly instead of monkeypatching
+    the stdlib `Path.home` class.
+    """
+    return Path.home() / ".sec-overlay" / "rule.json"
+
+
+def build_resolution(rule_path: str | None, excludes: list[str], repo_root: Path) -> RuleResolution:
+    """Assemble the four-layer resolution `resolve_rule_doc` and the exclude filter walk.
+
+    Mirrors OCR's `NewResolver`: the custom (`--rule`) and global layers resolve a
+    relative `rule` field against their OWN config file's directory
+    (`loadRuleFile`/`loadGlobalRule`, both call `resolveRuleEntries(pr.Rules,
+    filepath.Dir(path))`); only the project layer resolves against `repo_root`
+    (`loadProjectRule`). `build_file_filter` then picks one layer's filter, and
+    CLI `--exclude` values (lower-cased) always append to it.
+
+    Args:
+        rule_path: Path to a custom rule.json passed via `--rule`, or `None`.
+        excludes: Raw `--exclude` values from the CLI, in flag order.
+        repo_root: Repo root; anchors the project layer and the boundary check.
+
+    Returns:
+        The assembled `RuleResolution`.
+    """
+    custom = (
+        load_project_rule(Path(rule_path), Path(rule_path).parent)
+        if rule_path is not None
+        else None
+    )
+    project = load_project_rule(repo_root / ".sec-overlay" / "rule.json", repo_root)
+    global_path = _global_rule_path()
+    global_layer = load_project_rule(global_path, global_path.parent)
+    layers = [custom, project, global_layer]
+
+    file_filter = build_file_filter(layers)
+    lowered_excludes = [e.lower() for e in excludes]
+    if lowered_excludes:
+        base_include = file_filter.include if file_filter is not None else []
+        base_exclude = file_filter.exclude if file_filter is not None else []
+        file_filter = FileFilter(include=base_include, exclude=[*base_exclude, *lowered_excludes])
+
+    return RuleResolution(layers=layers, file_filter=file_filter, repo_root=repo_root)
+
+
 def resolve_rule_doc(path: str, resolution: RuleResolution | None = None) -> str:
     """Resolve a changed file's path to its rule-doc text, layer by layer.
 

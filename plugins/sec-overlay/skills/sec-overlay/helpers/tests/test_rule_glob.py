@@ -88,6 +88,7 @@ def test_load_project_rule_preserves_json_array_order_first_match_wins(tmp_path)
         )
     )
     layer = rule_glob.load_project_rule(rule_json, tmp_path)
+    assert layer is not None
     assert layer.entries[0].rule == "A text"
     resolution = RuleResolution(layers=[layer, None, None], file_filter=None, repo_root=tmp_path)
     assert resolve_rule_doc("x.py", resolution) == "A text"
@@ -99,7 +100,9 @@ def test_resolve_rule_doc_idempotent_across_repeated_calls(tmp_path):
     first = resolve_rule_doc("a.py", resolution)
     second = resolve_rule_doc("a.py", resolution)
     assert first == second == "stable text"
-    assert resolution.layers[0].entries[0].rule == "stable text"
+    stable_layer = resolution.layers[0]
+    assert stable_layer is not None
+    assert stable_layer.entries[0].rule == "stable text"
 
 
 def test_load_project_rule_returns_none_when_file_absent(tmp_path):
@@ -142,6 +145,7 @@ def test_build_file_filter_skips_empty_layer_and_uses_first_non_empty():
     empty = ProjectRule([], [], [])
     project = ProjectRule([], [], ["vendor/**"])
     result = rule_glob.build_file_filter([empty, project])
+    assert result is not None
     assert result.exclude == ["vendor/**"]
     assert result.include == []
 
@@ -150,6 +154,7 @@ def test_build_file_filter_does_not_merge_across_layers():
     custom = ProjectRule([], [], ["a/**"])
     project = ProjectRule([], [], ["b/**"])
     result = rule_glob.build_file_filter([custom, project])
+    assert result is not None
     assert result.exclude == ["a/**"]
 
 
@@ -161,6 +166,7 @@ def test_build_file_filter_returns_none_when_all_layers_empty():
 def test_build_file_filter_lower_cases_patterns_at_build_time():
     layer = ProjectRule([], [], ["VENDOR/**"])
     result = rule_glob.build_file_filter([layer])
+    assert result is not None
     assert result.exclude == ["vendor/**"]
     assert rule_glob.glob_match(result.exclude[0], "vendor/lib.py")
 
@@ -170,11 +176,13 @@ def test_build_resolution_appends_cli_excludes_to_layer_filter(tmp_path):
     project_dir.mkdir()
     (project_dir / "rule.json").write_text(json.dumps({"rules": [], "exclude": ["a/**"]}))
     resolution = rule_glob.build_resolution(None, ["VENDOR/**"], tmp_path)
+    assert resolution.file_filter is not None
     assert resolution.file_filter.exclude == ["a/**", "vendor/**"]
 
 
 def test_build_resolution_excludes_only_filter_when_no_layer_has_one(tmp_path):
     resolution = rule_glob.build_resolution(None, ["vendor/**"], tmp_path)
+    assert resolution.file_filter is not None
     assert resolution.file_filter.exclude == ["vendor/**"]
     assert resolution.file_filter.include == []
 
@@ -202,8 +210,12 @@ def test_build_resolution_resolves_custom_and_global_rule_paths_against_their_ow
     monkeypatch.setattr(rule_glob, "_global_rule_path", lambda: global_dir / "rule.json")
 
     resolution = rule_glob.build_resolution(str(custom_rule_json), [], tmp_path)
-    assert resolution.layers[0].entries[0].rule == "custom text"
-    assert resolution.layers[2].entries[0].rule == "global text"
+    custom_layer = resolution.layers[0]
+    global_layer = resolution.layers[2]
+    assert custom_layer is not None
+    assert global_layer is not None
+    assert custom_layer.entries[0].rule == "custom text"
+    assert global_layer.entries[0].rule == "global text"
 
 
 def test_review_cli_parses_rule_and_exclude_and_reaches_run_review(tmp_path, monkeypatch):

@@ -72,12 +72,15 @@ covers the four-layer rule resolver: per-path fallthrough (`ProjectRuleEntry`/`P
 `RuleResolution`, custom > project > global > built-in, first-match-wins per path),
 `merge_with_system_rule`'s header concatenation and its three empty-input cases, and
 `load_project_rule` preserving JSON array match order and idempotent repeated resolution. Task 2
-(9 tests, RED) covers the structurally separate whole-layer first-non-empty `build_file_filter`
+(9 tests, green) covers the structurally separate whole-layer first-non-empty `build_file_filter`
 (skips an empty layer, never merges two non-empty layers, lower-cases patterns at build time),
 `build_resolution` assembling the three layers and appending CLI `--exclude` values, a case
 proving the custom/global layers resolve a relative `rule` field against their own config
 directory (not `repo_root`, unlike the project layer), the `--rule`/`--exclude` CLI wiring
-reaching `run_review`, and an excluded file never entering the coverage manifest. Task 3 adds
+reaching `run_review`, and an excluded file never entering the coverage manifest. Every test that
+dereferences an `X | None` call result now carries the explicit `is not None` assertion `ty`
+needs to narrow the type (same idiom as `test_rule_matcher.py`/`test_bucket_b.py` below) — no
+behavior change, but it took `ty check`'s diagnostics on this file from 12 to 0. Task 3 adds
 the rule-file safety gate — landing as one green suite once all three land.
 
 `test_workspace.py` gained 4 tests for `Workspace.artifacts` (default path resolves under root,

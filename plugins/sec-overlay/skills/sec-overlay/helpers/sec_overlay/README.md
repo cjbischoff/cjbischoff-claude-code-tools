@@ -604,3 +604,20 @@ user_text)`, which reproduces OCR's `## System-Specific Rules (Mandatory)` /
 `## User-Specific Rules (Mandatory)` header format across all three empty-input cases. Per-path
 fallthrough and Task 2's whole-layer filter selection are deliberately separate functions with
 separate loops — the phase's single highest-risk mis-implementation is collapsing them into one.
+
+Task 2 adds the whole-layer filter and the two CLI flags it powers. `build_file_filter(layers)`
+walks `[custom, project, global]` and returns the first layer whose `include` or `exclude` is
+non-empty — lower-cased at build time (D-04) — skipping a layer where both are empty rather than
+selecting it as an empty filter; `None` when no layer qualifies. It shares no loop or helper with
+`match_project_rule_entry`: one answers per-path, the other picks one whole layer, and the two
+never call each other. `build_resolution(rule_path, excludes, repo_root)` assembles all three
+layers — mirroring OCR's `NewResolver`, the custom (`--rule`) and global layers resolve a relative
+`rule` field against their OWN file's directory (`Path(rule_path).parent`, `_global_rule_path()
+.parent`), while only the project layer resolves against `repo_root` — then calls
+`build_file_filter` and appends the lower-cased CLI `--exclude` values to whichever filter comes
+back (or builds an excludes-only `FileFilter` when no layer had one). `cli.py`'s `review`
+subparser gained `--rule` (single path) and `--exclude` (repeatable); `run_review` calls
+`build_resolution` once, passes the `RuleResolution` into `resolve_rule_doc` for each reviewable
+file, and narrows `selection.reviewable` by the resulting `FileFilter` before the manifest loop —
+`dataclasses.replace` rebuilds the frozen `Selection` rather than mutating it — so an excluded
+file never enters coverage accounting.

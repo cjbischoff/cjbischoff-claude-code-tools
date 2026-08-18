@@ -2,6 +2,26 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.52.0 - 2026-08-18
+
+### Added
+
+- `rule_glob.py`: `build_file_filter(layers)`, the whole-layer first-non-empty exclude/include
+  filter selection (RULE-02) — structurally separate from `match_project_rule_entry`'s per-path
+  fallthrough, sharing no loop or helper with it.
+- `rule_glob.py`: `build_resolution(rule_path, excludes, repo_root)`, assembling the custom
+  (`--rule`), project, and global layers and their file filter, following OCR's rule that the
+  custom and global layers resolve a relative `rule` field against their own config directory
+  while only the project layer resolves against `repo_root`.
+- `cli.py`: `--rule` and `--exclude` (repeatable) on the `review` subparser, threaded into
+  `run_review`, which narrows the reviewable set by the resolved filter before the coverage
+  manifest loop so an excluded file never enters coverage accounting.
+
+### Changed
+
+- `tests/test_rule_glob.py`: added explicit `is not None` assertions before dereferencing an
+  `X | None` call result, so `ty check` narrows the type — no behavior change.
+
 ## 1.51.1 - 2026-08-18
 
 ### Added
