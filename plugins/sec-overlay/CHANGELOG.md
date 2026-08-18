@@ -2,6 +2,18 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.51.0 - 2026-08-18
+
+### Added
+
+- `rule_glob.py`: the RULE-02 per-path four-layer rule resolver — `ProjectRuleEntry`/
+  `ProjectRule`/`RuleResolution` dataclasses mirroring OCR's `rule.json` shape (D-06),
+  `load_project_rule` (defensive load, absent file returns `None`), `match_project_rule_entry`
+  (first-match-wins per path in JSON array order), and RULE-04's `merge_with_system_rule`
+  (byte-exact `## System-Specific Rules (Mandatory)` / `## User-Specific Rules (Mandatory)`
+  headers). `resolve_rule_doc` now accepts an optional `RuleResolution`, falling back to the
+  built-in map alone when omitted.
+
 ## 1.50.1 - 2026-08-18
 
 ### Added

@@ -588,3 +588,19 @@ reserved for a later plan), resolves each reviewable file's rule doc, and runs i
 through `apply_verdict` (an always-empty verdict in this tracer slice — no finding source is wired
 into review mode yet) inside a `try`/`except` that records a `ReflectionSkip` and fails open on
 error rather than aborting the run.
+
+Phase 3 plan 02 (Task 1) expands `rule_glob.py`'s built-in-only resolution into RULE-02's four-layer
+resolver. `ProjectRuleEntry`/`ProjectRule` mirror OCR's `rule.json` shape byte-for-byte (D-06):
+an ordered `entries` list (`path` glob, `rule` text, `merge_system_rule` bool) plus `include`/
+`exclude` lists Task 2's whole-layer filter selection consumes — never per-path resolution.
+`load_project_rule(path, repo_root)` reads a layer defensively (`None` when absent, following
+`exclusions.load_exclusions`'s idiom) and resolves each entry's `rule` file at load time through
+a placeholder reader Task 3 replaces with `read_rule_file_safe`. `match_project_rule_entry(layer,
+path)` is the per-path fallthrough building block — first entry in JSON array order whose pattern
+matches wins. `resolve_rule_doc` now takes an optional `RuleResolution` and walks
+`[custom, project, global]` before falling back to the built-in map, deciding independently per
+path; an entry with `merge_system_rule` routes through `merge_with_system_rule(builtin_text,
+user_text)`, which reproduces OCR's `## System-Specific Rules (Mandatory)` /
+`## User-Specific Rules (Mandatory)` header format across all three empty-input cases. Per-path
+fallthrough and Task 2's whole-layer filter selection are deliberately separate functions with
+separate loops — the phase's single highest-risk mis-implementation is collapsing them into one.

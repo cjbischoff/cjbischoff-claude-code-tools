@@ -67,12 +67,13 @@ a zero-finding run still writes `reflection_retractions`/`reflection_skipped` as
 (never omitted) in the ledger and renders the "## Reflection retractions" heading in
 `report.md` (D-14/D-15 never-silent discipline).
 
-`test_rule_glob.py` (new, Phase 3 Plan 2) starts RED: 10 failing tests for the not-yet-implemented
-four-layer rule resolver (`ProjectRuleEntry`/`ProjectRule`/`RuleResolution`, custom > project >
-global > built-in per-path fallthrough), `merge_system_rule`'s header concatenation and its three
-empty-input cases, and `load_project_rule` preserving JSON array match order. The file grows
-across three TDD tasks in this plan — per-path fallthrough, the whole-layer exclude-filter
-selection, and the rule-file safety gate — landing as one suite once all three are green.
+`test_rule_glob.py` (new, Phase 3 Plan 2) grows across three TDD tasks. Task 1 (10 tests, green)
+covers the four-layer rule resolver: per-path fallthrough (`ProjectRuleEntry`/`ProjectRule`/
+`RuleResolution`, custom > project > global > built-in, first-match-wins per path),
+`merge_with_system_rule`'s header concatenation and its three empty-input cases, and
+`load_project_rule` preserving JSON array match order and idempotent repeated resolution. Task 2
+adds the structurally separate whole-layer exclude-filter selection and the `--rule`/`--exclude`
+CLI wiring; Task 3 adds the rule-file safety gate — landing as one green suite once all three land.
 
 `test_workspace.py` gained 4 tests for `Workspace.artifacts` (default path resolves under root,
 a `reports_dir` override does not redirect it, `ensure()` creates it, `ensure()` is idempotent).
