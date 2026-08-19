@@ -2,6 +2,19 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.57.0 - 2026-08-18
+
+### Added
+
+- `sec_overlay.report`: `render_reflection_skipped_section`/`REFLECTION_SKIPPED_HEADING` render
+  every file whose reflection pass failed open, unconditionally, mirroring the existing
+  retractions section. `to_markdown` and `write_report` gain a `reflection_skips` param wiring it
+  in — `review_ledger.json` and `report.md` now both carry never-silent retraction AND skip
+  sections (D-14/D-15).
+- `SKILL.md`: documents the reflection dispatch in the diff-scoped `review` mode — the
+  `review-filter` subagent, `validate_verdict`'s parse-before-trust step, and `apply_verdict`'s
+  retract-only contract.
+
 ## 1.56.0 - 2026-08-18
 
 ### Added

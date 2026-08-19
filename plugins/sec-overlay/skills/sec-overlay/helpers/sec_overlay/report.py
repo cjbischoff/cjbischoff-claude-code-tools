@@ -267,6 +267,7 @@ def to_markdown(
     dropped: list | None = None,
     position_reviews: list[PositionResult] | None = None,
     reflection_retractions: list | None = None,
+    reflection_skips: list | None = None,
 ) -> str:
     """Render findings and optional token accounting as Markdown.
 
@@ -301,6 +302,8 @@ def to_markdown(
             ``POSITION_REVIEW_HEADING`` the same way.
         reflection_retractions: Findings the reflection filter retracted; rendered under
             ``REFLECTION_RETRACTIONS_HEADING`` unconditionally, same as ``dropped``.
+        reflection_skips: Files whose reflection pass failed open; rendered under
+            ``REFLECTION_SKIPPED_HEADING`` unconditionally, same as ``dropped``.
 
     Returns:
         A Markdown report string.
@@ -379,6 +382,7 @@ def to_markdown(
     lines += ["", render_dropped_findings_section(dropped or [])]
     lines += ["", render_position_review_section(position_reviews or [])]
     lines += ["", render_reflection_retractions_section(reflection_retractions or [])]
+    lines += ["", render_reflection_skipped_section(reflection_skips or [])]
 
     # External-unverifiable leads — sink crosses into an un-ingested dependency
     if external:
@@ -619,6 +623,7 @@ def write_report(
             dropped=dropped,
             position_reviews=position_reviews,
             reflection_retractions=reflection_retractions,
+            reflection_skips=reflection_skips,
         )
     )
     write_finding_details(ws, reportable + ndt, patch_statuses=patch_statuses)
@@ -732,6 +737,33 @@ def render_reflection_retractions_section(retractions: list) -> str:
     ]
     for r in retractions:
         lines.append(f"| {r.path} | {r.line} | {r.rule_id} | {r.reason} |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+REFLECTION_SKIPPED_HEADING = "## Reflection skipped"
+
+
+def render_reflection_skipped_section(skips: list) -> str:
+    """Render every file whose reflection pass failed open as its own section (D-15).
+
+    Args:
+        skips: ``reflection.ReflectionSkip``s recorded when a file's reflection pass raised
+            and the run failed open rather than aborting. Rendered in the order given.
+
+    Returns:
+        A markdown string starting with ``REFLECTION_SKIPPED_HEADING``.
+    """
+    if not skips:
+        return f"{REFLECTION_SKIPPED_HEADING}\n\nNo file was skipped.\n"
+    lines = [
+        REFLECTION_SKIPPED_HEADING,
+        "",
+        "| Path | Reason | Error |",
+        "| --- | --- | --- |",
+    ]
+    for s in skips:
+        lines.append(f"| {s.path} | {s.reason} | {s.error} |")
     lines.append("")
     return "\n".join(lines)
 

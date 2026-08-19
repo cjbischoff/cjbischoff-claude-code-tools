@@ -2,6 +2,7 @@
 mechanical protected-subject veto (D-16)."""
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -11,12 +12,22 @@ from sec_overlay.reflection import (
     REFUSED_REASON,
     REPORT_INCORRECT_TOOL,
     RETRACTED_REASON,
+    SKIPPED_REASON,
     ReflectionComment,
     ReflectionResponseError,
+    ReflectionRetraction,
+    ReflectionSkip,
     apply_verdict,
     render_reflection_prompt,
     validate_verdict,
 )
+from sec_overlay.report import (
+    REFLECTION_SKIPPED_HEADING,
+    render_reflection_skipped_section,
+    to_markdown,
+    write_review_ledger,
+)
+from sec_overlay.workspace import Workspace
 
 
 class _Finding:
@@ -149,3 +160,71 @@ def test_apply_verdict_does_not_mutate_the_input_list():
     kept, _retractions = apply_verdict(findings, {"F-1": "sanitized upstream"}, path="app.py")
     assert findings == original
     assert kept is not findings
+
+
+# --- never-silent ledger for retractions and skips (D-14/D-15, Phase 3 Plan 05 Task 2) --------
+
+
+def test_render_reflection_skipped_section_states_none_skipped_when_empty():
+    md = render_reflection_skipped_section([])
+    assert md.startswith(REFLECTION_SKIPPED_HEADING)
+    assert "No file was skipped" in md
+
+
+def test_render_reflection_skipped_section_lists_each_skip():
+    skip = ReflectionSkip(path="app.py", reason=SKIPPED_REASON, error="response timed out")
+    md = render_reflection_skipped_section([skip])
+    rows = [line for line in md.splitlines() if line.startswith("| app.py")]
+    assert len(rows) == 1
+    assert SKIPPED_REASON in rows[0]
+    assert "response timed out" in rows[0]
+
+
+def test_to_markdown_renders_reflection_skipped_heading_with_zero_findings():
+    rendered = to_markdown([], reflection_skips=[])
+    assert REFLECTION_SKIPPED_HEADING in rendered
+
+
+def test_write_review_ledger_includes_reflection_skipped_key(tmp_path: Path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    skip = ReflectionSkip(path="app.py", reason=SKIPPED_REASON, error="boom")
+    path = write_review_ledger(
+        ws, position_reviews=[], dropped=[], reflection_retractions=[], reflection_skips=[skip]
+    )
+    data = json.loads(path.read_text())
+    assert data["reflection_skipped"] == [
+        {"path": "app.py", "reason": SKIPPED_REASON, "error": "boom"}
+    ]
+
+
+def test_write_review_ledger_refused_and_applied_retractions_share_one_list(tmp_path: Path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    applied = ReflectionRetraction("a.py", 1, "R1", RETRACTED_REASON, "sanitized upstream")
+    refused = ReflectionRetraction("b.py", 2, "R2", REFUSED_REASON, "looks unnecessary")
+    path = write_review_ledger(
+        ws,
+        position_reviews=[],
+        dropped=[],
+        reflection_retractions=[applied, refused],
+        reflection_skips=[],
+    )
+    data = json.loads(path.read_text())
+    reasons = {entry["reason"] for entry in data["reflection_retractions"]}
+    assert reasons == {RETRACTED_REASON, REFUSED_REASON}
+
+
+def test_write_review_ledger_writes_no_second_artifact_file_for_reflection(tmp_path: Path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    write_review_ledger(
+        ws,
+        position_reviews=[],
+        dropped=[],
+        reflection_retractions=[ReflectionRetraction("a.py", 1, "R1", RETRACTED_REASON, "x")],
+        reflection_skips=[ReflectionSkip("b.py", SKIPPED_REASON, "boom")],
+    )
+    json_files = list((tmp_path / "artifacts").glob("*.json"))
+    reflection_named = [p for p in json_files if "reflection" in p.name]
+    assert reflection_named == []

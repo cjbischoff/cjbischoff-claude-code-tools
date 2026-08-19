@@ -605,6 +605,18 @@ records a refused protected-class retraction (`REFUSED_REASON`) in the same `ret
 an applied one (`RETRACTED_REASON`) rather than dropping it — the finding still survives in `kept`,
 but the attempt is never silent (D-14).
 
+Phase 3 plan 05 (Task 2) closes the never-silent ledger's markdown-rendering half (D-15).
+`report.py` gains `render_reflection_skipped_section`/`REFLECTION_SKIPPED_HEADING`, mirroring
+`render_reflection_retractions_section`'s pattern — a table of `path`/`reason`/`error` per
+`ReflectionSkip`, or "No file was skipped." when empty, rendered unconditionally so a run with
+zero skips still shows the section rather than omitting it. `to_markdown` gains a
+`reflection_skips` keyword param and now calls both retraction and skip renderers back to back;
+`write_report` passes `reflection_skips` through to `to_markdown` (it already reached
+`write_review_ledger`). SKILL.md's "Diff-scoped review" section documents the dispatch: a
+`review-filter` subagent renders `render_reflection_prompt`, returns a verdict `validate_verdict`
+parses, and `apply_verdict` retracts — `cli.py review`'s tracer slice still calls it with an
+always-empty verdict, so live dispatch remains a later plan.
+
 Phase 3 plan 02 (Task 1) expands `rule_glob.py`'s built-in-only resolution into RULE-02's four-layer
 resolver. `ProjectRuleEntry`/`ProjectRule` mirror OCR's `rule.json` shape byte-for-byte (D-06):
 an ordered `entries` list (`path` glob, `rule` text, `merge_system_rule` bool) plus `include`/

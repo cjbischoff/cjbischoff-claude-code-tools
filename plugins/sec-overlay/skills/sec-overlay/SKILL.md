@@ -88,6 +88,23 @@ a change to it. `sec_overlay.review_findings.apply_profile` is the gate; `securi
 `general` never mix rule sets. Exit 0 on a `complete` coverage seal, 2 on an invalid ref or an
 unsafe rule file, 3 when one or more files could not be reviewed.
 
+### Reflection pass — fact-checking kept comments (D-16)
+
+Every kept finding for a reviewable file also runs through a **retract-only** reflection filter
+before the report is written: `sec_overlay.reflection.render_reflection_prompt` renders
+`agents/review-filter.md` for that file (path, diff, and the file's kept comments — no severity or
+category, so the filter has nothing to rank or rewrite); a `review-filter` subagent returns exactly
+one of `approve_all_comments` or `report_incorrect_comments`; `validate_verdict` parses that raw
+response before any finding sees it; `apply_verdict` is the only code path that may act on it, and
+only to retract — never to add, rank, or rewrite. `PROTECTED_SUBJECT_CLASSES` is a hardcoded veto
+no verdict can override: a retraction naming a protected-subject finding is refused and the finding
+stays kept, but the refusal is still recorded, never silently dropped (D-14). A file whose
+reflection pass raises fails open — the run records a `ReflectionSkip` and continues rather than
+aborting (D-15). `review_ledger.json` carries both `reflection_retractions` and
+`reflection_skipped` unconditionally, even when empty, and `report.md` renders both sections the
+same way. `cli.py review`'s tracer slice calls `apply_verdict` with an always-empty verdict — no
+finding source is wired into review mode yet — so live reflection dispatch is a later plan.
+
 ## Running a full audit
 
 Read [`CLAUDE.md`](CLAUDE.md) first for environment prerequisites, hard operating rules, and
