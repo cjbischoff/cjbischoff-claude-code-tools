@@ -5,15 +5,15 @@ milestone_name: Hybrid Diff-Review Architecture
 current_phase: 03
 current_phase_name: rule-matching-review-modes
 status: executing
-stopped_at: Completed 03-04-PLAN.md
-last_updated: "2026-08-18T23:47:17.677Z"
+stopped_at: Completed 03-05-PLAN.md
+last_updated: "2026-08-19T00:47:29.827Z"
 last_activity: 2026-08-18
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
   percent: 33
 ---
 
@@ -30,11 +30,11 @@ governed releases, receipt-backed findings.
 ## Current Position
 
 Phase: 03 (rule-matching-review-modes) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-08-18 — Phase 03 execution started
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: [█████████░] 86%
 | Phase 03 P02 | 1h10m | 3 tasks | 7 files |
 | Phase 03 P03 | 55min | 3 tasks | 15 files |
 | Phase 03 P04 | 40min | 3 tasks | 14 files |
+| Phase 03 P05 | 150m | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -117,6 +118,8 @@ Recent decisions affecting current work:
 - [Phase ?]: REV-01: option-a — new review_findings.py module wraps findings in ReviewFinding, keeping models.py/evidence.py frozen (D-11)
 - [Phase ?]: apply_profile returns a 2-tuple (kept, dropped), deliberately diverging from review_position_gate's 3-tuple since profile gating cannot produce a decline
 - [Phase ?]: Security-profile baseline captured as a committed JSON fixture, not recomputed inline, so a future regression fails the comparison
+- [Phase ?]: Injection assigned to STATIC_CHECKABLE_CLASSES explicitly (ships unconfirmed) since its sink matches Tier-1 static-tool reachability targets
+- [Phase ?]: disposition_without_receipt raises ValueError on unknown class instead of defaulting, forcing explicit classification of future general-defect classes
 
 ### Pending Todos
 
@@ -142,6 +145,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-18T23:47:17.657Z
-Stopped at: Completed 03-04-PLAN.md
+Last session: 2026-08-19T00:47:29.812Z
+Stopped at: Completed 03-05-PLAN.md
 Resume file: None

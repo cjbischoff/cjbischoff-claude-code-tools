@@ -82,7 +82,7 @@ models.py/evidence.py contract, receipt gate as the sole authority on `confirmed
   gate, retracts only, fails open on LLM error, and encodes the protected-subject
   vetoes; it can never produce a `confirmed` disposition
 
-- [ ] **REV-03**: The mechanical-receipt gate remains the sole authority on
+- [x] **REV-03**: The mechanical-receipt gate remains the sole authority on
   `confirmed`; general-defect findings without a Tier-1 receipt ship as
   `unconfirmed`/`needs-deployment-testing`
 
@@ -201,7 +201,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RULE-05 | Phase 3 | Complete |
 | REV-01 | Phase 3 | Complete |
 | REV-02 | Phase 3 | Complete |
-| REV-03 | Phase 3 | Pending |
+| REV-03 | Phase 3 | Complete |
 | SCALE-01 | Phase 4 | Pending |
 | SCALE-02 | Phase 4 | Pending |
 | SCALE-03 | Phase 4 | Pending |

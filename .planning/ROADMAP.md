@@ -106,7 +106,7 @@ Plans:
   4. `review --profile security` on a diff reproduces existing gate A-E behavior exactly; `--profile general` on the same diff additionally surfaces NPE/thread-safety/XSS/SQLi findings that gates A/B would have dropped, with gates C/D/E still enforced
   5. The reflection filter runs once per file after positioning and the hunk gate, retracts findings only, fails open on LLM error, and cannot itself produce a `confirmed` disposition; a general-defect finding without a Tier-1 mechanical receipt ships as `unconfirmed`/`needs-deployment-testing`, never `confirmed`
 
-**Plans**: 4/6 plans executed
+**Plans**: 5/6 plans executed
 **Wave 1**
 
 - [x] 03-01-PLAN.md — Wave 1 (tracer): end-to-end review of one Python file through its rule doc and the reflection filter
@@ -125,7 +125,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 03-05-PLAN.md — Wave 5: reflection prompt, protected-subject veto, never-silent ledger, and the receipt-gate disposition ladder
+- [x] 03-05-PLAN.md — Wave 5: reflection prompt, protected-subject veto, never-silent ledger, and the receipt-gate disposition ladder
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
@@ -187,7 +187,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Baseline Health Verification | 3/3 | Complete    | 2026-08-17 |
 | 2. Diff Pipeline & Positioning | 5/5 | In Progress|  |
-| 3. Rule Matching & Review Modes | 4/6 | In Progress|  |
+| 3. Rule Matching & Review Modes | 5/6 | In Progress|  |
 | 4. Scale, Resume & Diff Output | 0/TBD | Not started | - |
 | 5. End-to-End Verification (Audit & Review) | 0/TBD | Not started | - |
 | 6. Remediation and Governed Release | 0/TBD | Not started | - |
