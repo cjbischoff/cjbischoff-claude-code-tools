@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Record the Phase 04.1 security threat verification (`.planning/phases/04.1-close-gap-diff-04-review-sidecar-workspace-isolation/04.1-SECURITY.md`, status verified: 5 threats from the plan threat model, 5 closed, threats_open 0, 3 accepted risks logged).
 - Evolve `.planning/PROJECT.md` after Phase 04.1: move DIFF-04 (review sidecar workspace isolation) to Validated and bump the footer to Phase 04.1.
 - Verify and close Phase 04.1 (`.planning/phases/04.1-close-gap-diff-04-review-sidecar-workspace-isolation/04.1-VERIFICATION.md`, status passed: 6/6 must-haves, DIFF-04 traced); `.planning/ROADMAP.md` and `.planning/STATE.md` mark Phase 04.1 complete (2026-08-19) and point at Phase 5 (End-to-End Verification) next.
 - Record the Phase 04.1 code-review report (`.planning/phases/04.1-close-gap-diff-04-review-sidecar-workspace-isolation/04.1-REVIEW.md`, status clean: 0 critical, 0 warning, 0 info across 14 files at standard depth).
