@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Verify and close Phase 04.1 (`.planning/phases/04.1-close-gap-diff-04-review-sidecar-workspace-isolation/04.1-VERIFICATION.md`, status passed: 6/6 must-haves, DIFF-04 traced); `.planning/ROADMAP.md` and `.planning/STATE.md` mark Phase 04.1 complete (2026-08-19) and point at Phase 5 (End-to-End Verification) next.
 - Record the Phase 04.1 code-review report (`.planning/phases/04.1-close-gap-diff-04-review-sidecar-workspace-isolation/04.1-REVIEW.md`, status clean: 0 critical, 0 warning, 0 info across 14 files at standard depth).
 - Complete Phase 04.1 Plan 01 (`.planning/phases/04.1-close-gap-diff-04-review-sidecar-workspace-isolation/04.1-01-SUMMARY.md`, DIFF-04 closed): `run_review` now resolves its workspace through `RepoMemory.for_target` instead of `Workspace(args.root)`, matching `scan`/`audit`; every review test that read an artifact path now resolves it through the same sidecar. Mark Phase 04.1 complete (1/1 plan) in `.planning/STATE.md` and `.planning/ROADMAP.md`.
 - Record the Phase 04.1 pattern map (`.planning/phases/04.1-close-gap-diff-04-review-sidecar-workspace-isolation/04.1-PATTERNS.md`, 6/6 analogs found — the fix mirrors the `scan`/`audit` `RepoMemory.for_target` branches in `cli.py`) and mark Phase 04.1 "Ready to execute" (1 plan, plan checker passed 10/10 dimensions) in `.planning/STATE.md`.

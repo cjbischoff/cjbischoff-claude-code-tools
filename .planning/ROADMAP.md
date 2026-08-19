@@ -157,7 +157,7 @@ Plans:
 **Goal:** Reviewing a repo writes nothing into that repo's tracked working tree — `run_review` resolves its workspace through `RepoMemory.for_target(root)` to the `<target>/.sec-overlay/<slug>/` sidecar, exactly as `scan` and `audit` already do, with a regression test pinning the convention
 **Requirements**: DIFF-04
 **Depends on:** Phase 4
-**Plans:** 1/1 plans executed
+**Plans:** 1/1 plans complete
 
 Plans:
 
