@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.61.4 - 2026-08-19
+
+### Fixed
+
+- Fix `ty check` diagnostics in `tests/test_review_tracer.py` and `tests/test_diffscope.py`.
+  The fake-response class `R` declared only `returncode` and assigned `stdout` after
+  construction, so `ty` could not resolve the attribute. Each `R` class now declares
+  `stdout = ""` as a class attribute. Test behavior does not change.
+
 ## 1.61.3 - 2026-08-19
 
 ### Added

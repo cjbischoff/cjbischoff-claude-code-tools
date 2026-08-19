@@ -28,6 +28,7 @@ _DIFF = (
 def _fake_run(cmd, capture_output, text, check):
     class R:
         returncode = 0
+        stdout = ""
 
     r = R()
     if "--verify" in cmd:
@@ -61,6 +62,7 @@ def _make_fake_run(path: str, diff: str):
     def fake(cmd, capture_output, text, check):
         class R:
             returncode = 0
+            stdout = ""
 
         r = R()
         if "--verify" in cmd:

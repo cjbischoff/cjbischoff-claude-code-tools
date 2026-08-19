@@ -4,6 +4,9 @@
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+The fake-response `R` classes in `test_review_tracer.py` and `test_diffscope.py` declare
+`stdout = ""` as a class attribute so `ty check` resolves the attribute; behavior is unchanged.
+
 `test_cli.py` covers `run_review` mapping the coverage-manifest seal to an exit code: a
 `complete` seal returns 0 (including a diff with zero reviewable files), a `partial` seal
 returns 3 and prints one "unfinished file" line per non-`done` manifest entry naming its path,

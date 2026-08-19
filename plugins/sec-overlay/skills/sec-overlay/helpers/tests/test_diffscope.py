@@ -176,6 +176,7 @@ def test_rev_parse_precedes_diff_and_diff_never_sees_a_raw_ref(tmp_path):
 
             class R:
                 returncode = 0
+                stdout = ""
 
             r = R()
             r.stdout = f"sha-for-{cmd[-1]}\n" if "--verify" in cmd else ""
