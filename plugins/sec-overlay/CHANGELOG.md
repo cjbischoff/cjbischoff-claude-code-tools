@@ -2,6 +2,19 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.59.0 - 2026-08-19
+
+### Added
+
+- `sec_overlay.review_agent`: `render_review_prompt(path, rule_text, diff, changed_files)` renders
+  the per-file `agents/review-file.md` prompt; `parse_review_response(text, *, path,
+  rule_id_prefix)` converts a `code_comment`/`task_done` tool-call array into `Finding`s. Every
+  finding carries `REVIEW_AGENT_CLAIM` (`evidence.as_llm_claim("review-agent")`) as its sole
+  evidence source and `FindingStatus.RAW`, both fixed in code rather than trusted from the
+  model's response — `evidence.confirms_alone` is false for every agent-authored finding
+  (REV-03 elevation-of-privilege backstop). A `code_comment` naming a path other than the one
+  under review is discarded and counted, never converted (Strict Focus Rule).
+
 ## 1.58.0 - 2026-08-18
 
 ### Added

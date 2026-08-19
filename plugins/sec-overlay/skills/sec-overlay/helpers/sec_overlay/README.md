@@ -694,3 +694,14 @@ families every built-in doc must cover, in the fixed order `python.md` establish
 (a Rust doc says panic/unwrap where a Java doc says null pointer) as data, not scattered test
 logic — `tests/test_rule_docs.py` drives every assertion from these two constants and the map
 itself, never a hardcoded filename list.
+
+Phase 3 plan 06 (Task 1) adds the review-file agent seam, mirroring `reflection.py`'s
+render/parse-only discipline (no subprocess, no network client, no model SDK — `SKILL.md` owns
+dispatch, D-13). `review_agent.py`'s `render_review_prompt` renders `agents/review-file.md`
+(Task 2's file, not this one's) for a single file's review pass; `parse_review_response` is the
+REV-03 elevation-of-privilege backstop — every finding it builds carries `REVIEW_AGENT_CLAIM`
+(`evidence.as_llm_claim("review-agent")`) as its only evidence source and `FindingStatus.RAW`,
+both fixed in code rather than read from the model's response, so `evidence.confirms_alone` is
+false for every agent-authored finding regardless of what the response claims. A `code_comment`
+naming a path other than the one under review is discarded and counted, never converted —
+the Strict Focus Rule enforced mechanically, not only asked for in the prompt.

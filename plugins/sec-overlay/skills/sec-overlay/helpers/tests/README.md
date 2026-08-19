@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-102 pytest files, 1112 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+103 pytest files, 1124 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -84,6 +84,18 @@ path/reason/error row per `ReflectionSkip`; `to_markdown` renders `REFLECTION_SK
 with zero findings; `write_review_ledger` writes a `reflection_skipped` key matching the dataclass
 fields, keeps applied and refused retractions in the same `reflection_retractions` list, and never
 writes a second `*reflection*.json` artifact file.
+
+`test_review_agent.py` (12 tests, Phase 3 Plan 06 Task 1) covers `review_agent.py`'s prompt
+render and response parse, monkeypatching `_review_file_template_path` to a `tmp_path` fixture
+template so it needs nothing from `agents/review-file.md` (Task 2's file): `render_review_prompt`
+substituting all four content tokens and raising on a genuinely unfilled one (distinct from
+simply omitting a placeholder, which raises nothing); a `code_comment` for the reviewed path
+converting to one `Finding`, one for a different path being discarded and counted rather than
+converted; a `task_done`-only response yielding an empty list with no raise; a model-supplied
+`evidence_sources` or `status` being overwritten with `REVIEW_AGENT_CLAIM`/`FindingStatus.RAW`
+rather than trusted; `evidence.confirms_alone` false for every produced finding; malformed JSON,
+an unknown tool, and a missing `line`/`message` all raising `ReviewResponseError`; and two parses
+of the same response producing identical finding ids (idempotent re-parse).
 
 `test_rule_glob.py` (new, Phase 3 Plan 2) grows across three TDD tasks. Task 1 (10 tests, green)
 covers the four-layer rule resolver: per-path fallthrough (`ProjectRuleEntry`/`ProjectRule`/
