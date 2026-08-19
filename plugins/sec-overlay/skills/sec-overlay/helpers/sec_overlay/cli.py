@@ -118,9 +118,11 @@ def run_review(
 
     Batches over every reviewable changed file and implements exit codes 2 and 3.
     Live findings come from ``review_source`` — called once per file with its path
-    — then traverse the position gate, :func:`review_findings.apply_profile`, and
-    :func:`reflection.apply_verdict`, in that fixed order, before the receipt gate
-    runs. The gate's dropped/declined output is always written to ``report.md`` and
+    — then traverse the position gate and :func:`review_findings.apply_profile`.
+    ``apply_profile``'s kept output then feeds :func:`reflection.apply_verdict`,
+    called once per reviewable file with only that file's kept findings; the
+    findings surviving every file's verdict are what ``review_findings`` reports.
+    The gate's dropped/declined output is always written to ``report.md`` and
     ``artifacts/review_ledger.json`` via :func:`report.write_report` — including the
     zero-drop/zero-decline case — so "no finding was dropped" is recorded, not just
     absent (T-02-15).
@@ -300,13 +302,18 @@ def run_review(
 
     reflection_retractions: list = []
     reflection_skips: list[ReflectionSkip] = []
+    retracted_ids: set[str] = set()
     for record in selection.reviewable:
-        kept_for_file = [f for f in _kept if f.file == record.path]
+        kept_for_file = [rf.finding for rf in review_findings if rf.finding.file == record.path]
         try:
-            _kept_for_file, retractions = apply_verdict(kept_for_file, {}, path=record.path)
+            surviving, retractions = apply_verdict(kept_for_file, {}, path=record.path)
             reflection_retractions.extend(retractions)
+            surviving_ids = {f.id for f in surviving}
+            retracted_ids.update(f.id for f in kept_for_file if f.id not in surviving_ids)
         except Exception as exc:  # noqa: BLE001 - reflection fails open, never aborts the run
             reflection_skips.append(ReflectionSkip(record.path, SKIPPED_REASON, str(exc)))
+
+    review_findings = [rf for rf in review_findings if rf.finding.id not in retracted_ids]
 
     write_report(
         ws,

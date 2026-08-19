@@ -720,3 +720,18 @@ both fixed in code rather than read from the model's response, so `evidence.conf
 false for every agent-authored finding regardless of what the response claims. A `code_comment`
 naming a path other than the one under review is discarded and counted, never converted —
 the Strict Focus Rule enforced mechanically, not only asked for in the prompt.
+
+Phase 3 plan 07 (Task 1) closes a gap in that same gate chain (REV-02): `run_review`'s
+reflection loop read its per-file selection from the position gate's `_kept` list and then
+discarded `apply_verdict`'s returned kept half entirely, so a retraction never actually
+removed anything from the reported `review_findings` — the retracted finding still shipped
+in the ledger next to its own `RETRACTED_REASON` entry. The loop now selects each reviewable
+file's findings from `apply_profile`'s kept output (`review_findings`, not `_kept`), passes
+the inner `Finding` objects (`.finding`) to `apply_verdict`, and accumulates every retracted
+id (submitted ids minus the ids `apply_verdict` returned as kept) into one `retracted_ids` set
+across the loop. After the loop, `review_findings` is rebound to the entries whose
+`.finding.id` is not in `retracted_ids` — filtering the original list, never reconstructing it
+by union, so a finding on a path the loop never visits (absent from `selection.reviewable`)
+stays in place instead of being silently dropped (D-14). A per-file `apply_verdict` failure
+still records a `ReflectionSkip` and contributes no retracted ids, so that file's findings
+survive untouched (fail-open, D-15) without affecting any other file's retractions.

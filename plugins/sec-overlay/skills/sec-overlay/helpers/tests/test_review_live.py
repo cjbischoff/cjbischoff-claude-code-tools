@@ -172,12 +172,57 @@ def test_reflection_retraction_removes_a_live_finding(tmp_path, monkeypatch):
     assert rc == 0
 
     ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    assert ledger["review_findings"] == []
     assert len(ledger["reflection_retractions"]) == 1
-    assert ledger["review_findings"][0]["id"] if ledger["review_findings"] else None
-    # Retraction happens in reflection, after profile gating already kept the finding;
-    # review_findings still lists it (profile output), reflection removes it downstream
-    # of that ledger key — proven by the retraction entry itself, not an absent finding.
     assert ledger["reflection_retractions"][0]["reason"] == RETRACTED_REASON
+
+
+def test_reflection_failure_for_one_file_leaves_other_files_unaffected(tmp_path, monkeypatch):
+    diffs = {"app.py": _diff_for("app.py"), "other.py": _diff_for("other.py")}
+    monkeypatch.setattr(subprocess, "run", _fake_run_for(diffs))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+    _record_return(str(tmp_path), "other.py",
+                    calls=[_code_comment("other.py", 2, "sql injection", "sqli")])
+
+    def fake_apply_verdict(findings, verdict, *, path):
+        if path == "app.py":
+            raise RuntimeError("boom")
+        return findings, []
+
+    monkeypatch.setattr(cli, "apply_verdict", fake_apply_verdict)
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc == 0
+
+    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    assert len(ledger["reflection_skipped"]) == 1
+    assert ledger["reflection_skipped"][0]["path"] == "app.py"
+    assert {rf["path"] for rf in ledger["review_findings"]} == {"app.py", "other.py"}
+
+
+def test_finding_on_an_unreflected_path_survives(tmp_path, monkeypatch):
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+
+    from sec_overlay.models import Finding, FindingStatus, Severity
+
+    ghost = Finding(
+        id="ghost-1", rule_id="review:sqli", cls="sqli", status=FindingStatus.RAW,
+        severity=Severity.MEDIUM, file="ghost.py", line=1, message="orphaned finding",
+    )
+    real_gate = cli.review_position_gate
+
+    def fake_gate(findings, hunks_by_path, file_text_by_path):
+        kept, dropped, declines = real_gate(findings, hunks_by_path, file_text_by_path)
+        return [*kept, ghost], dropped, declines
+
+    monkeypatch.setattr(cli, "review_position_gate", fake_gate)
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc == 0
+
+    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    assert any(rf["path"] == "ghost.py" for rf in ledger["review_findings"])
 
 
 def test_file_with_no_recorded_return_is_skipped_and_run_still_exits_zero(tmp_path, monkeypatch):

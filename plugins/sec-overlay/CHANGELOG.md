@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.61.1 - 2026-08-19
+
+### Fixed
+
+- `cli.run_review`'s reflection loop now selects each reviewable file's findings from
+  `review_findings.apply_profile`'s kept output instead of the position gate's pre-profile
+  list, and rebinds `review_findings` to exclude every id `reflection.apply_verdict` retracted
+  across every file. A retraction previously never removed its finding from the reported
+  ledger; it now does, while a finding on a path the reflection loop never visits still
+  survives untouched.
+
 ## 1.61.0 - 2026-08-18
 
 ### Added

@@ -646,3 +646,15 @@ reconstructed from the fixture diff by default, or an explicit override
 content. `test_rule_glob.py`'s `fake_run_review` local fixture gained a `prepare: bool = False`
 keyword to match `run_review`'s signature; `test_cli.py`'s `test_review_ledger_drop_count_matches_markdown_drop_rows`
 monkeypatch of `review_position_gate` gained a matching `file_text_by_path=None` third parameter.
+
+Phase 3 plan 07 (Task 1, REV-02 gap closure) tightens and extends `test_review_live.py`'s
+reflection coverage. `test_reflection_retraction_removes_a_live_finding` now asserts
+`ledger["review_findings"] == []` after the faked retraction (the finding's actual absence,
+not just the retraction entry's presence — the assertion this test previously stopped short
+of). `test_reflection_failure_for_one_file_leaves_other_files_unaffected` covers two changed
+files: a fake `apply_verdict` that raises for one path and passes the other through
+unretracted proves a per-file reflection failure lands only in `reflection_skipped` for the
+raising path, while both files' findings still ship in `review_findings`.
+`test_finding_on_an_unreflected_path_survives` monkeypatches `review_position_gate` to inject
+an extra finding on a file absent from `selection.reviewable`, proving the reflection loop's
+rebind-by-filter never touches a finding on a path it never iterates (D-14, no silent drop).
