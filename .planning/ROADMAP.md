@@ -157,11 +157,11 @@ Plans:
 **Goal:** Reviewing a repo writes nothing into that repo's tracked working tree — `run_review` resolves its workspace through `RepoMemory.for_target(root)` to the `<target>/.sec-overlay/<slug>/` sidecar, exactly as `scan` and `audit` already do, with a regression test pinning the convention
 **Requirements**: DIFF-04
 **Depends on:** Phase 4
-**Plans:** 1 plan
+**Plans:** 1/1 plans executed
 
 Plans:
 
-- [ ] 04.1-01-PLAN.md — Re-root `run_review` onto the per-repo sidecar, re-root every test assertion that encoded the bug, and land it as one governed commit
+- [x] 04.1-01-PLAN.md — Re-root `run_review` onto the per-repo sidecar, re-root every test assertion that encoded the bug, and land it as one governed commit
 
 ### Phase 5: End-to-End Verification (Audit & Review)
 
