@@ -4,17 +4,17 @@ milestone: v5.0
 milestone_name: Hybrid Diff-Review Architecture
 current_phase: 03
 current_phase_name: rule-matching-review-modes
-status: executing
-stopped_at: Completed 03-05-PLAN.md
-last_updated: "2026-08-19T00:47:29.827Z"
+status: verifying
+stopped_at: Completed 03-06-PLAN.md (final plan of phase 03)
+last_updated: "2026-08-19T02:50:48.426Z"
 last_activity: 2026-08-18
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 14
-  completed_plans: 13
-  percent: 33
+  completed_plans: 14
+  percent: 50
 ---
 
 # Project State
@@ -31,10 +31,10 @@ governed releases, receipt-backed findings.
 
 Phase: 03 (rule-matching-review-modes) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-18 — Phase 03 execution started
 
-Progress: [█████████░] 93%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Progress: [█████████░] 93%
 | Phase 03 P03 | 55min | 3 tasks | 15 files |
 | Phase 03 P04 | 40min | 3 tasks | 14 files |
 | Phase 03 P05 | 150m | 3 tasks | 12 files |
+| Phase 03 P06 | ~2 hours across two sessions | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Security-profile baseline captured as a committed JSON fixture, not recomputed inline, so a future regression fails the comparison
 - [Phase ?]: Injection assigned to STATIC_CHECKABLE_CLASSES explicitly (ships unconfirmed) since its sink matches Tier-1 static-tool reachability targets
 - [Phase ?]: disposition_without_receipt raises ValueError on unknown class instead of defaulting, forcing explicit classification of future general-defect classes
+- [Phase ?]: diffscope.file_text_at_ref added (Rule 2): finding.evidence is derived by the harness from real file text at a ref, never trusted from the model's claim
+- [Phase ?]: run_review gate-chain order fixed: position gate -> apply_profile -> apply_verdict -> receipt gate, never reordered for test convenience
+- [Phase ?]: recorded_return_source treats missing return, stale base/head, and ReviewResponseError identically as one review_source_skipped entry (D-15 fail-open)
 
 ### Pending Todos
 
@@ -145,6 +149,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-19T00:47:29.812Z
-Stopped at: Completed 03-05-PLAN.md
+Last session: 2026-08-19T02:50:48.411Z
+Stopped at: Completed 03-06-PLAN.md (final plan of phase 03)
 Resume file: None
