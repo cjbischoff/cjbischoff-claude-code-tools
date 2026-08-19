@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Regenerate the Phase 3 code-review report after the Plan 7 gap closure (`.planning/phases/03-rule-matching-review-modes/03-REVIEW.md`, status issues_found: 0 critical, 2 warning, 1 info across 39 files at standard depth; prior findings CR-01 and WR-01 confirmed fixed).
 - Complete Phase 3 Plan 7, the gap-closure plan (rewires `run_review`'s reflection loop to actually remove a retracted finding from the ledger, and routes `apply_profile`'s kept-finding disposition through the D-12 receipt-gate ladder instead of hardcoding `unconfirmed`): record its summary in `.planning/phases/03-rule-matching-review-modes/03-07-SUMMARY.md`, advance `.planning/STATE.md` and `.planning/ROADMAP.md` to Phase 3 complete (7 of 7 plans done), and confirm REV-02 and REV-03 Complete in `.planning/REQUIREMENTS.md`.
 - Record the Phase 3 gap-closure planning pass in `.planning/STATE.md`: status returns to executing, the plan total rises to 15, and the phase shows "Ready to execute" for the checker-approved `03-07-PLAN.md`.
 - Add the Phase 3 gap-closure plan `.planning/phases/03-rule-matching-review-modes/03-07-PLAN.md` (wave 7), which closes the two wiring gaps `03-VERIFICATION.md` found: `run_review` discards the kept half of `reflection.apply_verdict`'s return so a retracted finding still reaches the ledger, and `findings_gate.disposition_without_receipt` is dead code because `apply_profile` hardcodes `unconfirmed`; ROADMAP.md now lists 7 plans for Phase 3.
