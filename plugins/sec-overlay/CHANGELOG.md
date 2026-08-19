@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.58.0 - 2026-08-18
+
+### Added
+
+- `sec_overlay.findings_gate`: `STATIC_CHECKABLE_CLASSES`/`RUNTIME_DEPENDENT_CLASSES` partition
+  `review_findings.GENERAL_DEFECT_CLASSES`; `disposition_without_receipt(defect_class)` maps a
+  general-defect finding with no Tier-1 receipt to `unconfirmed` or `needs-deployment-testing`
+  and raises on an unknown class (D-12). `confirms_alone` remains the sole path to `confirmed`/
+  `fixed`; no member is added to the frozen `FindingStatus` enum.
+
 ## 1.57.0 - 2026-08-18
 
 ### Added

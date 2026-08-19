@@ -617,6 +617,18 @@ zero skips still shows the section rather than omitting it. `to_markdown` gains 
 parses, and `apply_verdict` retracts — `cli.py review`'s tracer slice still calls it with an
 always-empty verdict, so live dispatch remains a later plan.
 
+Phase 3 plan 05 (Task 3) attaches the D-12 receipt-gate disposition ladder to
+`findings_gate.py`, beside the existing `confirms_alone` check it leaves untouched.
+`STATIC_CHECKABLE_CLASSES` (`null-dereference`, `error-swallowing`, `resource-leak`,
+`injection`) and `RUNTIME_DEPENDENT_CLASSES` (`thread-safety`) partition
+`review_findings.GENERAL_DEFECT_CLASSES` exactly — a module-level assert enforces the union
+and the empty intersection, so a sixth class added there without a matching entry here fails
+at import time rather than silently landing in neither set. `disposition_without_receipt`
+maps a general-defect class with no Tier-1 receipt to `unconfirmed` or
+`needs-deployment-testing` and raises `ValueError` on anything else — it never touches
+`FindingStatus`; `unconfirmed` stays a plain `review_findings` string, not a member of the
+frozen enum `models.py` byte-mirrors for the Go port.
+
 Phase 3 plan 02 (Task 1) expands `rule_glob.py`'s built-in-only resolution into RULE-02's four-layer
 resolver. `ProjectRuleEntry`/`ProjectRule` mirror OCR's `rule.json` shape byte-for-byte (D-06):
 an ordered `entries` list (`path` glob, `rule` text, `merge_system_rule` bool) plus `include`/

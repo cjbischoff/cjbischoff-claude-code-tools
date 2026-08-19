@@ -327,6 +327,14 @@ blank `impact` is rejected, a non-shipping finding with blank `impact` is not.
 `impact` text and that the constant §6 Confirmed Attack Scenario / §8 Testing strings are gone
 (ISSUE-052); the existing full-tier section-presence test was updated to match.
 
+`test_findings_gate.py` (Phase 3 Plan 05 Task 3, 7 new `-k general_defect` cases) covers the
+D-12 receipt-gate disposition ladder: `disposition_without_receipt` returns `unconfirmed` for
+null dereference, error swallowing, resource leak, and injection (each asserted individually,
+injection's explicitly rather than by falling through a default), and
+`needs-deployment-testing` for thread safety; an unknown class raises `ValueError`; and a
+general-defect finding WITH a Tier-1 receipt still reaches `confirmed` through the unchanged
+`confirms_alone` path, proving no reflection outcome or profile value can grant that status.
+
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 
