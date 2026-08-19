@@ -5,16 +5,16 @@ milestone_name: Hybrid Diff-Review Architecture
 current_phase: 03
 current_phase_name: rule-matching-review-modes
 status: executing
-stopped_at: Completed 03-06-PLAN.md (final plan of phase 03)
-last_updated: "2026-08-19T12:48:47.663Z"
-last_activity: 2026-08-18
+stopped_at: Completed 03-07-PLAN.md (gap-closure plan, phase 03 complete)
+last_updated: "2026-08-19T13:28:21.319Z"
+last_activity: 2026-08-19
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 15
-  completed_plans: 14
-  percent: 33
+  completed_plans: 15
+  percent: 50
 ---
 
 # Project State
@@ -29,10 +29,10 @@ governed releases, receipt-backed findings.
 
 ## Current Position
 
-Phase: 03 (rule-matching-review-modes) — EXECUTING
-Plan: 6 of 6
-Status: Ready to execute
-Last activity: 2026-08-18 — Phase 03 execution started
+Phase: 03 (rule-matching-review-modes) — COMPLETE
+Plan: 7 of 7
+Status: Phase 03 complete (gap closure plan 03-07 done)
+Last activity: 2026-08-19 — Phase 03 execution completed
 
 Progress: [██████████] 100%
 
@@ -74,6 +74,7 @@ Progress: [██████████] 100%
 | Phase 03 P04 | 40min | 3 tasks | 14 files |
 | Phase 03 P05 | 150m | 3 tasks | 12 files |
 | Phase 03 P06 | ~2 hours across two sessions | 3 tasks | 11 files |
+| Phase 03 P07 | 55min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -124,6 +125,8 @@ Recent decisions affecting current work:
 - [Phase ?]: diffscope.file_text_at_ref added (Rule 2): finding.evidence is derived by the harness from real file text at a ref, never trusted from the model's claim
 - [Phase ?]: run_review gate-chain order fixed: position gate -> apply_profile -> apply_verdict -> receipt gate, never reordered for test convenience
 - [Phase ?]: recorded_return_source treats missing return, stale base/head, and ReviewResponseError identically as one review_source_skipped entry (D-15 fail-open)
+- [Phase ?]: Task 2 disposition-ladder tests use a fixture local to each test, never a mutation of _dual_run_fixture (its thread-safety entry is gate-C, an unconditional drop)
+- [Phase ?]: Task 3's composed test relies on the real reflection.apply_verdict called with an empty verdict dict, which keeps everything by construction, instead of a mock
 
 ### Pending Todos
 
@@ -149,6 +152,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-19T02:50:48.411Z
-Stopped at: Completed 03-06-PLAN.md (final plan of phase 03)
+Last session: 2026-08-19T13:28:21.304Z
+Stopped at: Completed 03-07-PLAN.md (gap-closure plan, phase 03 complete)
 Resume file: None
