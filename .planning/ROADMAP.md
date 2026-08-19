@@ -106,7 +106,7 @@ Plans:
   4. `review --profile security` on a diff reproduces existing gate A-E behavior exactly; `--profile general` on the same diff additionally surfaces NPE/thread-safety/XSS/SQLi findings that gates A/B would have dropped, with gates C/D/E still enforced
   5. The reflection filter runs once per file after positioning and the hunk gate, retracts findings only, fails open on LLM error, and cannot itself produce a `confirmed` disposition; a general-defect finding without a Tier-1 mechanical receipt ships as `unconfirmed`/`needs-deployment-testing`, never `confirmed`
 
-**Plans**: 6/6 plans executed
+**Plans**: 6/7 plans executed (03-07 is gap closure from 03-VERIFICATION.md)
 **Wave 1**
 
 - [x] 03-01-PLAN.md — Wave 1 (tracer): end-to-end review of one Python file through its rule doc and the reflection filter
@@ -130,6 +130,10 @@ Plans:
 **Wave 6** *(blocked on Wave 5 completion)*
 
 - [x] 03-06-PLAN.md — Wave 6: per-file review-agent dispatch that feeds the resolved rule doc in and real findings out
+
+**Wave 7** *(gap closure, blocked on Wave 6 completion)*
+
+- [ ] 03-07-PLAN.md — Wave 7 (gap closure): report reflection survivors in the ledger and route apply_profile through the D-12 disposition ladder
 
 **Notes**: `**`-aware globbing needs `pathlib.PurePath.full_match` (Python 3.13) or a small custom matcher. State the chosen floor explicitly in the plugin docs — check the plugin's actual supported interpreter range before assuming Python 3.13 is available; if it is not, ship the custom matcher.
 

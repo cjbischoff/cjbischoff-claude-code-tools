@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Add the Phase 3 gap-closure plan `.planning/phases/03-rule-matching-review-modes/03-07-PLAN.md` (wave 7), which closes the two wiring gaps `03-VERIFICATION.md` found: `run_review` discards the kept half of `reflection.apply_verdict`'s return so a retracted finding still reaches the ledger, and `findings_gate.disposition_without_receipt` is dead code because `apply_profile` hardcodes `unconfirmed`; ROADMAP.md now lists 7 plans for Phase 3.
 - Record the Phase 3 verification report (`.planning/phases/03-rule-matching-review-modes/03-VERIFICATION.md`, status gaps_found: 4/5 must-haves verified, two gaps in REV-02/REV-03 wiring).
 - Record the Phase 3 code-review report (`.planning/phases/03-rule-matching-review-modes/03-REVIEW.md`, status issues_found: 1 critical, 3 warning, 1 info across 29 files at standard depth).
 - Complete Phase 3 Plan 6, the final plan of Phase 3 (wires a real finding source into the review verb: `review_agent.py`'s per-file prompt render and response parser, the ported `agents/review-file.md` prompt, and `run_review`'s live gate-chain wiring proven by a `--profile security`/`--profile general` split on one fixture diff): record its summary in `.planning/phases/03-rule-matching-review-modes/03-06-SUMMARY.md`, advance `.planning/STATE.md` and `.planning/ROADMAP.md` to Phase 3 complete (6 of 6 plans done), and confirm RULE-01, REV-01, and REV-02 Complete in `.planning/REQUIREMENTS.md`.
