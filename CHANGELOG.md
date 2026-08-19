@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Add the Phase 04.1 phase research and draft validation strategy (`.planning/phases/04.1-close-gap-diff-04-review-sidecar-workspace-isolation/04.1-RESEARCH.md`, confidence HIGH — the DIFF-04 fix routes `run_review`'s workspace through `RepoMemory.for_target` as `scan`/`audit` already do; `04.1-VALIDATION.md`, status draft).
 - Refresh the milestone audit a second time (`.planning/v5.0-MILESTONE-AUDIT.md`, audited 2026-08-19 at 3/6 phases, status still gaps_found: the `review` workspace-isolation sidecar blocker at `cli.py:173` remains open; Nyquist validation now compliant for all three executed phases, pytest count updated to 1175 passed).
 - Validate the Phase 1 Nyquist strategy retroactively (`.planning/phases/01-baseline-health-verification/01-VALIDATION.md`, status validated, nyquist_compliant true, 1 gap found and resolved: tests added for the `stage_validate.py` `_adapt_dict`/`_adapt_optional_dict` non-dict rejection paths).
 - Refresh the milestone audit (`.planning/v5.0-MILESTONE-AUDIT.md`, audited 2026-08-19 at 3/6 phases, status gaps_found: 10/32 requirements satisfied, 7 partial, 1 unsatisfied — the `review` workspace-isolation sidecar blocker at `cli.py:173`; Phase 2's three verification gaps confirmed fixed post-verification, Phase 1 flagged for missing Nyquist validation).
