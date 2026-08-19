@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.61.5 - 2026-08-19
+
+### Added
+
+- Add tests for the `_adapt_dict` / `_adapt_optional_dict` rejection paths in
+  `sec_overlay/stage_validate.py`. A non-dict stage output now has a test that
+  asserts the validator returns an error list instead of raising. Closes the
+  Phase 1 Nyquist validation gap.
+
 ## 1.61.4 - 2026-08-19
 
 ### Fixed

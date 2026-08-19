@@ -1,11 +1,16 @@
 # `tests/` — the deterministic test suite
 
-105 pytest files, 1163 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+105 pytest files, 1177 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
 The fake-response `R` classes in `test_review_tracer.py` and `test_diffscope.py` declare
 `stdout = ""` as a class attribute so `ty check` resolves the attribute; behavior is unchanged.
+
+`test_stage_validate.py` covers the `_adapt_dict` / `_adapt_optional_dict` rejection paths:
+a non-dict output for a dict-adapted stage returns `["stage output must be an object"]`, a
+non-dict non-None output for `reachability` returns `["stage output must be an object or null"]`,
+and `None` for `reachability` passes through to the wrapped validator without rejection.
 
 `test_cli.py` covers `run_review` mapping the coverage-manifest seal to an exit code: a
 `complete` seal returns 0 (including a diff with zero reviewable files), a `partial` seal

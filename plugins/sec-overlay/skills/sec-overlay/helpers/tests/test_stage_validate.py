@@ -39,6 +39,26 @@ def test_context_validator_ok_when_cited_doc_present():
     assert not any("docs_read" in e for e in validate_stage("context", obj))
 
 
+@pytest.mark.parametrize("bad", [["a", "list"], "a string", None])
+def test_rejects_non_dict_stage_output_for_dict_adapted_stage(bad):
+    from sec_overlay.stage_validate import validate_stage
+    assert validate_stage("context", bad) == ["stage output must be an object"]
+    assert validate_stage("recon", bad) == ["stage output must be an object"]
+
+
+def test_reachability_stage_allows_none():
+    from sec_overlay.stage_validate import validate_stage
+    # None passes through to validate_reachability rather than being rejected as non-dict.
+    errs = validate_stage("reachability", None)
+    assert errs != ["stage output must be an object or null"]
+
+
+@pytest.mark.parametrize("bad", [["a", "list"], "a string"])
+def test_rejects_non_dict_non_none_stage_output_for_optional_dict_stage(bad):
+    from sec_overlay.stage_validate import validate_stage
+    assert validate_stage("reachability", bad) == ["stage output must be an object or null"]
+
+
 def test_unknown_stage_raises():
     from sec_overlay.stage_validate import validate_stage
     with pytest.raises(ValueError):
