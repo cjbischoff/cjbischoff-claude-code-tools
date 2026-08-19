@@ -2,6 +2,23 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.61.0 - 2026-08-18
+
+### Added
+
+- `sec_overlay.diffscope.file_text_at_ref`: reads a path's whole file text at a resolved ref via
+  `git show`, mirroring the module's existing injectable-runner convention.
+
+### Changed
+
+- `cli.run_review` now wires a real finding source into the review-mode gate chain: it derives
+  each recorded finding's position-gate snippet from the real file text at its claimed line (never
+  from the model's own claim), builds `file_text_by_path` per reviewable file, and passes both
+  through `review_position_gate` → `review_findings.apply_profile` → `reflection.apply_verdict` →
+  the receipt gate, in that order. This makes the position gate's whole-file "relocated" rung
+  reachable, so a finding claimed outside every diff hunk is now correctly dropped as
+  `outside-diff` instead of declining earlier as `no-snippet`.
+
 ## 1.60.0 - 2026-08-19
 
 ### Added

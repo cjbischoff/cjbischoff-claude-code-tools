@@ -157,6 +157,26 @@ def file_diff_text(path: str, base: str, head: str, *, runner=subprocess.run) ->
     return completed.stdout
 
 
+def file_text_at_ref(path: str, ref: str, *, runner=subprocess.run) -> str:
+    """Return `path`'s whole file text at `ref` — the real content, not a claim about it.
+
+    Backs the review-mode position gate's whole-file rung (`positioning.resolve_position`):
+    a finding's claimed snippet is confirmed against this text, never trusted from the
+    model that reported it.
+
+    Args:
+        path: Repo-relative file path.
+        ref: A resolved SHA (or ref) to read the file at.
+        runner: Injectable subprocess runner (for testing).
+
+    Returns:
+        The file's full text at `ref`, or `""` if `git show` fails — e.g. the path did not
+        exist at that ref.
+    """
+    completed = runner(["git", "show", f"{ref}:{path}"], capture_output=True, text=True, check=False)
+    return completed.stdout if completed.returncode == 0 else ""
+
+
 def changed_files(base: str, head: str = "HEAD", *, runner=subprocess.run) -> list[str]:
     """Return files changed between two revisions.
 

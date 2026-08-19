@@ -259,7 +259,9 @@ def test_review_ledger_drop_count_matches_markdown_drop_rows(tmp_path, monkeypat
         PositionResult("needs-position-review", None, None, "no-hunk-match", "c.py", 3, "snip"),
     ]
     monkeypatch.setattr(
-        cli, "review_position_gate", lambda findings, hunks_by_path: ([], dropped, declines)
+        cli,
+        "review_position_gate",
+        lambda findings, hunks_by_path, file_text_by_path=None: ([], dropped, declines),
     )
     runner = _make_review_runner(["a.py"])
     rc = cli.run_review("main", "develop", str(tmp_path), runner=runner)

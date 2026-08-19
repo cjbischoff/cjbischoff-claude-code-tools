@@ -567,6 +567,21 @@ then returns 3. The pre-existing exit-2 ref-validation path is unaffected — it
 manifest exists at all. No `--max-diff-lines` override flag and no `logging` import: both stay
 out of scope for this milestone.
 
+Plan 03-06, task 3 wires the recorded review-agent returns into `run_review` as the review-mode
+finding source, closing the last gap noted above (`file_text_by_path` and a real position-gate
+snippet). `diffscope.py` gained `file_text_at_ref(path, ref, *, runner) -> str`, matching the
+module's existing injectable-runner convention (`git show <ref>:<path>`, empty string if the path
+did not exist at that ref) — every pre-existing symbol in the module is unchanged. `run_review`
+now builds `file_text_by_path` alongside `hunks_by_path`/`diff_text_by_path` in its per-file loop,
+then, before calling `review_position_gate`, sets each live finding's `evidence` field itself from
+the real file text at the finding's claimed line — never from the agent's own claim (the
+`code_comment` tool has no snippet field at all; D-13's tool-receipt discipline never trusts an
+LLM's claim of code content). This makes the position gate's whole-file "relocated" rung reachable
+for the first time in a live run, so a finding claimed outside every diff hunk is now correctly
+dropped with reason `outside-diff` instead of declining earlier as `no-snippet`. The gate chain
+order is unchanged: position gate → `review_findings.apply_profile` → `reflection.apply_verdict`
+→ the receipt gate.
+
 `cli.py`'s `run_review` closed the last gap in the drop/decline wiring (T-02-15, T-02-18):
 task 2/3 above wired the gate's output into `to_markdown`/`write_review_ledger`, but
 `run_review` itself still discarded `review_position_gate`'s returned `(kept, dropped,

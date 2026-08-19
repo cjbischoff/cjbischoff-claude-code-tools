@@ -268,6 +268,7 @@ def to_markdown(
     position_reviews: list[PositionResult] | None = None,
     reflection_retractions: list | None = None,
     reflection_skips: list | None = None,
+    review_source_skips: list | None = None,
 ) -> str:
     """Render findings and optional token accounting as Markdown.
 
@@ -304,6 +305,9 @@ def to_markdown(
             ``REFLECTION_RETRACTIONS_HEADING`` unconditionally, same as ``dropped``.
         reflection_skips: Files whose reflection pass failed open; rendered under
             ``REFLECTION_SKIPPED_HEADING`` unconditionally, same as ``dropped``.
+        review_source_skips: Files whose review source produced nothing (missing
+            return, stale base/head, or unparseable response); rendered under
+            ``REVIEW_SOURCE_SKIPPED_HEADING`` unconditionally, same as ``dropped``.
 
     Returns:
         A Markdown report string.
@@ -364,17 +368,18 @@ def to_markdown(
         lines += ["## Detail", ""]
         for f in detail:
             risk = f.risk_score if f.risk_score is not None else "-"
-            label = "needs-runtime" if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING else "confirmed"
+            label = (
+                "needs-runtime"
+                if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING
+                else "confirmed"
+            )
             lines.append(
                 f"- [{f.id}](findings/{f.id}.md) — risk {risk} — {label} — "
                 f"{_short_title((f.message or '').split('|', 1)[0].split('. ')[0].strip())}"
             )
         lines.append("")
         lines += [
-            (
-                "_Informational findings (not shipped in this report) remain in "
-                "`findings.json`._"
-            ),
+            ("_Informational findings (not shipped in this report) remain in `findings.json`._"),
             "",
         ]
 
@@ -383,6 +388,7 @@ def to_markdown(
     lines += ["", render_position_review_section(position_reviews or [])]
     lines += ["", render_reflection_retractions_section(reflection_retractions or [])]
     lines += ["", render_reflection_skipped_section(reflection_skips or [])]
+    lines += ["", render_review_source_skipped_section(review_source_skips or [])]
 
     # External-unverifiable leads — sink crosses into an un-ingested dependency
     if external:
@@ -531,6 +537,7 @@ def write_report(
     reflection_retractions: list | None = None,
     reflection_skips: list | None = None,
     review_findings: list[ReviewFinding] | None = None,
+    review_source_skips: list | None = None,
 ) -> dict:
     """Assemble the final SARIF + Markdown report from a workspace's findings.
 
@@ -562,6 +569,8 @@ def write_report(
         review_findings: :func:`review_findings.apply_profile`'s kept output (REV-01);
             ledgered only, no markdown rendering — present as an empty list when
             no finding survived profile gating.
+        review_source_skips: Files whose review source produced nothing; rendered and
+            ledgered the same way as ``reflection_skips`` (D-15).
 
     Returns:
         ``{"reported": <count>, "sarif": <path>, "report": <path>}``.
@@ -572,6 +581,7 @@ def write_report(
     reflection_retractions = reflection_retractions or []
     reflection_skips = reflection_skips or []
     review_findings = review_findings or []
+    review_source_skips = review_source_skips or []
     all_findings = read_findings(ws)
     reportable = select_reportable(all_findings)
     ndt = [f for f in all_findings if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING]
@@ -624,6 +634,7 @@ def write_report(
             position_reviews=position_reviews,
             reflection_retractions=reflection_retractions,
             reflection_skips=reflection_skips,
+            review_source_skips=review_source_skips,
         )
     )
     write_finding_details(ws, reportable + ndt, patch_statuses=patch_statuses)
@@ -637,6 +648,7 @@ def write_report(
         reflection_retractions=reflection_retractions,
         reflection_skips=reflection_skips,
         review_findings=review_findings,
+        review_source_skips=review_source_skips,
     )
     record_stage(ws, "report")
     return {"reported": len(reportable), "sarif": str(ws.sarif_path), "report": str(ws.report_path)}
@@ -768,6 +780,34 @@ def render_reflection_skipped_section(skips: list) -> str:
     return "\n".join(lines)
 
 
+REVIEW_SOURCE_SKIPPED_HEADING = "## Review source skipped"
+
+
+def render_review_source_skipped_section(skips: list) -> str:
+    """Render every file whose review source produced nothing as its own section (D-15).
+
+    Args:
+        skips: ``review_agent.ReviewSourceSkip``s recorded when a file's review
+            source raised (missing return, stale base/head, or unparseable
+            response) and the run failed open rather than aborting.
+
+    Returns:
+        A markdown string starting with ``REVIEW_SOURCE_SKIPPED_HEADING``.
+    """
+    if not skips:
+        return f"{REVIEW_SOURCE_SKIPPED_HEADING}\n\nNo file's review source was skipped.\n"
+    lines = [
+        REVIEW_SOURCE_SKIPPED_HEADING,
+        "",
+        "| Path | Reason | Error |",
+        "| --- | --- | --- |",
+    ]
+    for s in skips:
+        lines.append(f"| {s.path} | {s.reason} | {s.error} |")
+    lines.append("")
+    return "\n".join(lines)
+
+
 def write_review_ledger(
     ws: Workspace,
     *,
@@ -777,6 +817,7 @@ def write_review_ledger(
     reflection_retractions: list | None = None,
     reflection_skips: list | None = None,
     review_findings: list[ReviewFinding] | None = None,
+    review_source_skips: list | None = None,
 ) -> Path:
     """Write the machine-readable record of every position decline (D-13, POS-02).
 
@@ -799,6 +840,9 @@ def write_review_ledger(
             pass failed open; present as an empty list even when nothing was skipped (D-15).
         review_findings: `review_findings.apply_profile`'s kept output (REV-01); present as
             an empty list even when nothing survived profile gating.
+        review_source_skips: `review_agent.ReviewSourceSkip`s recorded for a file whose
+            review source produced nothing; present as an empty list even when nothing
+            was skipped (D-15).
 
     Returns:
         The path written.
@@ -821,6 +865,9 @@ def write_review_ledger(
         ],
         "reflection_skipped": [
             asdict(s) if is_dataclass(s) else s for s in (reflection_skips or [])
+        ],
+        "review_source_skipped": [
+            asdict(s) if is_dataclass(s) else s for s in (review_source_skips or [])
         ],
         "review_findings": [
             {

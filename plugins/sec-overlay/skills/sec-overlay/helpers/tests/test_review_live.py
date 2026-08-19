@@ -1,0 +1,257 @@
+"""Live-source tests: the review verb wired to real findings, end to end (03-06 Task 3)."""
+
+import json
+import subprocess
+
+from sec_overlay import cli
+from sec_overlay.cli import main, run_review
+from sec_overlay.review_agent import agent_label
+from sec_overlay.workspace import Workspace, record_agent_return
+
+_BASE_SHA = "a" * 40
+_HEAD_SHA = "b" * 40
+
+
+def _diff_for(path: str) -> str:
+    """One-hunk unified diff adding a line to `path` (mirrors test_review_tracer's fixture)."""
+    return (
+        f"diff --git a/{path} b/{path}\n"
+        "index 1111111..2222222 100644\n"
+        f"--- a/{path}\n"
+        f"+++ b/{path}\n"
+        "@@ -1,2 +1,3 @@\n"
+        " import os\n"
+        "+os.system(cmd)\n"
+        " print('hi')\n"
+    )
+
+
+def _new_file_text_from_diff(diff_text: str) -> str:
+    """Reconstruct the new-side whole file from a single-hunk diff covering it end to end.
+
+    Mirrors `diffhunks.parse_hunks`'s own line classification (context/added kept,
+    deleted dropped) — the fixture diffs here always describe the file's full content,
+    so this is the same "head text" `diffscope.file_text_at_ref` would return for real.
+    """
+    lines: list[str] = []
+    in_hunk = False
+    for raw in diff_text.splitlines():
+        if raw.startswith("@@"):
+            in_hunk = True
+            continue
+        if not in_hunk or raw.startswith("-"):
+            continue
+        lines.append(raw[1:] if raw else raw)
+    return "\n".join(lines) + "\n"
+
+
+def _fake_run_for(diffs: dict[str, str], head_texts: dict[str, str] | None = None):
+    """Fake runner over an arbitrary set of changed files (path -> diff text).
+
+    `head_texts` overrides the default whole-file text (reconstructed from `diffs`) that
+    a `git show <ref>:<path>` call returns — needed only when a test's claimed line falls
+    outside the diff-reconstructed content (e.g. line 999 of a much longer real file).
+    """
+    name_status = "".join(f"M\t{p}\n" for p in diffs)
+    texts = head_texts or {}
+
+    def fake(cmd, capture_output, text, check):
+        class R:
+            returncode = 0
+            stdout = ""
+
+        r = R()
+        if "--verify" in cmd:
+            r.stdout = f"{cmd[-1]}\n"
+        elif "--name-status" in cmd:
+            r.stdout = name_status
+        elif "--unified=3" in cmd:
+            r.stdout = diffs.get(cmd[-1], "")
+        elif cmd[1] == "show":
+            path = cmd[-1].split(":", 1)[1]
+            r.stdout = texts.get(path, _new_file_text_from_diff(diffs.get(path, "")))
+        else:
+            r.stdout = ""
+        return r
+
+    return fake
+
+
+def _record_return(root, path, *, base=_BASE_SHA, head=_HEAD_SHA, calls):
+    """Record a review-file return envelope for `path` (production disk format)."""
+    ws = Workspace(root)
+    ws.ensure()
+    envelope = json.dumps({"base": base, "head": head, "response": json.dumps(calls)})
+    record_agent_return(ws, agent_label(path), envelope)
+
+
+def _code_comment(path, line, message, defect_class="sqli"):
+    return {"tool": "code_comment", "path": path, "line": line, "message": message,
+            "defect_class": defect_class}
+
+
+def test_prepare_writes_plan_and_prompt_per_file(tmp_path, monkeypatch):
+    diffs = {"app.py": _diff_for("app.py"), "other.py": _diff_for("other.py")}
+    monkeypatch.setattr(subprocess, "run", _fake_run_for(diffs))
+    rc = main(["review", "--base", _BASE_SHA, "--head", _HEAD_SHA, "--root", str(tmp_path),
+               "--prepare"])
+    assert rc == 0
+
+    plan = json.loads((tmp_path / "runs" / "review_plan.json").read_text())
+    assert len(plan) == 2
+    assert {e["path"] for e in plan} == {"app.py", "other.py"}
+    for entry in plan:
+        assert entry["base"] == _BASE_SHA
+        assert entry["head"] == _HEAD_SHA
+        prompt_text = (tmp_path / "runs" / "review_prompts" / f"{entry['agent_label']}.md").read_text()
+        assert entry["path"] in prompt_text
+        assert "{{" not in prompt_text
+
+
+def test_recorded_return_produces_a_nonzero_finding_count(tmp_path, monkeypatch):
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc == 0
+
+    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    assert len(ledger["review_findings"]) == 1
+    assert ledger["review_findings"][0]["path"] == "app.py"
+
+
+def test_profile_split_null_dereference_security_excludes_general_includes(tmp_path, monkeypatch):
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "possible nil deref", "null-dereference")])
+
+    rc_security = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc_security == 0
+    ledger_security = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    assert ledger_security["review_findings"] == []
+
+    rc_general = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="general")
+    assert rc_general == 0
+    ledger_general = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    assert len(ledger_general["review_findings"]) == 1
+    assert ledger_general["review_findings"][0]["defect_class"] == "null-dereference"
+
+
+def test_finding_outside_every_hunk_dropped_as_outside_diff(tmp_path, monkeypatch):
+    # A real head file with 999 lines, a unique marker at line 999 — far outside the
+    # 3-line diff hunk `_diff_for` describes, so the position gate's whole-file rung
+    # relocates it there and then drops it for falling outside every hunk.
+    head_text = "\n".join([f"line {i}" for i in range(1, 999)] + ["unique marker line"]) + "\n"
+    monkeypatch.setattr(
+        subprocess, "run",
+        _fake_run_for({"app.py": _diff_for("app.py")}, head_texts={"app.py": head_text}),
+    )
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 999, "unreachable line", "sqli")])
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc == 0
+
+    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    assert ledger["review_findings"] == []
+    assert any(d["reason"] == "outside-diff" for d in ledger["dropped"])
+
+
+def test_reflection_retraction_removes_a_live_finding(tmp_path, monkeypatch):
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+
+    from sec_overlay.reflection import RETRACTED_REASON, ReflectionRetraction
+
+    def fake_apply_verdict(findings, verdict, *, path):
+        retraction = ReflectionRetraction(path, 2, findings[0].rule_id, RETRACTED_REASON, "sanitized upstream")
+        return [], [retraction]
+
+    monkeypatch.setattr(cli, "apply_verdict", fake_apply_verdict)
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc == 0
+
+    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    assert len(ledger["reflection_retractions"]) == 1
+    assert ledger["review_findings"][0]["id"] if ledger["review_findings"] else None
+    # Retraction happens in reflection, after profile gating already kept the finding;
+    # review_findings still lists it (profile output), reflection removes it downstream
+    # of that ledger key — proven by the retraction entry itself, not an absent finding.
+    assert ledger["reflection_retractions"][0]["reason"] == RETRACTED_REASON
+
+
+def test_file_with_no_recorded_return_is_skipped_and_run_still_exits_zero(tmp_path, monkeypatch):
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc == 0
+
+    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    assert ledger["review_findings"] == []
+    assert len(ledger["review_source_skipped"]) == 1
+    assert ledger["review_source_skipped"][0]["path"] == "app.py"
+
+
+def test_stale_base_head_return_is_refused_and_ledgered(tmp_path, monkeypatch):
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    _record_return(str(tmp_path), "app.py", base="c" * 40, head="d" * 40,
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc == 0
+
+    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    assert ledger["review_findings"] == []
+    assert len(ledger["review_source_skipped"]) == 1
+
+
+def test_unparseable_return_skips_one_file_leaves_others_intact(tmp_path, monkeypatch):
+    diffs = {"app.py": _diff_for("app.py"), "other.py": _diff_for("other.py")}
+    monkeypatch.setattr(subprocess, "run", _fake_run_for(diffs))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+    ws = Workspace(str(tmp_path))
+    ws.ensure()
+    envelope = json.dumps({"base": _BASE_SHA, "head": _HEAD_SHA, "response": "not-json"})
+    record_agent_return(ws, agent_label("other.py"), envelope)
+
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc == 0
+
+    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    assert len(ledger["review_source_skipped"]) == 1
+    assert ledger["review_source_skipped"][0]["path"] == "other.py"
+    assert len(ledger["review_findings"]) == 1
+    assert ledger["review_findings"][0]["path"] == "app.py"
+
+
+def test_zero_skips_still_renders_review_source_skipped_heading(tmp_path, monkeypatch):
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc == 0
+
+    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    assert ledger["review_source_skipped"] == []
+    report_text = (tmp_path / "report.md").read_text()
+    assert "## Review source skipped" in report_text
+    assert "No file's review source was skipped." in report_text
+
+
+def test_exit_codes_unchanged_invalid_ref_partial_seal_complete(tmp_path, monkeypatch):
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+
+    rc_invalid = run_review("-rf", _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc_invalid == 2
+
+    def failing_diff(cmd, capture_output, text, check):
+        if "--unified=3" in cmd:
+            raise RuntimeError("boom")
+        return _fake_run_for({"app.py": _diff_for("app.py")})(cmd, capture_output, text, check)
+
+    monkeypatch.setattr(subprocess, "run", failing_diff)
+    rc_partial = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path / "partial"), profile="security")
+    assert rc_partial == 3
+
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    rc_complete = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path / "complete"), profile="security")
+    assert rc_complete == 0

@@ -15,6 +15,7 @@ from sec_overlay.diffscope import (
     changed_file_records,
     file_diff_line_count,
     file_diff_text,
+    file_text_at_ref,
     resolve_ref_sha,
 )
 from sec_overlay.file_select import partition
@@ -24,14 +25,23 @@ from sec_overlay.phase_gate import review_position_gate
 from sec_overlay.reflection import SKIPPED_REASON, ReflectionSkip, apply_verdict
 from sec_overlay.repo_memory import RepoMemory, repo_slug
 from sec_overlay.report import to_markdown, write_report
+from sec_overlay.review_agent import (
+    SOURCE_SKIPPED_REASON,
+    ReviewPlanEntry,
+    ReviewSourceSkip,
+    agent_label,
+    recorded_return_source,
+    render_review_prompt,
+    write_review_plan,
+)
 from sec_overlay.review_coverage import MANIFEST_FILENAME, CoverageManifest
-from sec_overlay.review_findings import GatedFinding, apply_profile
+from sec_overlay.review_findings import GatedFinding, apply_profile, classify
 from sec_overlay.rule_glob import RuleSafetyError, build_resolution, glob_match, resolve_rule_doc
 from sec_overlay.sarif import to_sarif
 from sec_overlay.sast import run_semgrep
 from sec_overlay.scanscope import resolve as _resolve_scope
 from sec_overlay.scanscope import write_scope
-from sec_overlay.workspace import Workspace, load_paths, write_findings
+from sec_overlay.workspace import Workspace, _atomic_write, load_paths, write_findings
 
 
 def write_scan_scope(ws, target, *, sha: str = "", runner=None):
@@ -47,6 +57,7 @@ def write_scan_scope(ws, target, *, sha: str = "", runner=None):
         The persisted :class:`sec_overlay.scanscope.ScanScope`.
     """
     import subprocess
+
     _raw = runner or subprocess.run
 
     def r(cmd, **kwargs):
@@ -60,9 +71,7 @@ def write_scan_scope(ws, target, *, sha: str = "", runner=None):
     return scope
 
 
-def run_scan(
-    target: str, ws: Workspace, config: str, *, sha: str | None = None
-) -> list[Finding]:
+def run_scan(target: str, ws: Workspace, config: str, *, sha: str | None = None) -> list[Finding]:
     """Run the deterministic scan pipeline and write outputs.
 
     Steps: run semgrep -> normalize -> stamp discovery SHA -> persist findings ->
@@ -102,22 +111,30 @@ def run_review(
     rule_path: str | None = None,
     excludes: list[str] | None = None,
     runner=None,
+    review_source=None,
+    prepare: bool = False,
 ) -> int:
     """Run one review pass end to end: resolve refs, select files, position, seal.
 
     Batches over every reviewable changed file and implements exit codes 2 and 3.
-    No finding source is wired into ``review`` mode yet (investigate integration
-    lands in a later plan); the gate runs against an empty finding list so its
-    wiring is exercised now. The gate's dropped/declined output is always written
-    to ``report.md`` and ``artifacts/review_ledger.json`` via :func:`report.write_report`
-    — including the zero-drop/zero-decline case — so "no finding was dropped" is
-    recorded, not just absent (T-02-15).
+    Live findings come from ``review_source`` — called once per file with its path
+    — then traverse the position gate, :func:`review_findings.apply_profile`, and
+    :func:`reflection.apply_verdict`, in that fixed order, before the receipt gate
+    runs. The gate's dropped/declined output is always written to ``report.md`` and
+    ``artifacts/review_ledger.json`` via :func:`report.write_report` — including the
+    zero-drop/zero-decline case — so "no finding was dropped" is recorded, not just
+    absent (T-02-15).
+
+    With ``prepare=True``, refs are resolved and files selected as usual, then each
+    reviewable file's rule doc and diff are rendered into a `review-file` prompt
+    under ``runs/review_prompts/`` and listed in ``runs/review_plan.json`` (path,
+    prompt path, agent label, base/head refs). No gate runs; this is the
+    deterministic half of the step, SKILL.md owns dispatching the agent half.
 
     Each reviewable file's rule doc is resolved via :func:`rule_glob.resolve_rule_doc`
-    and its post-gate findings run through :func:`reflection.apply_verdict` (an empty
-    verdict in this tracer slice, since no finding source is wired yet); a per-file
-    reflection failure is recorded as a :class:`reflection.ReflectionSkip` and the run
-    fails open rather than aborting (D-15).
+    and its post-gate findings run through :func:`reflection.apply_verdict`; a
+    per-file reflection failure is recorded as a :class:`reflection.ReflectionSkip`
+    and the run fails open rather than aborting (D-15).
 
     Args:
         base: Base ref. Validated and resolved to a SHA before any other git call.
@@ -125,21 +142,30 @@ def run_review(
         root: Target repo root; the workspace and its ``artifacts/`` dir live here.
         profile: Review profile (``"security"`` or ``"general"``); gates the position
             gate's kept findings through :func:`review_findings.apply_profile` (REV-01).
-            A later plan still owes the rule-doc selection this value also drives.
         rule_path: Path to a custom rule.json (``--rule``); resolved as the highest-priority
             layer via :func:`rule_glob.build_resolution`. ``None`` skips the custom layer.
         excludes: Raw ``--exclude`` glob values, appended (lower-cased) to whichever layer's
             file filter wins, or used alone when no layer defines one.
         runner: Injectable subprocess runner (tests); defaults to ``subprocess.run``.
+        review_source: Callable taking one file path and returning that file's
+            findings; defaults to :func:`review_agent.recorded_return_source` reading
+            recorded returns from ``ws``. Injecting a source keeps the gate chain
+            testable without a model call, and keeps this module free of dispatch
+            (D-13).
+        prepare: When true, write the prompt/plan files described above and return
+            before any gate runs.
 
     Returns:
         0 when the coverage manifest seals ``complete`` (including a diff with no
-        reviewable files), 2 on an invalid ``base``/``head`` ref (D-06) or a
-        ``RuleSafetyError`` from the RULE-03 rule-file safety gate (no fallback
-        to another layer), 3 when the seal is ``partial`` (D-15) — one or more
-        files could not be reviewed.
+        reviewable files) or ``prepare=True`` completed, 2 on an invalid ``base``/
+        ``head`` ref (D-06) or a ``RuleSafetyError`` from the RULE-03 rule-file
+        safety gate (no fallback to another layer), 3 when the seal is ``partial``
+        (D-15) — one or more files could not be reviewed. A skipped review source
+        never turns a complete pass into a partial one — a source skip is a
+        reviewer failure, not a coverage failure.
     """
     import subprocess
+
     r = runner or subprocess.run
 
     ws = Workspace(root)
@@ -151,6 +177,9 @@ def run_review(
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+
+    if review_source is None:
+        review_source = recorded_return_source(ws, base=base_sha, head=head_sha)
 
     try:
         resolution = build_resolution(rule_path, excludes or [], Path(root))
@@ -181,14 +210,18 @@ def run_review(
 
     manifest = CoverageManifest(base_sha, head_sha, ws.artifacts / MANIFEST_FILENAME)
     hunks_by_path: dict[str, list] = {}
+    diff_text_by_path: dict[str, str] = {}
+    file_text_by_path: dict[str, str] = {}
     rule_docs: list[dict] = []
     for record in selection.reviewable:
         manifest.add(record.path)
         manifest.start(record.path)
         try:
-            hunks_by_path[record.path] = parse_hunks(
-                file_diff_text(record.path, base_sha, head_sha, runner=r)
+            diff_text_by_path[record.path] = file_diff_text(
+                record.path, base_sha, head_sha, runner=r
             )
+            hunks_by_path[record.path] = parse_hunks(diff_text_by_path[record.path])
+            file_text_by_path[record.path] = file_text_at_ref(record.path, head_sha, runner=r)
         except Exception as exc:  # noqa: BLE001 - any per-file failure becomes a coverage gap, not a crash
             manifest.fail(record.path, note=str(exc))
             continue
@@ -200,11 +233,65 @@ def run_review(
             return 2
         rule_docs.append({"path": record.path, "text": rule_text})
 
-    _kept, dropped, declines = review_position_gate([], hunks_by_path)
+    if prepare:
+        rule_text_by_path = {d["path"]: d["text"] for d in rule_docs}
+        overlay_root = str(Path(__file__).resolve().parents[2])
+        prompts_dir = ws.runs / "review_prompts"
+        prompts_dir.mkdir(parents=True, exist_ok=True)
+        entries: list[ReviewPlanEntry] = []
+        for record in selection.reviewable:
+            if record.path not in hunks_by_path:
+                continue
+            label = agent_label(record.path)
+            prompt = render_review_prompt(
+                record.path,
+                rule_text_by_path[record.path],
+                diff_text_by_path[record.path],
+                [r.path for r in selection.reviewable if r.path != record.path],
+                repo_root=root,
+                overlay_root=overlay_root,
+            )
+            prompt_path = prompts_dir / f"{label}.md"
+            _atomic_write(prompt_path, prompt)
+            entries.append(
+                ReviewPlanEntry(
+                    path=record.path,
+                    prompt_path=str(prompt_path),
+                    agent_label=label,
+                    base=base_sha,
+                    head=head_sha,
+                )
+            )
+        write_review_plan(ws, entries)
+        return 0
+
+    live_findings: list[Finding] = []
+    review_source_skips: list[ReviewSourceSkip] = []
+    for record in selection.reviewable:
+        if record.path not in hunks_by_path:
+            continue
+        try:
+            live_findings.extend(review_source(record.path))
+        except Exception as exc:  # noqa: BLE001 - a source failure is a reviewer skip, not a crash
+            review_source_skips.append(
+                ReviewSourceSkip(record.path, SOURCE_SKIPPED_REASON, str(exc))
+            )
+
+    # The agent's `code_comment` claims a path/line only, never a snippet (D-13's
+    # tool-receipt discipline: never trust an LLM's claim of code content). The harness
+    # derives each finding's position-gate snippet itself, from the real file text at its
+    # claimed line — the gate then independently confirms that real line against the diff.
+    for finding in live_findings:
+        lines = file_text_by_path.get(finding.file, "").splitlines()
+        if 1 <= finding.line <= len(lines):
+            finding.evidence = lines[finding.line - 1]
+
+    _kept, dropped, declines = review_position_gate(live_findings, hunks_by_path, file_text_by_path)
 
     try:
         review_findings, profile_dropped = apply_profile(
-            [GatedFinding(finding=f, gate=None) for f in _kept], profile
+            [GatedFinding(finding=f, gate="B" if classify(f) is not None else None) for f in _kept],
+            profile,
         )
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -229,6 +316,7 @@ def run_review(
         reflection_retractions=reflection_retractions,
         reflection_skips=reflection_skips,
         review_findings=review_findings,
+        review_source_skips=review_source_skips,
     )
 
     if not selection.reviewable:
@@ -256,10 +344,13 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
     scan = sub.add_parser("scan", help="Run the deterministic scan pipeline.")
     scan.add_argument("--target", required=True)
-    scan.add_argument("--workspace", default=None,
-                      help="Override the workspace; default is the in-repo per-repo "
-                           "memory folder (<target>/.sec-overlay/<slug>/, or "
-                           "$SEC_OVERLAY_HOME/<slug>/ if set).")
+    scan.add_argument(
+        "--workspace",
+        default=None,
+        help="Override the workspace; default is the in-repo per-repo "
+        "memory folder (<target>/.sec-overlay/<slug>/, or "
+        "$SEC_OVERLAY_HOME/<slug>/ if set).",
+    )
     scan.add_argument("--config", required=True)
     scan.add_argument("--sha", default=None)
     scan.add_argument("--reports-dir", default=None)
@@ -285,8 +376,15 @@ def main(argv: list[str] | None = None) -> int:
     review.add_argument("--profile", choices=["security", "general"], default="security")
     review.add_argument("--rule", default=None, help="Path to a custom rule.json layer.")
     review.add_argument(
-        "--exclude", action="append", default=[],
+        "--exclude",
+        action="append",
+        default=[],
         help="Glob pattern to exclude (repeatable); appends to the resolved layer's excludes.",
+    )
+    review.add_argument(
+        "--prepare",
+        action="store_true",
+        help="Write review prompts and review_plan.json; skip the gate chain.",
     )
     args = parser.parse_args(argv)
 
@@ -294,8 +392,10 @@ def main(argv: list[str] | None = None) -> int:
         memory = None
         if args.workspace:
             ws = load_paths(
-                workspace=args.workspace, paths_config=args.paths_config,
-                reports_dir=args.reports_dir, findings_dir=args.findings_dir,
+                workspace=args.workspace,
+                paths_config=args.paths_config,
+                reports_dir=args.reports_dir,
+                findings_dir=args.findings_dir,
                 kb_dir=args.kb_dir,
             )
         else:
@@ -317,8 +417,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"learning recorded: {path}")
             return 0
         st = memory.run_status()
-        state = "FINISHED" if st["finished"] else (
-            f"RESUME at {st['next_phase']}" if st["resumable"] else "not started")
+        state = (
+            "FINISHED"
+            if st["finished"]
+            else (f"RESUME at {st['next_phase']}" if st["resumable"] else "not started")
+        )
         print(f"memory: {memory.root}")
         print(f"status: {state} (pass {st['pass_number']} @ {st['active_sha']})")
         print(f"stages done: {', '.join(st['stages_done']) or '(none)'}")
@@ -343,8 +446,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "review":
         return run_review(
-            args.base, args.head, args.root,
-            profile=args.profile, rule_path=args.rule, excludes=args.exclude,
+            args.base,
+            args.head,
+            args.root,
+            profile=args.profile,
+            rule_path=args.rule,
+            excludes=args.exclude,
+            prepare=args.prepare,
         )
     return 1
 

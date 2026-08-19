@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-103 pytest files, 1124 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+105 pytest files, 1163 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
 [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -628,3 +628,21 @@ these two tests cites `245d9e7`, the commit that added
 (`test_dual_run_security_profile_matches_committed_baseline_no_regression` and
 `test_dual_run_general_profile_is_a_strict_superset_of_the_security_baseline`) so `pytest -k
 dual_run` selects exactly the D-10 pair.
+
+`test_review_live.py` (new, phase 3 plan 06, REV-02) covers `cli.run_review` wired to a real
+finding source end to end: `--prepare` writes a plan entry and rendered prompt per reviewable
+file; a recorded `review-file` return produces a nonzero finding count; the same fixture diff
+run under `security` then `general` proves the profile split on a live source (a null-dereference
+finding excluded under `security`, included under `general`); a finding claimed on a line far
+outside every diff hunk is relocated by the position gate's whole-file rung and then dropped with
+reason `outside-diff` (not the earlier `no-snippet` decline); a `reflection.apply_verdict`
+retraction removes a live finding and the retraction records in the ledger; a file with no
+recorded return, a stale base/head return, and an unparseable return each land in
+`review_source_skipped` without stopping the run for other files; and the CLI's existing exit
+codes (2 on an invalid ref, 3 on a partial seal, 0 on a complete one) are unaffected by the new
+finding-source wiring. The fake runner's `git show <ref>:<path>` branch returns a whole-file text
+reconstructed from the fixture diff by default, or an explicit override
+(`head_texts` parameter) for the one test that needs a claimed line outside the diff-derived
+content. `test_rule_glob.py`'s `fake_run_review` local fixture gained a `prepare: bool = False`
+keyword to match `run_review`'s signature; `test_cli.py`'s `test_review_ledger_drop_count_matches_markdown_drop_rows`
+monkeypatch of `review_position_gate` gained a matching `file_text_by_path=None` third parameter.

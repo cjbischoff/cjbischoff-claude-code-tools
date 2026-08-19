@@ -18,11 +18,13 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Sequence
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from sec_overlay.evidence import as_llm_claim
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.prompts import render_prompt
+from sec_overlay.workspace import Workspace, _atomic_write, read_agent_return
 
 REVIEW_AGENT_CLAIM = as_llm_claim("review-agent")
 
@@ -31,6 +33,10 @@ REVIEW_AGENT_CLAIM = as_llm_claim("review-agent")
 CODE_COMMENT_TOOL = "code_comment"
 TASK_DONE_TOOL = "task_done"
 _KNOWN_TOOLS = frozenset({CODE_COMMENT_TOOL, TASK_DONE_TOOL})
+
+# A missing return, a stale base/head pair, and an unparseable response are all
+# ledgered identically — a reviewer failure, never a coverage failure (D-15).
+SOURCE_SKIPPED_REASON = "review-source-skipped"
 
 
 class ReviewResponseError(Exception):
@@ -54,7 +60,15 @@ def _render_change_files_block(changed_files: Sequence[str]) -> str:
     return "\n".join(f"- {p}" for p in changed_files)
 
 
-def render_review_prompt(path: str, rule_text: str, diff: str, changed_files: Sequence[str]) -> str:
+def render_review_prompt(
+    path: str,
+    rule_text: str,
+    diff: str,
+    changed_files: Sequence[str],
+    *,
+    repo_root: str = "",
+    overlay_root: str = "",
+) -> str:
     """Render the `agents/review-file.md` prompt for one file's review pass.
 
     Args:
@@ -67,6 +81,12 @@ def render_review_prompt(path: str, rule_text: str, diff: str, changed_files: Se
         changed_files: The other paths changed in this diff, rendered into
             `{{CHANGE_FILES}}` for context only — a comment about one of
             these must not become a finding against `path`.
+        repo_root: Substituted into `{{REPO_ROOT}}` — the base every cited
+            line is relative to (`PATH_BASE`). Defaults to empty for callers
+            (existing unit tests) whose fixture template never references it.
+        overlay_root: Substituted into `{{OVERLAY_ROOT}}` — where the
+            harness's own `review_findings.py` lives, for the prompt's
+            profile-decision note. Same empty default as `repo_root`.
 
     Returns:
         The fully rendered prompt text.
@@ -81,6 +101,8 @@ def render_review_prompt(path: str, rule_text: str, diff: str, changed_files: Se
         "SYSTEM_RULE": rule_text,
         "DIFF": diff,
         "CHANGE_FILES": _render_change_files_block(changed_files),
+        "REPO_ROOT": repo_root,
+        "OVERLAY_ROOT": overlay_root,
     }
     return render_prompt(template, subs)
 
@@ -159,3 +181,88 @@ def parse_review_response(
             )
         )
     return findings, discarded
+
+
+def agent_label(path: str) -> str:
+    """Derive a stable, filesystem-safe recorded-return label for one file.
+
+    A repo path carries `/` and cannot be a `runs/<label>.txt` filename
+    directly (mirrors `_stable_finding_id`'s hash-derivation approach) — the
+    label is a deterministic hash of the path instead.
+    """
+    digest = hashlib.sha256(path.encode("utf-8")).hexdigest()[:16]
+    return f"review-file-{digest}"
+
+
+@dataclass(frozen=True)
+class ReviewPlanEntry:
+    """One `--prepare` plan entry: where its prompt lives and what to record it under."""
+
+    path: str
+    prompt_path: str
+    agent_label: str
+    base: str
+    head: str
+
+
+def write_review_plan(ws: Workspace, entries: Sequence[ReviewPlanEntry]) -> Path:
+    """Write `runs/review_plan.json`, the `--prepare` half's SKILL.md-facing manifest.
+
+    Args:
+        ws: Workspace whose `runs/` receives the plan.
+        entries: One entry per reviewable file, in selection order.
+
+    Returns:
+        The path written.
+    """
+    path = ws.runs / "review_plan.json"
+    _atomic_write(path, json.dumps([asdict(e) for e in entries], indent=2))
+    return path
+
+
+@dataclass(frozen=True)
+class ReviewSourceSkip:
+    """Record of a file whose review source produced nothing (D-15 fail-open)."""
+
+    path: str
+    reason: str
+    error: str
+
+
+def recorded_return_source(ws: Workspace, *, base: str, head: str):
+    """Build a per-file source reading recorded `review-file` returns from disk.
+
+    Each return is recorded as a JSON envelope (`{"base", "head", "response"}`)
+    under its own `agent_label`. A return recorded for a different base/head
+    pair is refused rather than consumed, so a stale return can never
+    masquerade as this run's finding (T-03-19).
+
+    Args:
+        ws: Workspace `runs/<label>.txt` returns are read from.
+        base: This run's resolved base SHA.
+        head: This run's resolved head SHA.
+
+    Returns:
+        A callable taking one file path and returning its findings. Raises
+        `ValueError` for a missing return or a base/head mismatch;
+        `ReviewResponseError` from `parse_review_response` propagates
+        unchanged. The caller treats all of these identically — one skip,
+        zero findings for that file (D-15).
+    """
+
+    def _source(path: str) -> list[Finding]:
+        text = read_agent_return(ws, agent_label(path))
+        if text is None:
+            raise ValueError(f"no recorded return for {path}")
+        try:
+            envelope = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"recorded return for {path} is not valid JSON: {exc}") from exc
+        if envelope.get("base") != base or envelope.get("head") != head:
+            raise ValueError(f"recorded return for {path} was captured for a different base/head")
+        findings, _discarded = parse_review_response(
+            envelope.get("response", ""), path=path, rule_id_prefix="review"
+        )
+        return findings
+
+    return _source
