@@ -156,6 +156,19 @@ unrunnable precondition, not a live directive — enforced deterministically dow
 | `tune-config.md` | optional ratcheted loop (≤3 rounds): author targeted semgrep rules for uncovered classes, test-fire them, add noise-floor exclusions. |
 | `correlate-combiner.md` + `cross-repo-adversary.md` | cross-repo: narrate the combined multi-repo artifacts (fill `<!-- NARRATIVE -->` slots only; never touch the code-authored diagrams/tables), then pressure-check. |
 
+### Diff-review pipeline (`review`) — a separate, lighter track
+
+The `sec-overlay review` tracer (`SKILL.md`'s "Diff-scoped review" section) runs a distinct,
+lighter pipeline over one diff — not the full audit above. It has one prompt so far:
+
+| Prompt | Model | Reads | Writes / does |
+|--------|-------|-------|----------------|
+| `review-filter.md` | sonnet | one changed file's path, diff, and the review comments (findings) that survived positioning + the hunk gate | a **retract-only** fact-checking verdict — `approve_all_comments` or `report_incorrect_comments` naming only ids it was shown. It does not fit the producer/adversary pair above: there is no separate adversary pass, because the real safety guarantee is a mechanical code-level veto (`sec_overlay.reflection.PROTECTED_SUBJECT_CLASSES`), not model tier or a second opinion. `sec_overlay.reflection.validate_verdict` parses its raw response before any finding sees it; `apply_verdict` is the sole code path that may act on it, and even then only to retract — never to add, rank, or rewrite. |
+
+`review-filter.md` uses its own token set (`{{PATH}}`, `{{DIFF}}`, `{{COMMENTS}}`), rendered by
+`sec_overlay.reflection.render_reflection_prompt` — none of the audit-pipeline tokens below apply
+to it, since it is dispatched per file rather than by the orchestrator's phase driver.
+
 ---
 
 ## `classes/` — CWE-class extension prompts

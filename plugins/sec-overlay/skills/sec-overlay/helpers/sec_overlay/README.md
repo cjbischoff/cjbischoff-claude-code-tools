@@ -594,6 +594,17 @@ through `apply_verdict` (an always-empty verdict in this tracer slice — no fin
 into review mode yet) inside a `try`/`except` that records a `ReflectionSkip` and fails open on
 error rather than aborting the run.
 
+Phase 3 plan 05 (Task 1) adds the prompt and verdict-validation half of that filter.
+`render_reflection_prompt` renders the new `agents/review-filter.md` prompt wholesale via
+`sec_overlay.prompts.render_prompt`, substituting only `{{PATH}}`/`{{DIFF}}`/`{{COMMENTS}}`.
+`validate_verdict` parses the LLM's raw JSON tool-call response and raises `ReflectionResponseError`
+on invalid JSON, an unnamed tool, or a `report_incorrect_comments` id outside what the file's
+payload actually submitted — reading only the named tool, `comment_ids`, and `analysis`, so an
+extra field (severity, message, a would-be new finding) is silently ignored. `apply_verdict` now
+records a refused protected-class retraction (`REFUSED_REASON`) in the same `retractions` list as
+an applied one (`RETRACTED_REASON`) rather than dropping it — the finding still survives in `kept`,
+but the attempt is never silent (D-14).
+
 Phase 3 plan 02 (Task 1) expands `rule_glob.py`'s built-in-only resolution into RULE-02's four-layer
 resolver. `ProjectRuleEntry`/`ProjectRule` mirror OCR's `rule.json` shape byte-for-byte (D-06):
 an ordered `entries` list (`path` glob, `rule` text, `merge_system_rule` bool) plus `include`/

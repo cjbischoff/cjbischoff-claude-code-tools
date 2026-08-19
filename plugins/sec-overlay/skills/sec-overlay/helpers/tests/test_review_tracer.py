@@ -219,7 +219,11 @@ def test_apply_verdict_never_retracts_a_protected_subject_class():
     findings = [_ReflectionFinding("F-1", 2, "R1", protected_cls)]
     kept, retractions = reflection.apply_verdict(findings, {"F-1": "sanitized upstream"}, path="app.py")
     assert kept == findings
-    assert retractions == []
+    # A refused retraction is still recorded (never a silent no-op, D-14) — the
+    # finding stays in `kept`, but the attempt appears in the ledger with
+    # REFUSED_REASON so a reviewer can see the filter tried and was stopped.
+    assert len(retractions) == 1
+    assert retractions[0].reason == reflection.REFUSED_REASON
 
 
 def test_review_zero_findings_still_renders_reflection_sections(tmp_path, monkeypatch):

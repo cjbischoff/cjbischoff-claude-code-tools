@@ -2,6 +2,20 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.56.0 - 2026-08-18
+
+### Added
+
+- `sec_overlay.reflection`: `render_reflection_prompt` renders the new `agents/review-filter.md`
+  prompt per file (`{{PATH}}`/`{{DIFF}}`/`{{COMMENTS}}` only); `validate_verdict` parses and
+  validates the LLM's raw JSON tool-call response before any finding sees it, reading only the
+  named tool, the retracted id list, and the analysis text. `apply_verdict` now records a refused
+  protected-class retraction (`REFUSED_REASON`) alongside applied ones (`RETRACTED_REASON`) rather
+  than silently dropping it (D-14).
+- `agents/review-filter.md`: the retract-only fact-checking prompt for diff review — a mechanical
+  `PROTECTED_SUBJECT_CLASSES` veto backstops the same veto stated in the prompt; the model output
+  is never trusted alone (D-16).
+
 ## 1.55.2 - 2026-08-18
 
 ### Fixed

@@ -65,7 +65,20 @@ retracting a submitted id, ignoring an unsubmitted one, and refusing to retract 
 subject class; and `test_review_zero_findings_still_renders_reflection_sections`, pinning that
 a zero-finding run still writes `reflection_retractions`/`reflection_skipped` as empty lists
 (never omitted) in the ledger and renders the "## Reflection retractions" heading in
-`report.md` (D-14/D-15 never-silent discipline).
+`report.md` (D-14/D-15 never-silent discipline). Its one protected-subject test now also asserts
+the refused retraction is recorded (`REFUSED_REASON`), never a silent `[]` (Phase 3 Plan 05).
+
+`test_reflection.py` (16 tests, Phase 3 Plan 05 Task 1) covers `reflection.py`'s prompt-rendering
+and verdict-validation half of the retract-only filter: `render_reflection_prompt` substituting
+`{{PATH}}`/`{{DIFF}}`/`{{COMMENTS}}`, all five `PROTECTED_SUBJECT_CLASSES` phrases and the
+ordered method-step headings (veto before Ground A before Ground B before "when in doubt")
+appearing in the rendered text; `validate_verdict` accepting `approve_all_comments` (retracts
+nothing), accepting `report_incorrect_comments` for a submitted id, ignoring extra fields
+(severity/message/add_finding), and raising `ReflectionResponseError` on an unsubmitted id,
+invalid JSON, or an unnamed tool; and one parametrized test per protected subject class proving
+`apply_verdict` refuses the retraction (finding stays in `kept`) while still recording it
+(`REFUSED_REASON`, distinct from `RETRACTED_REASON`) — plus a mutation test proving `apply_verdict`
+never mutates its input list.
 
 `test_rule_glob.py` (new, Phase 3 Plan 2) grows across three TDD tasks. Task 1 (10 tests, green)
 covers the four-layer rule resolver: per-path fallthrough (`ProjectRuleEntry`/`ProjectRule`/
