@@ -735,3 +735,13 @@ by union, so a finding on a path the loop never visits (absent from `selection.r
 stays in place instead of being silently dropped (D-14). A per-file `apply_verdict` failure
 still records a `ReflectionSkip` and contributes no retracted ids, so that file's findings
 survive untouched (fail-open, D-15) without affecting any other file's retractions.
+
+Phase 3 plan 07 (Task 2) closes the other REV-03 gap: `apply_profile` hardcoded
+`UNCONFIRMED_DISPOSITION` for every kept finding, so `findings_gate.disposition_without_receipt`
+(the D-12 ladder above) was dead code and a kept thread-safety finding never shipped
+`needs-deployment-testing`. `apply_profile` now calls `disposition_without_receipt(defect_class)`
+for every kept finding whose `classify` result is not `None`, and keeps the
+`UNCONFIRMED_DISPOSITION` fallback only for a kept finding `classify` returns `None` for (a
+gate-unmarked finding outside the general-defect allowlist). The import is function-local inside
+`apply_profile` — `findings_gate` already imports `GENERAL_DEFECT_CLASSES` and both disposition
+constants from this module at module level, so a module-level reverse import would cycle.

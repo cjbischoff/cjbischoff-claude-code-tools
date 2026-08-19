@@ -10,6 +10,7 @@ from sec_overlay.phase_gate import DroppedFinding
 from sec_overlay.review_findings import (
     EXCLUSION_BLOCK_BY_PROFILE,
     GENERAL_DEFECT_CLASSES,
+    NEEDS_DEPLOYMENT_TESTING_DISPOSITION,
     UNCONFIRMED_DISPOSITION,
     GatedFinding,
     ReviewFinding,
@@ -122,11 +123,34 @@ def test_general_profile_drops_gates_c_d_e_unconditionally_even_for_allowlisted_
     assert {d.reason for d in dropped} == {"gate-c", "gate-d", "gate-e"}
 
 
+def test_apply_profile_assigns_needs_deployment_testing_for_thread_safety():
+    """D-12: a runtime-dependent class ships needs-deployment-testing, never unconfirmed."""
+    finding = _finding("F-TS", "thread-safety", file="ts.py", line=1, rule_id="RTS")
+    kept, dropped = apply_profile([GatedFinding(finding, gate="A")], "general")
+    assert dropped == []
+    assert len(kept) == 1
+    assert kept[0].disposition == NEEDS_DEPLOYMENT_TESTING_DISPOSITION
+
+
+@pytest.mark.parametrize(
+    "cls_", ["null-dereference", "error-swallowing", "resource-leak", "injection"]
+)
+def test_apply_profile_assigns_unconfirmed_for_each_static_checkable_class(cls_):
+    """D-12: every static-checkable class ships unconfirmed, never needs-deployment-testing."""
+    finding = _finding("F-SC", cls_, file="sc.py", line=1, rule_id="RSC")
+    kept, dropped = apply_profile([GatedFinding(finding, gate="A")], "general")
+    assert dropped == []
+    assert len(kept) == 1
+    assert kept[0].disposition == UNCONFIRMED_DISPOSITION
+
+
 def test_apply_profile_never_assigns_a_confirmed_disposition():
-    kept, _ = apply_profile(_dual_run_fixture(), "general")
+    thread_safety = _finding("F-TS", "thread-safety", file="ts.py", line=1, rule_id="RTS")
+    fixture = [*_dual_run_fixture(), GatedFinding(thread_safety, gate="A")]
+    kept, _ = apply_profile(fixture, "general")
     for rf in kept:
         assert rf.disposition != "confirmed"
-        assert rf.disposition == UNCONFIRMED_DISPOSITION
+        assert rf.disposition in (UNCONFIRMED_DISPOSITION, NEEDS_DEPLOYMENT_TESTING_DISPOSITION)
 
 
 def test_dropped_findings_are_sorted_by_path_line_rule_id():

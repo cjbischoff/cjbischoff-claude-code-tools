@@ -658,3 +658,18 @@ raising path, while both files' findings still ship in `review_findings`.
 `test_finding_on_an_unreflected_path_survives` monkeypatches `review_position_gate` to inject
 an extra finding on a file absent from `selection.reviewable`, proving the reflection loop's
 rebind-by-filter never touches a finding on a path it never iterates (D-14, no silent drop).
+
+Phase 3 plan 07 (Task 2, REV-03 gap closure) extends `test_review_profiles.py` with the D-12
+disposition ladder proof `apply_profile` skipped until now.
+`test_apply_profile_assigns_needs_deployment_testing_for_thread_safety` keeps a single
+thread-safety finding under a relaxable gate and asserts its disposition is
+`NEEDS_DEPLOYMENT_TESTING_DISPOSITION`, not `UNCONFIRMED_DISPOSITION` — this fixture is local to
+the test, never a mutation of `_dual_run_fixture` (whose one thread-safety entry is gate-C, an
+unconditional drop, so it never reaches this branch).
+`test_apply_profile_assigns_unconfirmed_for_each_static_checkable_class` parametrizes the same
+shape over `null-dereference`, `error-swallowing`, `resource-leak`, and `injection`, asserting
+`UNCONFIRMED_DISPOSITION` for each. `test_apply_profile_never_assigns_a_confirmed_disposition` now
+runs over `_dual_run_fixture` plus one added kept thread-safety finding, asserting every kept
+disposition is one of the two allowed values rather than only `UNCONFIRMED_DISPOSITION` — the
+committed-baseline comparison test is untouched, since the baseline never serialized a
+`disposition` field.

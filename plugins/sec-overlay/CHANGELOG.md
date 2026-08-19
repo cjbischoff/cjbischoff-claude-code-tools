@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.61.2 - 2026-08-19
+
+### Fixed
+
+- `review_findings.apply_profile` now assigns a kept general-defect finding's disposition via
+  `findings_gate.disposition_without_receipt` (the D-12 ladder) instead of hardcoding
+  `unconfirmed`. A kept thread-safety finding now ships `needs-deployment-testing`; every kept
+  static-checkable class (`null-dereference`, `error-swallowing`, `resource-leak`, `injection`)
+  and every unclassified kept finding still ships `unconfirmed`.
+
 ## 1.61.1 - 2026-08-19
 
 ### Fixed

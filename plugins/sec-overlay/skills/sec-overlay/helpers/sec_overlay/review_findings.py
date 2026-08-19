@@ -7,7 +7,11 @@ class is a general-defect class (REV-01, D-09); every other A/B-marked
 finding is still dropped, and gates C, D, and E drop a finding under both
 profiles unconditionally. The general-defect class and the review-mode
 disposition it ships with live here, in a new module, never in
-``models.py`` — that file is byte-mirrored by the Go port (D-11).
+``models.py`` — that file is byte-mirrored by the Go port (D-11). A kept
+general-defect finding's disposition comes from
+``findings_gate.disposition_without_receipt`` (D-12): runtime-dependent
+classes ship ``needs-deployment-testing``, static-checkable ones and
+unclassified findings ship ``unconfirmed``.
 
 ``apply_profile`` returns a 2-tuple ``(kept, dropped)``, not the 3-tuple
 ``(kept, dropped, declines)`` :func:`phase_gate.review_position_gate`
@@ -46,8 +50,11 @@ GENERAL_DEFECT_CLASSES: frozenset[str] = frozenset(
 UNCONFIRMED_DISPOSITION = "unconfirmed"
 NEEDS_DEPLOYMENT_TESTING_DISPOSITION = "needs-deployment-testing"
 # The review-mode disposition vocabulary a general-defect finding may ship
-# with. D-12's static-checkable/runtime-dependent split is a later plan's
-# job; apply_profile only ever assigns UNCONFIRMED_DISPOSITION today.
+# with. apply_profile routes every classified finding through
+# findings_gate.disposition_without_receipt (D-12): runtime-dependent classes
+# ship NEEDS_DEPLOYMENT_TESTING_DISPOSITION, static-checkable ones ship
+# UNCONFIRMED_DISPOSITION; an unclassified finding (defect_class is None)
+# still falls back to UNCONFIRMED_DISPOSITION.
 REVIEW_DISPOSITIONS: frozenset[str] = frozenset(
     {UNCONFIRMED_DISPOSITION, NEEDS_DEPLOYMENT_TESTING_DISPOSITION}
 )
@@ -139,11 +146,21 @@ def apply_profile(
         defect_class = classify(finding)
         bypassed = profile == "general" and gate in _RELAXABLE_GATES and defect_class is not None
         if gate is None or bypassed:
+            # Deferred import: findings_gate imports GENERAL_DEFECT_CLASSES and both
+            # disposition constants from this module at module level, so importing it
+            # back at module level here would be a cycle.
+            from sec_overlay.findings_gate import disposition_without_receipt
+
+            disposition = (
+                disposition_without_receipt(defect_class)
+                if defect_class is not None
+                else UNCONFIRMED_DISPOSITION
+            )
             kept.append(
                 ReviewFinding(
                     finding=finding,
                     defect_class=defect_class,
-                    disposition=UNCONFIRMED_DISPOSITION,
+                    disposition=disposition,
                     profile=profile,
                 )
             )
