@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Record the Phase 3 security threat verification (`.planning/phases/03-rule-matching-review-modes/03-SECURITY.md`, status verified: 27 threats from the seven plan threat models, 27 closed, threats_open 0, 3 accepted risks logged).
 - Evolve `.planning/PROJECT.md` after Phase 3: move REV-01, REV-04, and REV-05 (Phase 3) plus REV-02 and REV-03 (Phase 2, previously unrecorded) from Active to Validated, and bump the footer to 2026-08-19.
 - Close out Phase 3 as complete and verified: re-verification passes 5/5 must-haves (`.planning/phases/03-rule-matching-review-modes/03-VERIFICATION.md`, status passed, CR-01 and WR-01 confirmed closed, all 8 requirement IDs traced), and `.planning/ROADMAP.md` and `.planning/STATE.md` advance to Phase 4 (Scale, Resume & Diff Output).
 - Regenerate the Phase 3 code-review report after the Plan 7 gap closure (`.planning/phases/03-rule-matching-review-modes/03-REVIEW.md`, status issues_found: 0 critical, 2 warning, 1 info across 39 files at standard depth; prior findings CR-01 and WR-01 confirmed fixed).
