@@ -57,6 +57,7 @@ All items below shipped before this project started.
 - ✓ `review` verb reviews a diff in `security` and `general` profiles (REV-01) — Validated in Phase 3: Rule Matching & Review Modes, 2026-08-19
 - ✓ Glob rule matching selects per-language rule docs with safe rule-file reads (REV-04) — Validated in Phase 3: Rule Matching & Review Modes, 2026-08-19
 - ✓ Reflection filter retracts only, fails open, never confirms (REV-05) — Validated in Phase 3: Rule Matching & Review Modes, 2026-08-19
+- ✓ Review workspace isolated to the `<target>/.sec-overlay/<slug>/` sidecar; nothing written to the reviewed repo's tracked tree (DIFF-04) — Validated in Phase 04.1: Close gap: review sidecar workspace isolation, 2026-08-19
 
 ### Active
 
@@ -145,4 +146,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-19 after completing Phase 3 (Rule Matching & Review Modes) of milestone v5.0*
+*Last updated: 2026-08-19 after completing Phase 04.1 (Close gap: DIFF-04 — review sidecar workspace isolation) of milestone v5.0*
