@@ -5,11 +5,22 @@ import subprocess
 
 from sec_overlay import cli
 from sec_overlay.cli import main, run_review
+from sec_overlay.repo_memory import RepoMemory
 from sec_overlay.review_agent import agent_label
-from sec_overlay.workspace import Workspace, record_agent_return
+from sec_overlay.workspace import record_agent_return
 
 _BASE_SHA = "a" * 40
 _HEAD_SHA = "b" * 40
+
+
+def _sidecar_ws(root):
+    """Resolve the sidecar workspace `run_review` writes to for `root`.
+
+    Reads `subprocess.run` at call time so it sees whatever the test's
+    `monkeypatch.setattr(subprocess, "run", ...)` installed — the same runner
+    `run_review` resolves through its own `r = runner or subprocess.run` default.
+    """
+    return RepoMemory.for_target(root, runner=subprocess.run).workspace
 
 
 def _diff_for(path: str) -> str:
@@ -79,7 +90,7 @@ def _fake_run_for(diffs: dict[str, str], head_texts: dict[str, str] | None = Non
 
 def _record_return(root, path, *, base=_BASE_SHA, head=_HEAD_SHA, calls):
     """Record a review-file return envelope for `path` (production disk format)."""
-    ws = Workspace(root)
+    ws = _sidecar_ws(root)
     ws.ensure()
     envelope = json.dumps({"base": base, "head": head, "response": json.dumps(calls)})
     record_agent_return(ws, agent_label(path), envelope)
@@ -97,13 +108,14 @@ def test_prepare_writes_plan_and_prompt_per_file(tmp_path, monkeypatch):
                "--prepare"])
     assert rc == 0
 
-    plan = json.loads((tmp_path / "runs" / "review_plan.json").read_text())
+    ws = _sidecar_ws(tmp_path)
+    plan = json.loads((ws.runs / "review_plan.json").read_text())
     assert len(plan) == 2
     assert {e["path"] for e in plan} == {"app.py", "other.py"}
     for entry in plan:
         assert entry["base"] == _BASE_SHA
         assert entry["head"] == _HEAD_SHA
-        prompt_text = (tmp_path / "runs" / "review_prompts" / f"{entry['agent_label']}.md").read_text()
+        prompt_text = (ws.runs / "review_prompts" / f"{entry['agent_label']}.md").read_text()
         assert entry["path"] in prompt_text
         assert "{{" not in prompt_text
 
@@ -115,7 +127,8 @@ def test_recorded_return_produces_a_nonzero_finding_count(tmp_path, monkeypatch)
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc == 0
 
-    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    ws = _sidecar_ws(tmp_path)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert len(ledger["review_findings"]) == 1
     assert ledger["review_findings"][0]["path"] == "app.py"
 
@@ -125,14 +138,15 @@ def test_profile_split_null_dereference_security_excludes_general_includes(tmp_p
     _record_return(str(tmp_path), "app.py",
                     calls=[_code_comment("app.py", 2, "possible nil deref", "null-dereference")])
 
+    ws = _sidecar_ws(tmp_path)
     rc_security = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc_security == 0
-    ledger_security = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    ledger_security = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert ledger_security["review_findings"] == []
 
     rc_general = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="general")
     assert rc_general == 0
-    ledger_general = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    ledger_general = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert len(ledger_general["review_findings"]) == 1
     assert ledger_general["review_findings"][0]["defect_class"] == "null-dereference"
 
@@ -151,7 +165,8 @@ def test_finding_outside_every_hunk_dropped_as_outside_diff(tmp_path, monkeypatc
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc == 0
 
-    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    ws = _sidecar_ws(tmp_path)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert ledger["review_findings"] == []
     assert any(d["reason"] == "outside-diff" for d in ledger["dropped"])
 
@@ -171,7 +186,8 @@ def test_reflection_retraction_removes_a_live_finding(tmp_path, monkeypatch):
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc == 0
 
-    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    ws = _sidecar_ws(tmp_path)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert ledger["review_findings"] == []
     assert len(ledger["reflection_retractions"]) == 1
     assert ledger["reflection_retractions"][0]["reason"] == RETRACTED_REASON
@@ -194,7 +210,8 @@ def test_reflection_failure_for_one_file_leaves_other_files_unaffected(tmp_path,
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc == 0
 
-    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    ws = _sidecar_ws(tmp_path)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert len(ledger["reflection_skipped"]) == 1
     assert ledger["reflection_skipped"][0]["path"] == "app.py"
     assert {rf["path"] for rf in ledger["review_findings"]} == {"app.py", "other.py"}
@@ -221,7 +238,8 @@ def test_finding_on_an_unreflected_path_survives(tmp_path, monkeypatch):
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc == 0
 
-    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    ws = _sidecar_ws(tmp_path)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert any(rf["path"] == "ghost.py" for rf in ledger["review_findings"])
 
 
@@ -233,7 +251,8 @@ def test_thread_safety_finding_ships_needs_deployment_testing_end_to_end(tmp_pat
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="general")
     assert rc == 0
 
-    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    ws = _sidecar_ws(tmp_path)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert len(ledger["review_findings"]) == 1
     assert ledger["review_findings"][0]["disposition"] == "needs-deployment-testing"
     assert ledger["review_findings"][0]["defect_class"] == "thread-safety"
@@ -244,7 +263,8 @@ def test_file_with_no_recorded_return_is_skipped_and_run_still_exits_zero(tmp_pa
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc == 0
 
-    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    ws = _sidecar_ws(tmp_path)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert ledger["review_findings"] == []
     assert len(ledger["review_source_skipped"]) == 1
     assert ledger["review_source_skipped"][0]["path"] == "app.py"
@@ -257,7 +277,8 @@ def test_stale_base_head_return_is_refused_and_ledgered(tmp_path, monkeypatch):
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc == 0
 
-    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    ws = _sidecar_ws(tmp_path)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert ledger["review_findings"] == []
     assert len(ledger["review_source_skipped"]) == 1
 
@@ -267,7 +288,7 @@ def test_unparseable_return_skips_one_file_leaves_others_intact(tmp_path, monkey
     monkeypatch.setattr(subprocess, "run", _fake_run_for(diffs))
     _record_return(str(tmp_path), "app.py",
                     calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
-    ws = Workspace(str(tmp_path))
+    ws = _sidecar_ws(str(tmp_path))
     ws.ensure()
     envelope = json.dumps({"base": _BASE_SHA, "head": _HEAD_SHA, "response": "not-json"})
     record_agent_return(ws, agent_label("other.py"), envelope)
@@ -275,7 +296,7 @@ def test_unparseable_return_skips_one_file_leaves_others_intact(tmp_path, monkey
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc == 0
 
-    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert len(ledger["review_source_skipped"]) == 1
     assert ledger["review_source_skipped"][0]["path"] == "other.py"
     assert len(ledger["review_findings"]) == 1
@@ -289,9 +310,10 @@ def test_zero_skips_still_renders_review_source_skipped_heading(tmp_path, monkey
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc == 0
 
-    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    ws = _sidecar_ws(tmp_path)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert ledger["review_source_skipped"] == []
-    report_text = (tmp_path / "report.md").read_text()
+    report_text = ws.report_path.read_text()
     assert "## Review source skipped" in report_text
     assert "No file's review source was skipped." in report_text
 

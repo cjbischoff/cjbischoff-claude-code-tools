@@ -88,6 +88,14 @@ a change to it. `sec_overlay.review_findings.apply_profile` is the gate; `securi
 `general` never mix rule sets. Exit 0 on a `complete` coverage seal, 2 on an invalid ref or an
 unsafe rule file, 3 when one or more files could not be reviewed.
 
+Like `scan` and `audit`, every review artifact — `coverage_manifest.json`, `runs/review_plan.json`,
+`runs/review_prompts/`, `report.md`, `review_ledger.json` — resolves under the same per-repo
+memory sidecar (`<root>/.sec-overlay/<repo-slug>/`), never at `--root` itself; see "Per-repo
+memory" below. `--root` has no `--workspace` override for review (unlike `scan`/`audit`): pass
+the **identical** `--root` string, preferably absolute, to every `prepare`, dispatch, and
+`consume` invocation of one review — the sidecar slug is derived from that string, so a
+different spelling resolves to a different sidecar and silently orphans the prepared run.
+
 ### Reflection pass — fact-checking kept comments (D-16)
 
 Every kept finding for a reviewable file also runs through a **retract-only** reflection filter

@@ -5,6 +5,7 @@ import json
 from sec_overlay.cli import run_scan
 from sec_overlay.phase_gate import DroppedFinding
 from sec_overlay.positioning import PositionResult
+from sec_overlay.repo_memory import RepoMemory
 from sec_overlay.report import DROPPED_FINDINGS_HEADING, POSITION_REVIEW_HEADING
 from sec_overlay.workspace import Workspace
 
@@ -236,7 +237,7 @@ def test_review_writes_ledger_and_report_with_zero_drops_and_declines(tmp_path):
     rc = cli.run_review("main", "develop", str(tmp_path), runner=runner)
     assert rc == 0
 
-    ws = Workspace(str(tmp_path))
+    ws = RepoMemory.for_target(str(tmp_path), runner=runner).workspace
     ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert ledger["dropped"] == []
     assert ledger["position_reviews"] == []
@@ -244,6 +245,31 @@ def test_review_writes_ledger_and_report_with_zero_drops_and_declines(tmp_path):
     md = ws.report_path.read_text()
     assert f"{DROPPED_FINDINGS_HEADING}\n\nNo finding was dropped." in md
     assert f"{POSITION_REVIEW_HEADING}\n\nNo finding required position review." in md
+
+
+def test_review_defaults_to_repo_memory(tmp_path, monkeypatch):
+    # Regression (DIFF-04): run_review must resolve its workspace through
+    # RepoMemory.for_target, the same sidecar convention scan/audit use, not a bare
+    # Workspace(root) on the reviewed repo's tracked tree.
+    import subprocess
+
+    from sec_overlay import cli
+
+    monkeypatch.setenv("SEC_OVERLAY_HOME", str(tmp_path / "mem"))
+    target = tmp_path / "repo"
+    target.mkdir()
+    monkeypatch.setattr(subprocess, "run", _make_review_runner(["a.py"]))
+
+    rc = cli.main(["review", "--base", "main", "--head", "develop", "--root", str(target)])
+    assert rc == 0
+
+    mem_base = tmp_path / "mem"
+    slugs = [p for p in mem_base.iterdir() if p.is_dir()]
+    assert len(slugs) == 1
+    assert (slugs[0] / "artifacts" / "coverage_manifest.json").exists()
+
+    assert not (target / "artifacts").exists()
+    assert not (target / "report.md").exists()
 
 
 def test_review_ledger_drop_count_matches_markdown_drop_rows(tmp_path, monkeypatch):
@@ -267,7 +293,7 @@ def test_review_ledger_drop_count_matches_markdown_drop_rows(tmp_path, monkeypat
     rc = cli.run_review("main", "develop", str(tmp_path), runner=runner)
     assert rc == 0
 
-    ws = Workspace(str(tmp_path))
+    ws = RepoMemory.for_target(str(tmp_path), runner=runner).workspace
     ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert len(ledger["dropped"]) == len(dropped)
     assert len(ledger["position_reviews"]) == len(declines)

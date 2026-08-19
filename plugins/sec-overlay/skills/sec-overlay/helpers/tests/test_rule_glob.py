@@ -14,6 +14,7 @@ import json
 import pytest
 
 from sec_overlay import rule_glob
+from sec_overlay.repo_memory import RepoMemory
 from sec_overlay.rule_glob import (
     ProjectRule,
     ProjectRuleEntry,
@@ -251,7 +252,8 @@ def test_run_review_excludes_filtered_files_from_reviewable_set(tmp_path):
         "main", "develop", str(tmp_path), excludes=["vendor/**"], runner=runner
     )
     assert rc == 0
-    manifest = json.loads((tmp_path / "artifacts" / "coverage_manifest.json").read_text())
+    ws = RepoMemory.for_target(str(tmp_path), runner=runner).workspace
+    manifest = json.loads((ws.artifacts / "coverage_manifest.json").read_text())
     paths = [f["path"] for f in manifest["files"]]
     assert "src/a.py" in paths
     assert "vendor/lib.py" not in paths
@@ -339,4 +341,5 @@ def test_run_review_exits_2_on_rule_safety_error_with_no_fallback(tmp_path, caps
     assert rc == 2
     captured = capsys.readouterr()
     assert str(bad_rule.resolve()) in captured.err
-    assert not (tmp_path / "artifacts" / "coverage_manifest.json").exists()
+    ws = RepoMemory.for_target(str(tmp_path), runner=runner).workspace
+    assert not (ws.artifacts / "coverage_manifest.json").exists()

@@ -32,7 +32,8 @@ These hold everywhere and are enforced in code where possible, prompt otherwise:
 2. **Writes only its own sidecar.** All output lives in an in-repo, self-ignoring
    `<target>/.sec-overlay/<slug>/` directory (override the base with `$SEC_OVERLAY_HOME`, or
    the whole workspace with `--workspace`). A seeded `.sec-overlay/.gitignore` keeps output
-   out of the reviewed repo's git tree.
+   out of the reviewed repo's git tree. `review` shares this convention too — it has no
+   `--workspace` override, so pass the same `--root` string to every invocation of one run.
 3. **Tool-receipt gate.** A finding reaches `confirmed`/`fixed` only with ≥1 mechanical
    receipt (`semgrep` / `codeql` / `ast-grep` / `tree-sitter` / `ripgrep` /
    `structural-index` / `secrets` / `sca`). LLM reasoning is namespaced `llm-claimed:` and can

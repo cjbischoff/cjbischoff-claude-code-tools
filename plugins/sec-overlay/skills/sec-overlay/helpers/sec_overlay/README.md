@@ -745,3 +745,14 @@ for every kept finding whose `classify` result is not `None`, and keeps the
 gate-unmarked finding outside the general-defect allowlist). The import is function-local inside
 `apply_profile` — `findings_gate` already imports `GENERAL_DEFECT_CLASSES` and both disposition
 constants from this module at module level, so a module-level reverse import would cycle.
+
+Phase 4.1 plan 01 fixes DIFF-04: `cli.py`'s `run_review` used to construct `Workspace(args.root)`
+directly, writing every review artifact at the bare `--root` instead of the per-repo sidecar
+`scan` and `audit` already use. `run_review` now resolves its workspace through
+`RepoMemory.for_target(root, runner=r).workspace`, the same call `_target_workspace` makes for
+`audit`, threading the same `r = runner or subprocess.run` default the rest of the function
+already used. `build_resolution` and `render_review_prompt` still take the bare `root` — they
+never touched the workspace, only the rule/prompt resolution paths — so they are unchanged.
+Every test in `test_review_live.py`, `test_review_tracer.py`, and `test_rule_glob.py` that reads
+back a review artifact now resolves it through the same sidecar rather than joining `tmp_path`
+directly, so a passing test proves the production path, not the bug.

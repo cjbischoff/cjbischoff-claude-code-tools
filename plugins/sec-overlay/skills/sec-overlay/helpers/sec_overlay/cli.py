@@ -141,7 +141,9 @@ def run_review(
     Args:
         base: Base ref. Validated and resolved to a SHA before any other git call.
         head: Head ref, same treatment.
-        root: Target repo root; the workspace and its ``artifacts/`` dir live here.
+        root: Target repo under review; the workspace and its ``artifacts/`` dir live in
+            the per-repo sidecar resolved beneath it (``<root>/.sec-overlay/<slug>/``),
+            not at ``root`` itself.
         profile: Review profile (``"security"`` or ``"general"``); gates the position
             gate's kept findings through :func:`review_findings.apply_profile` (REV-01).
         rule_path: Path to a custom rule.json (``--rule``); resolved as the highest-priority
@@ -170,8 +172,9 @@ def run_review(
 
     r = runner or subprocess.run
 
-    ws = Workspace(root)
-    ws.ensure()
+    memory = RepoMemory.for_target(root, runner=r)
+    memory.ensure(target=root)
+    ws = memory.workspace
 
     try:
         base_sha = resolve_ref_sha(base, runner=r)

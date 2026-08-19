@@ -690,3 +690,15 @@ thread-safety finding runs through `run_review` under the `general` profile with
 everything, so reflection's default behavior IS the "reflection keeps it" case); the ledger's one
 surviving finding carries `"disposition": "needs-deployment-testing"` and
 `"defect_class": "thread-safety"`.
+
+Phase 4.1 plan 01 (DIFF-04) fixes `run_review` writing to the bare `--root` instead of the
+per-repo sidecar `scan` and `audit` already use. `test_review_live.py`, `test_review_tracer.py`,
+and `test_rule_glob.py` each gained (or reuse) a `_sidecar_ws(root)` helper that resolves
+`RepoMemory.for_target(root, runner=...).workspace` with the same runner the test handed
+`run_review` — `subprocess.run` read at call time for a `monkeypatch.setattr(subprocess, "run",
+...)` fixture, or the test's own explicit `runner=` object for `test_rule_glob.py`'s
+`_review_runner` fixture. Every assertion that used to join `tmp_path` directly against
+`coverage_manifest.json`, `review_ledger.json`, `runs/review_plan.json`,
+`runs/review_prompts/`, or `report.md` now reads through that sidecar workspace instead — a
+passing test now proves the sidecar convention holds, not the bare-root bug. `test_diffscope.py`
+needed no change: it never reads back a review artifact path.

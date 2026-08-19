@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.61.6 - 2026-08-19
+
+### Fixed
+
+- Fix `review` writing findings and reports at the bare `--root` instead of the
+  per-repo memory sidecar `scan` and `audit` already use. `run_review` now
+  resolves its workspace through `RepoMemory.for_target`, matching the
+  existing convention; a regression test pins it. Closes DIFF-04.
+
 ## 1.61.5 - 2026-08-19
 
 ### Added

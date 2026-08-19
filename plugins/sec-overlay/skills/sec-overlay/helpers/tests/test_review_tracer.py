@@ -9,9 +9,20 @@ from sec_overlay.diffhunks import added_line_numbers, parse_hunks
 from sec_overlay.diffscope import changed_file_records, validate_ref
 from sec_overlay.phase_gate import review_position_gate
 from sec_overlay.positioning import resolve_position
+from sec_overlay.repo_memory import RepoMemory
 
 _BASE_SHA = "a" * 40
 _HEAD_SHA = "b" * 40
+
+
+def _sidecar_ws(root):
+    """Resolve the sidecar workspace `run_review` writes to for `root`.
+
+    Reads `subprocess.run` at call time so it sees whatever the test's
+    `monkeypatch.setattr(subprocess, "run", ...)` installed — the same runner
+    `run_review` resolves through its own `r = runner or subprocess.run` default.
+    """
+    return RepoMemory.for_target(root, runner=subprocess.run).workspace
 
 _DIFF = (
     "diff --git a/app.py b/app.py\n"
@@ -99,7 +110,7 @@ def test_review_one_changed_file_exits_zero_and_seals_complete(tmp_path, monkeyp
     rc = main(["review", "--base", _BASE_SHA, "--head", _HEAD_SHA, "--root", str(tmp_path)])
     assert rc == 0
 
-    manifest_path = tmp_path / "artifacts" / "coverage_manifest.json"
+    manifest_path = _sidecar_ws(tmp_path).artifacts / "coverage_manifest.json"
     data = json.loads(manifest_path.read_text())
     assert data["base_sha"] == _BASE_SHA
     assert data["head_sha"] == _HEAD_SHA
@@ -159,7 +170,7 @@ def test_review_python_file_resolves_python_rule_doc(tmp_path, monkeypatch):
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc == 0
 
-    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    ledger = json.loads((_sidecar_ws(tmp_path).artifacts / "review_ledger.json").read_text())
     expected_text = (rule_glob.builtin_rule_docs_dir() / "python.md").read_text()
     assert ledger["rule_docs"] == [{"path": path, "text": expected_text}]
 
@@ -173,7 +184,7 @@ def test_review_unmatched_file_resolves_default_rule_doc(tmp_path, monkeypatch):
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc == 0
 
-    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    ledger = json.loads((_sidecar_ws(tmp_path).artifacts / "review_ledger.json").read_text())
     expected_text = (rule_glob.builtin_rule_docs_dir() / "default.md").read_text()
     assert ledger["rule_docs"] == [{"path": path, "text": expected_text}]
 
@@ -233,8 +244,9 @@ def test_review_zero_findings_still_renders_reflection_sections(tmp_path, monkey
     rc = main(["review", "--base", _BASE_SHA, "--head", _HEAD_SHA, "--root", str(tmp_path)])
     assert rc == 0
 
-    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    ws = _sidecar_ws(tmp_path)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert ledger["reflection_retractions"] == []
     assert ledger["reflection_skipped"] == []
-    report_text = (tmp_path / "report.md").read_text()
+    report_text = ws.report_path.read_text()
     assert "## Reflection retractions" in report_text
