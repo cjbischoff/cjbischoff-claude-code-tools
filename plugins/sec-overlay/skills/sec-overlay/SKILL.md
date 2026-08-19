@@ -105,6 +105,31 @@ aborting (D-15). `review_ledger.json` carries both `reflection_retractions` and
 same way. `cli.py review`'s tracer slice calls `apply_verdict` with an always-empty verdict — no
 finding source is wired into review mode yet — so live reflection dispatch is a later plan.
 
+### Review mode (diff-scoped) — prepare, dispatch, consume
+
+Review mode has no phase driver like the full audit above — it is a three-step loop the main
+agent runs directly, over one `review-file` subagent per reviewable file:
+
+1. **Prepare** — `uv run python -m sec_overlay.cli review --base <ref> --prepare` writes
+   `runs/review_plan.json` (one entry per reviewable file: path, resolved rule text, diff, other
+   changed files) and renders one prompt per entry from `agents/review-file.md` under
+   `runs/review_prompts/<slug>.md`.
+2. **Dispatch** — for each entry, spawn a `review-file` subagent (sonnet) in a fresh context with
+   that rendered prompt, then persist its final return with
+   `workspace.record_agent_return(ws, <label>, <text>)` — the same disk-is-truth convention the
+   full audit uses (never depend on the subagent's summary message propagating). Dispatch in
+   waves of three to four, matching the fan-out rule the audit pipeline already uses under
+   provider load.
+3. **Consume** — `uv run python -m sec_overlay.cli review --base <ref> [--profile general]` reads
+   the recorded returns back from disk and runs them through the same gate chain the tracer slice
+   already builds: position gate → `apply_profile` → the reflection filter → the receipt gate.
+
+The skill never parses a subagent's return itself and never decides what a finding is — it only
+records the raw text; `sec_overlay.review_agent.parse_review_response` is the sole parser. The
+loop fails open: a file with no recorded return, or one whose return will not parse, contributes
+zero findings for that file and is listed in the run's skip ledger rather than aborting the pass
+— the same discipline as the reflection skip above.
+
 ## Running a full audit
 
 Read [`CLAUDE.md`](CLAUDE.md) first for environment prerequisites, hard operating rules, and

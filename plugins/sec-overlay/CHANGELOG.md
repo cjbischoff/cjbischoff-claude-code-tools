@@ -2,6 +2,24 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.60.0 - 2026-08-19
+
+### Added
+
+- `agents/review-file.md`: the review-mode producer prompt, ported from open-code-review's main
+  task prompt (D-02) — role, capabilities, strict-focus rules, and reply limit, adapted to this
+  skill's single-shot no-tool dispatch and uppercase token/prompt-constants conventions. Reports
+  a `code_comment` per confirmed issue and a closing `task_done`; a comment naming a path other
+  than the file under review is discarded by `sec_overlay.review_agent.parse_review_response`,
+  never converted, and the reviewer never claims a mechanical tool receipt.
+- `SKILL.md`: a **Review mode (diff-scoped)** section documenting the prepare/dispatch/consume
+  subagent loop — `cli review --prepare` writes `runs/review_plan.json` and one rendered prompt
+  per reviewable file; the main agent dispatches one `review-file` subagent per entry in waves of
+  three to four and persists each return with `workspace.record_agent_return`; `cli review`
+  consumes the recorded returns through the position gate, profile gate, reflection filter, and
+  receipt gate. A file with no recorded or unparseable return contributes no findings and is
+  logged to the run's skip ledger rather than aborting the pass.
+
 ## 1.59.0 - 2026-08-19
 
 ### Added
