@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Record the Phase 3 verification report (`.planning/phases/03-rule-matching-review-modes/03-VERIFICATION.md`, status gaps_found: 4/5 must-haves verified, two gaps in REV-02/REV-03 wiring).
 - Record the Phase 3 code-review report (`.planning/phases/03-rule-matching-review-modes/03-REVIEW.md`, status issues_found: 1 critical, 3 warning, 1 info across 29 files at standard depth).
 - Complete Phase 3 Plan 6, the final plan of Phase 3 (wires a real finding source into the review verb: `review_agent.py`'s per-file prompt render and response parser, the ported `agents/review-file.md` prompt, and `run_review`'s live gate-chain wiring proven by a `--profile security`/`--profile general` split on one fixture diff): record its summary in `.planning/phases/03-rule-matching-review-modes/03-06-SUMMARY.md`, advance `.planning/STATE.md` and `.planning/ROADMAP.md` to Phase 3 complete (6 of 6 plans done), and confirm RULE-01, REV-01, and REV-02 Complete in `.planning/REQUIREMENTS.md`.
 - Complete Phase 3 Plan 5 (the retract-only reflection filter, its never-silent ledger markdown rendering, and the D-12 receipt-gate disposition ladder for general-defect findings): record its summary in `.planning/phases/03-rule-matching-review-modes/03-05-SUMMARY.md`, advance `.planning/STATE.md` and `.planning/ROADMAP.md` to Plan 5 of 6 done, and mark REV-03 Complete in `.planning/REQUIREMENTS.md`.
