@@ -24,7 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Baseline Health Verification** - Prove the delivered marketplace and plugin baseline is healthy: validation, tests, hooks (completed 2026-08-17)
 - [ ] **Phase 2: Diff Pipeline & Positioning** - Deterministic diff acquisition, per-file coverage tracking, and hunk-anchored finding positioning
-- [ ] **Phase 3: Rule Matching & Review Modes** - Per-language rule selection, the `review` verb's security/general profiles, and the retract-only reflection filter
+- [x] **Phase 3: Rule Matching & Review Modes** - Per-language rule selection, the `review` verb's security/general profiles, and the retract-only reflection filter (completed 2026-08-19)
 - [ ] **Phase 4: Scale, Resume & Diff Output** - Semantic bundling, concurrency/resume limits, and the diff-anchored output payload
 - [ ] **Phase 5: End-to-End Verification (Audit & Review)** - Drive full audit and review runs on a real target and verify honest, receipt-backed output
 - [ ] **Phase 6: Remediation and Governed Release** - Fix what the runs surfaced and ship through governance with the frozen contract intact
@@ -191,7 +191,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Baseline Health Verification | 3/3 | Complete    | 2026-08-17 |
 | 2. Diff Pipeline & Positioning | 5/5 | In Progress|  |
-| 3. Rule Matching & Review Modes | 7/7 | In Progress|  |
+| 3. Rule Matching & Review Modes | 7/7 | Complete    | 2026-08-19 |
 | 4. Scale, Resume & Diff Output | 0/TBD | Not started | - |
 | 5. End-to-End Verification (Audit & Review) | 0/TBD | Not started | - |
 | 6. Remediation and Governed Release | 0/TBD | Not started | - |
