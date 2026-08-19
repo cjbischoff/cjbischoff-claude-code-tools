@@ -52,6 +52,11 @@ All items below shipped before this project started.
 - ✓ CVSS v4.0 migration, architecture/threat-model rebuild, diagram/STE gates — 2026-08-16
 - ✓ Driven invocation (/sec-overlay:audit, run.py, receipts, fence) — 2026-08-16
 - ✓ Baseline health verified: plugin validate, ruff/ty green, prek hooks (VAL-01/02/03) — Validated in Phase 1: Baseline Health Verification, 2026-08-17 (pytest carries a recorded maintainer override for two environmental failures)
+- ✓ Coverage manifest blocks a `complete` seal while any file is pending (REV-02) — Validated in Phase 2: Diff Pipeline & Positioning, 2026-08-18
+- ✓ Positioning confirms or declines every finding location; no guesses (REV-03) — Validated in Phase 2: Diff Pipeline & Positioning, 2026-08-18
+- ✓ `review` verb reviews a diff in `security` and `general` profiles (REV-01) — Validated in Phase 3: Rule Matching & Review Modes, 2026-08-19
+- ✓ Glob rule matching selects per-language rule docs with safe rule-file reads (REV-04) — Validated in Phase 3: Rule Matching & Review Modes, 2026-08-19
+- ✓ Reflection filter retracts only, fails open, never confirms (REV-05) — Validated in Phase 3: Rule Matching & Review Modes, 2026-08-19
 
 ### Active
 
@@ -62,11 +67,6 @@ All items below shipped before this project started.
 - [ ] Report states coverage denominator; gaps logged, never dropped (AUD-05)
 - [ ] Run defects fixed or dispositioned; frozen contract unchanged (REL-01)
 - [ ] Fixes ship through full governance with CodeRabbit review (REL-02)
-- [ ] `review` verb reviews a diff in `security` and `general` profiles (REV-01)
-- [ ] Coverage manifest blocks a `complete` seal while any file is pending (REV-02)
-- [ ] Positioning confirms or declines every finding location; no guesses (REV-03)
-- [ ] Glob rule matching selects per-language rule docs with safe rule-file reads (REV-04)
-- [ ] Reflection filter retracts only, fails open, never confirms (REV-05)
 - [ ] Bundling and concurrency bound sub-agent context on large changesets (REV-06)
 
 ### Out of Scope
@@ -145,4 +145,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-17 after completing Phase 1 (Baseline Health Verification) of milestone v5.0*
+*Last updated: 2026-08-19 after completing Phase 3 (Rule Matching & Review Modes) of milestone v5.0*

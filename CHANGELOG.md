@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Evolve `.planning/PROJECT.md` after Phase 3: move REV-01, REV-04, and REV-05 (Phase 3) plus REV-02 and REV-03 (Phase 2, previously unrecorded) from Active to Validated, and bump the footer to 2026-08-19.
 - Close out Phase 3 as complete and verified: re-verification passes 5/5 must-haves (`.planning/phases/03-rule-matching-review-modes/03-VERIFICATION.md`, status passed, CR-01 and WR-01 confirmed closed, all 8 requirement IDs traced), and `.planning/ROADMAP.md` and `.planning/STATE.md` advance to Phase 4 (Scale, Resume & Diff Output).
 - Regenerate the Phase 3 code-review report after the Plan 7 gap closure (`.planning/phases/03-rule-matching-review-modes/03-REVIEW.md`, status issues_found: 0 critical, 2 warning, 1 info across 39 files at standard depth; prior findings CR-01 and WR-01 confirmed fixed).
 - Complete Phase 3 Plan 7, the gap-closure plan (rewires `run_review`'s reflection loop to actually remove a retracted finding from the ledger, and routes `apply_profile`'s kept-finding disposition through the D-12 receipt-gate ladder instead of hardcoding `unconfirmed`): record its summary in `.planning/phases/03-rule-matching-review-modes/03-07-SUMMARY.md`, advance `.planning/STATE.md` and `.planning/ROADMAP.md` to Phase 3 complete (7 of 7 plans done), and confirm REV-02 and REV-03 Complete in `.planning/REQUIREMENTS.md`.
