@@ -673,3 +673,12 @@ runs over `_dual_run_fixture` plus one added kept thread-safety finding, asserti
 disposition is one of the two allowed values rather than only `UNCONFIRMED_DISPOSITION` — the
 committed-baseline comparison test is untouched, since the baseline never serialized a
 `disposition` field.
+
+Phase 3 plan 07 (Task 3) adds `test_thread_safety_finding_ships_needs_deployment_testing_end_to_end`
+to `test_review_live.py` — the composed proof that Task 1's ledger wiring and Task 2's disposition
+ladder hold together through the real CLI path, not only at unit level. A single recorded
+thread-safety finding runs through `run_review` under the `general` profile with no faked
+`apply_verdict` (the real `reflection.apply_verdict` called with an empty verdict keeps
+everything, so reflection's default behavior IS the "reflection keeps it" case); the ledger's one
+surviving finding carries `"disposition": "needs-deployment-testing"` and
+`"defect_class": "thread-safety"`.

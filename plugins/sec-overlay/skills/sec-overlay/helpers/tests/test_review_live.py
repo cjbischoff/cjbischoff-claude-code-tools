@@ -225,6 +225,20 @@ def test_finding_on_an_unreflected_path_survives(tmp_path, monkeypatch):
     assert any(rf["path"] == "ghost.py" for rf in ledger["review_findings"])
 
 
+def test_thread_safety_finding_ships_needs_deployment_testing_end_to_end(tmp_path, monkeypatch):
+    """Composed proof (03-07): Task 1's ledger wiring + Task 2's disposition ladder together."""
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "unsynchronized shared counter", "thread-safety")])
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="general")
+    assert rc == 0
+
+    ledger = json.loads((tmp_path / "artifacts" / "review_ledger.json").read_text())
+    assert len(ledger["review_findings"]) == 1
+    assert ledger["review_findings"][0]["disposition"] == "needs-deployment-testing"
+    assert ledger["review_findings"][0]["defect_class"] == "thread-safety"
+
+
 def test_file_with_no_recorded_return_is_skipped_and_run_still_exits_zero(tmp_path, monkeypatch):
     monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")

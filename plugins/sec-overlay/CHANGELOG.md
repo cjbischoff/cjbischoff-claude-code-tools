@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.61.3 - 2026-08-19
+
+### Added
+
+- `test_thread_safety_finding_ships_needs_deployment_testing_end_to_end`: composed proof that a
+  thread-safety finding ships `needs-deployment-testing` through the real `run_review` CLI path,
+  not only at the `apply_profile` unit level.
+
 ## 1.61.2 - 2026-08-19
 
 ### Fixed
