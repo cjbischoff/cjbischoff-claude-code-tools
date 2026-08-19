@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Diff-Review Architecture
-current_phase: 4
-current_phase_name: Scale, Resume & Diff Output
-status: planning
+current_phase: 04.1
+current_phase_name: "Close gap: DIFF-04 — review sidecar workspace isolation"
+status: executing
 stopped_at: Completed 03-07-PLAN.md (gap-closure plan, phase 03 complete)
-last_updated: "2026-08-19T14:02:56.972Z"
+last_updated: "2026-08-19T19:31:43.950Z"
 last_activity: 2026-08-19
 last_activity_desc: Phase 03 execution started
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 3
-  total_plans: 15
+  total_plans: 16
   completed_plans: 15
-  percent: 50
+  percent: 43
 ---
 
 # Project State
@@ -29,9 +29,9 @@ governed releases, receipt-backed findings.
 
 ## Current Position
 
-Phase: 4 — Scale, Resume & Diff Output
+Phase: 04.1 — Close gap: DIFF-04 — review sidecar workspace isolation (INSERTED)
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-08-19 — Phase 03 complete, transitioned to Phase 4
 
 Progress: [██████████] 100%
@@ -141,6 +141,10 @@ None yet.
 
 - Phase 5 needs a real target repo for both the audit and review verification runs.
   Pick one before planning Phase 5.
+
+### Roadmap Evolution
+
+- Phase 04.1 inserted after Phase 4: Close gap: DIFF-04 — review sidecar workspace isolation (URGENT)
 
 ## Deferred Items
 
