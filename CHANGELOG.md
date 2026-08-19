@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Validate the Phase 1 Nyquist strategy retroactively (`.planning/phases/01-baseline-health-verification/01-VALIDATION.md`, status validated, nyquist_compliant true, 1 gap found and resolved: tests added for the `stage_validate.py` `_adapt_dict`/`_adapt_optional_dict` non-dict rejection paths).
 - Refresh the milestone audit (`.planning/v5.0-MILESTONE-AUDIT.md`, audited 2026-08-19 at 3/6 phases, status gaps_found: 10/32 requirements satisfied, 7 partial, 1 unsatisfied — the `review` workspace-isolation sidecar blocker at `cli.py:173`; Phase 2's three verification gaps confirmed fixed post-verification, Phase 1 flagged for missing Nyquist validation).
 - Validate the Phase 3 Nyquist strategy (`.planning/phases/03-rule-matching-review-modes/03-VALIDATION.md`, status validated, nyquist_compliant true, 1 gap found and resolved, 191 phase tests green, `ty check` clean; three rows added for the 03-07 gap-closure plan).
 - Record the Phase 3 security threat verification (`.planning/phases/03-rule-matching-review-modes/03-SECURITY.md`, status verified: 27 threats from the seven plan threat models, 27 closed, threats_open 0, 3 accepted risks logged).
