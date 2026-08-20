@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Point `.planning/STATE.md` at Phase 5 (End-to-End Verification) after Phase 4 completion; the automatic advance had targeted Phase 04.1, which completed 2026-08-19.
 - Move REV-06 (bundling and concurrency bound sub-agent context; SCALE-01/02/03, OUT-01/02) from Active to Validated in `.planning/PROJECT.md` after Phase 4 completion.
 - Record the Phase 4 re-verification report (`.planning/phases/04-scale-resume-diff-output/04-VERIFICATION.md`, status passed: 5/5 must-haves; OUT-01, SCALE-02, and SCALE-03 re-confirmed fixed independently) and mark Phase 4 complete (4/4 plans, 2026-08-20) in `.planning/ROADMAP.md` and `.planning/STATE.md`.
 - Regenerate the Phase 4 code-review report after gap closure (`.planning/phases/04-scale-resume-diff-output/04-REVIEW.md`, status issues_found: 0 critical, 2 warning, 1 info across 20 files at standard depth; the three prior critical findings — pre-seal manifest embed, missing `--model` flag, unbounded executor shutdown — are confirmed fixed).

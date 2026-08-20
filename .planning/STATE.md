@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Diff-Review Architecture
-current_phase: 04.1
-current_phase_name: "Close gap: DIFF-04 — review sidecar workspace isolation"
+current_phase: 05
+current_phase_name: "End-to-End Verification (Audit & Review)"
 status: planning
 stopped_at: Completed 04-04-PLAN.md
 last_updated: "2026-08-20T20:59:43.768Z"
 last_activity: 2026-08-20
-last_activity_desc: Phase 04 execution started
+last_activity_desc: Phase 04 complete, verified 5/5; next is Phase 5
 progress:
   total_phases: 7
   completed_phases: 5
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-08-16)
 
 **Core value:** The marketplace never ships an unverified claim — validated plugins,
 governed releases, receipt-backed findings.
-**Current focus:** Phase 04 — scale-resume-diff-output
+**Current focus:** Phase 5 — End-to-End Verification (Audit & Review)
 
 ## Current Position
 
-Phase: 04.1 — Close gap: DIFF-04 — review sidecar workspace isolation
+Phase: 05 — End-to-End Verification (Audit & Review)
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-08-20 — Phase 04 complete, transitioned to Phase 04.1
+Last activity: 2026-08-20 — Phase 04 complete and verified (5/5); Phase 04.1 was already complete (2026-08-19), so position advances to Phase 5
 
 Progress: [██████████] 100%
 
