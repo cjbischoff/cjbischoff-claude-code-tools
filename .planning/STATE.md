@@ -4,17 +4,17 @@ milestone: v5.0
 milestone_name: Hybrid Diff-Review Architecture
 current_phase: 04
 current_phase_name: scale-resume-diff-output
-status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-08-20T17:43:08.881Z"
+status: verifying
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-08-20T18:33:18.861Z"
 last_activity: 2026-08-20
 last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 19
-  completed_plans: 18
-  percent: 57
+  completed_plans: 19
+  percent: 71
 ---
 
 # Project State
@@ -31,10 +31,10 @@ governed releases, receipt-backed findings.
 
 Phase: 04 (scale-resume-diff-output) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-20 — Phase 04 execution started
 
-Progress: [██████████] 95%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -81,6 +81,7 @@ Progress: [██████████] 95%
 | Phase 04.1 P01 | 55min | 3 tasks | 12 files |
 | Phase 04 P01 | 47min | 3 tasks | 12 files |
 | Phase 04 P02 | 55min | 3 tasks | 10 files |
+| Phase 04 P03 | 18min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Rewrote Finding(**overrides) test helpers as explicit-parameter functions after ty check flagged the dict-splat as untypeable against the dataclass constructor
 - [Phase ?]: Chose the locale-sibling grouping rule (uncapped member count) over the impl/test pairing rule (capped at 2) to build a genuine three-file ReviewUnit for the timeout acceptance test
 - [Phase ?]: Reused TimeoutError(TIMEOUT_NOTE) through the existing str(exception)-as-note manifest.fail() path so the timeout branch needs no special-casing versus an ordinary per-file fetch failure
+- [Phase ?]: SCALE-03 Task 1: identity lives on CoverageManifest itself (option-a), not a sibling artifact
+- [Phase ?]: SCALE-03 Task 3: resumed reads sourced from prior manifest, round-tripped through resolve_ref_sha; no changes needed in diffscope.py
+- [Phase ?]: Split test_review_live.py's profile-comparison test into two independent targets (Rule 1 fix for Task 2's identity gate regression)
 
 ### Pending Todos
 
@@ -167,6 +171,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-20T17:43:08.863Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-08-20T18:33:18.842Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None

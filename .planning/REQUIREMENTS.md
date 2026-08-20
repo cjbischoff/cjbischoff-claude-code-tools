@@ -96,7 +96,7 @@ models.py/evidence.py contract, receipt gate as the sole authority on `confirmed
   10m), and `--max-git-procs` (default 16) bound execution; a timed-out bundle marks
   its files `failed` and the run terminal state becomes `partial`
 
-- [ ] **SCALE-03**: Resume validates identity before any agent spawn — an implicit
+- [x] **SCALE-03**: Resume validates identity before any agent spawn — an implicit
   model or profile change is rejected with nothing persisted, and file reads stay
   pinned to sealed commit SHAs
 
@@ -204,7 +204,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REV-03 | Phase 3 | Complete |
 | SCALE-01 | Phase 4 | Complete |
 | SCALE-02 | Phase 4 | Complete |
-| SCALE-03 | Phase 4 | Pending |
+| SCALE-03 | Phase 4 | Complete |
 | OUT-01 | Phase 4 | Complete |
 | OUT-02 | Phase 4 | Complete |
 | AUD-01 | Phase 5 | Pending |
