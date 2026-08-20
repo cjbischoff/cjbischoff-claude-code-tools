@@ -769,3 +769,26 @@ constant: every SARIF result now carries a `partialFingerprints` entry keyed on
 `file|cls|evidence.strip()`, deliberately excluding `message` so a wording tweak does not churn
 result identity, and deliberately not reusing `fingerprint.fingerprint()` (a different identity
 contract).
+
+Phase 4 plan 01 (Task 2) gives `group_bundles` its real grouping semantics, replacing Task 1's
+degenerate one-unit-per-file placeholder: an impl/test pair (`foo.py`/`test_foo.py`,
+`foo.go`/`foo_test.go`, `foo.ts`/`foo.test.ts` or `foo.spec.ts`) and locale/config siblings in the
+same directory (`en.json`/`fr.json`, `config.dev.yaml`/`config.prod.yaml`) now share one
+`ReviewUnit`; every file a rule does not claim still falls back to its own single-member unit, so
+no path is ever dropped. The fallback key strips a `test`/`tests` directory segment before
+comparing, so this repo's own `tests/test_foo.py` convention pairs with a root-level `foo.py`.
+`parse_review_response` gained a keyword-only `bundle_paths: frozenset[str] | None = None`
+parameter widening the Strict Focus Rule from "this exact path" to "any member of the reviewing
+unit" — a kept comment is now attributed to *its own* claimed path (`Finding.file`,
+`_stable_finding_id`), not the outer `path`, since a multi-file unit's comment may name any
+member. `bundle_paths=None` (the default) keeps the single-file behavior byte-identical to before
+this task. `recorded_return_source` gained a matching `bundle_paths_by_path: dict[str,
+frozenset[str]] | None = None` parameter, looked up per file and passed through unchanged.
+`cli.run_review` now builds that map from `group_bundles(selection.reviewable)`'s output and
+passes it to the default `recorded_return_source` call — the per-file dispatch loop shape is
+unchanged; only the membership each file's parse call sees is widened. Known heuristic scope
+limit: the `test`/`tests` segment strip only matches a literal directory component, so a
+non-conventional parallel source/test tree (e.g. `sec_overlay/bundle.py` vs
+`tests/test_bundle.py`, this very codebase's own layout) does not pair under this rule — both
+still ship as correct, safe single-member units via the fallback, so no path is ever mis-grouped
+or dropped, only left unpaired.

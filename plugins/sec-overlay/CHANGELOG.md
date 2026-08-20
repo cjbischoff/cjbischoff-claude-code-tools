@@ -2,6 +2,24 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.63.0 - 2026-08-20
+
+### Added
+
+- Give `sec_overlay/bundle.py`'s `group_bundles` real grouping semantics:
+  impl/test pairs (Python, Go, JS/TS conventions) and locale/config siblings
+  in the same directory now share one `ReviewUnit`; every other file still
+  falls back to its own single-member unit.
+- Widen `review_agent.parse_review_response`'s focus rule with a
+  keyword-only `bundle_paths` parameter — a `code_comment` naming any member
+  of the reviewing unit becomes a finding attributed to that entry's own
+  path, instead of only the single file under review. `None` (the default)
+  keeps the prior single-file behavior unchanged.
+- Thread each `ReviewUnit`'s membership from `cli.run_review` through
+  `review_agent.recorded_return_source`'s new `bundle_paths_by_path`
+  parameter, so real bundling is live end to end without changing the
+  per-file dispatch loop shape.
+
 ## 1.62.0 - 2026-08-20
 
 ### Added

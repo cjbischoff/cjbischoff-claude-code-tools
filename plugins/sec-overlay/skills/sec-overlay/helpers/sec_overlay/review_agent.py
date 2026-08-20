@@ -114,27 +114,40 @@ def _stable_finding_id(rule_id_prefix: str, path: str, line: int, cls: str) -> s
 
 
 def parse_review_response(
-    text: str, *, path: str, rule_id_prefix: str
+    text: str,
+    *,
+    path: str,
+    rule_id_prefix: str,
+    bundle_paths: frozenset[str] | None = None,
 ) -> tuple[list[Finding], int]:
     """Parse a recorded review-file response into findings for `path`.
 
     Accepts only `code_comment` and `task_done` entries. A `code_comment`
-    naming a path other than `path` is discarded and counted rather than
-    converted, so context gathered from another file can never become a
+    naming a path outside the reviewing unit is discarded and counted rather
+    than converted, so context gathered from another file can never become a
     finding against this one (OCR's Strict Focus Rule, enforced mechanically
-    here rather than only asked for in the prompt).
+    here rather than only asked for in the prompt). When `bundle_paths` is
+    `None`, membership is exactly `path` itself (single-file behavior,
+    unchanged from before SCALE-01 bundling). When supplied (a multi-file
+    `ReviewUnit`'s members), a comment naming any member becomes a finding
+    attributed to *that entry's own path*, not the outer `path`.
 
     Args:
         text: The raw recorded response text (a JSON array of tool calls).
-        path: The file under review; only `code_comment` entries naming this
-            exact path become findings.
+        path: The file under review, used as the membership set when
+            `bundle_paths` is `None`.
         rule_id_prefix: Prefix combined with each comment's defect class to
             form `Finding.rule_id`, and with the path/line/class to derive a
             deterministic `Finding.id`.
+        bundle_paths: The reviewing `ReviewUnit`'s member paths. A
+            `code_comment` naming any member is kept; one naming any other
+            path is discarded and counted. `None` means membership is just
+            `{path}`.
 
     Returns:
-        `(findings, discarded)` — findings for `path`, and the count of
-        `code_comment` entries discarded for naming a different path.
+        `(findings, discarded)` — findings for members of the reviewing
+        unit, and the count of `code_comment` entries discarded for naming a
+        path outside it.
 
     Raises:
         ReviewResponseError: `text` is not valid JSON, is not a JSON array,
@@ -149,6 +162,8 @@ def parse_review_response(
     if not isinstance(parsed, list):
         raise ReviewResponseError("review response must be a JSON array of tool calls")
 
+    members = bundle_paths if bundle_paths is not None else frozenset({path})
+
     findings: list[Finding] = []
     discarded = 0
     for entry in parsed:
@@ -162,19 +177,20 @@ def parse_review_response(
         if line is None or not message:
             raise ReviewResponseError(f"code_comment entry missing line or message: {entry!r}")
 
-        if entry.get("path") != path:
+        entry_path = entry.get("path")
+        if entry_path not in members:
             discarded += 1
             continue
 
         cls = entry.get("defect_class") or "unknown"
         findings.append(
             Finding(
-                id=_stable_finding_id(rule_id_prefix, path, line, cls),
+                id=_stable_finding_id(rule_id_prefix, entry_path, line, cls),
                 rule_id=f"{rule_id_prefix}.{cls}",
                 cls=cls,
                 status=FindingStatus.RAW,
                 severity=Severity.MEDIUM,
-                file=path,
+                file=entry_path,
                 line=line,
                 message=message,
                 evidence_sources=[REVIEW_AGENT_CLAIM],
@@ -229,7 +245,13 @@ class ReviewSourceSkip:
     error: str
 
 
-def recorded_return_source(ws: Workspace, *, base: str, head: str):
+def recorded_return_source(
+    ws: Workspace,
+    *,
+    base: str,
+    head: str,
+    bundle_paths_by_path: dict[str, frozenset[str]] | None = None,
+):
     """Build a per-file source reading recorded `review-file` returns from disk.
 
     Each return is recorded as a JSON envelope (`{"base", "head", "response"}`)
@@ -241,6 +263,10 @@ def recorded_return_source(ws: Workspace, *, base: str, head: str):
         ws: Workspace `runs/<label>.txt` returns are read from.
         base: This run's resolved base SHA.
         head: This run's resolved head SHA.
+        bundle_paths_by_path: Maps each reviewable path to its `ReviewUnit`'s
+            member paths (SCALE-01). Looked up per call and passed through to
+            `parse_review_response` as `bundle_paths`. `None`, or a path
+            absent from the map, keeps the single-file membership behavior.
 
     Returns:
         A callable taking one file path and returning its findings. Raises
@@ -260,8 +286,12 @@ def recorded_return_source(ws: Workspace, *, base: str, head: str):
             raise ValueError(f"recorded return for {path} is not valid JSON: {exc}") from exc
         if envelope.get("base") != base or envelope.get("head") != head:
             raise ValueError(f"recorded return for {path} was captured for a different base/head")
+        bundle_paths = (bundle_paths_by_path or {}).get(path)
         findings, _discarded = parse_review_response(
-            envelope.get("response", ""), path=path, rule_id_prefix="review"
+            envelope.get("response", ""),
+            path=path,
+            rule_id_prefix="review",
+            bundle_paths=bundle_paths,
         )
         return findings
 

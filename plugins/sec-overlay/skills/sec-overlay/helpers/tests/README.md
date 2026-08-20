@@ -713,3 +713,17 @@ then asserts `artifacts/review_comments.json` holds exactly one comment with the
 only by `run_scan`, so `report.sarif` written by `run_review` always has empty `results`
 regardless of this plan's changes — and asserts the result carries a 16-hex-char
 `partialFingerprints` entry.
+
+`test_bundle.py` (new, Phase 4 plan 01 Task 2, 14 tests) covers `group_bundles`'s totality
+(every input path appears in exactly one returned unit), input-order preservation, deterministic
+`unit_id` across repeat calls on the same member set, a different member set producing a
+different `unit_id`, the empty-input and single-file cases, `ReviewUnit.__post_init__` rejecting
+an empty `files` tuple, and the real pairing rules: Python/Go/TS impl-test pairs, locale siblings
+and config-family siblings in the same directory (plus a locale-siblings-across-directories case
+that must NOT pair), and unrelated files each landing in their own unit.
+
+`test_review_agent.py` gained three tests (Phase 4 plan 01 Task 2) covering the widened
+`bundle_paths` parameter: a `code_comment` naming any member of a supplied `bundle_paths` set is
+kept and its `Finding.file` is that entry's own path (not the outer `path` argument); a comment
+naming a path outside `bundle_paths` is discarded and counted, exactly like the single-file rule;
+and `bundle_paths=None` reproduces the pre-widening single-path behavior unchanged.

@@ -151,3 +151,34 @@ def test_parse_review_response_is_idempotent_across_two_parses():
     second, _ = parse_review_response(text, path="app.py", rule_id_prefix="review")
     assert first == second
     assert first[0].id == second[0].id
+
+
+# --- parse_review_response with bundle_paths (SCALE-01 widened focus rule) ------
+
+
+def test_parse_review_response_keeps_comment_for_any_bundle_member():
+    text = json.dumps([_code_comment(path="sibling.py")])
+    findings, discarded = parse_review_response(
+        text, path="app.py", rule_id_prefix="review", bundle_paths=frozenset({"app.py", "sibling.py"})
+    )
+    assert discarded == 0
+    assert len(findings) == 1
+    assert findings[0].file == "sibling.py"
+
+
+def test_parse_review_response_discards_comment_outside_bundle_membership():
+    text = json.dumps([_code_comment(path="stranger.py")])
+    findings, discarded = parse_review_response(
+        text, path="app.py", rule_id_prefix="review", bundle_paths=frozenset({"app.py", "sibling.py"})
+    )
+    assert findings == []
+    assert discarded == 1
+
+
+def test_parse_review_response_none_bundle_paths_keeps_single_path_behavior():
+    text = json.dumps([_code_comment(path="app.py")])
+    findings, discarded = parse_review_response(
+        text, path="app.py", rule_id_prefix="review", bundle_paths=None
+    )
+    assert discarded == 0
+    assert findings[0].file == "app.py"

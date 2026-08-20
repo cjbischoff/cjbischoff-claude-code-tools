@@ -185,9 +185,6 @@ def run_review(
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    if review_source is None:
-        review_source = recorded_return_source(ws, base=base_sha, head=head_sha)
-
     try:
         resolution = build_resolution(rule_path, excludes or [], Path(root))
     except RuleSafetyError as exc:
@@ -215,8 +212,20 @@ def run_review(
         ]
         selection = replace(selection, reviewable=kept)
 
-    # Bundle-membership threading into recorded_return_source lands in a later plan.
-    group_bundles(selection.reviewable)
+    # SCALE-01: group reviewable files into units so an impl/test pair or a
+    # locale/config family shares one review pass's membership. No new
+    # dispatch shape here — the per-file loop below is unchanged; only the
+    # focus-rule membership each file's parse call sees is widened.
+    bundle_paths_by_path: dict[str, frozenset[str]] = {}
+    for unit in group_bundles(selection.reviewable):
+        members = frozenset(unit.files)
+        for member_path in unit.files:
+            bundle_paths_by_path[member_path] = members
+
+    if review_source is None:
+        review_source = recorded_return_source(
+            ws, base=base_sha, head=head_sha, bundle_paths_by_path=bundle_paths_by_path
+        )
 
     manifest = CoverageManifest(base_sha, head_sha, ws.artifacts / MANIFEST_FILENAME)
     hunks_by_path: dict[str, list] = {}
