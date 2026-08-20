@@ -150,7 +150,7 @@ Plans:
   4. Diff-review mode emits a diff-anchored comment payload (`path, line, side, existing_code, content`) per finding alongside the existing SARIF, markdown, and per-finding files, with the coverage manifest included
   5. SARIF fingerprints key on `Path|Category|ExistingCode`, excluding message text
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans executed
 
 Plans:
 **Wave 1**
@@ -167,7 +167,7 @@ Plans:
 
 **Wave 4** *(gap closure — blocked on Wave 3 completion)*
 
-- [ ] 04-04-PLAN.md — Seal before embedding the manifest, give `--model` a CLI surface, and bound wall-clock time on a hung fetch (OUT-01, SCALE-02, SCALE-03)
+- [x] 04-04-PLAN.md — Seal before embedding the manifest, give `--model` a CLI surface, and bound wall-clock time on a hung fetch (OUT-01, SCALE-02, SCALE-03)
 
 ### Phase 04.1: Close gap: DIFF-04 — review sidecar workspace isolation (INSERTED)
 
@@ -220,6 +220,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Baseline Health Verification | 3/3 | Complete    | 2026-08-17 |
 | 2. Diff Pipeline & Positioning | 5/5 | Complete    | 2026-08-19 |
 | 3. Rule Matching & Review Modes | 7/7 | Complete    | 2026-08-19 |
-| 4. Scale, Resume & Diff Output | 3/3 | In Progress|  |
+| 4. Scale, Resume & Diff Output | 4/4 | In Progress|  |
 | 5. End-to-End Verification (Audit & Review) | 0/TBD | Not started | - |
 | 6. Remediation and Governed Release | 0/TBD | Not started | - |

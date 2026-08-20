@@ -4,17 +4,17 @@ milestone: v5.0
 milestone_name: Hybrid Diff-Review Architecture
 current_phase: 04
 current_phase_name: scale-resume-diff-output
-status: executing
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-08-20T19:27:42.912Z"
+status: verifying
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-08-20T20:30:32.822Z"
 last_activity: 2026-08-20
 last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 20
-  completed_plans: 19
-  percent: 57
+  completed_plans: 20
+  percent: 71
 ---
 
 # Project State
@@ -31,7 +31,7 @@ governed releases, receipt-backed findings.
 
 Phase: 04 (scale-resume-diff-output) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-20 — Phase 04 execution started
 
 Progress: [██████████] 100%
@@ -82,6 +82,7 @@ Progress: [██████████] 100%
 | Phase 04 P01 | 47min | 3 tasks | 12 files |
 | Phase 04 P02 | 55min | 3 tasks | 10 files |
 | Phase 04 P03 | 18min | 2 tasks | 8 files |
+| Phase 04 P04 | 26min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -142,6 +143,9 @@ Recent decisions affecting current work:
 - [Phase ?]: SCALE-03 Task 1: identity lives on CoverageManifest itself (option-a), not a sibling artifact
 - [Phase ?]: SCALE-03 Task 3: resumed reads sourced from prior manifest, round-tripped through resolve_ref_sha; no changes needed in diffscope.py
 - [Phase ?]: Split test_review_live.py's profile-comparison test into two independent targets (Rule 1 fix for Task 2's identity gate regression)
+- [Phase ?]: Zero-reviewable early-return path keeps writing comments from an unsealed manifest.to_dict() rather than sealing an empty manifest, since CoverageManifest.seal() raises by design on an empty manifest (T-02-05).
+- [Phase ?]: Production runner default becomes partial(subprocess.run, timeout=timeout) at the single r = runner or ... assignment, so every git call in run_review inherits the kill deadline through the shared r variable with no other call-site change.
+- [Phase ?]: Per-call subprocess timeout equals the declared --timeout (not a fraction of it) so the future-level timeout always fires first and TIMEOUT_NOTE bookkeeping stays deterministic.
 
 ### Pending Todos
 
@@ -171,6 +175,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-20T18:33:18.842Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-08-20T20:30:32.799Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
