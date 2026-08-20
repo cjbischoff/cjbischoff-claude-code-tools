@@ -37,7 +37,12 @@ from sec_overlay.review_agent import (
     write_review_plan,
 )
 from sec_overlay.review_comments import comment_from_finding, write_review_comments
-from sec_overlay.review_coverage import MANIFEST_FILENAME, CoverageManifest
+from sec_overlay.review_coverage import (
+    MANIFEST_FILENAME,
+    CoverageManifest,
+    ResumeIdentityError,
+    check_resume_identity,
+)
 from sec_overlay.review_findings import GatedFinding, apply_profile, classify
 from sec_overlay.rule_glob import RuleSafetyError, build_resolution, glob_match, resolve_rule_doc
 from sec_overlay.sarif import to_sarif
@@ -222,6 +227,7 @@ def run_review(
     concurrency: int = DEFAULT_CONCURRENCY,
     timeout: int = DEFAULT_TIMEOUT_SECONDS,
     max_git_procs: int = DEFAULT_MAX_GIT_PROCS,
+    model: str | None = None,
 ) -> int:
     """Run one review pass end to end: resolve refs, select files, position, seal.
 
@@ -275,16 +281,21 @@ def run_review(
             worker-future timeout for that unit's git fetch work (SCALE-02).
         max_git_procs: Bound on concurrent git subprocesses (``--max-git-procs``),
             sizing the worker pools around the two per-file git loops (SCALE-02).
+        model: This run's model identity (SCALE-03); pinned into the coverage
+            manifest on first write. Resuming a workspace whose manifest already
+            recorded a different ``model`` or ``profile`` is rejected before any
+            write — a resumed run must not silently switch identity mid-review.
 
     Returns:
         0 when the coverage manifest seals ``complete`` (including a diff with no
         reviewable files) or ``prepare=True`` completed, 2 on an invalid ``base``/
-        ``head`` ref (D-06), an out-of-range bound flag, or a ``RuleSafetyError``
-        from the RULE-03 rule-file safety gate (no fallback to another layer), 3
-        when the seal is ``partial`` (D-15) — one or more files could not be
-        reviewed, including every member of a unit that timed out. A skipped
-        review source never turns a complete pass into a partial one — a source
-        skip is a reviewer failure, not a coverage failure.
+        ``head`` ref (D-06), an out-of-range bound flag, a ``RuleSafetyError``
+        from the RULE-03 rule-file safety gate (no fallback to another layer), or
+        a ``ResumeIdentityError`` (SCALE-03), 3 when the seal is ``partial``
+        (D-15) — one or more files could not be reviewed, including every member
+        of a unit that timed out. A skipped review source never turns a complete
+        pass into a partial one — a source skip is a reviewer failure, not a
+        coverage failure.
     """
     try:
         _bounded_int(concurrency, flag="--concurrency", ceiling=MAX_WORKERS)
@@ -301,6 +312,15 @@ def run_review(
     memory = RepoMemory.for_target(root, runner=r)
     memory.ensure(target=root)
     ws = memory.workspace
+
+    manifest_path = ws.artifacts / MANIFEST_FILENAME
+    if manifest_path.exists():
+        prior_manifest = CoverageManifest.load(manifest_path)
+        try:
+            check_resume_identity(prior_manifest, model=model, profile=profile)
+        except ResumeIdentityError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
 
     try:
         base_sha = resolve_ref_sha(base, runner=r)
@@ -354,7 +374,7 @@ def run_review(
             ws, base=base_sha, head=head_sha, bundle_paths_by_path=bundle_paths_by_path
         )
 
-    manifest = CoverageManifest(base_sha, head_sha, ws.artifacts / MANIFEST_FILENAME)
+    manifest = CoverageManifest(base_sha, head_sha, manifest_path, model=model, profile=profile)
     hunks_by_path: dict[str, list] = {}
     diff_text_by_path: dict[str, str] = {}
     file_text_by_path: dict[str, str] = {}

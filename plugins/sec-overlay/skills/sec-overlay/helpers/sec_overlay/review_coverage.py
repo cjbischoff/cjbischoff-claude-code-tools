@@ -14,7 +14,7 @@ from pathlib import Path
 from sec_overlay.workspace import _atomic_write
 
 MANIFEST_FILENAME = "coverage_manifest.json"
-MANIFEST_VERSION = 1
+MANIFEST_VERSION = 2
 STATES: frozenset[str] = frozenset({"pending", "in_review", "done", "failed"})
 SEALS: frozenset[str] = frozenset({"complete", "partial"})
 
@@ -30,6 +30,10 @@ _ALLOWED_TRANSITIONS: dict[str, frozenset[str]] = {
 
 class CoverageTransitionError(RuntimeError):
     """Raised for an unknown path or an illegal state transition."""
+
+
+class ResumeIdentityError(RuntimeError):
+    """Raised when a resumed run's model or profile differs from the prior run's."""
 
 
 @dataclass
@@ -49,18 +53,30 @@ class CoverageManifest:
     in the same directory, then ``os.replace``).
     """
 
-    def __init__(self, base_sha: str, head_sha: str, path: Path) -> None:
+    def __init__(
+        self,
+        base_sha: str,
+        head_sha: str,
+        path: Path,
+        *,
+        model: str | None = None,
+        profile: str | None = None,
+    ) -> None:
         """Start a manifest for one run.
 
         Args:
             base_sha: Resolved base SHA for this run.
             head_sha: Resolved head SHA for this run.
             path: File the manifest persists to (``ws.artifacts / MANIFEST_FILENAME``).
+            model: This run's model identity, or ``None`` when not supplied.
+            profile: This run's review profile, or ``None`` when not supplied.
         """
         self.version = MANIFEST_VERSION
         self.base_sha = base_sha
         self.head_sha = head_sha
         self.path = path
+        self.model = model
+        self.profile = profile
         self._seal: str | None = None
         self.files: list[FileCoverage] = []
 
@@ -142,6 +158,8 @@ class CoverageManifest:
             "version": self.version,
             "base_sha": self.base_sha,
             "head_sha": self.head_sha,
+            "model": self.model,
+            "profile": self.profile,
             "seal": self._seal,
             "files": [asdict(entry) for entry in self.files],
         }
@@ -160,7 +178,13 @@ class CoverageManifest:
             The reconstructed :class:`CoverageManifest`.
         """
         data = json.loads(path.read_text())
-        manifest = cls(base_sha=data["base_sha"], head_sha=data["head_sha"], path=path)
+        manifest = cls(
+            base_sha=data["base_sha"],
+            head_sha=data["head_sha"],
+            path=path,
+            model=data.get("model"),
+            profile=data.get("profile"),
+        )
         manifest.version = data.get("version", 1)
         manifest._seal = data.get("seal")
         manifest.files = [
@@ -168,3 +192,29 @@ class CoverageManifest:
             for entry in data.get("files", [])
         ]
         return manifest
+
+
+def check_resume_identity(prior: CoverageManifest, *, model: str | None, profile: str) -> None:
+    """Raise before any write if this run's model/profile differs from ``prior``'s.
+
+    A prior manifest with no recorded identity (``None``) permits any current value — a
+    version-1 manifest, or a version-2 manifest written before an identity was ever
+    supplied, starts being pinned from this run forward, never enforced retroactively.
+
+    Args:
+        prior: The manifest loaded from the workspace's existing artifact.
+        model: This run's model identity (``None`` if not supplied).
+        profile: This run's review profile.
+
+    Raises:
+        ResumeIdentityError: ``prior.model`` or ``prior.profile`` is set and differs from
+            the corresponding argument.
+    """
+    if prior.model is not None and prior.model != model:
+        raise ResumeIdentityError(
+            f"resume rejected: model changed from {prior.model!r} to {model!r}"
+        )
+    if prior.profile is not None and prior.profile != profile:
+        raise ResumeIdentityError(
+            f"resume rejected: profile changed from {prior.profile!r} to {profile!r}"
+        )

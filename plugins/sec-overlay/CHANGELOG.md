@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.67.0 - 2026-08-20
+
+### Added
+
+- Add a resume-identity gate (SCALE-03): `CoverageManifest`'s `MANIFEST_VERSION`
+  is now 2 and carries `model`/`profile`. `review` rejects (exit 2) a resumed
+  run whose `model` or `profile` differs from the prior manifest's, before
+  resolving refs or writing anything — the on-disk workspace stays
+  byte-identical. A prior manifest with no recorded identity permits any
+  current value.
+
 ## 1.66.1 - 2026-08-20
 
 ### Added

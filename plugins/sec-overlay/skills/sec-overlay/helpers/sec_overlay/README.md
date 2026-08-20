@@ -832,3 +832,16 @@ per-file error still fails only that file. `run_review` opens one `ThreadPoolExe
 the accumulated `fetch_by_path` dict, performing every `manifest.add`/`start`/`finish`/`fail`
 transition exactly as before — parallel fetch, serial manifest mutation, and a `seal()` of
 `"partial"` (rc 3) when any unit times out, unchanged for every other path.
+
+Phase 4 plan 03 (Task 2, SCALE-03) adds a resume-identity gate. `review_coverage.py`'s
+`MANIFEST_VERSION` is now 2: `CoverageManifest` gains keyword-only `model`/`profile` fields,
+round-tripped through `to_dict`/`load` (a version-1 manifest, or a version-2 one written before
+either was ever supplied, loads both as `None`). A new `check_resume_identity(prior, *, model,
+profile)` raises `ResumeIdentityError` — naming both the prior and current value — when the
+current run's `model` or `profile` differs from `prior`'s recorded value; a `None` prior value
+permits any current one, so identity pinning starts from the run that first supplies it, never
+enforced retroactively. `cli.py`'s `run_review` gained a keyword-only `model` parameter and now
+loads any existing `coverage_manifest.json` and runs this check immediately after resolving the
+workspace — before resolving `base`/`head` refs or constructing this run's own
+`CoverageManifest` — so a resumed run that switched identity is rejected (exit 2) with the
+on-disk workspace left byte-identical and no new file written.
