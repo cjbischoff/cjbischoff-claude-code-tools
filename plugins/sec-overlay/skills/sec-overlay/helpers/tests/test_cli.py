@@ -407,3 +407,82 @@ def test_review_default_bounds_are_8_600_and_16(tmp_path, monkeypatch):
     rc = cli.main(["review", "--base", "main", "--head", "develop", "--root", str(target)])
     assert rc == 0
     assert captured == {"concurrency": 8, "timeout": 600, "max_git_procs": 16}
+
+
+# --- run_review: bounded ThreadPoolExecutor for per-file git fetch loops (SCALE-02) -------
+
+
+def test_review_fetches_files_concurrently_bounded_by_max_git_procs(tmp_path):
+    """A serial per-file fetch loop takes ``len(paths) * SLEEP``; a pool sized to
+    fit every file collapses that to roughly one ``SLEEP`` regardless of file count."""
+    import time
+
+    from sec_overlay import cli
+
+    paths = ["a.py", "b.py", "c.py"]
+    sleep_seconds = 0.05
+
+    def runner(cmd, capture_output, text, check):
+        if cmd[1] == "rev-parse":
+            return _FakeResult(f"sha-{cmd[-1]}\n")
+        if cmd[1] == "diff" and "--name-status" in cmd:
+            return _FakeResult("".join(f"M\t{p}\n" for p in paths))
+        if cmd[1] == "diff" and ("--unified=3" in cmd or "--unified=0" in cmd):
+            time.sleep(sleep_seconds)
+            path = cmd[-1]
+            return _FakeResult(f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n-old\n+new\n")
+        return _FakeResult("")
+
+    start = time.monotonic()
+    rc = cli.run_review(
+        "main", "develop", str(tmp_path), runner=runner, max_git_procs=len(paths)
+    )
+    elapsed = time.monotonic() - start
+    assert rc == 0
+    assert elapsed < len(paths) * sleep_seconds
+
+
+def test_review_manifest_entries_preserve_file_order_despite_uneven_fetch_delay(tmp_path):
+    """Manifest mutation order must stay file order, not fetch-completion order —
+    the consuming thread applies ``manifest.add``/``start``/... in ``selection.reviewable``
+    order regardless of which worker's git call returns first."""
+    import json
+    import time
+
+    from sec_overlay import cli
+    from sec_overlay.repo_memory import RepoMemory
+
+    paths = ["a.py", "b.py", "c.py"]
+    # a.py's fetch is the slowest, so a completion-ordered consumer would place it last.
+    delays = {"a.py": 0.06, "b.py": 0.0, "c.py": 0.0}
+
+    def runner(cmd, capture_output, text, check):
+        if cmd[1] == "rev-parse":
+            return _FakeResult(f"sha-{cmd[-1]}\n")
+        if cmd[1] == "diff" and "--name-status" in cmd:
+            return _FakeResult("".join(f"M\t{p}\n" for p in paths))
+        if cmd[1] == "diff" and "--unified=3" in cmd:
+            path = cmd[-1]
+            time.sleep(delays.get(path, 0.0))
+            return _FakeResult(f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n-old\n+new\n")
+        return _FakeResult("")
+
+    rc = cli.run_review("main", "develop", str(tmp_path), runner=runner, max_git_procs=3)
+    assert rc == 0
+
+    ws = RepoMemory.for_target(str(tmp_path), runner=runner).workspace
+    manifest_json = json.loads((ws.artifacts / "coverage_manifest.json").read_text())
+    assert [f["path"] for f in manifest_json["files"]] == paths
+
+
+def test_review_zero_reviewable_files_needs_no_worker_pool(tmp_path, monkeypatch):
+    """An empty diff must not construct a ``ThreadPoolExecutor`` at all."""
+    from sec_overlay import cli
+
+    def _forbidden(*args, **kwargs):
+        raise AssertionError("ThreadPoolExecutor must not be constructed for zero files")
+
+    monkeypatch.setattr(cli, "ThreadPoolExecutor", _forbidden)
+    runner = _make_review_runner([])
+    rc = cli.run_review("main", "develop", str(tmp_path), runner=runner)
+    assert rc == 0

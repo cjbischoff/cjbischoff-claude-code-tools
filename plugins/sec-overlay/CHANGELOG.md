@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.65.0 - 2026-08-20
+
+### Added
+
+- Wrap `run_review`'s two serial per-file git-fetch loops in a bounded
+  `ThreadPoolExecutor` (`_bounded_map`, sized to `--max-git-procs`), consumed
+  via order-preserving `.map()` so coverage-manifest transitions still apply
+  in file order regardless of fetch-completion order. No pool is built for
+  zero reviewable files.
+
 ## 1.64.0 - 2026-08-20
 
 ### Added

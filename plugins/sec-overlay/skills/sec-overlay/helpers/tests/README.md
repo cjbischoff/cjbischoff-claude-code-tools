@@ -748,3 +748,10 @@ ceiling; each is rejected at 0, -1, and one past its ceiling with a non-zero exi
 message naming the flag and its `1 and <ceiling>` range; a non-integer value raises `SystemExit`
 via argparse before `run_review` ever runs; and the three defaults (8, 600, 16) are asserted by
 spying on `run_review`'s kwargs when no flag is passed.
+
+`test_cli.py` gained four more tests (Phase 4 plan 02 Task 2, SCALE-02) for the bounded
+`ThreadPoolExecutor` git-fetch loops: a wall-clock test asserting `N` files' fetch elapses in
+roughly one sleep interval, not `N` sleep intervals, when `--max-git-procs` fits every file;
+a manifest-order test with an uneven per-file delay asserting `coverage_manifest.json`'s file
+order stays input order regardless of which file's fetch finishes first; a monkeypatch on
+`cli.ThreadPoolExecutor` asserting zero reviewable files never constructs a pool.

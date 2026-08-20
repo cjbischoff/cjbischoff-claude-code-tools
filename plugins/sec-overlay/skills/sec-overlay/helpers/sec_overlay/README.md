@@ -806,3 +806,17 @@ and `main()` maps the `ValueError` to exit 2 exactly like an unknown profile or 
 `--concurrency` has no enforcement point in `cli.py` itself — the Python core never dispatches a
 review agent — so it is validated here and its bound is otherwise enforced by `SKILL.md`'s
 dispatch loop.
+
+Task 2 (SCALE-02) wrapped `run_review`'s two serial per-file git loops in a bounded
+`ThreadPoolExecutor` via a new `_bounded_map(items, workers, fn)` helper: sizes the pool to
+`min(workers, len(items))` (never `max(1, min(...))`, never wider than the item count), consumes
+through `.map()` — never `as_completed()` — so results land in submission order regardless of
+completion order, and builds no pool at all for an empty `items`. The diff-line-count
+comprehension now calls `_bounded_map(records, max_git_procs, ...)` then zips the result back
+onto `record.path`. The manifest loop's three git calls (`file_diff_text`, `parse_hunks`,
+`file_text_at_ref`) moved into a new `_fetch_file_review_inputs(path, base, head, runner)`
+worker function that catches its own exception and returns it instead of raising; `run_review`
+runs that through `_bounded_map` first, then iterates `selection.reviewable` in original order
+zipped with the fetch results, performing every `manifest.add`/`start`/`finish`/`fail`
+transition on the consuming (main) thread exactly as before — parallel fetch, serial manifest
+mutation, byte-identical behavior to the pre-parallel loop.

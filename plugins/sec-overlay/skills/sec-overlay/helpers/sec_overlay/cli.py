@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
 
@@ -76,6 +77,55 @@ def _bounded_int(value: int, *, flag: str, ceiling: int) -> int:
     if value < 1 or value > ceiling:
         raise ValueError(f"{flag} must be between 1 and {ceiling} (got {value})")
     return value
+
+
+def _bounded_map(items, workers: int, fn):
+    """Apply ``fn`` to every item, order-preserved, via a pool sized to fit ``items``.
+
+    ``.map()`` yields results in submission order regardless of which worker
+    finishes first, so callers can consume this list positionally and get
+    file-order results, not completion-order results (SCALE-02). Never builds
+    a pool for an empty ``items`` — nothing to dispatch.
+
+    Args:
+        items: The sequence to map ``fn`` over.
+        workers: The operator's ``--max-git-procs`` bound; only ever narrowed
+            down to ``len(items)``, never widened past it.
+        fn: A one-argument callable applied to each item.
+
+    Returns:
+        A list of ``fn(item)`` results, one per item, in ``items`` order.
+    """
+    if not items:
+        return []
+    with ThreadPoolExecutor(max_workers=min(workers, len(items))) as ex:
+        return list(ex.map(fn, items))
+
+
+def _fetch_file_review_inputs(path: str, base: str, head: str, runner):
+    """Fetch one file's diff text, parsed hunks, and head-ref text on a worker thread.
+
+    Catches its own exception so one file's failure never cancels a sibling's
+    fetch; the caller applies the coverage-manifest transition on the
+    consuming thread, in file order, not fetch-completion order (SCALE-02).
+
+    Args:
+        path: Repo-relative file path.
+        base: Base revision, already resolved to a SHA.
+        head: Head revision, already resolved to a SHA.
+        runner: Injectable subprocess runner (for testing).
+
+    Returns:
+        A ``(diff_text, hunks, file_text)`` tuple on success, or the caught
+        exception on failure — never re-raised here.
+    """
+    try:
+        diff_text = file_diff_text(path, base, head, runner=runner)
+        hunks = parse_hunks(diff_text)
+        file_text = file_text_at_ref(path, head, runner=runner)
+        return diff_text, hunks, file_text
+    except Exception as exc:  # noqa: BLE001 - reported to the caller, not raised here
+        return exc
 
 
 def write_scan_scope(ws, target, *, sha: str = "", runner=None):
@@ -244,10 +294,12 @@ def run_review(
         return 2
 
     records = changed_file_records(base_sha, head_sha, runner=r)
-    diff_line_counts = {
-        record.path: file_diff_line_count(record.path, base_sha, head_sha, runner=r)
-        for record in records
-    }
+    line_counts = _bounded_map(
+        records,
+        max_git_procs,
+        lambda record: file_diff_line_count(record.path, base_sha, head_sha, runner=r),
+    )
+    diff_line_counts = dict(zip((record.path for record in records), line_counts))
     excluded_binary = binary_paths(base_sha, head_sha, runner=r)
     selection = partition(records, diff_line_counts=diff_line_counts, binary_paths=excluded_binary)
 
@@ -284,18 +336,22 @@ def run_review(
     diff_text_by_path: dict[str, str] = {}
     file_text_by_path: dict[str, str] = {}
     rule_docs: list[dict] = []
-    for record in selection.reviewable:
+    fetch_results = _bounded_map(
+        selection.reviewable,
+        max_git_procs,
+        lambda record: _fetch_file_review_inputs(record.path, base_sha, head_sha, r),
+    )
+    for record, fetched in zip(selection.reviewable, fetch_results):
         manifest.add(record.path)
         manifest.start(record.path)
-        try:
-            diff_text_by_path[record.path] = file_diff_text(
-                record.path, base_sha, head_sha, runner=r
-            )
-            hunks_by_path[record.path] = parse_hunks(diff_text_by_path[record.path])
-            file_text_by_path[record.path] = file_text_at_ref(record.path, head_sha, runner=r)
-        except Exception as exc:  # noqa: BLE001 - any per-file failure becomes a coverage gap, not a crash
-            manifest.fail(record.path, note=str(exc))
+        if isinstance(fetched, Exception):
+            # Any per-file fetch failure becomes a coverage gap, not a crash.
+            manifest.fail(record.path, note=str(fetched))
             continue
+        diff_text, hunks, file_text = fetched
+        diff_text_by_path[record.path] = diff_text
+        hunks_by_path[record.path] = hunks
+        file_text_by_path[record.path] = file_text
         manifest.finish(record.path)
         try:
             rule_text = resolve_rule_doc(record.path, resolution)
