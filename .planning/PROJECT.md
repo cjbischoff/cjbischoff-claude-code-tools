@@ -58,6 +58,7 @@ All items below shipped before this project started.
 - ✓ Glob rule matching selects per-language rule docs with safe rule-file reads (REV-04) — Validated in Phase 3: Rule Matching & Review Modes, 2026-08-19
 - ✓ Reflection filter retracts only, fails open, never confirms (REV-05) — Validated in Phase 3: Rule Matching & Review Modes, 2026-08-19
 - ✓ Review workspace isolated to the `<target>/.sec-overlay/<slug>/` sidecar; nothing written to the reviewed repo's tracked tree (DIFF-04) — Validated in Phase 04.1: Close gap: review sidecar workspace isolation, 2026-08-19
+- ✓ Bundling, bounded concurrency/timeouts, identity-checked SHA-pinned resume, and diff-anchored output with content-only SARIF fingerprints (REV-06; SCALE-01/02/03, OUT-01/02) — Validated in Phase 4: Scale, Resume & Diff Output, 2026-08-20
 
 ### Active
 
@@ -68,7 +69,6 @@ All items below shipped before this project started.
 - [ ] Report states coverage denominator; gaps logged, never dropped (AUD-05)
 - [ ] Run defects fixed or dispositioned; frozen contract unchanged (REL-01)
 - [ ] Fixes ship through full governance with CodeRabbit review (REL-02)
-- [ ] Bundling and concurrency bound sub-agent context on large changesets (REV-06)
 
 ### Out of Scope
 
@@ -146,4 +146,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-19 after completing Phase 04.1 (Close gap: DIFF-04 — review sidecar workspace isolation) of milestone v5.0*
+*Last updated: 2026-08-20 after completing Phase 4 (Scale, Resume & Diff Output) of milestone v5.0*
