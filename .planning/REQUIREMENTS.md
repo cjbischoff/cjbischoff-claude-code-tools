@@ -88,7 +88,7 @@ models.py/evidence.py contract, receipt gate as the sole authority on `confirmed
 
 ### Scale and Resume (SCALE)
 
-- [ ] **SCALE-01**: `bundle.py` deterministically groups locale/config siblings and
+- [x] **SCALE-01**: `bundle.py` deterministically groups locale/config siblings and
   impl/test pairs into single review units, one file per unit as fallback, documented
   as a sec-overlay addition beyond OCR
 
@@ -102,11 +102,11 @@ models.py/evidence.py contract, receipt gate as the sole authority on `confirmed
 
 ### Output (OUT)
 
-- [ ] **OUT-01**: Diff-review mode emits a diff-anchored comment payload
+- [x] **OUT-01**: Diff-review mode emits a diff-anchored comment payload
   `{path, line, side, existing_code, content}` alongside the existing SARIF,
   markdown, and per-finding files, with the coverage manifest included
 
-- [ ] **OUT-02**: SARIF fingerprints use `Path|Category|ExistingCode` excluding
+- [x] **OUT-02**: SARIF fingerprints use `Path|Category|ExistingCode` excluding
   message text
 
 ### Audit Integrity (AUD)
@@ -202,11 +202,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REV-01 | Phase 3 | Complete |
 | REV-02 | Phase 3 | Complete |
 | REV-03 | Phase 3 | Complete |
-| SCALE-01 | Phase 4 | Pending |
+| SCALE-01 | Phase 4 | Complete |
 | SCALE-02 | Phase 4 | Pending |
 | SCALE-03 | Phase 4 | Pending |
-| OUT-01 | Phase 4 | Pending |
-| OUT-02 | Phase 4 | Pending |
+| OUT-01 | Phase 4 | Complete |
+| OUT-02 | Phase 4 | Complete |
 | AUD-01 | Phase 5 | Pending |
 | AUD-02 | Phase 5 | Pending |
 | AUD-03 | Phase 5 | Pending |

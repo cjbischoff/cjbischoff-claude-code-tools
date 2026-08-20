@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Diff-Review Architecture
-current_phase: 5
-current_phase_name: End-to-End Verification (Audit & Review)
+current_phase: 04
+current_phase_name: scale-resume-diff-output
 status: executing
-stopped_at: Completed 04.1-01-PLAN.md
-last_updated: "2026-08-20T15:12:09.452Z"
-last_activity: 2026-08-19
-last_activity_desc: Phase 02 re-verified passed (9/9); position stays at Phase 5
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-08-20T16:41:29.500Z"
+last_activity: 2026-08-20
+last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 19
-  completed_plans: 16
+  completed_plans: 17
   percent: 57
 ---
 
@@ -25,16 +25,16 @@ See: .planning/PROJECT.md (updated 2026-08-16)
 
 **Core value:** The marketplace never ships an unverified claim — validated plugins,
 governed releases, receipt-backed findings.
-**Current focus:** Phase 5 — End-to-End Verification (Audit & Review)
+**Current focus:** Phase 04 — scale-resume-diff-output
 
 ## Current Position
 
-Phase: 5 — End-to-End Verification (Audit & Review)
-Plan: Not started
+Phase: 04 (scale-resume-diff-output) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-08-19 — Phase 02 re-verified passed (9/9); ROADMAP checkbox closed
+Last activity: 2026-08-20 — Phase 04 execution started
 
-Progress: [██████████] 100%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -79,6 +79,7 @@ Progress: [██████████] 100%
 | Phase 03 P06 | ~2 hours across two sessions | 3 tasks | 11 files |
 | Phase 03 P07 | 55min | 3 tasks | 8 files |
 | Phase 04.1 P01 | 55min | 3 tasks | 12 files |
+| Phase 04 P01 | 47min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -132,6 +133,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Task 2 disposition-ladder tests use a fixture local to each test, never a mutation of _dual_run_fixture (its thread-safety entry is gate-C, an unconditional drop)
 - [Phase ?]: Task 3's composed test relies on the real reflection.apply_verdict called with an empty verdict dict, which keeps everything by construction, instead of a mock
 - [Phase ?]: DIFF-04 closed: run_review resolves workspace via RepoMemory.for_target, matching scan/audit
+- [Phase ?]: Task 3 found sarif.py/review_comments.py already correct from tracer plan; closed test coverage gap only, no implementation change
+- [Phase ?]: Rewrote Finding(**overrides) test helpers as explicit-parameter functions after ty check flagged the dict-splat as untypeable against the dataclass constructor
 
 ### Pending Todos
 
@@ -161,6 +164,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-19T20:05:59.844Z
-Stopped at: Completed 04.1-01-PLAN.md
+Last session: 2026-08-20T16:41:29.483Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None
