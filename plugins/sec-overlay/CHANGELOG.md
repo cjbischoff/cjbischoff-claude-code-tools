@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.64.0 - 2026-08-20
+
+### Added
+
+- Add three bounded `review` CLI flags: `--concurrency` (default 8, 1-128),
+  `--timeout` (default 600 seconds, 1-3600), and `--max-git-procs` (default
+  16, 1-128). Each is validated by a shared `_bounded_int` helper before any
+  git subprocess runs; an out-of-range value exits 2 naming the flag and its
+  range and is never silently clamped.
+
 ## 1.63.1 - 2026-08-20
 
 ### Added

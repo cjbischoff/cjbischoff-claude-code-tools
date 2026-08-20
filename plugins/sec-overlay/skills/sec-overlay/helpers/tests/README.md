@@ -741,3 +741,10 @@ purpose. `test_review_comments.py` (new, 5 tests) locks the OUT-01 contract:
 `comment_from_finding`'s field mapping, an empty comment list still carrying the
 `coverage_manifest`, the write path resolving to `ws.artifacts / COMMENTS_FILENAME`, and a
 comment payload having exactly the 5 documented keys and no more.
+
+`test_cli.py` gained a new section (Phase 4 plan 02 Task 1, SCALE-02) covering the bounded
+`--concurrency`/`--timeout`/`--max-git-procs` flags: each flag is accepted at 1 and at its own
+ceiling; each is rejected at 0, -1, and one past its ceiling with a non-zero exit and a stderr
+message naming the flag and its `1 and <ceiling>` range; a non-integer value raises `SystemExit`
+via argparse before `run_review` ever runs; and the three defaults (8, 600, 16) are asserted by
+spying on `run_review`'s kwargs when no flag is passed.

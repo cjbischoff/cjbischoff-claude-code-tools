@@ -45,6 +45,38 @@ from sec_overlay.scanscope import resolve as _resolve_scope
 from sec_overlay.scanscope import write_scope
 from sec_overlay.workspace import Workspace, _atomic_write, load_paths, write_findings
 
+# SCALE-02: ceilings and defaults for the review subcommand's three bound flags.
+# Two separate ceilings (not one shared value) because a worker-count ceiling
+# sized for --concurrency/--max-git-procs would reject --timeout's own,
+# much larger, order of magnitude (seconds, not workers).
+MAX_WORKERS = 128
+MAX_TIMEOUT_SECONDS = 3600
+DEFAULT_CONCURRENCY = 8
+DEFAULT_TIMEOUT_SECONDS = 600
+DEFAULT_MAX_GIT_PROCS = 16
+TIMEOUT_NOTE = "review unit exceeded --timeout"
+
+
+def _bounded_int(value: int, *, flag: str, ceiling: int) -> int:
+    """Reject a bound value outside ``[1, ceiling]``; never clamp it.
+
+    Args:
+        value: The operator-supplied bound (already an ``int`` via argparse).
+        flag: The flag's CLI spelling (e.g. ``"--concurrency"``), named in the
+            error so a rejection is actionable.
+        ceiling: The largest value this flag accepts.
+
+    Returns:
+        ``value`` unchanged, when it is within range.
+
+    Raises:
+        ValueError: If ``value`` is below 1 or above ``ceiling``. Silently
+            clamping would misreport what the run actually did (ASVS V5).
+    """
+    if value < 1 or value > ceiling:
+        raise ValueError(f"{flag} must be between 1 and {ceiling} (got {value})")
+    return value
+
 
 def write_scan_scope(ws, target, *, sha: str = "", runner=None):
     """Resolve + persist the canonical ScanScope for a scan (called at pass start).
@@ -115,6 +147,9 @@ def run_review(
     runner=None,
     review_source=None,
     prepare: bool = False,
+    concurrency: int = DEFAULT_CONCURRENCY,
+    timeout: int = DEFAULT_TIMEOUT_SECONDS,
+    max_git_procs: int = DEFAULT_MAX_GIT_PROCS,
 ) -> int:
     """Run one review pass end to end: resolve refs, select files, position, seal.
 
@@ -160,16 +195,33 @@ def run_review(
             (D-13).
         prepare: When true, write the prompt/plan files described above and return
             before any gate runs.
+        concurrency: Review-unit dispatch fan-out bound (``--concurrency``); recorded
+            for the dispatching document (SKILL.md) to honor — the Python core never
+            dispatches an agent, so this value is validated here but read nowhere else
+            in this module (T-04-09).
+        timeout: Per-unit deadline in seconds (``--timeout``), used unrounded as the
+            worker-future timeout for that unit's git fetch work (SCALE-02).
+        max_git_procs: Bound on concurrent git subprocesses (``--max-git-procs``),
+            sizing the worker pools around the two per-file git loops (SCALE-02).
 
     Returns:
         0 when the coverage manifest seals ``complete`` (including a diff with no
         reviewable files) or ``prepare=True`` completed, 2 on an invalid ``base``/
-        ``head`` ref (D-06) or a ``RuleSafetyError`` from the RULE-03 rule-file
-        safety gate (no fallback to another layer), 3 when the seal is ``partial``
-        (D-15) — one or more files could not be reviewed. A skipped review source
-        never turns a complete pass into a partial one — a source skip is a
-        reviewer failure, not a coverage failure.
+        ``head`` ref (D-06), an out-of-range bound flag, or a ``RuleSafetyError``
+        from the RULE-03 rule-file safety gate (no fallback to another layer), 3
+        when the seal is ``partial`` (D-15) — one or more files could not be
+        reviewed, including every member of a unit that timed out. A skipped
+        review source never turns a complete pass into a partial one — a source
+        skip is a reviewer failure, not a coverage failure.
     """
+    try:
+        _bounded_int(concurrency, flag="--concurrency", ceiling=MAX_WORKERS)
+        _bounded_int(timeout, flag="--timeout", ceiling=MAX_TIMEOUT_SECONDS)
+        _bounded_int(max_git_procs, flag="--max-git-procs", ceiling=MAX_WORKERS)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
     import subprocess
 
     r = runner or subprocess.run
@@ -413,6 +465,25 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Write review prompts and review_plan.json; skip the gate chain.",
     )
+    review.add_argument(
+        "--concurrency",
+        type=int,
+        default=DEFAULT_CONCURRENCY,
+        help="Review-unit dispatch fan-out bound, 1-128 (default 8). Enforced by "
+        "SKILL.md's dispatch loop, not by this process.",
+    )
+    review.add_argument(
+        "--timeout",
+        type=int,
+        default=DEFAULT_TIMEOUT_SECONDS,
+        help="Per-unit deadline in seconds, 1-3600 (default 600).",
+    )
+    review.add_argument(
+        "--max-git-procs",
+        type=int,
+        default=DEFAULT_MAX_GIT_PROCS,
+        help="Bound on concurrent git subprocesses, 1-128 (default 16).",
+    )
     args = parser.parse_args(argv)
 
     if args.cmd == "scan":
@@ -480,6 +551,9 @@ def main(argv: list[str] | None = None) -> int:
             rule_path=args.rule,
             excludes=args.exclude,
             prepare=args.prepare,
+            concurrency=args.concurrency,
+            timeout=args.timeout,
+            max_git_procs=args.max_git_procs,
         )
     return 1
 

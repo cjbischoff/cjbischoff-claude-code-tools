@@ -792,3 +792,17 @@ non-conventional parallel source/test tree (e.g. `sec_overlay/bundle.py` vs
 `tests/test_bundle.py`, this very codebase's own layout) does not pair under this rule — both
 still ship as correct, safe single-member units via the fallback, so no path is ever mis-grouped
 or dropped, only left unpaired.
+
+Phase 4 plan 02 (task 1, SCALE-02) gave `cli.py`'s `review` subcommand three bounded flags:
+`--concurrency` (`DEFAULT_CONCURRENCY = 8`, ceiling `MAX_WORKERS = 128`), `--timeout`
+(`DEFAULT_TIMEOUT_SECONDS = 600`, ceiling `MAX_TIMEOUT_SECONDS = 3600`), and `--max-git-procs`
+(`DEFAULT_MAX_GIT_PROCS = 16`, ceiling `MAX_WORKERS`). Two separate ceiling constants, not one
+shared value, because a worker-count ceiling sized for `--concurrency`/`--max-git-procs` would
+reject `--timeout`'s own, much larger, order of magnitude (seconds, not workers). A new
+`_bounded_int(value, *, flag, ceiling)` helper rejects (never clamps) a value outside `[1,
+ceiling]`, raising `ValueError` with a message naming the flag and its range; `run_review` calls
+it on all three kwonly params as its first executable statement, before any git subprocess call,
+and `main()` maps the `ValueError` to exit 2 exactly like an unknown profile or bad ref.
+`--concurrency` has no enforcement point in `cli.py` itself — the Python core never dispatches a
+review agent — so it is validated here and its bound is otherwise enforced by `SKILL.md`'s
+dispatch loop.

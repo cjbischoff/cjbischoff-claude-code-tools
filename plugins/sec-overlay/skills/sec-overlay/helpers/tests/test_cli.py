@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from sec_overlay.cli import run_scan
 from sec_overlay.phase_gate import DroppedFinding
 from sec_overlay.positioning import PositionResult
@@ -305,3 +307,103 @@ def test_review_ledger_drop_count_matches_markdown_drop_rows(tmp_path, monkeypat
         if line.startswith("|") and "Path" not in line and "---" not in line
     ]
     assert len(drop_rows) == len(ledger["dropped"])
+
+
+# --- run_review: bounded --concurrency / --timeout / --max-git-procs (SCALE-02) ---------
+
+
+@pytest.mark.parametrize(
+    "flag,value",
+    [
+        ("--concurrency", 1),
+        ("--concurrency", 128),
+        ("--timeout", 1),
+        ("--timeout", 3600),
+        ("--max-git-procs", 1),
+        ("--max-git-procs", 128),
+    ],
+)
+def test_review_accepts_flag_at_1_and_at_its_own_ceiling(tmp_path, monkeypatch, flag, value):
+    import subprocess
+
+    from sec_overlay import cli
+
+    monkeypatch.setattr(subprocess, "run", _make_review_runner([]))
+    target = tmp_path / "repo"
+    target.mkdir()
+    rc = cli.main(
+        ["review", "--base", "main", "--head", "develop", "--root", str(target), flag, str(value)]
+    )
+    assert rc == 0
+
+
+@pytest.mark.parametrize(
+    "flag,ceiling,invalid",
+    [
+        ("--concurrency", 128, 0),
+        ("--concurrency", 128, -1),
+        ("--concurrency", 128, 129),
+        ("--timeout", 3600, 0),
+        ("--timeout", 3600, -1),
+        ("--timeout", 3600, 3601),
+        ("--max-git-procs", 128, 0),
+        ("--max-git-procs", 128, -1),
+        ("--max-git-procs", 128, 129),
+    ],
+)
+def test_review_rejects_flag_out_of_range_naming_flag_and_range(
+    tmp_path, capsys, flag, ceiling, invalid
+):
+    from sec_overlay import cli
+
+    rc = cli.main(
+        [
+            "review",
+            "--base", "main",
+            "--head", "develop",
+            "--root", str(tmp_path),
+            f"{flag}={invalid}",
+        ]
+    )
+    assert rc != 0
+    err = capsys.readouterr().err
+    assert flag in err
+    assert f"1 and {ceiling}" in err
+
+
+def test_review_rejects_non_integer_flag_value_via_argparse(tmp_path, capsys):
+    from sec_overlay import cli
+
+    with pytest.raises(SystemExit):
+        cli.main(
+            [
+                "review",
+                "--base", "main",
+                "--head", "develop",
+                "--root", str(tmp_path),
+                "--concurrency=nope",
+            ]
+        )
+
+
+def test_review_default_bounds_are_8_600_and_16(tmp_path, monkeypatch):
+    from sec_overlay import cli
+
+    captured = {}
+    real_run_review = cli.run_review
+
+    def spy(*args, **kwargs):
+        captured["concurrency"] = kwargs.get("concurrency")
+        captured["timeout"] = kwargs.get("timeout")
+        captured["max_git_procs"] = kwargs.get("max_git_procs")
+        return real_run_review(*args, **kwargs)
+
+    monkeypatch.setattr(cli, "run_review", spy)
+    import subprocess
+
+    monkeypatch.setattr(subprocess, "run", _make_review_runner([]))
+    target = tmp_path / "repo"
+    target.mkdir()
+    rc = cli.main(["review", "--base", "main", "--head", "develop", "--root", str(target)])
+    assert rc == 0
+    assert captured == {"concurrency": 8, "timeout": 600, "max_git_procs": 16}
