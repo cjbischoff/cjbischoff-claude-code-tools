@@ -790,3 +790,11 @@ second `profile` — the new resume-identity gate (Task 2) now rejects that seco
 `"complete"` on both, and a partial run (one of two files fails `parse_hunks`) expects
 `"partial"` on both. Both fail against the pre-fix ordering — `write_review_comments` ran before
 `manifest.seal()`, so the embedded seal always read `null` regardless of the on-disk value.
+
+`test_cli.py` gained two more tests (Phase 4 plan 04 Task 2, SCALE-03 gap closure) for the
+`review` subcommand's `--model` argparse surface: a spy on `run_review` asserts `cli.main([...,
+"--model", "opus"])` forwards `model="opus"`; a resume test drives two `cli.main` calls against
+the same target with different `--model` values and asserts the second exits 2 with both model
+names named in stderr. Both fail against the pre-fix parser — `--model` was unrecognized, so
+`main()` never called `run_review` with a `model` value, leaving the already-wired
+`check_resume_identity` gate dead code in production.

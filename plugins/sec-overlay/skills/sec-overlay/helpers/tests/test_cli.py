@@ -636,3 +636,61 @@ def test_review_resume_with_unresolvable_persisted_sha_fails_loudly(tmp_path, ca
     rc2 = cli.run_review("main", "develop", str(tmp_path), runner=gc_runner)
     assert rc2 == 2
     assert "sha-develop" in capsys.readouterr().err
+
+
+# --- review CLI surface: --model flag forwarding + resume rejection (SCALE-03) -----------
+
+
+def test_review_accepts_model_flag_and_forwards_it_to_run_review(tmp_path, monkeypatch):
+    from sec_overlay import cli
+
+    captured = {}
+    real_run_review = cli.run_review
+
+    def spy(*args, **kwargs):
+        captured["model"] = kwargs.get("model")
+        return real_run_review(*args, **kwargs)
+
+    monkeypatch.setattr(cli, "run_review", spy)
+    import subprocess
+
+    monkeypatch.setattr(subprocess, "run", _make_review_runner([]))
+    target = tmp_path / "repo"
+    target.mkdir()
+    rc = cli.main(
+        [
+            "review", "--base", "main", "--head", "develop", "--root", str(target),
+            "--model", "opus",
+        ]
+    )
+    assert rc == 0
+    assert captured["model"] == "opus"
+
+
+def test_review_resume_with_changed_model_exits_2_via_main_entrypoint(
+    tmp_path, monkeypatch, capsys
+):
+    from sec_overlay import cli
+
+    import subprocess
+
+    monkeypatch.setattr(subprocess, "run", _make_review_runner(["a.py"]))
+
+    rc1 = cli.main(
+        [
+            "review", "--base", "main", "--head", "develop", "--root", str(tmp_path),
+            "--model", "opus",
+        ]
+    )
+    assert rc1 == 0
+
+    rc2 = cli.main(
+        [
+            "review", "--base", "main", "--head", "develop", "--root", str(tmp_path),
+            "--model", "sonnet",
+        ]
+    )
+    assert rc2 == 2
+    err = capsys.readouterr().err
+    assert "opus" in err
+    assert "sonnet" in err

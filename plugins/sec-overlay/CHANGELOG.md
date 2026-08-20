@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.68.3 - 2026-08-20
+
+### Added
+
+- Add failing tests for a `review --model` argparse surface: forwarding
+  to `run_review` and resume rejection via `cli.main` (SCALE-03 gap
+  closure, RED phase).
+
 ## 1.68.2 - 2026-08-20
 
 ### Fixed
