@@ -8,6 +8,7 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
+from sec_overlay.bundle import group_bundles
 from sec_overlay.campaign import record_stage
 from sec_overlay.diffhunks import parse_hunks
 from sec_overlay.diffscope import (
@@ -34,6 +35,7 @@ from sec_overlay.review_agent import (
     render_review_prompt,
     write_review_plan,
 )
+from sec_overlay.review_comments import comment_from_finding, write_review_comments
 from sec_overlay.review_coverage import MANIFEST_FILENAME, CoverageManifest
 from sec_overlay.review_findings import GatedFinding, apply_profile, classify
 from sec_overlay.rule_glob import RuleSafetyError, build_resolution, glob_match, resolve_rule_doc
@@ -213,6 +215,9 @@ def run_review(
         ]
         selection = replace(selection, reviewable=kept)
 
+    # Bundle-membership threading into recorded_return_source lands in a later plan.
+    group_bundles(selection.reviewable)
+
     manifest = CoverageManifest(base_sha, head_sha, ws.artifacts / MANIFEST_FILENAME)
     hunks_by_path: dict[str, list] = {}
     diff_text_by_path: dict[str, str] = {}
@@ -328,6 +333,9 @@ def run_review(
         review_findings=review_findings,
         review_source_skips=review_source_skips,
     )
+
+    comments = [comment_from_finding(rf.finding) for rf in review_findings]
+    write_review_comments(ws, comments, manifest.to_dict())
 
     if not selection.reviewable:
         return 0

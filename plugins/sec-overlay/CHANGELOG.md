@@ -2,6 +2,20 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.62.0 - 2026-08-20
+
+### Added
+
+- Add `sec_overlay/bundle.py` (`ReviewUnit`, `group_bundles`) and
+  `sec_overlay/review_comments.py` (`DiffComment`, `write_review_comments`),
+  wired into `run_review`: every review run now writes
+  `artifacts/review_comments.json`, a diff-anchored comment per shipped
+  finding plus the coverage manifest. This plan ships the degenerate
+  one-file-per-unit grouping only; real multi-file grouping is a later
+  plan. `sarif.to_sarif` now attaches a message-independent
+  `partialFingerprints` entry to every result. Progresses SCALE-01,
+  OUT-01, OUT-02.
+
 ## 1.61.6 - 2026-08-19
 
 ### Fixed

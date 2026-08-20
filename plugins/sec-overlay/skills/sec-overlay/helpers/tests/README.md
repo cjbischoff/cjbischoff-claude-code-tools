@@ -56,7 +56,7 @@ collections, and a three-path lifecycle plus a contiguous `line_in_hunk` sweep p
 and the membership check agree over a full hunk range. `test_review_tracer.py` is unchanged and
 still green.
 
-`test_review_tracer.py` (15 tests) covers the `sec-overlay review` tracer path end to
+`test_review_tracer.py` (16 tests) covers the `sec-overlay review` tracer path end to
 end: `main(["review", ...])` with a fake `subprocess.run` injected at the module level (`cli.py`
 looks up `subprocess.run` inline at call time, so a `monkeypatch.setattr(subprocess, "run", ...)`
 reaches it through every `runner=` default) exits 0 and seals `artifacts/coverage_manifest.json`
@@ -702,3 +702,14 @@ and `test_rule_glob.py` each gained (or reuse) a `_sidecar_ws(root)` helper that
 `runs/review_prompts/`, or `report.md` now reads through that sidecar workspace instead — a
 passing test now proves the sidecar convention holds, not the bare-root bug. `test_diffscope.py`
 needed no change: it never reads back a review artifact path.
+
+Phase 4 plan 01 (Task 1, tracer) adds one test to `test_review_tracer.py`:
+`test_review_one_finding_ships_diff_anchored_comment_and_sarif_fingerprint` injects a
+`review_source` returning one real `Finding` into a direct `run_review()` call, asserts exit 0,
+then asserts `artifacts/review_comments.json` holds exactly one comment with the five-key shape
+(`path`/`line`/`side`/`existing_code`/`content`) mapped from that finding plus the embedded
+`coverage_manifest`. It also calls `sarif.to_sarif([finding])` directly rather than reading
+`report.sarif` — `report.py`'s `write_report` reads findings from `ws.findings_dir`, populated
+only by `run_scan`, so `report.sarif` written by `run_review` always has empty `results`
+regardless of this plan's changes — and asserts the result carries a 16-hex-char
+`partialFingerprints` entry.

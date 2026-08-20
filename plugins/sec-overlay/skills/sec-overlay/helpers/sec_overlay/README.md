@@ -756,3 +756,16 @@ never touched the workspace, only the rule/prompt resolution paths — so they a
 Every test in `test_review_live.py`, `test_review_tracer.py`, and `test_rule_glob.py` that reads
 back a review artifact now resolves it through the same sidecar rather than joining `tmp_path`
 directly, so a passing test proves the production path, not the bug.
+
+Phase 4 plan 01 (Task 1, tracer) adds two new modules and extends `sarif.py`, wired end to end
+through `cli.run_review` — see the module map entries in [`../README.md`](../README.md) for the
+full contract. `bundle.py` is SCALE-01's grouping unit (`ReviewUnit`, `group_bundles`); this
+plan's grouping is the degenerate one-unit-per-file case only, called on `selection.reviewable`
+downstream of `file_select.partition`. `review_comments.py` is OUT-01's diff-anchored comment
+writer (`DiffComment`, `comment_from_finding`, `write_review_comments`), called once after
+`write_report` with `CoverageManifest.to_dict()`'s own dict, writing
+`artifacts/review_comments.json`. `sarif.py` gained `_sarif_fingerprint` + the `FINGERPRINT_KEY`
+constant: every SARIF result now carries a `partialFingerprints` entry keyed on
+`file|cls|evidence.strip()`, deliberately excluding `message` so a wording tweak does not churn
+result identity, and deliberately not reusing `fingerprint.fingerprint()` (a different identity
+contract).

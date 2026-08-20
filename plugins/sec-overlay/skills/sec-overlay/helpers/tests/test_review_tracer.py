@@ -7,9 +7,11 @@ from sec_overlay import reflection, rule_glob
 from sec_overlay.cli import main, run_review
 from sec_overlay.diffhunks import added_line_numbers, parse_hunks
 from sec_overlay.diffscope import changed_file_records, validate_ref
+from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.phase_gate import review_position_gate
 from sec_overlay.positioning import resolve_position
 from sec_overlay.repo_memory import RepoMemory
+from sec_overlay.sarif import FINGERPRINT_KEY, to_sarif
 
 _BASE_SHA = "a" * 40
 _HEAD_SHA = "b" * 40
@@ -237,6 +239,41 @@ def test_apply_verdict_never_retracts_a_protected_subject_class():
     # REFUSED_REASON so a reviewer can see the filter tried and was stopped.
     assert len(retractions) == 1
     assert retractions[0].reason == reflection.REFUSED_REASON
+
+
+def test_review_one_finding_ships_diff_anchored_comment_and_sarif_fingerprint(tmp_path, monkeypatch):
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+    finding = Finding(
+        id="F-1",
+        rule_id="review-1",
+        cls="sqli",
+        status=FindingStatus.CONFIRMED,
+        severity=Severity.HIGH,
+        file="app.py",
+        line=2,
+        message="Command injection via os.system",
+        evidence="os.system(cmd)",
+    )
+    rc = run_review(
+        _BASE_SHA, _HEAD_SHA, str(tmp_path), review_source=lambda path: [finding]
+    )
+    assert rc == 0
+
+    ws = _sidecar_ws(tmp_path)
+    payload = json.loads((ws.artifacts / "review_comments.json").read_text())
+    assert len(payload["comments"]) == 1
+    comment = payload["comments"][0]
+    assert set(comment) == {"path", "line", "side", "existing_code", "content"}
+    assert comment["path"] == "app.py"
+    assert comment["line"] == 2
+    assert comment["side"] == "RIGHT"
+    assert comment["existing_code"] == "os.system(cmd)"
+    assert comment["content"] == "Command injection via os.system"
+    assert payload["coverage_manifest"]["base_sha"] == _BASE_SHA
+
+    doc = to_sarif([finding])
+    fingerprint = doc["runs"][0]["results"][0]["partialFingerprints"][FINGERPRINT_KEY]
+    assert len(fingerprint) == 16
 
 
 def test_review_zero_findings_still_renders_reflection_sections(tmp_path, monkeypatch):
