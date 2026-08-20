@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Record the Phase 5 context session in `.planning/STATE.md`.
 - Capture Phase 5 context (`.planning/phases/05-end-to-end-verification-audit-review/05-CONTEXT.md` plus its discussion log): audit targets a pinned local work repo at `main` HEAD with default excludes, the review run uses one real diff in both profiles, committed evidence is sanitized receipts only with sidecar artifacts retained until the milestone ships, and Phase 5 fixes run-blockers only, deferring other defects to `05-DEFECTS.md` for Phase 6.
 - Point `.planning/STATE.md` at Phase 5 (End-to-End Verification) after Phase 4 completion; the automatic advance had targeted Phase 04.1, which completed 2026-08-19.
 - Move REV-06 (bundling and concurrency bound sub-agent context; SCALE-01/02/03, OUT-01/02) from Active to Validated in `.planning/PROJECT.md` after Phase 4 completion.
