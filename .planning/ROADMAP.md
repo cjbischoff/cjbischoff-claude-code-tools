@@ -197,9 +197,20 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 05-01-PLAN.md — Tracer: run the diff-review pipeline end to end on a real diff in both profiles, seal the manifest, and establish the sanitized receipt format and defect ledger (AUD-06)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 05-02-PLAN.md — Close the vendored semgrep ruleset gap, then drive the audit through every PHASE_TABLE stage on the pinned target head (AUD-01)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 05-03-PLAN.md — Read finding integrity back from the audit sidecar: the Tier-1 receipt ladder and runtime-dependent risk scoring (AUD-02, AUD-03)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 05-04-PLAN.md — Read artifact gates and coverage back: deterministic gates, CVSS v4.0 only, coverage denominator, and the coverage ledger (AUD-04, AUD-05)
 
 ### Phase 6: Remediation and Governed Release
