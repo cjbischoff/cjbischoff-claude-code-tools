@@ -128,6 +128,28 @@ def _fetch_file_review_inputs(path: str, base: str, head: str, runner):
         return exc
 
 
+def _fetch_review_unit_files(paths, base, head, runner):
+    """Fetch every member file of one ``ReviewUnit``, one exception per file.
+
+    Each member's own fetch failure is caught individually (delegated to
+    :func:`_fetch_file_review_inputs`) so a normal per-file error only fails
+    that file, not its unit-mates. Only the caller's ``future.result(timeout=
+    ...)`` — timing out this whole call — fails every member together
+    (SCALE-02).
+
+    Args:
+        paths: The unit's member file paths.
+        base: Base revision, already resolved to a SHA.
+        head: Head revision, already resolved to a SHA.
+        runner: Injectable subprocess runner (for testing).
+
+    Returns:
+        A dict mapping each path to its ``(diff_text, hunks, file_text)``
+        tuple on success, or the caught exception on failure.
+    """
+    return {path: _fetch_file_review_inputs(path, base, head, runner) for path in paths}
+
+
 def write_scan_scope(ws, target, *, sha: str = "", runner=None):
     """Resolve + persist the canonical ScanScope for a scan (called at pass start).
 
@@ -317,11 +339,12 @@ def run_review(
         selection = replace(selection, reviewable=kept)
 
     # SCALE-01: group reviewable files into units so an impl/test pair or a
-    # locale/config family shares one review pass's membership. No new
-    # dispatch shape here — the per-file loop below is unchanged; only the
-    # focus-rule membership each file's parse call sees is widened.
+    # locale/config family shares one review pass's membership, and one slow
+    # member's --timeout fails its bundle-mates together, not just itself
+    # (SCALE-02).
+    units = group_bundles(selection.reviewable)
     bundle_paths_by_path: dict[str, frozenset[str]] = {}
-    for unit in group_bundles(selection.reviewable):
+    for unit in units:
         members = frozenset(unit.files)
         for member_path in unit.files:
             bundle_paths_by_path[member_path] = members
@@ -336,12 +359,24 @@ def run_review(
     diff_text_by_path: dict[str, str] = {}
     file_text_by_path: dict[str, str] = {}
     rule_docs: list[dict] = []
-    fetch_results = _bounded_map(
-        selection.reviewable,
-        max_git_procs,
-        lambda record: _fetch_file_review_inputs(record.path, base_sha, head_sha, r),
-    )
-    for record, fetched in zip(selection.reviewable, fetch_results):
+    fetch_by_path = {}
+    if units:
+        with ThreadPoolExecutor(max_workers=min(max_git_procs, len(units))) as ex:
+            futures = [
+                ex.submit(_fetch_review_unit_files, unit.files, base_sha, head_sha, r)
+                for unit in units
+            ]
+            for unit, future in zip(units, futures):
+                try:
+                    fetch_by_path.update(future.result(timeout=timeout))
+                except TimeoutError:
+                    # The whole unit missed --timeout — every member fails
+                    # together, not just whichever file was slow (SCALE-02).
+                    fetch_by_path.update(
+                        {path: TimeoutError(TIMEOUT_NOTE) for path in unit.files}
+                    )
+    for record in selection.reviewable:
+        fetched = fetch_by_path[record.path]
         manifest.add(record.path)
         manifest.start(record.path)
         if isinstance(fetched, Exception):

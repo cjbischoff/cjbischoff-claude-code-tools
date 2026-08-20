@@ -127,7 +127,9 @@ agent runs directly, over one `review-file` subagent per reviewable file:
    `workspace.record_agent_return(ws, <label>, <text>)` — the same disk-is-truth convention the
    full audit uses (never depend on the subagent's summary message propagating). Dispatch in
    waves of three to four, matching the fan-out rule the audit pipeline already uses under
-   provider load.
+   provider load, and never exceed `--concurrency` (default 8, ceiling 128) live subagents at
+   once — the Python core validates and records this bound but never dispatches an agent itself
+   (T-04-09), so the dispatching agent (you) is the enforcement point.
 3. **Consume** — `uv run python -m sec_overlay.cli review --base <ref> [--profile general]` reads
    the recorded returns back from disk and runs them through the same gate chain the tracer slice
    already builds: position gate → `apply_profile` → the reflection filter → the receipt gate.

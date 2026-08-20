@@ -755,3 +755,12 @@ roughly one sleep interval, not `N` sleep intervals, when `--max-git-procs` fits
 a manifest-order test with an uneven per-file delay asserting `coverage_manifest.json`'s file
 order stays input order regardless of which file's fetch finishes first; a monkeypatch on
 `cli.ThreadPoolExecutor` asserting zero reviewable files never constructs a pool.
+
+`test_cli.py` gained two more tests (Phase 4 plan 02 Task 3, SCALE-02) for the per-`ReviewUnit`
+`--timeout`: a fake runner sleeps past `timeout=1` on a three-file locale-sibling group
+(`en.json`/`fr.json`/`de.json`, grouped into one unit by `bundle.py`'s same-directory locale
+rule) and asserts `run_review` returns `3`, that `coverage_manifest.json` marks **all three**
+member paths `failed` with the exact note `cli.TIMEOUT_NOTE`, and that its `seal` is `"partial"`
+— three, not two, so a fix that only fails the first member (or the unit as a whole) and leaves
+the rest unfinished cannot pass; a second test asserts a unit that finishes inside `timeout=5`
+still seals `"complete"` (rc 0), so the new dispatch path is a no-op when nothing is slow.

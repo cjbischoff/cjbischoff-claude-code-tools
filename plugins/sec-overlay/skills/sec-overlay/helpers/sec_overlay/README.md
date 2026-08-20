@@ -815,8 +815,20 @@ completion order, and builds no pool at all for an empty `items`. The diff-line-
 comprehension now calls `_bounded_map(records, max_git_procs, ...)` then zips the result back
 onto `record.path`. The manifest loop's three git calls (`file_diff_text`, `parse_hunks`,
 `file_text_at_ref`) moved into a new `_fetch_file_review_inputs(path, base, head, runner)`
-worker function that catches its own exception and returns it instead of raising; `run_review`
-runs that through `_bounded_map` first, then iterates `selection.reviewable` in original order
-zipped with the fetch results, performing every `manifest.add`/`start`/`finish`/`fail`
-transition on the consuming (main) thread exactly as before — parallel fetch, serial manifest
-mutation, byte-identical behavior to the pre-parallel loop.
+worker function that catches its own exception and returns it instead of raising.
+
+Task 3 (SCALE-02) replaced the manifest loop's `_bounded_map` dispatch with a per-`ReviewUnit`
+dispatch so `--timeout` fails a whole bundle together, not just its slow member. `group_bundles
+(selection.reviewable)` is now retained as `units` (previously computed and discarded inline) and
+reused for both `bundle_paths_by_path` and the fetch dispatch. A new `_fetch_review_unit_files
+(paths, base, head, runner)` calls `_fetch_file_review_inputs` once per member path, so a normal
+per-file error still fails only that file. `run_review` opens one `ThreadPoolExecutor` sized to
+`min(max_git_procs, len(units))`, submits one future per unit via `ex.submit(...)` (never `.map
+()` here — each future needs its own timeout), and reads results back with `future.result
+(timeout=timeout)` in submission order (zipped with `units`, never `as_completed()`). A
+`TimeoutError` from `.result()` fails every member path of that unit with the module-level
+`TIMEOUT_NOTE = "review unit exceeded --timeout"` constant instead of re-raising. The consuming
+(main) thread still iterates `selection.reviewable` in original order, looking each path up in
+the accumulated `fetch_by_path` dict, performing every `manifest.add`/`start`/`finish`/`fail`
+transition exactly as before — parallel fetch, serial manifest mutation, and a `seal()` of
+`"partial"` (rc 3) when any unit times out, unchanged for every other path.

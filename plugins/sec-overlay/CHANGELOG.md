@@ -2,6 +2,21 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.66.0 - 2026-08-20
+
+### Added
+
+- Add a per-`ReviewUnit` `--timeout`: a unit's git-fetch work is dispatched
+  with `ThreadPoolExecutor.submit()` and read back with
+  `future.result(timeout=timeout)` in submission order; a unit that misses
+  the deadline fails every one of its member files with a fixed timeout
+  note, sealing the coverage manifest `"partial"` (exit 3) instead of
+  raising. The timeout test covers a three-member locale-sibling unit, so a
+  fix that only fails the first member (or the unit as a whole) and leaves
+  the rest unfinished cannot pass. Record `--concurrency`'s enforced
+  dispatch bound in `SKILL.md` beside the existing review-mode fan-out
+  guidance.
+
 ## 1.65.0 - 2026-08-20
 
 ### Added

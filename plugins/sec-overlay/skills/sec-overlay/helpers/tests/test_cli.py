@@ -486,3 +486,52 @@ def test_review_zero_reviewable_files_needs_no_worker_pool(tmp_path, monkeypatch
     runner = _make_review_runner([])
     rc = cli.run_review("main", "develop", str(tmp_path), runner=runner)
     assert rc == 0
+
+
+# --- run_review: per-unit --timeout fails every member of a slow unit (SCALE-02) ----------
+
+
+def test_review_unit_timeout_fails_every_member_with_timeout_note(tmp_path):
+    """A ReviewUnit whose fetch work exceeds ``--timeout`` fails every one of its
+    member files with the timeout note, sealing the manifest partial (rc == 3).
+
+    Three, not two, members — a timed-out unit that fails only its first
+    member (or only itself) leaves the rest unfinished, and ``seal()`` raises
+    on unfinished entries instead of returning partial (the plan's named
+    regression risk)."""
+    import time
+
+    from sec_overlay import cli
+
+    # en.json / fr.json / de.json group into one ReviewUnit via bundle.py's
+    # same-directory locale-sibling rule (three members, one unit).
+    paths = ["locales/en.json", "locales/fr.json", "locales/de.json"]
+
+    def runner(cmd, capture_output, text, check):
+        if cmd[1] == "rev-parse":
+            return _FakeResult(f"sha-{cmd[-1]}\n")
+        if cmd[1] == "diff" and "--name-status" in cmd:
+            return _FakeResult("".join(f"M\t{p}\n" for p in paths))
+        if cmd[1] == "diff" and "--unified=3" in cmd:
+            time.sleep(1.2)
+            path = cmd[-1]
+            return _FakeResult(f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n-old\n+new\n")
+        return _FakeResult("")
+
+    rc = cli.run_review("main", "develop", str(tmp_path), runner=runner, timeout=1)
+    assert rc == 3
+
+    ws = RepoMemory.for_target(str(tmp_path), runner=runner).workspace
+    manifest_json = json.loads((ws.artifacts / "coverage_manifest.json").read_text())
+    failed = {f["path"]: f["note"] for f in manifest_json["files"] if f["state"] == "failed"}
+    assert failed == {p: cli.TIMEOUT_NOTE for p in paths}
+    assert manifest_json["seal"] == "partial"
+
+
+def test_review_unit_within_timeout_finishes_normally(tmp_path):
+    """A unit whose fetch work stays under ``--timeout`` seals complete, not partial."""
+    from sec_overlay import cli
+
+    runner = _make_review_runner(["a.py", "test_a.py"])
+    rc = cli.run_review("main", "develop", str(tmp_path), runner=runner, timeout=5)
+    assert rc == 0

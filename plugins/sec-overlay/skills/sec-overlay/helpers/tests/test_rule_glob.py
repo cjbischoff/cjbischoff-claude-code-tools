@@ -227,7 +227,8 @@ def test_review_cli_parses_rule_and_exclude_and_reaches_run_review(tmp_path, mon
     captured = {}
 
     def fake_run_review(base, head, root, *, profile="security", rule_path=None,
-                         excludes=None, runner=None, prepare=False):
+                         excludes=None, runner=None, prepare=False, concurrency=8,
+                         timeout=600, max_git_procs=16):
         captured["rule_path"] = rule_path
         captured["excludes"] = excludes
         return 0
