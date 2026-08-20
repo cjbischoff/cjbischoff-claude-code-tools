@@ -756,6 +756,16 @@ a manifest-order test with an uneven per-file delay asserting `coverage_manifest
 order stays input order regardless of which file's fetch finishes first; a monkeypatch on
 `cli.ThreadPoolExecutor` asserting zero reviewable files never constructs a pool.
 
+`test_review_coverage.py` gained ten tests (Phase 4 plan 03 Task 2, SCALE-03) covering a
+resume-identity gate, currently failing (RED phase; `ResumeIdentityError`/`check_resume_identity`
+do not exist yet in `review_coverage.py`): `MANIFEST_VERSION` is 2; `to_dict`/`load` round-trip
+`model`/`profile`, including a `None` case and a version-1 manifest with neither key; a
+`ResumeIdentityError` extends `RuntimeError`; `check_resume_identity` passes on a match, permits
+any value when the prior manifest recorded neither field, and raises naming both values on a
+model or profile mismatch; and `cli.run_review` run twice with different `model` values against
+the same target returns 2 on the second call, leaving the manifest byte-identical with no new
+artifact file written.
+
 `test_cli.py` gained two more tests (Phase 4 plan 02 Task 3, SCALE-02) for the per-`ReviewUnit`
 `--timeout`: a fake runner sleeps past `timeout=1` on a three-file locale-sibling group
 (`en.json`/`fr.json`/`de.json`, grouped into one unit by `bundle.py`'s same-directory locale

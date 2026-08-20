@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.66.1 - 2026-08-20
+
+### Added
+
+- Add failing tests for a resume-identity gate on `CoverageManifest`
+  (SCALE-03): `model`/`profile` will round-trip through `to_dict`/`load`
+  under a bumped `MANIFEST_VERSION`, and a resumed run whose model or
+  profile differs from the prior manifest's will be rejected before any
+  write. `ResumeIdentityError`/`check_resume_identity` are not yet
+  implemented — RED phase of a TDD task.
+
 ## 1.66.0 - 2026-08-20
 
 ### Added
