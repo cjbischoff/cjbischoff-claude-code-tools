@@ -798,3 +798,23 @@ the same target with different `--model` values and asserts the second exits 2 w
 names named in stderr. Both fail against the pre-fix parser — `--model` was unrecognized, so
 `main()` never called `run_review` with a `model` value, leaving the already-wired
 `check_resume_identity` gate dead code in production.
+
+`test_cli.py` gained three more tests (Phase 4 plan 04 Task 3, SCALE-02 gap closure) bounding a
+hung unit fetch's wall-clock time: `test_review_returns_before_hung_unit_fetch_completes` reuses
+the three-locale-sibling unit and 1.2s-sleeping runner from the 4.20s reproduction
+(`test_review_unit_timeout_fails_every_member_with_timeout_note`) and asserts elapsed time under
+2s instead of the full ~3.6s sequential fetch — the pre-fix `with ThreadPoolExecutor(...) as ex:`
+blocks on exit until the abandoned worker finishes, even after `future.result(timeout=...)`
+already raised.  `test_review_abandoned_unit_fetch_stops_at_the_unit_deadline` counts a
+0.6s-sleeping runner's invocations and asserts the count stays below the unit's full member
+count — the abandoned worker must stop fetching once its own deadline passes rather than working
+through every remaining member.  `test_review_production_git_calls_carry_subprocess_timeout`
+monkeypatches the real `subprocess.run` with a fake accepting `**kwargs` and asserts every call
+the review path makes (with no injected `runner`) carries `timeout` equal to the declared
+`--timeout`, so a hung git child is killed instead of orphaned. Fixing this shifted the shared
+fake-runner convention: **every fake handed to `monkeypatch.setattr(subprocess, "run", ...)` (or
+injected as `runner=`) must accept a `timeout` keyword it can ignore**, because the production
+default is now `partial(subprocess.run, timeout=timeout)` — `_make_review_runner` (`test_cli.py`),
+`_fake_run_for`/`failing_diff` (`test_review_live.py`), and `_fake_run`/`_make_fake_run`
+(`test_review_tracer.py`) all gained `**kwargs` for this reason; none of their return values
+changed.

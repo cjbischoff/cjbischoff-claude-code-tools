@@ -576,6 +576,105 @@ def test_review_unit_within_timeout_finishes_normally(tmp_path):
     assert rc == 0
 
 
+# --- run_review: wall-clock bound on a hung unit fetch (SCALE-02) ------------------------
+
+
+def test_review_returns_before_hung_unit_fetch_completes(tmp_path):
+    """A unit whose fetch work sleeps well past ``--timeout`` must not hold
+    ``run_review`` open until every member finishes fetching. Pre-fix reproduction
+    (04-VERIFICATION.md SCALE-02): 4.20s wall clock for a declared ``timeout=1``,
+    because ``with ThreadPoolExecutor(...) as ex:`` blocks on exit until the
+    abandoned worker finishes, even after ``future.result(timeout=...)`` already
+    raised."""
+    import time
+
+    from sec_overlay import cli
+
+    paths = ["locales/en.json", "locales/fr.json", "locales/de.json"]
+
+    def runner(cmd, capture_output, text, check):
+        if cmd[1] == "rev-parse":
+            return _FakeResult(f"sha-{cmd[-1]}\n")
+        if cmd[1] == "diff" and "--name-status" in cmd:
+            return _FakeResult("".join(f"M\t{p}\n" for p in paths))
+        if cmd[1] == "diff" and "--unified=3" in cmd:
+            time.sleep(1.2)
+            path = cmd[-1]
+            return _FakeResult(f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n-old\n+new\n")
+        return _FakeResult("")
+
+    start = time.monotonic()
+    rc = cli.run_review("main", "develop", str(tmp_path), runner=runner, timeout=1)
+    elapsed = time.monotonic() - start
+    assert rc == 3
+    # Roughly twice the declared timeout, not the ~4.2s full-fetch pre-fix wait.
+    assert elapsed < 2.0
+
+    ws = RepoMemory.for_target(str(tmp_path), runner=runner).workspace
+    manifest_json = json.loads((ws.artifacts / "coverage_manifest.json").read_text())
+    failed = {f["path"]: f["note"] for f in manifest_json["files"] if f["state"] == "failed"}
+    assert failed == {p: cli.TIMEOUT_NOTE for p in paths}
+    assert manifest_json["seal"] == "partial"
+
+
+def test_review_abandoned_unit_fetch_stops_at_the_unit_deadline(tmp_path):
+    """Once a timed-out unit's own fetch deadline passes, the abandoned worker
+    stops fetching its remaining members instead of continuing pointless work
+    (SCALE-02) -- the recorded call count stays below a full unit fetch's count."""
+    import time
+
+    from sec_overlay import cli
+
+    paths = ["locales/en.json", "locales/fr.json", "locales/de.json"]
+    calls: list[str] = []
+
+    def runner(cmd, capture_output, text, check):
+        if cmd[1] == "rev-parse":
+            return _FakeResult(f"sha-{cmd[-1]}\n")
+        if cmd[1] == "diff" and "--name-status" in cmd:
+            return _FakeResult("".join(f"M\t{p}\n" for p in paths))
+        if cmd[1] == "diff" and "--unified=3" in cmd:
+            calls.append(cmd[-1])
+            time.sleep(0.6)
+            path = cmd[-1]
+            return _FakeResult(f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n-old\n+new\n")
+        return _FakeResult("")
+
+    rc = cli.run_review("main", "develop", str(tmp_path), runner=runner, timeout=1)
+    assert rc == 3
+    # Let the abandoned worker thread reach (and stop at) its own deadline
+    # before reading the call count it recorded.
+    time.sleep(0.8)
+    assert len(calls) < len(paths)
+
+
+def test_review_production_git_calls_carry_subprocess_timeout(tmp_path, monkeypatch):
+    """With no injected runner, every real ``subprocess.run`` call the review
+    path makes carries a ``timeout`` equal to the declared ``--timeout``, so a
+    hung git child is killed rather than orphaned (SCALE-02)."""
+    from sec_overlay import cli
+
+    captured_timeouts: list[object] = []
+
+    def fake_run(cmd, capture_output=True, text=True, check=False, **kwargs):
+        captured_timeouts.append(kwargs.get("timeout"))
+        if cmd[1] == "rev-parse":
+            return _FakeResult(f"sha-{cmd[-1]}\n")
+        if cmd[1] == "diff" and "--name-status" in cmd:
+            return _FakeResult("M\ta.py\n")
+        if cmd[1] == "diff" and "--unified=3" in cmd:
+            return _FakeResult("diff --git a/a.py b/a.py\n@@ -1 +1 @@\n-old\n+new\n")
+        return _FakeResult("")
+
+    import subprocess
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    rc = cli.run_review("main", "develop", str(tmp_path), timeout=42)
+    assert rc == 0
+    assert captured_timeouts
+    assert all(t == 42 for t in captured_timeouts)
+
+
 # --- run_review: resumed run reads at the sealed SHAs, not fresh refs (SCALE-03) ---------
 
 

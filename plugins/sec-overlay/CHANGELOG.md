@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.68.5 - 2026-08-20
+
+### Added
+
+- Add failing tests bounding a hung `review` unit fetch's wall-clock time
+  to `--timeout` (SCALE-02 gap closure, RED phase): a unit whose fetch
+  sleeps past the declared timeout must not hold `run_review` open, an
+  abandoned worker must stop fetching once its own deadline passes, and
+  every production `subprocess.run` call must carry a `timeout` equal to
+  `--timeout`.
+
 ## 1.68.4 - 2026-08-20
 
 ### Fixed
