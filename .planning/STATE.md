@@ -5,15 +5,15 @@ milestone_name: Hybrid Diff-Review Architecture
 current_phase: 04
 current_phase_name: scale-resume-diff-output
 status: executing
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-08-20T16:41:29.500Z"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-08-20T17:43:08.881Z"
 last_activity: 2026-08-20
 last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 19
-  completed_plans: 17
+  completed_plans: 18
   percent: 57
 ---
 
@@ -30,11 +30,11 @@ governed releases, receipt-backed findings.
 ## Current Position
 
 Phase: 04 (scale-resume-diff-output) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-08-20 — Phase 04 execution started
 
-Progress: [█████████░] 89%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -80,6 +80,7 @@ Progress: [█████████░] 89%
 | Phase 03 P07 | 55min | 3 tasks | 8 files |
 | Phase 04.1 P01 | 55min | 3 tasks | 12 files |
 | Phase 04 P01 | 47min | 3 tasks | 12 files |
+| Phase 04 P02 | 55min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -135,6 +136,8 @@ Recent decisions affecting current work:
 - [Phase ?]: DIFF-04 closed: run_review resolves workspace via RepoMemory.for_target, matching scan/audit
 - [Phase ?]: Task 3 found sarif.py/review_comments.py already correct from tracer plan; closed test coverage gap only, no implementation change
 - [Phase ?]: Rewrote Finding(**overrides) test helpers as explicit-parameter functions after ty check flagged the dict-splat as untypeable against the dataclass constructor
+- [Phase ?]: Chose the locale-sibling grouping rule (uncapped member count) over the impl/test pairing rule (capped at 2) to build a genuine three-file ReviewUnit for the timeout acceptance test
+- [Phase ?]: Reused TimeoutError(TIMEOUT_NOTE) through the existing str(exception)-as-note manifest.fail() path so the timeout branch needs no special-casing versus an ordinary per-file fetch failure
 
 ### Pending Todos
 
@@ -164,6 +167,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-20T16:41:29.483Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-08-20T17:43:08.863Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None

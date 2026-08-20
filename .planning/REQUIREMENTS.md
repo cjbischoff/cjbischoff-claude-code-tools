@@ -92,7 +92,7 @@ models.py/evidence.py contract, receipt gate as the sole authority on `confirmed
   impl/test pairs into single review units, one file per unit as fallback, documented
   as a sec-overlay addition beyond OCR
 
-- [ ] **SCALE-02**: `--concurrency` (default 8), per-bundle `--timeout` (default
+- [x] **SCALE-02**: `--concurrency` (default 8), per-bundle `--timeout` (default
   10m), and `--max-git-procs` (default 16) bound execution; a timed-out bundle marks
   its files `failed` and the run terminal state becomes `partial`
 
@@ -203,7 +203,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REV-02 | Phase 3 | Complete |
 | REV-03 | Phase 3 | Complete |
 | SCALE-01 | Phase 4 | Complete |
-| SCALE-02 | Phase 4 | Pending |
+| SCALE-02 | Phase 4 | Complete |
 | SCALE-03 | Phase 4 | Pending |
 | OUT-01 | Phase 4 | Complete |
 | OUT-02 | Phase 4 | Complete |
