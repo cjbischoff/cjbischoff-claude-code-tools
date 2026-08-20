@@ -535,3 +535,65 @@ def test_review_unit_within_timeout_finishes_normally(tmp_path):
     runner = _make_review_runner(["a.py", "test_a.py"])
     rc = cli.run_review("main", "develop", str(tmp_path), runner=runner, timeout=5)
     assert rc == 0
+
+
+# --- run_review: resumed run reads at the sealed SHAs, not fresh refs (SCALE-03) ---------
+
+
+def test_review_resume_reads_at_persisted_head_sha_despite_moved_head(tmp_path):
+    """A resumed run reads diffs at the SHA the prior run sealed, not at a freshly
+    resolved (possibly moved) ref — the prior run's ``develop`` may have advanced."""
+    from sec_overlay import cli
+
+    runner = _make_review_runner(["a.py"])
+    rc1 = cli.run_review("main", "develop", str(tmp_path), runner=runner)
+    assert rc1 == 0
+
+    ws = RepoMemory.for_target(str(tmp_path), runner=runner).workspace
+    prior = json.loads((ws.artifacts / "coverage_manifest.json").read_text())
+    assert prior["head_sha"] == "sha-develop"
+
+    captured = {}
+
+    def moved_runner(cmd, capture_output, text, check):
+        if cmd[1] == "rev-parse":
+            ref = cmd[-1]
+            if ref == "develop":
+                # The branch moved since the prior run — a resumed read must
+                # never land on this value.
+                return _FakeResult("sha-develop-MOVED\n")
+            return _FakeResult(f"{ref}\n" if ref.startswith("sha-") else f"sha-{ref}\n")
+        if cmd[1] == "diff" and "--name-status" in cmd:
+            captured["diff_refs"] = (cmd[3], cmd[4])
+            return _FakeResult("M\ta.py\n")
+        if cmd[1] == "diff" and "--unified=3" in cmd:
+            path = cmd[-1]
+            return _FakeResult(f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n-old\n+new\n")
+        return _FakeResult("")
+
+    rc2 = cli.run_review("main", "develop", str(tmp_path), runner=moved_runner)
+    assert rc2 == 0
+    assert captured["diff_refs"] == ("sha-main", "sha-develop")
+
+
+def test_review_resume_with_unresolvable_persisted_sha_fails_loudly(tmp_path, capsys):
+    """T-04-12: a persisted SHA that no longer resolves (rewritten/collected) fails
+    the resumed run rather than silently reading a different tree as an empty diff."""
+    from sec_overlay import cli
+
+    runner = _make_review_runner(["a.py"])
+    rc1 = cli.run_review("main", "develop", str(tmp_path), runner=runner)
+    assert rc1 == 0
+
+    def gc_runner(cmd, capture_output, text, check):
+        if cmd[1] == "rev-parse":
+            ref = cmd[-1]
+            if ref == "sha-develop":
+                # The prior run's sealed head SHA has since been GC'd/rewritten.
+                return _FakeResult("", returncode=128)
+            return _FakeResult(f"{ref}\n")
+        return _FakeResult("")
+
+    rc2 = cli.run_review("main", "develop", str(tmp_path), runner=gc_runner)
+    assert rc2 == 2
+    assert "sha-develop" in capsys.readouterr().err

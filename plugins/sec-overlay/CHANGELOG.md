@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.67.1 - 2026-08-20
+
+### Added
+
+- Add failing tests for SHA-pinning on resume (SCALE-03, T-04-12): a resumed
+  run must read diffs at the head SHA the prior run sealed, not a freshly
+  resolved (possibly moved) ref, and an unresolvable persisted SHA must fail
+  the run rather than read an empty diff. `run_review` does not yet source
+  `base_sha`/`head_sha` from the prior manifest on resume — RED phase of a
+  TDD task.
+
 ## 1.67.0 - 2026-08-20
 
 ### Added

@@ -757,8 +757,7 @@ order stays input order regardless of which file's fetch finishes first; a monke
 `cli.ThreadPoolExecutor` asserting zero reviewable files never constructs a pool.
 
 `test_review_coverage.py` gained ten tests (Phase 4 plan 03 Task 2, SCALE-03) covering a
-resume-identity gate, currently failing (RED phase; `ResumeIdentityError`/`check_resume_identity`
-do not exist yet in `review_coverage.py`): `MANIFEST_VERSION` is 2; `to_dict`/`load` round-trip
+resume-identity gate: `MANIFEST_VERSION` is 2; `to_dict`/`load` round-trip
 `model`/`profile`, including a `None` case and a version-1 manifest with neither key; a
 `ResumeIdentityError` extends `RuntimeError`; `check_resume_identity` passes on a match, permits
 any value when the prior manifest recorded neither field, and raises naming both values on a
@@ -774,3 +773,12 @@ member paths `failed` with the exact note `cli.TIMEOUT_NOTE`, and that its `seal
 — three, not two, so a fix that only fails the first member (or the unit as a whole) and leaves
 the rest unfinished cannot pass; a second test asserts a unit that finishes inside `timeout=5`
 still seals `"complete"` (rc 0), so the new dispatch path is a no-op when nothing is slow.
+
+`test_cli.py` gained two more tests (Phase 4 plan 03 Task 3, SCALE-03) for SHA-pinning on
+resume, currently failing (RED phase; `run_review` still resolves fresh `base`/`head` refs on
+a resumed run instead of the prior manifest's sealed SHAs): a fake runner whose `rev-parse` for
+`develop` returns a different SHA than the prior run sealed asserts the resumed `git diff
+--name-status` call still uses the persisted head SHA; a second fake runner makes the
+persisted head SHA itself unresolvable (`rev-parse --verify` exits 128, simulating a
+rewritten/collected SHA) and asserts the resumed run exits 2 naming that SHA rather than
+reading an empty diff (T-04-12).
