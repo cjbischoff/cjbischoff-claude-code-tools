@@ -150,7 +150,12 @@ Plans:
   4. Diff-review mode emits a diff-anchored comment payload (`path, line, side, existing_code, content`) per finding alongside the existing SARIF, markdown, and per-finding files, with the coverage manifest included
   5. SARIF fingerprints key on `Path|Category|ExistingCode`, excluding message text
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Bundle grouping, diff-anchored comment payload, and content-only SARIF fingerprints (SCALE-01, OUT-01, OUT-02)
+- [ ] 04-02-PLAN.md — Bounded concurrency, per-bundle timeout, git process cap, and timeout-to-partial sealing (SCALE-02)
+- [ ] 04-03-PLAN.md — Resume identity validation before any write, and SHA-pinned resumed reads (SCALE-03)
 
 ### Phase 04.1: Close gap: DIFF-04 — review sidecar workspace isolation (INSERTED)
 
@@ -203,6 +208,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Baseline Health Verification | 3/3 | Complete    | 2026-08-17 |
 | 2. Diff Pipeline & Positioning | 5/5 | Complete    | 2026-08-19 |
 | 3. Rule Matching & Review Modes | 7/7 | Complete    | 2026-08-19 |
-| 4. Scale, Resume & Diff Output | 0/TBD | Not started | - |
+| 4. Scale, Resume & Diff Output | 0/3 | Not started | - |
 | 5. End-to-End Verification (Audit & Review) | 0/TBD | Not started | - |
 | 6. Remediation and Governed Release | 0/TBD | Not started | - |
