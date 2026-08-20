@@ -227,6 +227,45 @@ def test_review_exit_3_via_main_entrypoint_on_partial_seal(tmp_path, monkeypatch
     assert rc == 3
 
 
+# --- run_review: review_comments.json's embedded seal matches on-disk (OUT-01) -----------
+
+
+def test_review_comments_embedded_manifest_seal_matches_on_disk_after_complete_run(tmp_path):
+    from sec_overlay import cli
+    from sec_overlay.repo_memory import RepoMemory
+
+    runner = _make_review_runner(["a.py"])
+    rc = cli.run_review("main", "develop", str(tmp_path), runner=runner)
+    assert rc == 0
+
+    ws = RepoMemory.for_target(str(tmp_path), runner=runner).workspace
+    on_disk_seal = json.loads((ws.artifacts / "coverage_manifest.json").read_text())["seal"]
+    comments_json = json.loads((ws.artifacts / "review_comments.json").read_text())
+    embedded_seal = comments_json["coverage_manifest"]["seal"]
+
+    assert embedded_seal is not None
+    assert embedded_seal == on_disk_seal == "complete"
+
+
+def test_review_comments_embedded_manifest_seal_is_partial_after_partial_run(
+    tmp_path, monkeypatch
+):
+    from sec_overlay import cli
+    from sec_overlay.repo_memory import RepoMemory
+
+    runner = _make_review_runner(["a.py", "b.py"])
+    monkeypatch.setattr(cli, "parse_hunks", _failing_parse_hunks(["b.py"]))
+    rc = cli.run_review("main", "develop", str(tmp_path), runner=runner)
+    assert rc == 3
+
+    ws = RepoMemory.for_target(str(tmp_path), runner=runner).workspace
+    on_disk_seal = json.loads((ws.artifacts / "coverage_manifest.json").read_text())["seal"]
+    comments_json = json.loads((ws.artifacts / "review_comments.json").read_text())
+    embedded_seal = comments_json["coverage_manifest"]["seal"]
+
+    assert embedded_seal == on_disk_seal == "partial"
+
+
 # --- run_review: gate output wired into report.md + review_ledger.json (T-02-15/18) -----
 
 

@@ -783,3 +783,10 @@ naming that SHA rather than reading an empty diff (T-04-12). `test_review_live.p
 profile-split test (security excludes a null-dereference finding, general includes it) was
 split to run against two independent target directories instead of resuming one target with a
 second `profile` — the new resume-identity gate (Task 2) now rejects that second call.
+
+`test_cli.py` gained two more tests (Phase 4 plan 04 Task 1, OUT-01 gap closure) asserting
+`review_comments.json`'s embedded `coverage_manifest` matches the on-disk
+`coverage_manifest.json` byte-for-byte on its `seal` field: a complete single-file run expects
+`"complete"` on both, and a partial run (one of two files fails `parse_hunks`) expects
+`"partial"` on both. Both fail against the pre-fix ordering — `write_review_comments` ran before
+`manifest.seal()`, so the embedded seal always read `null` regardless of the on-disk value.

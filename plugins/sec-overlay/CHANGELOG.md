@@ -2,6 +2,14 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.68.1 - 2026-08-20
+
+### Added
+
+- Add failing tests asserting `review_comments.json`'s embedded
+  `coverage_manifest.seal` matches the on-disk `coverage_manifest.json`
+  for both a complete and a partial run (OUT-01 gap closure, RED phase).
+
 ## 1.68.0 - 2026-08-20
 
 ### Added
