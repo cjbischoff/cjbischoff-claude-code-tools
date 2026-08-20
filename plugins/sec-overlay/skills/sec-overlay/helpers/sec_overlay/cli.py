@@ -521,12 +521,15 @@ def run_review(
     )
 
     comments = [comment_from_finding(rf.finding) for rf in review_findings]
-    write_review_comments(ws, comments, manifest.to_dict())
 
     if not selection.reviewable:
+        write_review_comments(ws, comments, manifest.to_dict())
         return 0
 
-    if manifest.seal() == "complete":
+    seal = manifest.seal()
+    write_review_comments(ws, comments, manifest.to_dict())
+
+    if seal == "complete":
         return 0
 
     for entry in manifest.entries():

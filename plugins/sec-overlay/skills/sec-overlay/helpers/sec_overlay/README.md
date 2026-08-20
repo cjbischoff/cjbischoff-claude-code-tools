@@ -862,3 +862,12 @@ SHA `cli.py` resolves and passes down, not in how any downstream call uses it. A
 `profile` values (to compare finding output across profiles) now hits the Task 2 identity gate
 on its second call — that test was split into two independent targets, since its intent was
 never to model a resume.
+
+Phase 4 plan 04 (Task 1, OUT-01 gap closure) fixes `run_review` calling
+`write_review_comments` before `manifest.seal()` ran, which left the embedded
+`coverage_manifest.seal` in `review_comments.json` permanently `null` regardless of the
+on-disk manifest's real seal. The zero-reviewable early return still writes an unsealed
+dict and returns 0 unchanged (there is nothing to seal). Every other path now assigns
+`manifest.seal()` to a local before calling `write_review_comments` exactly once with the
+post-seal dict, branching the exit code on that local instead of re-deriving it — so the
+embedded seal always matches the on-disk manifest, for both a complete and a partial run.

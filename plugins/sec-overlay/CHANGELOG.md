@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.68.2 - 2026-08-20
+
+### Fixed
+
+- Fix `review_comments.json`'s embedded `coverage_manifest.seal` always
+  reading `null` (OUT-01): `run_review` called `write_review_comments`
+  before `manifest.seal()` ran on every path except the zero-reviewable
+  early return. `seal()` now runs first and its result is written once,
+  so the embedded seal matches the on-disk `coverage_manifest.json` for
+  both a complete and a partial run.
+
 ## 1.68.1 - 2026-08-20
 
 ### Added
