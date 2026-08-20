@@ -2,6 +2,20 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.68.6 - 2026-08-20
+
+### Fixed
+
+- Fix a hung `review` unit fetch holding the process open past `--timeout`
+  (SCALE-02): `with ThreadPoolExecutor(...) as ex:` blocked on exit until
+  every submitted worker finished, even one already reported as timed out,
+  and the production runner never bounded the underlying git subprocess.
+  The executor now shuts down via `shutdown(wait=False)`, the production
+  runner default carries `timeout=--timeout` into every `subprocess.run`
+  call so a hung git child is killed, and `_fetch_review_unit_files` stops
+  fetching a timed-out unit's remaining members once its own deadline
+  passes.
+
 ## 1.68.5 - 2026-08-20
 
 ### Added

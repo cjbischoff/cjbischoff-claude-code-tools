@@ -881,3 +881,27 @@ from Task 2 of plan 04-03 — this closes the CLI surface only, nothing in `run_
 argparse surface, so a resumed run could never actually change model identity through the
 CLI, leaving the resume-rejection gate dead code in production despite being fully tested
 at the `run_review` Python-function level.
+
+Phase 4 plan 04 (Task 3, SCALE-02 gap closure) bounds `run_review`'s wall-clock time on a
+hung unit fetch to `--timeout`. Two prior gaps combined to leave the process open past the
+declared timeout: the unit-fetch block's `with ThreadPoolExecutor(...) as ex:` blocked on
+exit until every submitted worker finished, even one `future.result(timeout=timeout)`
+already reported as timed out; and the production runner default was a bare
+`subprocess.run`, so a hung git child inside that abandoned worker was never killed, only
+orphaned. Both are now fixed together: the executor is built directly (not as a context
+manager) and shut down via `ex.shutdown(wait=False)` in a `finally`, so `run_review` returns
+without waiting for an abandoned worker; and the production runner default is
+`partial(subprocess.run, timeout=timeout)`, so every git call the review path makes — every
+unit fetch, `_bounded_map`'s line-count prefetch and binary-path detection, `resolve_ref_sha`,
+`RepoMemory.for_target` — inherits a kill deadline equal to the declared `--timeout` through
+the shared runner `r`, with no change needed to `_bounded_map` itself. `shutdown(wait=False)`
+alone would still leave the process open at interpreter exit (`concurrent.futures.thread`
+registers an atexit hook that joins every worker thread); killing the child closes that gap
+too, since a killed `subprocess.run` call returns (raising `TimeoutExpired`, caught by
+`_fetch_file_review_inputs`'s existing exception-return path) instead of blocking forever.
+`_fetch_review_unit_files` also gained its own `timeout` parameter: it computes a monotonic
+deadline at its own entry (not at submit time, so a queued unit's wait in the pool never
+consumes its own budget) and, once past that deadline, records a unit's remaining members as
+timed out instead of fetching them — an abandoned worker stops doing pointless work rather
+than working through every member. An injected `runner` (tests) is untouched; only the
+bare-`subprocess.run` default changed.

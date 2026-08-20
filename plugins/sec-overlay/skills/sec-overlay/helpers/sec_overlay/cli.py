@@ -5,8 +5,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
 
 from sec_overlay.bundle import group_bundles
@@ -133,7 +135,7 @@ def _fetch_file_review_inputs(path: str, base: str, head: str, runner):
         return exc
 
 
-def _fetch_review_unit_files(paths, base, head, runner):
+def _fetch_review_unit_files(paths, base, head, runner, timeout):
     """Fetch every member file of one ``ReviewUnit``, one exception per file.
 
     Each member's own fetch failure is caught individually (delegated to
@@ -142,17 +144,32 @@ def _fetch_review_unit_files(paths, base, head, runner):
     ...)`` — timing out this whole call — fails every member together
     (SCALE-02).
 
+    The deadline is computed here, at this call's own entry, not when the
+    unit was submitted to the pool — a queued unit's wait in the pool would
+    otherwise silently consume its own budget. Once past the deadline, this
+    worker stops fetching remaining members instead of doing pointless work
+    the caller has already abandoned (SCALE-02).
+
     Args:
         paths: The unit's member file paths.
         base: Base revision, already resolved to a SHA.
         head: Head revision, already resolved to a SHA.
         runner: Injectable subprocess runner (for testing).
+        timeout: Seconds this unit's fetch is allowed, matching the caller's
+            own ``future.result(timeout=timeout)`` budget.
 
     Returns:
         A dict mapping each path to its ``(diff_text, hunks, file_text)``
         tuple on success, or the caught exception on failure.
     """
-    return {path: _fetch_file_review_inputs(path, base, head, runner) for path in paths}
+    deadline = time.monotonic() + timeout
+    result = {}
+    for path in paths:
+        if time.monotonic() > deadline:
+            result[path] = TimeoutError(TIMEOUT_NOTE)
+            continue
+        result[path] = _fetch_file_review_inputs(path, base, head, runner)
+    return result
 
 
 def write_scan_scope(ws, target, *, sha: str = "", runner=None):
@@ -311,7 +328,11 @@ def run_review(
 
     import subprocess
 
-    r = runner or subprocess.run
+    # A bare `subprocess.run` leaves a hung git child running past --timeout;
+    # binding the process-level timeout here reaches every git call the
+    # review path makes, since `r` is the shared runner passed through the
+    # rest of this function (SCALE-02). An injected `runner` is untouched.
+    r = runner or partial(subprocess.run, timeout=timeout)
 
     memory = RepoMemory.for_target(root, runner=r)
     memory.ensure(target=root)
@@ -395,9 +416,17 @@ def run_review(
     rule_docs: list[dict] = []
     fetch_by_path = {}
     if units:
-        with ThreadPoolExecutor(max_workers=min(max_git_procs, len(units))) as ex:
+        # Context-managed `with ThreadPoolExecutor(...) as ex:` blocks on exit
+        # until every submitted worker finishes, even one already reported as
+        # timed out via `future.result(timeout=...)` above -- holding
+        # run_review open past --timeout (SCALE-02). `shutdown(wait=False)`
+        # lets this function return without waiting for an abandoned worker;
+        # the production-runner change above bounds what that worker's own
+        # git child can do with the time it's abandoned in.
+        ex = ThreadPoolExecutor(max_workers=min(max_git_procs, len(units)))
+        try:
             futures = [
-                ex.submit(_fetch_review_unit_files, unit.files, base_sha, head_sha, r)
+                ex.submit(_fetch_review_unit_files, unit.files, base_sha, head_sha, r, timeout)
                 for unit in units
             ]
             for unit, future in zip(units, futures):
@@ -409,6 +438,8 @@ def run_review(
                     fetch_by_path.update(
                         {path: TimeoutError(TIMEOUT_NOTE) for path in unit.files}
                     )
+        finally:
+            ex.shutdown(wait=False)
     for record in selection.reviewable:
         fetched = fetch_by_path[record.path]
         manifest.add(record.path)

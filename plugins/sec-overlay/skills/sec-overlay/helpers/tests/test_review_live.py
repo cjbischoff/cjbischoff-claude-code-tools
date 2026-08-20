@@ -62,11 +62,15 @@ def _fake_run_for(diffs: dict[str, str], head_texts: dict[str, str] | None = Non
     `head_texts` overrides the default whole-file text (reconstructed from `diffs`) that
     a `git show <ref>:<path>` call returns — needed only when a test's claimed line falls
     outside the diff-reconstructed content (e.g. line 999 of a much longer real file).
+
+    Accepts (and ignores) `**kwargs`: the production runner default is
+    `partial(subprocess.run, timeout=timeout)`, so a fake monkeypatched onto
+    `subprocess.run` receives a `timeout` keyword it must tolerate (SCALE-02).
     """
     name_status = "".join(f"M\t{p}\n" for p in diffs)
     texts = head_texts or {}
 
-    def fake(cmd, capture_output, text, check):
+    def fake(cmd, capture_output, text, check, **kwargs):
         class R:
             returncode = 0
             stdout = ""
@@ -334,10 +338,12 @@ def test_exit_codes_unchanged_invalid_ref_partial_seal_complete(tmp_path, monkey
     rc_invalid = run_review("-rf", _HEAD_SHA, str(tmp_path), profile="security")
     assert rc_invalid == 2
 
-    def failing_diff(cmd, capture_output, text, check):
+    def failing_diff(cmd, capture_output, text, check, **kwargs):
         if "--unified=3" in cmd:
             raise RuntimeError("boom")
-        return _fake_run_for({"app.py": _diff_for("app.py")})(cmd, capture_output, text, check)
+        return _fake_run_for({"app.py": _diff_for("app.py")})(
+            cmd, capture_output, text, check, **kwargs
+        )
 
     monkeypatch.setattr(subprocess, "run", failing_diff)
     rc_partial = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path / "partial"), profile="security")

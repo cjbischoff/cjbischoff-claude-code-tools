@@ -77,9 +77,15 @@ class _FakeResult:
 
 
 def _make_review_runner(paths):
-    """Fake ``runner`` answering rev-parse/name-status/unified diff for ``paths``."""
+    """Fake ``runner`` answering rev-parse/name-status/unified diff for ``paths``.
 
-    def runner(cmd, capture_output, text, check):
+    Accepts (and ignores) ``**kwargs`` because the production runner default
+    is ``partial(subprocess.run, timeout=timeout)`` — any fake monkeypatched
+    onto ``subprocess.run`` receives a ``timeout`` keyword it must tolerate
+    (SCALE-02).
+    """
+
+    def runner(cmd, capture_output, text, check, **kwargs):
         if cmd[1] == "rev-parse":
             return _FakeResult(f"sha-{cmd[-1]}\n")
         if cmd[1] == "diff" and "--name-status" in cmd:

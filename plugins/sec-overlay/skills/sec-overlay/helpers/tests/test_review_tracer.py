@@ -38,7 +38,10 @@ _DIFF = (
 )
 
 
-def _fake_run(cmd, capture_output, text, check):
+def _fake_run(cmd, capture_output, text, check, **kwargs):
+    # Accepts (and ignores) **kwargs: the production runner default is
+    # partial(subprocess.run, timeout=timeout), so a fake monkeypatched onto
+    # subprocess.run receives a `timeout` keyword it must tolerate (SCALE-02).
     class R:
         returncode = 0
         stdout = ""
@@ -72,7 +75,7 @@ def _make_diff(path: str) -> str:
 def _make_fake_run(path: str, diff: str):
     """Fake-runner factory for a single-file diff at an arbitrary path (fixture)."""
 
-    def fake(cmd, capture_output, text, check):
+    def fake(cmd, capture_output, text, check, **kwargs):
         class R:
             returncode = 0
             stdout = ""

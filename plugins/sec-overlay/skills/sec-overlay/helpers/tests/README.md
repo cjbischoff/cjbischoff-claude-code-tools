@@ -818,3 +818,9 @@ default is now `partial(subprocess.run, timeout=timeout)` — `_make_review_runn
 `_fake_run_for`/`failing_diff` (`test_review_live.py`), and `_fake_run`/`_make_fake_run`
 (`test_review_tracer.py`) all gained `**kwargs` for this reason; none of their return values
 changed.
+
+Fixing SCALE-02 also surfaced a latent regression from the SCALE-03 `--model` wiring (Phase 4 plan
+04 Task 2, commit `7b72c75`): `test_rule_glob.py`'s `fake_run_review` spy had no `model` parameter,
+so the full suite raised `TypeError: fake_run_review() got an unexpected keyword argument 'model'`
+once Task 3's fix forced a full-suite run. Added `model=None` to the spy's signature to match
+`run_review`'s real keyword-only parameters.
