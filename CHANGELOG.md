@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Complete the Phase 2 UAT (`.planning/phases/02-diff-pipeline-positioning/02-UAT.md`, status complete: 10/10 tests passed — 6 deliverables auto-covered by their passing test suites, 4 verified by hand against a live `sec-overlay review` run covering exclusion reasons, vacuous-success exit 0, invalid-ref exit 2, and the report/ledger outputs — 0 issues).
 - Refresh the milestone audit a third time (`.planning/v5.0-MILESTONE-AUDIT.md`, status gaps_found at 4/7 phases executed: 12/32 requirements satisfied, 6 partial on the stale Phase 2 verification record, 14 pending in unstarted Phases 4–6; the DIFF-04 sidecar blocker is closed by Phase 04.1, the integration check reports 6/6 links wired with zero gaps, and Nyquist validation is compliant for all four executed phases).
 - Fill and approve the Phase 04.1 validation strategy (`.planning/phases/04.1-close-gap-diff-04-review-sidecar-workspace-isolation/04.1-VALIDATION.md`, status validated, nyquist_compliant true: 0 gaps found, all 3 tasks map to green automated checks, 78 phase tests pass, and the full suite matches the recorded baseline of 1176 passed with the same 2 documented environmental failures).
 - Record the Phase 04.1 security threat verification (`.planning/phases/04.1-close-gap-diff-04-review-sidecar-workspace-isolation/04.1-SECURITY.md`, status verified: 5 threats from the plan threat model, 5 closed, threats_open 0, 3 accepted risks logged).
