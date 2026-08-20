@@ -153,8 +153,16 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 04-01-PLAN.md — Bundle grouping, diff-anchored comment payload, and content-only SARIF fingerprints (SCALE-01, OUT-01, OUT-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 04-02-PLAN.md — Bounded concurrency, per-bundle timeout, git process cap, and timeout-to-partial sealing (SCALE-02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 04-03-PLAN.md — Resume identity validation before any write, and SHA-pinned resumed reads (SCALE-03)
 
 ### Phase 04.1: Close gap: DIFF-04 — review sidecar workspace isolation (INSERTED)
