@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Diff-Review Architecture
-current_phase: 04
-current_phase_name: scale-resume-diff-output
-status: verifying
+current_phase: 04.1
+current_phase_name: "Close gap: DIFF-04 — review sidecar workspace isolation"
+status: planning
 stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-08-20T20:30:32.822Z"
+last_updated: "2026-08-20T20:59:43.768Z"
 last_activity: 2026-08-20
 last_activity_desc: Phase 04 execution started
 progress:
@@ -29,10 +29,10 @@ governed releases, receipt-backed findings.
 
 ## Current Position
 
-Phase: 04 (scale-resume-diff-output) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-08-20 — Phase 04 execution started
+Phase: 04.1 — Close gap: DIFF-04 — review sidecar workspace isolation
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-20 — Phase 04 complete, transitioned to Phase 04.1
 
 Progress: [██████████] 100%
 
@@ -40,7 +40,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 16
+- Total plans completed: 20
 - Average duration: -
 - Total execution time: -
 
@@ -52,6 +52,7 @@ Progress: [██████████] 100%
 | 03 | 7 | - | - |
 | 04.1 | 1 | - | - |
 | 02 | 5 | - | - |
+| 04 | 4 | - | - |
 
 **Recent Trend:**
 

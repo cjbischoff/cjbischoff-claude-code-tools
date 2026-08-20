@@ -1,87 +1,28 @@
 ---
 phase: 04-scale-resume-diff-output
-verified: 2026-08-20T19:06:21Z
-status: gaps_found
-score: 2/5 must-haves verified
+verified: 2026-08-20T21:15:00Z
+status: passed
+score: 5/5 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
-gaps:
-  - truth: "OUT-01: review_comments.json carries the coverage manifest alongside the comment payload so a consumer can tell whether the run producing it was complete or partial, without inferring it from the file's presence"
-    status: failed
-    reason: >
-      cli.py calls write_review_comments(ws, comments, manifest.to_dict()) before
-      manifest.seal() runs, so the embedded coverage_manifest.seal is always null in
-      every real run, regardless of whether the run actually completed or partial-sealed.
-      This falsifies the module's own docstring promise and the plan's T-04-04 threat
-      mitigation claim. No test at any level (unit or integration) exercises the real
-      cli.py call ordering — the one existing test
-      (test_write_review_comments_empty_list_still_has_manifest) calls
-      write_review_comments() directly with a hand-built fixture manifest, never
-      through run_review()'s real sequence.
-    artifacts:
-      - path: "plugins/sec-overlay/skills/sec-overlay/helpers/sec_overlay/cli.py"
-        issue: "Lines ~523-530: write_review_comments(ws, comments, manifest.to_dict()) runs before manifest.seal(); the embedded manifest is always pre-seal state"
-    missing:
-      - "Reorder cli.py so manifest.seal() runs before write_review_comments(), or write the comments file a second time with a post-seal manifest snapshot"
-      - "An integration test asserting review_comments.json's embedded coverage_manifest['seal'] is non-null and matches the on-disk coverage_manifest.json's seal after a real run_review() call (not a direct write_review_comments() call)"
-  - truth: "SCALE-03: Resume validates identity before any agent spawn — an implicit model or profile change is rejected with nothing persisted"
-    status: failed
-    reason: >
-      The profile half of this gate is fully wired end to end (check_resume_identity
-      runs before CoverageManifest construction and before any write, confirmed by a
-      byte-hash-unchanged test). The model half is unreachable in production: the
-      `review` argparse subparser declares no --model argument, and main()'s dispatch
-      to run_review() never passes model=, so model is always None through any real
-      CLI invocation. check_resume_identity's model-mismatch branch is dead code
-      outside of direct Python-level test calls that bypass main(). Confirmed by
-      `python -m sec_overlay.cli review --model opus ...` failing with
-      "error: unrecognized arguments: --model opus", and zero occurrences of "--model"
-      across cli.py, every test file, and SKILL.md.
-    artifacts:
-      - path: "plugins/sec-overlay/skills/sec-overlay/helpers/sec_overlay/cli.py"
-        issue: "review subparser (~lines 576-611) has no --model argument; main()'s dispatch (~lines 670-682) never passes model=args.model to run_review()"
-    missing:
-      - "Add review.add_argument(\"--model\", default=None) to the review subparser"
-      - "Pass model=args.model at the run_review() call site in main()"
-      - "A CLI-level (argparse-through-main) test asserting a resumed run with a changed --model value exits non-zero naming the model field, not just a direct check_resume_identity() unit test"
-  - truth: "SCALE-02: --concurrency, per-bundle --timeout, and --max-git-procs bound execution; a timed-out bundle marks its files failed and the run terminal state becomes partial"
-    status: failed
-    reason: >
-      The three flags exist with correct defaults/ceilings/rejection behavior, and a
-      timed-out unit correctly marks every member file failed via CoverageManifest.fail()
-      (seal() then correctly returns "partial", exit 3 — confirmed by a passing test
-      that asserts manifest_json["seal"] == "partial"). But --timeout does not bound
-      wall-clock execution: `with ThreadPoolExecutor(...) as ex:` wraps the entire
-      submit-and-wait loop, so a `TimeoutError` from future.result(timeout=...) is
-      caught and handled correctly, but the `with` block's __exit__ still calls
-      ex.shutdown(wait=True) on exit, blocking the whole process until the abandoned
-      thread finishes its work regardless of the declared timeout. Independently
-      reproduced by timing the shipped test: declared timeout=1 in the test's own
-      setup, measured wall time 4.20s (uv run pytest tests/test_cli.py::test_review_unit_timeout_fails_every_member_with_timeout_note
-      -q → "1 passed in 4.20s"). This falsifies the literal roadmap wording "bound
-      execution." 04-02-SUMMARY.md's own "Decisions Made" section documents the team
-      recognized this exact tension at implementation time and left it unresolved
-      ("closing it after only submitting would make __exit__'s shutdown(wait=True)
-      block until every future finishes anyway, silently defeating the timeout's
-      early-return purpose") without applying the actual fix (shutdown(wait=False) in
-      a finally block, or a subprocess-level timeout that actually kills the hung
-      process).
-    artifacts:
-      - path: "plugins/sec-overlay/skills/sec-overlay/helpers/sec_overlay/cli.py"
-        issue: "Lines ~397-411: with ThreadPoolExecutor(...) as ex: wraps the entire fetch-and-wait loop; __exit__'s implicit shutdown(wait=True) blocks past the declared --timeout on any abandoned/hung thread"
-    missing:
-      - "Replace the with-statement with an explicit try/finally that calls ex.shutdown(wait=False) after the result-collection loop, so a timed-out future's thread is abandoned rather than awaited"
-      - "For a complete fix, also thread a real subprocess-level timeout/kill into the git fetch call itself, since abandoning the Python thread still leaves the underlying git subprocess running"
-      - "A wall-clock timing test proving --timeout actually bounds the CLI's total runtime for a hung unit, not just that the manifest ends up marked failed"
+re_verification:
+  previous_status: gaps_found
+  previous_score: 2/5
+  gaps_closed:
+    - "OUT-01: review_comments.json carries the coverage manifest alongside the comment payload so a consumer can tell whether the run producing it was complete or partial, without inferring it from the file's presence"
+    - "SCALE-03: Resume validates identity before any agent spawn — an implicit model or profile change is rejected with nothing persisted"
+    - "SCALE-02: --concurrency, per-bundle --timeout, and --max-git-procs bound execution; a timed-out bundle marks its files failed and the run terminal state becomes partial"
+  gaps_remaining: []
+  regressions: []
 deferred: []
 ---
 
 # Phase 4: Scale, Resume & Diff Output Verification Report
 
 **Phase Goal:** Large changesets stay bounded and resumable, and every shipped finding carries a diff-anchored, positioning-confirmed location.
-**Verified:** 2026-08-20T19:06:21Z
-**Status:** gaps_found
-**Re-verification:** No — initial verification
+**Verified:** 2026-08-20T21:15:00Z
+**Status:** passed
+**Re-verification:** Yes — after gap closure (04-04-PLAN.md / 04-04-SUMMARY.md)
 
 ## Goal Achievement
 
@@ -89,97 +30,91 @@ deferred: []
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | SCALE-01: `bundle.py` groups locale/config siblings and impl/test pairs into review units, one file per unit as fallback, documented as beyond OCR | ✓ VERIFIED | `bundle.py` module docstring states "This is a sec-overlay addition beyond OCR"; `group_bundles()` pure/total (no fs/subprocess/Workspace imports); `review_agent.py:187` sets `Finding.file=entry_path` (entry's own path, not the outer file under review); 14 `test_bundle.py` tests + 3 `test_review_agent.py` tests pass |
-| 2 | SCALE-02: `--concurrency`/`--timeout`/`--max-git-procs` bound execution; a timed-out bundle marks its files failed and the run seals `partial` | ✗ FAILED | Flags exist, validated, correctly bounded (`_bounded_int`, `MAX_WORKERS=128`, `MAX_TIMEOUT_SECONDS=3600`); timeout handling correctly marks files failed (`cli.py:405-409`) and `seal()` returns `"partial"` (test-confirmed). But `with ThreadPoolExecutor(...) as ex:` (`cli.py:397`) blocks on `shutdown(wait=True)` past the declared timeout — independently reproduced (declared `timeout=1`, measured wall time 4.20s) |
-| 3 | SCALE-03: Resume validates identity (model or profile) before any write, rejecting a mismatch with nothing persisted; reads pin to sealed SHAs | ✗ FAILED | `check_resume_identity()` runs before `CoverageManifest` construction (`cli.py:322-328`), confirmed byte-hash-unchanged on rejection; SHA-pinning-on-resume confirmed (`resolve_ref_sha` round-trip). But the `review` argparse subparser declares no `--model` flag and `main()` never passes `model=` to `run_review()` — the model half of the identity gate is unreachable through any real CLI invocation (confirmed: `--model opus` → `error: unrecognized arguments`) |
-| 4 | OUT-01: A diff-anchored comment payload `{path, line, side, existing_code, content}` is written alongside SARIF/markdown/per-finding files, with the coverage manifest included so completeness is legible without inferring it from the file's presence | ✗ FAILED | 5-key `DiffComment` payload confirmed (`review_comments.py`); atomic write confirmed; a manifest dict IS embedded — but `cli.py` calls `write_review_comments(ws, comments, manifest.to_dict())` *before* `manifest.seal()` runs (`cli.py:523` vs `526`), so the embedded `coverage_manifest.seal` is always `null`, falsifying the documented completeness signal |
-| 5 | OUT-02: SARIF fingerprints key on `Path|Category|ExistingCode`, excluding message text | ✓ VERIFIED | `sarif.py`'s `_sarif_fingerprint()`: `f"{finding.file}|{finding.cls}|{finding.evidence.strip()}"`, sha256-truncated, no Unicode normalization (deliberate, documented); message excluded; `to_sarif([])` yields zero `partialFingerprints` occurrences; 8 dedicated tests pass |
+| 1 | SCALE-01: `bundle.py` groups locale/config siblings and impl/test pairs into review units, one file per unit as fallback, documented as beyond OCR | ✓ VERIFIED | Regression-checked: `bundle.py` unchanged since prior verification; `uv run pytest tests/test_bundle.py tests/test_review_agent.py -q` → 41 passed (`plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_bundle.py`, `tests/test_review_agent.py`) |
+| 2 | SCALE-02: `--concurrency`/`--timeout`/`--max-git-procs` bound execution; a timed-out bundle marks its files failed and the run seals `partial` | ✓ VERIFIED | Gap closed. `cli.py:426-442`: unit-fetch executor is now an explicit instance wrapped in `try`/`finally` calling `ex.shutdown(wait=False)` (was a `with`-block that blocked on exit). `cli.py:335`: production runner default is `partial(subprocess.run, timeout=timeout)`, so every real git call carries a kill deadline. Independently re-ran the previously-failing behavior: `test_review_returns_before_hung_unit_fetch_completes` now measures `elapsed < 2.0s` (was 4.20s pre-fix) and passed; `test_review_abandoned_unit_fetch_stops_at_the_unit_deadline` confirms the abandoned worker stops fetching past its deadline; `test_review_production_git_calls_carry_subprocess_timeout` confirms every real `subprocess.run` call receives `timeout=42` when declared. All three ran green (`uv run pytest tests/test_cli.py -k "hung_unit or abandoned_unit or production_git_calls" -q` → 3 passed) |
+| 3 | SCALE-03: Resume validates identity (model or profile) before any write, rejecting a mismatch with nothing persisted; reads pin to sealed SHAs | ✓ VERIFIED | Gap closed. `cli.py:646-651`: `review` subparser now declares `--model` (default `None`); `cli.py:722`: `main()` forwards `model=args.model` to `run_review()`. `check_resume_identity()` still runs (`cli.py:346`) before `CoverageManifest` construction (`cli.py:412`) and before any write, for both `model` and `profile`. Re-ran: `uv run python -m sec_overlay.cli review --help` now lists `--model`; a real invocation with `--model opus` no longer raises `unrecognized arguments` (previously reproduced failure). `test_review_accepts_model_flag_and_forwards_it_to_run_review` and `test_review_resume_with_changed_model_exits_2_via_main_entrypoint` both pass, the latter driving two full `cli.main()` calls and asserting exit code 2 with stderr naming both the old and new model values |
+| 4 | OUT-01: A diff-anchored comment payload `{path, line, side, existing_code, content}` is written alongside SARIF/markdown/per-finding files, with the coverage manifest included so completeness is legible without inferring it from the file's presence | ✓ VERIFIED | Gap closed. `cli.py:560-561`: `seal = manifest.seal()` now runs *before* `write_review_comments(ws, comments, manifest.to_dict())` (previously reversed). Re-ran the two new tests that read both artifacts and assert equality end-to-end through a real `run_review()` call: `test_review_comments_embedded_manifest_seal_matches_on_disk_after_complete_run` (embedded seal == on-disk seal == `"complete"`) and `test_review_comments_embedded_manifest_seal_is_partial_after_partial_run` (both == `"partial"`). Both pass |
+| 5 | OUT-02: SARIF fingerprints key on `Path|Category|ExistingCode`, excluding message text | ✓ VERIFIED | Regression-checked: `sarif.py` unchanged since prior verification; `uv run pytest tests/test_sarif.py -q` → included in the 41-pass regression run above |
 
-**Score:** 2/5 truths verified
+**Score:** 5/5 truths verified
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `sec_overlay/bundle.py` | `group_bundles()` real grouping semantics | ✓ VERIFIED | Pure, total, documented, 14 tests pass |
-| `sec_overlay/review_agent.py` | `bundle_paths` focus-widening in `parse_review_response` | ✓ VERIFIED | `entry_path not in members` check + `file=entry_path` attribution confirmed |
-| `sec_overlay/cli.py` | Three bounded flags, pooled git fetch, per-unit timeout, resume-identity gate | ⚠️ PARTIAL | Flags/pooling/timeout-marking exist and are wired, but two specific behaviors (wall-clock timeout enforcement, model identity) are not reachable/correct in production — see gaps |
-| `sec_overlay/review_coverage.py` | `MANIFEST_VERSION` 2, `model`/`profile` fields, `check_resume_identity`, `ResumeIdentityError` | ✓ VERIFIED | Present, correctly ordered relative to manifest construction |
-| `sec_overlay/review_comments.py` | 5-key comment payload + embedded coverage manifest | ⚠️ HOLLOW | Shape correct; embedded manifest's `seal` field is always stale (pre-seal) in every real run |
-| `sec_overlay/sarif.py` | `partialFingerprints` on `Path|Category|ExistingCode` | ✓ VERIFIED | Confirmed by direct code read and passing tests |
+| `sec_overlay/bundle.py` | `group_bundles()` real grouping semantics | ✓ VERIFIED | Unchanged, regression-passed |
+| `sec_overlay/review_agent.py` | `bundle_paths` focus-widening in `parse_review_response` | ✓ VERIFIED | Unchanged, regression-passed |
+| `sec_overlay/cli.py` | Three bounded flags, pooled git fetch, per-unit timeout, resume-identity gate, `--model` surface, seal-before-write ordering | ✓ VERIFIED | All three 04-04 fixes confirmed present and behaviorally exercised (see truths 2-4 above) |
+| `sec_overlay/review_coverage.py` | `MANIFEST_VERSION` 2, `model`/`profile` fields, `check_resume_identity`, `ResumeIdentityError` | ✓ VERIFIED | Unchanged, still correctly ordered relative to manifest construction |
+| `sec_overlay/review_comments.py` | 5-key comment payload + embedded coverage manifest | ✓ VERIFIED | Shape unchanged; embedded manifest's `seal` field now matches on-disk seal for both complete and partial runs |
+| `sec_overlay/sarif.py` | `partialFingerprints` on `Path|Category|ExistingCode` | ✓ VERIFIED | Unchanged, regression-passed |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|-----|-----|--------|---------|
-| `cli.run_review` | `bundle.group_bundles` | builds `bundle_paths_by_path`, threads into `recorded_return_source` | ✓ WIRED | Confirmed at `cli.py` review_source construction |
-| `review_agent.parse_review_response` | unit membership | `bundle_paths` param, `entry_path in members` check | ✓ WIRED | Confirmed line-level |
-| `cli.run_review` | `CoverageManifest`/`check_resume_identity` | identity check before manifest construction | ✓ WIRED (profile only) | `model` param exists on the function but has no CLI argument feeding it — NOT_WIRED at the CLI surface |
-| `cli.run_review` | `write_review_comments` | `manifest.to_dict()` passed at write time | ⚠️ WIRED BUT WRONG ORDER | Write happens before `seal()`, so the link delivers stale data |
-| `cli.run_review` | `to_sarif` | via `report.write_report` | ✓ WIRED | Confirmed |
+| `cli.run_review` | `bundle.group_bundles` | builds `bundle_paths_by_path`, threads into `recorded_return_source` | ✓ WIRED | Unchanged from prior verification |
+| `review_agent.parse_review_response` | unit membership | `bundle_paths` param, `entry_path in members` check | ✓ WIRED | Unchanged from prior verification |
+| `cli.main` | `run_review` model param | `args.model` from `--model` argparse arg → `model=args.model` kwarg | ✓ WIRED | `cli.py:647-651` (argparse) → `cli.py:722` (call site); confirmed by `test_review_accepts_model_flag_and_forwards_it_to_run_review` |
+| `cli.run_review` | `CoverageManifest`/`check_resume_identity` | identity check before manifest construction, now reachable for both `model` and `profile` via the CLI | ✓ WIRED | `cli.py:322-346` before `cli.py:412`; confirmed end-to-end via `cli.main()` in `test_review_resume_with_changed_model_exits_2_via_main_entrypoint` |
+| `cli.run_review` | `write_review_comments` | `manifest.seal()` result embedded via `manifest.to_dict()` at write time | ✓ WIRED (correct order) | `cli.py:560` (`seal = manifest.seal()`) precedes `cli.py:561` (`write_review_comments(...)`); confirmed by direct on-disk/embedded seal equality tests |
+| `cli.run_review` unit-fetch | `ThreadPoolExecutor` lifetime | explicit instance + `try`/`finally` `shutdown(wait=False)`, plus per-call `subprocess.run(timeout=...)` | ✓ WIRED | `cli.py:426-442` (executor lifetime), `cli.py:335` (subprocess-level kill); confirmed by wall-clock timing test (1.01s vs pre-fix 4.20s) |
+| `cli.run_review` | `to_sarif` | via `report.write_report` | ✓ WIRED | Unchanged from prior verification |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| `--timeout` bounds wall-clock execution on a hung unit | `uv run pytest tests/test_cli.py::test_review_unit_timeout_fails_every_member_with_timeout_note -q` | `1 passed in 4.20s` against a declared `timeout=1` in the test's own setup | ✗ FAIL — confirms CR-03 independently |
-| `--model` reaches the CLI | `uv run python -m sec_overlay.cli review --model opus --base HEAD --root /tmp` | `error: unrecognized arguments: --model opus` | ✗ FAIL — confirms CR-02 independently |
-| Embedded manifest ordering | `grep -n "write_review_comments\|manifest.seal()" cli.py` | `write_review_comments(...)` at line ~523, `manifest.seal()` at line ~526 (write precedes seal) | ✗ FAIL — confirms CR-01 independently |
-| Full suite regression | `uv run pytest -q` (run once) | `1242 passed, 2 failed` — both failures are the documented pre-existing environmental baseline (`test_bench.py::test_seed_corpus_is_valid`, `test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd`) | ✓ PASS — zero new regressions |
-| Lint/type cleanliness | `uv run ruff check sec_overlay/ bench/ tests/`, `uv run ty check` | Both "All checks passed!" | ✓ PASS |
+| `--timeout` now bounds wall-clock execution on a hung unit | `uv run pytest tests/test_cli.py -k "embedded_manifest_seal or model or hung_unit or abandoned_unit or production_git_calls" -q --durations=10` | `7 passed in 3.02s`; `test_review_returns_before_hung_unit_fetch_completes` took 1.01s (was 4.20s pre-fix) | ✓ PASS |
+| `--model` reaches the CLI | `uv run python -m sec_overlay.cli review --help \| grep -- "--model"` | `--model MODEL` listed with help text | ✓ PASS |
+| `--model` no longer rejected by argparse | `uv run python -m sec_overlay.cli review --model opus --base HEAD~1 --head HEAD --root /tmp` | exit 0, no `unrecognized arguments` error (previously reproduced failure) | ✓ PASS |
+| Embedded manifest ordering | `grep -n "seal = manifest.seal()\|write_review_comments(ws, comments, manifest.to_dict())" cli.py` | `seal = manifest.seal()` at line 560, `write_review_comments(...)` at line 561 (seal precedes write) | ✓ PASS |
+| Full suite regression (run once) | `uv run pytest -q` | `2 failed, 1249 passed` — both failures are the documented pre-existing environmental baseline (`test_bench.py::test_seed_corpus_is_valid`, `test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd`) | ✓ PASS — zero new regressions |
+| Type cleanliness | `uv run ty check` | "All checks passed!" | ✓ PASS |
+| Lint cleanliness | `uv run ruff check sec_overlay/ bench/ tests/` | 1 error: `I001` unsorted import block in `tests/test_cli.py:778` (inside `test_review_resume_with_changed_model_exits_2_via_main_entrypoint`, one of the 7 new tests) | ⚠️ WARNING — see Anti-Patterns |
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |-------------|-------------|-------------|--------|----------|
-| SCALE-01 | 04-01-PLAN.md | Bundle grouping + focus rule | ✓ SATISFIED | `bundle.py`, `review_agent.py`, 14+3 tests |
-| SCALE-02 | 04-02-PLAN.md | Bounded flags + timeout | ✗ BLOCKED | `--timeout` does not bound wall-clock execution (CR-03) |
-| SCALE-03 | 04-03-PLAN.md | Resume identity + SHA pinning | ✗ BLOCKED | Model half of identity gate has no CLI surface (CR-02) |
-| OUT-01 | 04-01-PLAN.md | Diff-anchored comment payload + manifest | ✗ BLOCKED | Embedded manifest's `seal` always `null` (CR-01) |
-| OUT-02 | 04-01-PLAN.md | SARIF fingerprint contract | ✓ SATISFIED | `sarif.py`, 8 tests |
+| SCALE-01 | 04-01-PLAN.md | Bundle grouping + focus rule | ✓ SATISFIED | Unchanged, regression-passed |
+| SCALE-02 | 04-02-PLAN.md, 04-04-PLAN.md (gap closure) | Bounded flags + timeout actually bounds wall clock | ✓ SATISFIED | Executor lifetime + subprocess-level kill fix confirmed behaviorally |
+| SCALE-03 | 04-03-PLAN.md, 04-04-PLAN.md (gap closure) | Resume identity (model + profile) + SHA pinning | ✓ SATISFIED | `--model` CLI surface wired and enforced through `main()` |
+| OUT-01 | 04-01-PLAN.md, 04-04-PLAN.md (gap closure) | Diff-anchored comment payload + manifest | ✓ SATISFIED | Embedded manifest's `seal` now matches on-disk seal for complete and partial runs |
+| OUT-02 | 04-01-PLAN.md | SARIF fingerprint contract | ✓ SATISFIED | Unchanged, regression-passed |
 
-No orphaned requirements — all five phase-declared IDs (SCALE-01, SCALE-02, SCALE-03, OUT-01, OUT-02) appear in a plan's `requirements` frontmatter and are traced above. REQUIREMENTS.md marks all five `[x]` Complete; this verification disagrees with three of those five markings for the reasons above.
+No orphaned requirements — all five phase-declared IDs (SCALE-01, SCALE-02, SCALE-03, OUT-01, OUT-02) appear in a plan's `requirements` frontmatter (04-01, 04-02, 04-03, and gap-closure 04-04) and are traced above. REQUIREMENTS.md marks all five `[x]` Complete; this verification agrees with all five markings.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| `sec_overlay/cli.py` | ~523-530 | `write_review_comments()` called before `manifest.seal()` | 🛑 Blocker | OUT-01's completeness signal is always false (`seal: null`) |
-| `sec_overlay/cli.py` | ~576-611, ~670-682 | `review` subparser has no `--model` arg; `main()` never passes `model=` | 🛑 Blocker | SCALE-03's model-identity gate is dead code in production |
-| `sec_overlay/cli.py` | ~397-411 | `with ThreadPoolExecutor(...) as ex:` implicit `shutdown(wait=True)` on exit | 🛑 Blocker | SCALE-02's `--timeout` does not bound wall-clock execution on a hung unit |
-| `sec_overlay/bundle.py` | 30 | `_LOCALE_STEM` regex misses lowercase-region (`pt-br`), underscore (`pt_BR`), 3-letter (`fil`/`haw`) codes | ⚠️ Warning | Fails safe (single-file fallback) but under-delivers grouping for these formats; non-blocking against literal SC1 wording |
-| `sec_overlay/sarif.py` | ~71 | Fingerprint key omits `line`; same file/cls/evidence at different lines collide | ⚠️ Warning | Non-blocking against literal SC5 wording (no line-disambiguation requirement) |
-| `sec_overlay/cli.py` | ~353-357 | Diff-line-count prefetch's `_bounded_map` uses plain `ex.map()` with no timeout | ⚠️ Warning | Unprotected phase distinct from the per-unit fetch loop; not the literal SC2 fetch-loop scope |
-| `sec_overlay/cli.py` / `SKILL.md` | — | `--concurrency` validated in Python core, enforced only by `SKILL.md`'s dispatch loop | ℹ️ Info | Explicit, documented design decision (T-04-09 in 04-02-PLAN.md); not a defect |
+| `tests/test_cli.py` | 778 | `I001` unsorted/unformatted import block inside `test_review_resume_with_changed_model_exits_2_via_main_entrypoint` (one of the 04-04 gap-closure tests) | ⚠️ Warning | Cosmetic lint regression against the project's Zero Warnings Policy; does not affect test correctness or any phase truth. `ty check` is still clean. Fixable with `ruff check --fix` |
+| `sec_overlay/cli.py` | 310-319, 556-558 | `run_review`'s zero-reviewable-files early return never calls `.seal()` (deliberate, per T-02-05: `seal()` raises on an empty manifest) and never persists `coverage_manifest.json` at all; the embedded `coverage_manifest.seal` stays `null` for this input shape, contradicting the module's own docstring ("0 when the coverage manifest seals `complete` (including a diff with no reviewable files)"). Freshly identified as WR-01 in the 04-04 code review (`04-REVIEW.md`) | ⚠️ Warning | Pre-existing since 04-01 (not introduced or touched by 04-04). Explicitly out of scope for 04-04's `must_haves.truths`, which scope OUT-01 to "after any run_review() call that reaches a seal" — the zero-reviewable path never reaches a seal by design. Does not affect the phase's Success Criterion #4 wording ("with the coverage manifest included") for the common case (≥1 reviewable file). Low practical impact (nothing to resume when zero files were reviewed) but leaves a resumed run against a zero-file diff unrecognized as a resume |
+| `sec_overlay/bundle.py` | 30, 65-66 | `_LOCALE_STEM` regex can group two unrelated non-locale source files (e.g. `id.py`/`ok.py`) sharing a two-letter stem in the same directory into one `ReviewUnit`, sharing failure/timeout blast radius. Freshly identified as WR-02 in the 04-04 code review | ⚠️ Warning | Pre-existing since 04-01. Non-blocking against literal SC1 wording (fails toward over-grouping, not under-grouping or a crash); explicitly listed as a non-goal in 04-04-PLAN.md's scope ("WR-01 (`_LOCALE_STEM` misses `pt-br`/`pt_BR`/`fil`)... Do not touch") |
+| `sec_overlay/cli.py` | 443-444 | Direct `fetch_by_path[record.path]` dict index relies on an unstated cross-function invariant (`group_bundles` totality over `selection.reviewable`) with no local comment | ℹ️ Info | Invariant holds today and is well-tested (`test_bundle.py::test_group_bundles_every_path_appears_in_exactly_one_unit`); a future refactor of `units` construction could silently break it with no local signal |
 
 No unreferenced `TBD`/`FIXME`/`XXX` markers found in phase-modified files.
 
 ### Deferred Items
 
-None. All three blockers were considered against Step 9b's later-phase matching: Phase 5 (AUD-01..06) and Phase 6 (REL-01..03, "every defect observed in the verification runs is fixed or given a written disposition") were checked. REL-01's wording is a milestone-wide catch-all with no phase-4-specific evidence, and the methodology requires conservative matching — a vague catch-all does not defer a direct contradiction of this phase's own literal Success Criteria. These three gaps are native to Phase 4 and are reported as gaps here, not deferred.
+None. All warnings above were checked against later-phase matching (Phase 5: AUD-01..06; Phase 6: REL-01..03). None are addressed by a later phase's stated goal or success criteria with specific, concrete evidence — they are recorded as open warnings here, consistent with 04-04-PLAN.md's own explicit non-goals list (WR-01/WR-02/IN-01, using that plan's own numbering, are declared out of scope and left open by design).
 
 ### Human Verification Required
 
-None. All three gaps were independently confirmed by direct code reading and reproducible commands (grep evidence, a real CLI invocation, and a timed test run) — no item requires subjective human judgment to resolve.
+None. All three previously-failed truths were independently re-confirmed by direct code reading, wall-clock timing measurement, and real CLI invocation — no item requires subjective human judgment to resolve.
 
 ### Gaps Summary
 
-Phase 4's own prior code-review artifact (`04-REVIEW.md`, dated the same day as phase completion) already identified these three defects (there labeled CR-01/CR-02/CR-03) with concrete fix snippets. Git history (`6b671d2` through `84aa291`) shows zero remediation commits after the review was written — the defects are still live in the current working tree, independently re-confirmed here by direct code inspection, a real CLI invocation, and a timed test run rather than by trusting the review's narrative.
+None. This is a re-verification after `04-04-PLAN.md` (gap closure, 6 commits: `70aaf9d`, `728ff73`, `36b08d0`, `7b72c75`, `80074fd`, `e6dcddc`) closed all three gaps recorded in the prior `04-VERIFICATION.md` (score 2/5, `status: gaps_found`):
 
-All three break the literal wording of a ROADMAP.md Success Criterion for this phase, not merely a nice-to-have:
+1. **OUT-01** — `cli.py` now computes `seal = manifest.seal()` before calling `write_review_comments(ws, comments, manifest.to_dict())` (previously reversed), so the embedded `coverage_manifest.seal` in `review_comments.json` always matches the on-disk `coverage_manifest.json`'s seal for both complete and partial runs. Independently confirmed by direct code read (`cli.py:560-561`) and by running the two new tests, which drive a real `run_review()` call and assert equality against the on-disk artifact rather than a hand-built fixture.
+2. **SCALE-03** — the `review` argparse subparser now declares `--model` (default `None`), and `main()` forwards `model=args.model` to `run_review()`. Independently confirmed by `uv run python -m sec_overlay.cli review --help` listing `--model` (the previously recorded `unrecognized arguments: --model opus` failure no longer reproduces), and by a test that drives two full `cli.main()` invocations and asserts exit code 2 with stderr naming both model values.
+3. **SCALE-02** — the unit-fetch `ThreadPoolExecutor` is now an explicit instance wrapped in `try`/`finally` calling `ex.shutdown(wait=False)` (replacing the `with`-block whose implicit `shutdown(wait=True)` blocked past `--timeout`), and the production runner default became `partial(subprocess.run, timeout=timeout)` so every real git subprocess call carries a kill deadline equal to the declared `--timeout`. Independently re-measured: the previously-failing wall-clock reproduction (declared `timeout=1`, measured 4.20s) is now bounded — the equivalent test measures 1.01s.
 
-1. **OUT-01** — "with the coverage manifest included" is satisfied structurally (a manifest dict is present) but not functionally: the manifest is captured *before* `seal()` runs, so its `seal` field is always `null`, meaning a consumer reading `review_comments.json` can never actually tell a complete run from a partial one — the exact case the manifest was embedded to solve (module docstring; plan's T-04-04 threat mitigation).
-2. **SCALE-03** — "an implicit model or profile change is rejected" is only half-true: `--profile`'s mismatch path works end to end, but no `--model` CLI flag exists, so the model-mismatch branch of `check_resume_identity` can never fire outside of a unit test that calls the function directly, bypassing `main()`.
-3. **SCALE-02** — "`--timeout`... bound execution" is falsified for the case that matters most: a genuinely hung git subprocess. The per-unit timeout correctly marks the manifest `partial`, but the enclosing `with ThreadPoolExecutor(...) as ex:` block's `shutdown(wait=True)` on exit still blocks the whole CLI process until the abandoned thread finishes, independently confirmed by timing (declared `timeout=1`, measured 4.20s).
-
-Two of the three plans' own SUMMARY.md files show the team came close to catching these: 04-01-SUMMARY.md's Task 3 explicitly checked `sarif.py`/`review_comments.py` for an implementation gap and (correctly, at the unit level) found none — the defect lives one layer up, in `cli.py`'s call ordering, which no test exercises. 04-02-SUMMARY.md's "Decisions Made" section explicitly names the `shutdown(wait=True)` tension and reasons through it without resolving it. Neither SUMMARY's "verified manually" or "full suite green" claims constitute evidence against these three gaps — the manual SCALE-03 check in 04-03-SUMMARY.md only exercised `--profile`'s path, never `--model`'s, which is exactly consistent with `--model` having no real CLI surface to exercise.
-
-**Fix guidance** (already drafted with more detail in `04-REVIEW.md`):
-- Reorder `cli.py` to call `manifest.seal()` before `write_review_comments()`, or re-write the comments file after sealing.
-- Add `review.add_argument("--model", default=None)` to the `review` subparser and pass `model=args.model` at the `run_review()` call site.
-- Replace `with ThreadPoolExecutor(...) as ex:` with an explicit `try/finally` calling `ex.shutdown(wait=False)`, and consider a subprocess-level kill for a complete fix.
+All 5/5 phase-goal truths are verified with direct evidence (code reads, independently re-run tests, a real CLI invocation, and a wall-clock timing measurement), not by trusting SUMMARY.md's narrative. Three pre-existing, non-blocking warnings remain open by explicit design decision in `04-04-PLAN.md`'s own non-goals list and this verification's regression check, plus one new cosmetic lint warning (`ruff` `I001` in one of the seven new tests) that does not affect correctness or any phase truth.
 
 ---
 
-_Verified: 2026-08-20T19:06:21Z_
+_Verified: 2026-08-20T21:15:00Z_
 _Verifier: Claude (gsd-verifier)_
