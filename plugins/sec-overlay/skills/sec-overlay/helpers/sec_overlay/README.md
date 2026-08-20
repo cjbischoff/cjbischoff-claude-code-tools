@@ -871,3 +871,13 @@ dict and returns 0 unchanged (there is nothing to seal). Every other path now as
 `manifest.seal()` to a local before calling `write_review_comments` exactly once with the
 post-seal dict, branching the exit code on that local instead of re-deriving it — so the
 embedded seal always matches the on-disk manifest, for both a complete and a partial run.
+
+Phase 4 plan 04 (Task 2, SCALE-03 gap closure) gives the `review` subcommand a `--model`
+argparse flag (default `None`), forwarded as `model=args.model` at `main()`'s single
+`run_review(...)` call site. `run_review`'s `model` keyword parameter, `CoverageManifest`'s
+`model` field, and `check_resume_identity`'s model-mismatch check were already fully wired
+from Task 2 of plan 04-03 — this closes the CLI surface only, nothing in `run_review`,
+`CoverageManifest`, or `check_resume_identity` changed. Before this fix, `--model` had no
+argparse surface, so a resumed run could never actually change model identity through the
+CLI, leaving the resume-rejection gate dead code in production despite being fully tested
+at the `run_review` Python-function level.

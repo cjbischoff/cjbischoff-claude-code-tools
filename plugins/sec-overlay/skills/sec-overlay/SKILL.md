@@ -95,6 +95,10 @@ memory" below. `--root` has no `--workspace` override for review (unlike `scan`/
 the **identical** `--root` string, preferably absolute, to every `prepare`, dispatch, and
 `consume` invocation of one review — the sidecar slug is derived from that string, so a
 different spelling resolves to a different sidecar and silently orphans the prepared run.
+`--model` records an opaque model-identity string on the coverage manifest; pass the
+**identical** `--model` string to every invocation of one review the same way — a resumed
+run with a different `--model` is rejected (exit 2) rather than silently mixing findings
+from two different models on one manifest.
 
 ### Reflection pass — fact-checking kept comments (D-16)
 
@@ -130,9 +134,11 @@ agent runs directly, over one `review-file` subagent per reviewable file:
    provider load, and never exceed `--concurrency` (default 8, ceiling 128) live subagents at
    once — the Python core validates and records this bound but never dispatches an agent itself
    (T-04-09), so the dispatching agent (you) is the enforcement point.
-3. **Consume** — `uv run python -m sec_overlay.cli review --base <ref> [--profile general]` reads
-   the recorded returns back from disk and runs them through the same gate chain the tracer slice
-   already builds: position gate → `apply_profile` → the reflection filter → the receipt gate.
+3. **Consume** — `uv run python -m sec_overlay.cli review --base <ref> [--profile general]
+   [--model <id>]` reads the recorded returns back from disk and runs them through the same gate
+   chain the tracer slice already builds: position gate → `apply_profile` → the reflection filter
+   → the receipt gate. Pass the identical `--model` string used to `prepare`/`dispatch` this
+   review; a resumed consume with a different `--model` is rejected (exit 2).
 
 The skill never parses a subagent's return itself and never decides what a finding is — it only
 records the raw text; `sec_overlay.review_agent.parse_review_response` is the sole parser. The

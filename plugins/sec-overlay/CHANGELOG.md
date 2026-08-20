@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.68.4 - 2026-08-20
+
+### Fixed
+
+- Fix `review --model` having no CLI surface (SCALE-03): `main()` never
+  forwarded a model value to `run_review`, leaving the already-wired
+  model-identity resume-rejection gate dead code in production. `review`
+  now accepts `--model` (default `None`) and forwards it unchanged.
+
 ## 1.68.3 - 2026-08-20
 
 ### Added

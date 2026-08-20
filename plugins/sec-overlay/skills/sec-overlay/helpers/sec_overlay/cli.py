@@ -612,6 +612,12 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_MAX_GIT_PROCS,
         help="Bound on concurrent git subprocesses, 1-128 (default 16).",
     )
+    review.add_argument(
+        "--model",
+        default=None,
+        help="Opaque model identity string recorded on the coverage manifest; a resumed "
+        "run with a different --model is rejected (exit 2).",
+    )
     args = parser.parse_args(argv)
 
     if args.cmd == "scan":
@@ -682,6 +688,7 @@ def main(argv: list[str] | None = None) -> int:
             concurrency=args.concurrency,
             timeout=args.timeout,
             max_git_procs=args.max_git_procs,
+            model=args.model,
         )
     return 1
 
