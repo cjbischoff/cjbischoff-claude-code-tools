@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Plan Phase 5 (`.planning/phases/05-end-to-end-verification-audit-review/05-01-PLAN.md` through `05-04-PLAN.md`, plus `05-PATTERNS.md` and `COVERAGE.md`): four sequential plans led by a diff-review tracer that runs both profiles on one real diff, then the full audit run behind a vendored semgrep-ruleset fix, then finding-integrity and artifact-coverage readbacks against the live sidecar. All six AUD requirement IDs and all twelve context decisions are mapped, and `.planning/ROADMAP.md` now lists the four plans in place of its `TBD` placeholder.
 - Seed the Phase 5 draft validation strategy (`.planning/phases/05-end-to-end-verification-audit-review/05-VALIDATION.md`, status draft) from the GSD template ahead of planning.
 - Research Phase 5 (`.planning/phases/05-end-to-end-verification-audit-review/05-RESEARCH.md`, confidence HIGH): the audit and review pipelines already enforce the six AUD success criteria mechanically in shipped code, and no natural D-05-compliant diff exists yet in mando's history for the review run.
 - Record the Phase 5 context session in `.planning/STATE.md`.

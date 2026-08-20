@@ -194,7 +194,13 @@ Plans:
   5. The audit report states its coverage denominator, and every attack-surface class without a finding has a logged coverage-ledger entry
   6. A full `review` run in both profiles completes end to end on a real diff, with the coverage manifest sealed and every reported line positioning-confirmed
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Tracer: run the diff-review pipeline end to end on a real diff in both profiles, seal the manifest, and establish the sanitized receipt format and defect ledger (AUD-06)
+- [ ] 05-02-PLAN.md — Close the vendored semgrep ruleset gap, then drive the audit through every PHASE_TABLE stage on the pinned target head (AUD-01)
+- [ ] 05-03-PLAN.md — Read finding integrity back from the audit sidecar: the Tier-1 receipt ladder and runtime-dependent risk scoring (AUD-02, AUD-03)
+- [ ] 05-04-PLAN.md — Read artifact gates and coverage back: deterministic gates, CVSS v4.0 only, coverage denominator, and the coverage ledger (AUD-04, AUD-05)
 
 ### Phase 6: Remediation and Governed Release
 
