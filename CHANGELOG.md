@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Add the Phase 4 draft validation strategy (`.planning/phases/04-scale-resume-diff-output/04-VALIDATION.md`, status draft).
 - Add the Phase 4 phase research (`.planning/phases/04-scale-resume-diff-output/04-RESEARCH.md`, confidence HIGH — covers SCALE-01/02/03 and OUT-01/02: bundling as a new stage downstream of `file_select.partition()`, bounded concurrency reusing `prefilter.py`'s `ThreadPoolExecutor` pattern and `CoverageManifest`'s `fail()`/`seal()` transitions, resume identity-pinning by extending `CoverageManifest` with model/profile fields, and a new diff-anchored comment payload plus SARIF `partialFingerprints` derived from existing `Finding` fields).
 
 - Regenerate the Phase 2 verification after the review fixes (`.planning/phases/02-diff-pipeline-positioning/02-VERIFICATION.md`, status passed: 9/9 must-haves, the three previously-failed items CR-01/CR-02/CR-03 live-reproduced as fixed against the current code); mark Phase 2 complete (2026-08-19) in `.planning/ROADMAP.md` and keep `.planning/STATE.md` at Phase 5.
