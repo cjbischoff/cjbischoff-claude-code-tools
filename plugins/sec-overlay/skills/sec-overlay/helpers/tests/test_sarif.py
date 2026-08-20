@@ -1,7 +1,7 @@
 """Tests for SARIF emission."""
 
 from sec_overlay.models import Finding, FindingStatus, Severity
-from sec_overlay.sarif import to_sarif
+from sec_overlay.sarif import FINGERPRINT_KEY, to_sarif
 
 
 def _f(sev):
@@ -97,3 +97,89 @@ def test_suppressed_findings_carry_insource_suppression():
     }
     assert "suppressions" not in by_id["a.py"]
     assert by_id["b.py"]["suppressions"][0]["kind"] == "inSource"
+
+
+# --- partialFingerprints (OUT-02) ----------------------------------------------
+
+
+def _finding(
+    id="F-0001",
+    file="app.py",
+    cls="sqli",
+    message="SQLi",
+    evidence="cursor.execute(query)",
+):
+    return Finding(
+        id=id,
+        rule_id="r",
+        cls=cls,
+        status=FindingStatus.CONFIRMED,
+        severity=Severity.HIGH,
+        file=file,
+        line=18,
+        message=message,
+        evidence=evidence,
+    )
+
+
+def test_two_findings_differing_only_in_message_share_fingerprint():
+    doc = to_sarif([_finding(message="first wording"), _finding(id="F-0002", message="second wording")])
+    fp1, fp2 = (r["partialFingerprints"][FINGERPRINT_KEY] for r in doc["runs"][0]["results"])
+    assert fp1 == fp2
+
+
+def test_findings_differing_in_file_produce_different_fingerprints():
+    doc = to_sarif([_finding(file="app.py"), _finding(id="F-0002", file="other.py")])
+    fp1, fp2 = (r["partialFingerprints"][FINGERPRINT_KEY] for r in doc["runs"][0]["results"])
+    assert fp1 != fp2
+
+
+def test_findings_differing_in_cls_produce_different_fingerprints():
+    doc = to_sarif([_finding(cls="sqli"), _finding(id="F-0002", cls="xss")])
+    fp1, fp2 = (r["partialFingerprints"][FINGERPRINT_KEY] for r in doc["runs"][0]["results"])
+    assert fp1 != fp2
+
+
+def test_findings_differing_in_evidence_produce_different_fingerprints():
+    doc = to_sarif([_finding(evidence="a"), _finding(id="F-0002", evidence="b")])
+    fp1, fp2 = (r["partialFingerprints"][FINGERPRINT_KEY] for r in doc["runs"][0]["results"])
+    assert fp1 != fp2
+
+
+def test_to_sarif_empty_list_has_no_results_and_no_fingerprint_key_anywhere():
+    doc = to_sarif([])
+    assert doc["runs"][0]["results"] == []
+    assert "partialFingerprints" not in json_dumps_for_scan(doc)
+
+
+def json_dumps_for_scan(doc: dict) -> str:
+    """Serialize `doc` for a substring scan, so a fingerprint key hiding in a
+    nested location the test author didn't think to check is still caught."""
+    import json
+
+    return json.dumps(doc)
+
+
+def test_a_single_finding_produces_exactly_one_fingerprint():
+    doc = to_sarif([_finding()])
+    results = doc["runs"][0]["results"]
+    assert len(results) == 1
+    assert len(results[0]["partialFingerprints"][FINGERPRINT_KEY]) == 16
+
+
+def test_whitespace_only_evidence_still_receives_a_fingerprint():
+    doc = to_sarif([_finding(evidence="   \n\t  ")])
+    fp = doc["runs"][0]["results"][0]["partialFingerprints"][FINGERPRINT_KEY]
+    assert len(fp) == 16
+
+
+def test_unicode_normalized_equivalent_evidence_produces_different_fingerprints():
+    # "é" (e + combining acute accent) and "é" (é, precomposed) are
+    # Unicode-equivalent under NFC but not byte-identical. The fingerprint is a
+    # deliberate byte-equality contract (no unicodedata normalization pass) —
+    # this test records that decision rather than leaving it an accident.
+    combining = _finding(evidence="café")
+    precomposed = _finding(id="F-0002", evidence="café")
+    doc = to_sarif([combining, precomposed])
+    fp1, fp2 = (r["partialFingerprints"][FINGERPRINT_KEY] for r in doc["runs"][0]["results"])
+    assert fp1 != fp2

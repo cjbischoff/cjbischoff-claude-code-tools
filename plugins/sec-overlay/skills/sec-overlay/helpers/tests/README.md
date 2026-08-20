@@ -727,3 +727,17 @@ that must NOT pair), and unrelated files each landing in their own unit.
 kept and its `Finding.file` is that entry's own path (not the outer `path` argument); a comment
 naming a path outside `bundle_paths` is discarded and counted, exactly like the single-file rule;
 and `bundle_paths=None` reproduces the pre-widening single-path behavior unchanged.
+
+Phase 4 plan 01 Task 3 found `sarif.py` and `review_comments.py` already correct — no
+implementation gap — and closed the missing test coverage instead. `test_sarif.py` gained eight
+tests locking the `partialFingerprints` contract (OUT-02): two findings differing only in
+`message` share a fingerprint; findings differing in `file`, `cls`, or `evidence` each produce
+different fingerprints; `to_sarif([])` yields `results == []` with no `partialFingerprints` key
+anywhere in the serialized document; a single finding gets exactly one 16-character fingerprint;
+whitespace-only evidence still gets a fingerprint; and a decomposed-vs-precomposed pair of the
+same Unicode grapheme (`"café"` vs `"café"`) produces different fingerprints — recording
+that the fingerprint is a byte-equality contract with no `unicodedata` normalization pass, on
+purpose. `test_review_comments.py` (new, 5 tests) locks the OUT-01 contract:
+`comment_from_finding`'s field mapping, an empty comment list still carrying the
+`coverage_manifest`, the write path resolving to `ws.artifacts / COMMENTS_FILENAME`, and a
+comment payload having exactly the 5 documented keys and no more.

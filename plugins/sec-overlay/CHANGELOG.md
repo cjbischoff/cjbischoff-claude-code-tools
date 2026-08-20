@@ -2,6 +2,21 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.63.1 - 2026-08-20
+
+### Added
+
+- Lock the `sarif.to_sarif` `partialFingerprints` contract (OUT-02) with 8
+  new tests: message-independence, file/cls/evidence sensitivity, an empty
+  finding list producing no fingerprint key anywhere, and a
+  decomposed-vs-precomposed Unicode evidence pair producing different
+  fingerprints (byte equality, no `unicodedata` normalization pass).
+- Add `tests/test_review_comments.py` locking the diff-anchored comment
+  contract (OUT-01): the empty-comment-list-still-has-manifest case, the
+  exact 5-key comment payload shape, and `comment_from_finding`'s field
+  mapping. No implementation change — both modules already satisfied the
+  contract from the tracer plan.
+
 ## 1.63.0 - 2026-08-20
 
 ### Added
