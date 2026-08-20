@@ -775,10 +775,11 @@ the rest unfinished cannot pass; a second test asserts a unit that finishes insi
 still seals `"complete"` (rc 0), so the new dispatch path is a no-op when nothing is slow.
 
 `test_cli.py` gained two more tests (Phase 4 plan 03 Task 3, SCALE-03) for SHA-pinning on
-resume, currently failing (RED phase; `run_review` still resolves fresh `base`/`head` refs on
-a resumed run instead of the prior manifest's sealed SHAs): a fake runner whose `rev-parse` for
-`develop` returns a different SHA than the prior run sealed asserts the resumed `git diff
---name-status` call still uses the persisted head SHA; a second fake runner makes the
-persisted head SHA itself unresolvable (`rev-parse --verify` exits 128, simulating a
-rewritten/collected SHA) and asserts the resumed run exits 2 naming that SHA rather than
-reading an empty diff (T-04-12).
+resume: a fake runner whose `rev-parse` for `develop` returns a different SHA than the prior
+run sealed asserts the resumed `git diff --name-status` call still uses the persisted head
+SHA; a second fake runner makes the persisted head SHA itself unresolvable (`rev-parse
+--verify` exits 128, simulating a rewritten/collected SHA) and asserts the resumed run exits 2
+naming that SHA rather than reading an empty diff (T-04-12). `test_review_live.py`'s
+profile-split test (security excludes a null-dereference finding, general includes it) was
+split to run against two independent target directories instead of resuming one target with a
+second `profile` — the new resume-identity gate (Task 2) now rejects that second call.

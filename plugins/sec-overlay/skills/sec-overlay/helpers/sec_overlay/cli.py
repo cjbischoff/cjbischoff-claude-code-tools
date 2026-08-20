@@ -255,7 +255,11 @@ def run_review(
 
     Args:
         base: Base ref. Validated and resolved to a SHA before any other git call.
-        head: Head ref, same treatment.
+            Ignored on a resumed run (a prior manifest already exists at
+            ``root``'s workspace) in favor of that manifest's sealed
+            ``base_sha`` (SCALE-03).
+        head: Head ref, same treatment -- ignored on resume in favor of the
+            prior manifest's sealed ``head_sha``.
         root: Target repo under review; the workspace and its ``artifacts/`` dir live in
             the per-repo sidecar resolved beneath it (``<root>/.sec-overlay/<slug>/``),
             not at ``root`` itself.
@@ -314,6 +318,7 @@ def run_review(
     ws = memory.workspace
 
     manifest_path = ws.artifacts / MANIFEST_FILENAME
+    prior_manifest: CoverageManifest | None = None
     if manifest_path.exists():
         prior_manifest = CoverageManifest.load(manifest_path)
         try:
@@ -323,8 +328,17 @@ def run_review(
             return 2
 
     try:
-        base_sha = resolve_ref_sha(base, runner=r)
-        head_sha = resolve_ref_sha(head, runner=r)
+        if prior_manifest is not None:
+            # Resumed run: read at the SHAs the prior run sealed, not fresh
+            # refs -- HEAD may have moved since (SCALE-03). Each persisted SHA
+            # still round-trips through resolve_ref_sha, so a rewritten or
+            # collected SHA fails loudly (T-04-12) instead of reading a
+            # different tree as an empty diff.
+            base_sha = resolve_ref_sha(prior_manifest.base_sha, runner=r)
+            head_sha = resolve_ref_sha(prior_manifest.head_sha, runner=r)
+        else:
+            base_sha = resolve_ref_sha(base, runner=r)
+            head_sha = resolve_ref_sha(head, runner=r)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

@@ -845,3 +845,20 @@ loads any existing `coverage_manifest.json` and runs this check immediately afte
 workspace — before resolving `base`/`head` refs or constructing this run's own
 `CoverageManifest` — so a resumed run that switched identity is rejected (exit 2) with the
 on-disk workspace left byte-identical and no new file written.
+
+Phase 4 plan 03 (Task 3, SCALE-03/T-04-12) pins a resumed run's reads to the SHAs the prior
+run sealed. `cli.py`'s `run_review` now branches past the identity check: when a prior
+manifest exists, `base_sha`/`head_sha` come from `prior_manifest.base_sha`/`head_sha` — never
+from a fresh `resolve_ref_sha(base, ...)`/`resolve_ref_sha(head, ...)` on the CLI's own
+`--base`/`--head` — so a branch that moved since the prior run cannot change what a resumed
+run reads. Each persisted SHA is still round-tripped through `resolve_ref_sha`, reusing the
+same `try`/`except ValueError` → exit 2 path a bad ref already took, so a rewritten or
+collected SHA fails the run loudly instead of silently reading a different tree as an empty
+diff. No change was needed in `diffscope.py`: every ref-consuming function there
+(`changed_file_records`, `file_diff_line_count`, `binary_paths`, `file_diff_text`,
+`file_text_at_ref`) already takes a pre-resolved SHA string, so the fix is entirely in *which*
+SHA `cli.py` resolves and passes down, not in how any downstream call uses it. A pre-existing
+`test_review_live.py` test that ran `run_review` twice against one target with two different
+`profile` values (to compare finding output across profiles) now hits the Task 2 identity gate
+on its second call — that test was split into two independent targets, since its intent was
+never to model a resume.

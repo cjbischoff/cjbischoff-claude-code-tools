@@ -2,6 +2,25 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.68.0 - 2026-08-20
+
+### Added
+
+- Pin a resumed run's reads to the SHAs the prior run sealed (SCALE-03,
+  T-04-12): `review` now sources `base_sha`/`head_sha` from an existing
+  `coverage_manifest.json` instead of freshly resolving `--base`/`--head`
+  when one is found, so a branch that moved since the prior run cannot
+  change what a resumed run reads. Each persisted SHA still round-trips
+  through the same ref-resolution path, so a rewritten or collected SHA
+  fails the run (exit 2) instead of silently reading a different tree as
+  an empty diff.
+
+### Fixed
+
+- Split `test_review_live.py`'s profile-comparison test into two
+  independent targets — running it against one target with two different
+  `profile` values now trips the resume-identity gate added in 1.67.0.
+
 ## 1.67.1 - 2026-08-20
 
 ### Added

@@ -134,19 +134,29 @@ def test_recorded_return_produces_a_nonzero_finding_count(tmp_path, monkeypatch)
 
 
 def test_profile_split_null_dereference_security_excludes_general_includes(tmp_path, monkeypatch):
+    # Two independent targets, not two calls against one target: SCALE-03's resume-identity
+    # gate now rejects a profile change on an existing manifest, so this profile-split
+    # comparison needs its own workspace per profile rather than resuming one.
     monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
-    _record_return(str(tmp_path), "app.py",
+    target_security = tmp_path / "security"
+    target_general = tmp_path / "general"
+    _record_return(str(target_security), "app.py",
+                    calls=[_code_comment("app.py", 2, "possible nil deref", "null-dereference")])
+    _record_return(str(target_general), "app.py",
                     calls=[_code_comment("app.py", 2, "possible nil deref", "null-dereference")])
 
-    ws = _sidecar_ws(tmp_path)
-    rc_security = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    rc_security = run_review(_BASE_SHA, _HEAD_SHA, str(target_security), profile="security")
     assert rc_security == 0
-    ledger_security = json.loads((ws.artifacts / "review_ledger.json").read_text())
+    ledger_security = json.loads(
+        (_sidecar_ws(target_security).artifacts / "review_ledger.json").read_text()
+    )
     assert ledger_security["review_findings"] == []
 
-    rc_general = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="general")
+    rc_general = run_review(_BASE_SHA, _HEAD_SHA, str(target_general), profile="general")
     assert rc_general == 0
-    ledger_general = json.loads((ws.artifacts / "review_ledger.json").read_text())
+    ledger_general = json.loads(
+        (_sidecar_ws(target_general).artifacts / "review_ledger.json").read_text()
+    )
     assert len(ledger_general["review_findings"]) == 1
     assert ledger_general["review_findings"][0]["defect_class"] == "null-dereference"
 
