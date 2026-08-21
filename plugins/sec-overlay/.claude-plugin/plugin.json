@@ -1,7 +1,7 @@
 {
   "name": "sec-overlay",
   "description": "Agentic security-audit harness: runs SAST, investigates candidates with multi-agent gates, and emits SARIF + Markdown reports.",
-  "version": "1.68.9",
+  "version": "1.68.10",
   "author": {
     "name": "Christopher Bischoff"
   }

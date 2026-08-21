@@ -430,3 +430,65 @@ def test_run_review_rejects_a_file_as_root_with_exit_2(tmp_path, capsys):
     assert err.startswith("error:")
     assert "--root" in err
     assert str(a_file) in err
+
+
+# --- D-03: --workspace override (06-01) --------------------------------------------------
+
+
+def test_run_review_uses_the_workspace_override_when_supplied(tmp_path):
+    """An explicit `workspace=` writes artifacts there, not the --root sidecar."""
+    target = tmp_path / "repo"
+    target.mkdir()
+    custom_ws = tmp_path / "custom-workspace"
+    runner = _fake_run_for({"app.py": _diff_for("app.py")})
+
+    rc = run_review(
+        _BASE_SHA, _HEAD_SHA, str(target), runner=runner, workspace=str(custom_ws), profile="security"
+    )
+    assert rc == 0
+    assert (custom_ws / "artifacts" / "coverage_manifest.json").is_file()
+    # The per-repo sidecar under --root must stay untouched by the override.
+    assert not _sidecar_ws(str(target)).artifacts.exists()
+
+
+def test_run_review_falls_back_to_the_repo_sidecar_when_workspace_is_absent(tmp_path):
+    """No `workspace=` keeps the existing per-repo sidecar resolution (regression guard)."""
+    target = tmp_path / "repo"
+    target.mkdir()
+    runner = _fake_run_for({"app.py": _diff_for("app.py")})
+
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(target), runner=runner, profile="security")
+    assert rc == 0
+    assert (_sidecar_ws(str(target)).artifacts / "coverage_manifest.json").is_file()
+
+
+def test_review_workspace_override_permits_a_second_profile_without_weakening_the_resume_guard(
+    tmp_path,
+):
+    """A `workspace=` override must not bypass the SCALE-03 resume-identity guard."""
+    target = tmp_path / "repo"
+    target.mkdir()
+    custom_ws = tmp_path / "custom-workspace"
+    runner = _fake_run_for({"app.py": _diff_for("app.py")})
+
+    rc1 = run_review(
+        _BASE_SHA,
+        _HEAD_SHA,
+        str(target),
+        runner=runner,
+        workspace=str(custom_ws),
+        model="model-a",
+        profile="security",
+    )
+    assert rc1 == 0
+
+    rc2 = run_review(
+        _BASE_SHA,
+        _HEAD_SHA,
+        str(target),
+        runner=runner,
+        workspace=str(custom_ws),
+        model="model-b",
+        profile="security",
+    )
+    assert rc2 == 2

@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.68.10 - 2026-08-21
+
+### Added
+
+- Add three tests pinning `review`'s new `--workspace` override (D-03): the
+  override case, the no-override fallback (regression guard), and a
+  two-profile resume-identity check confirming the override does not weaken
+  SCALE-03. Implementation lands in 1.69.0.
+
 ## 1.68.9 - 2026-08-21
 
 ### Fixed
