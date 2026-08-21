@@ -2,6 +2,21 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.4 - 2026-08-21
+
+### Fixed
+
+- Reconcile the maintainer-manual phase order with the wired `PHASE_TABLE`
+  (D-01). `redteam` moves after `report`/`selfscore` and before
+  `artifact-gate` (numbered `14.4`, was `13.5` positioned before `report`);
+  `postflight` is renumbered `15` as the pipeline's final phase (was `C2`).
+  Both entries note they now run automatically via `PHASE_TABLE`/
+  `DETERMINISTIC_ACTIONS`, with their standalone `python -m` invocations kept
+  as the manual re-run path. Applied to `skills/sec-overlay/CLAUDE.md`'s
+  phase-order block, `skills/sec-overlay/README.md`'s pipeline diagram,
+  worked-example table, and CLI legend, and
+  `skills/sec-overlay/helpers/README.md`'s deterministic-pipeline diagram.
+
 ## 1.69.3 - 2026-08-21
 
 ### Fixed
