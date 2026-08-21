@@ -2,6 +2,23 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.2 - 2026-08-21
+
+### Fixed
+
+- Fix `redteam`/`postflight` being absent from `PHASE_TABLE`, so
+  `run.drive()`/`run.advance()` silently skipped both phases (D-01, part 1).
+  `redteam` is a new agent `PhaseSpec` (`agents/redteam.md`, input
+  `findings_dir`, output `reports/redteam-plan.md`) placed between
+  `selfscore` and `artifact-gate` — `artifact_gate.run_artifact_gate`
+  hard-requires `redteam-plan.md` to exist, so redteam must run first, not
+  after `artifact-review` as an earlier pattern draft suggested. `postflight`
+  is a new deterministic `PhaseSpec` (input `artifact-review`'s gate JSON,
+  output `context.prior_context_path`) appended as the table's final row.
+  `redteam`'s `kind="agent"` is confirmed against the real dispatch path —
+  the skill CLAUDE.md's phase-order list runs `agents/redteam.md` (sonnet)
+  then `agents/redteam-adversary.md` (opus), never a bare module call.
+
 ## 1.69.1 - 2026-08-21
 
 ### Added
