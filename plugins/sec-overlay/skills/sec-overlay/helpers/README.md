@@ -76,9 +76,9 @@ flowchart TD
     CIT --> PATCHV(("patch / validate-fix agents"))
     PATCHV --> VER["verify.py<br/>apply patch to COPY, re-scan"]
     VER --> GATE2["findings_gate.py"]
-    GATE2 --> RT(("redteam agents")) --> RTR["redteam.py<br/>render redteam-plan.md"]
-    RTR --> REP["report.py<br/>report.sarif + report.md"]
-    REP --> POST["postflight.py<br/>prior_context.json (durable)"]
+    GATE2 --> REP["report.py<br/>report.sarif + report.md"]
+    REP --> RT(("redteam agents")) --> RTR["redteam.py<br/>render redteam-plan.md"]
+    RTR --> POST["postflight.py<br/>prior_context.json (durable, final phase)"]
 ```
 
 Every deterministic step records completion with `campaign.record_stage(ws, "<phase>")` so an

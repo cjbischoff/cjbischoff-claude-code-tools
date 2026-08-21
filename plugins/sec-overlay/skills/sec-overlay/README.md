@@ -111,12 +111,12 @@ flowchart TD
     CAL --> PAT(("11 · patch(opus) → validate-fix"))
     PAT --> VER["12 · verify<br/>apply patch to COPY, re-scan"]
     VER --> GATE["13 · findings_gate"]
-    GATE --> RT(("13.5 · redteam → redteam-adversary"))
+    GATE --> REP["14 · report<br/>report.sarif + report.md"]
+    REP --> RT(("14.4 · redteam → redteam-adversary"))
     RT --> RTR["redteam.py → redteam-plan.md"]
-    RTR --> REP["14 · report<br/>report.sarif + report.md"]
-    REP --> AG["14.5 · artifact_gate<br/>deterministic self-check"]
+    RTR --> AG["14.5 · artifact_gate<br/>deterministic self-check (requires redteam-plan.md)"]
     AG --> AR(("14.6 · artifact-review (opus)<br/>claim↔evidence over the rendered report"))
-    AR --> C2["C2 · postflight<br/>durable prior_context.json"]
+    AR --> C2["15 · postflight<br/>durable prior_context.json"]
 ```
 
 The phase legend with exact commands is in [`SKILL.md`](SKILL.md); the hard operating rules
@@ -151,11 +151,11 @@ def get_user():
 | **10 calibrate** | `calibrate` (no LLM) | Preconditions enumerated first (unauthenticated, no WAF assumed) → CVSS computed by formula → `risk_score: 9`. ASVS/CodeGuard citations auto-attached. | `risk_score`, `asvs_ids` |
 | **11 patch** | `patch.md` (opus) | Proposes a parameterized-query diff into `patch_diff` — against a *copy*, never the real file. | `patch_diff` |
 | **12 verify** | `verify` (no LLM) | Applies the diff to a temp copy, re-runs semgrep → the rule no longer fires → **`fixed` / verified-static**. | status → `fixed` |
-| **13.5 redteam** | `redteam` → `redteam-adversary` | Marks it `static-settled` (source proves it) but still writes a `runtime_test` with a `$PAYLOAD` shell var so an operator can confirm live; opus adversary keeps it (payload ties to the real sink). | `redteam-plan.md` |
 | **14 report** | `report` (no LLM) | Renders the finding into `report.md` (9-section template) and `report.sarif`. | `report.md`, `report.sarif` |
+| **14.4 redteam** | `redteam` → `redteam-adversary` | Marks it `static-settled` (source proves it) but still writes a `runtime_test` with a `$PAYLOAD` shell var so an operator can confirm live; opus adversary keeps it (payload ties to the real sink). `artifact_gate` hard-requires this file, so redteam runs before it, not after. | `redteam-plan.md` |
 | **14.5 artifact_gate** | `artifact_gate` (no LLM) | Checks the finding has a detail file and a red-team directive, and that its triage-table `what` cell isn't stale or over-long. Passes. | `kb/gates/artifact-gate.json` |
 | **14.6 artifact-review** | `artifact-review.md` (**opus**) | Reads the finding's tool receipt against `report.md`'s claim — they match, impact text is honest, red-team coverage is present. No demotion, no re-render forced. | `kb/gates/artifact-review.json` |
-| **C2 postflight** | `postflight` | Records "confirmed SQLi in get_user, fixed at <sha>" into durable memory so the next scan doesn't re-litigate it. | `kb/prior_context.json` |
+| **15 postflight** | `postflight` | Records "confirmed SQLi in get_user, fixed at <sha>" into durable memory so the next scan doesn't re-litigate it. | `kb/prior_context.json` |
 
 The point of the table: **no single step is trusted.** A tool found it, a sonnet agent
 investigated it, an opus agent tried to kill it, a deterministic module scored it, and a
@@ -203,13 +203,13 @@ uv run python -m sec_overlay.calibrate     --workspace <WS>    # 10
 # 11 spawn patch → validate-fix
 uv run python -m sec_overlay.verify        --workspace <WS> --target <T> --config <rules>   # 12
 uv run python -m sec_overlay.findings_gate --workspace <WS>    # 13
-# 13.5 spawn redteam → redteam-adversary
-uv run python -m sec_overlay.redteam       --workspace <WS>
 uv run python -m sec_overlay.report        --workspace <WS>    # 14
+uv run python -m sec_overlay.selfscore     --workspace <WS>
+# 14.4 spawn redteam → redteam-adversary (before artifact_gate: it hard-requires redteam-plan.md)
+uv run python -m sec_overlay.redteam       --workspace <WS>
 uv run python -m sec_overlay.artifact_gate --workspace <WS>    # 14.5
 # 14.6 spawn agents/artifact-review.md (opus)
-uv run python -m sec_overlay.postflight    --workspace <WS> --sha <sha>   # C2
-uv run python -m sec_overlay.selfscore     --workspace <WS>
+uv run python -m sec_overlay.postflight    --workspace <WS> --sha <sha>   # 15, final phase
 ```
 
 > **A scan is clean only if every planned backend actually ran.** If `preflight` shows a

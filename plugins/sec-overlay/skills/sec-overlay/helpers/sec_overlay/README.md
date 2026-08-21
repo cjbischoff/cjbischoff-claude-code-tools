@@ -198,10 +198,14 @@ review-improvements branch; keep them that way (run `ruff format` before committ
 
 `phases.py` (new) is the ordered phase table (`PhaseSpec`, `PHASE_TABLE`) plus pure sequencer
 helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit driver walks —
-see the module map entry. `PHASE_TABLE` now ends with `artifact-gate` (deterministic, input
-`_report`/`_sarif`, output `_artifact_gate_json`) then `artifact-review` (agent,
-`agents/artifact-review.md`, input `_artifact_gate_json`, output `_artifact_review_json`), both
-after `selfscore`. `architecture` now outputs `_arc42`/`_container` (`kb.arc42_path` /
+see the module map entry. `PHASE_TABLE` now ends with `redteam` (agent, `agents/redteam.md`,
+input `_findings_dir`, output `_redteam_plan` — `reports/redteam-plan.md`) after `selfscore` and
+before `artifact-gate` (deterministic, input `_report`/`_sarif`, output `_artifact_gate_json`) —
+`artifact_gate.run_artifact_gate` hard-requires `redteam-plan.md` to exist, so redteam must run
+first (D-01) — then `artifact-review` (agent, `agents/artifact-review.md`, input
+`_artifact_gate_json`, output `_artifact_review_json`), and finally `postflight`
+(deterministic, input `_artifact_review_json`, output `context.prior_context_path` —
+`kb/prior_context.json`), the durable cross-scan distillation that closes the pipeline. `architecture` now outputs `_arc42`/`_container` (`kb.arc42_path` /
 `kb.container_diagram_path`, i.e. `architecture/arc42.md` + `architecture/container-diagram.mmd`,
 not the old `kb/architecture.md`), immediately followed by the deterministic `arch-gate` row
 (input those same two paths, output `_arch_gate_json` — `kb/gates/arch-gate.json`). `threat_model`
@@ -237,14 +241,17 @@ reconciled class list passed to `render_dispatch(classes=...)` (no triage block,
 `demote-noise` → `partition.demote_noise`, `report` → `report.write_report`, `selfscore` →
 `selfscore.write_self_score`, `artifact-gate` → `_act_artifact_gate` (calls
 `artifact_gate.run_artifact_gate`, raising `PhaseHalt` naming every error when the gate rejects the
-run's own artifacts), `arch-gate` → `_act_arch_gate`, `tm-gate` → `_act_tm_gate`. Both new actions
+run's own artifacts), `arch-gate` → `_act_arch_gate`, `tm-gate` → `_act_tm_gate`, `postflight` →
+`_act_postflight` (calls `postflight.run_postflight(ctx.ws, ctx.sha)`, which distills the finished
+scan into `kb/prior_context.json` and records its own stage — D-01). Both `arch-gate`/`tm-gate`
 run `diagram_gate.run_diagram_gate` over `architecture/` (and `threat-model/` where present) plus
 `ste_lint.lint_prose` over their doc, write `{"passed", "errors", "warnings"}` to
 `kb/gates/<name>.json` via the shared `_write_gate` helper, and raise `PhaseHalt` naming every
 error; `_act_tm_gate` additionally runs `artifact_gate.check_duplication` against `arc42.md` and
 calls `run_diagram_gate(..., require_threat_model=True)` so a missing `dfd.mmd` is a gate error
-instead of the silently-optional default. `artifact-review` is an agent phase with no registered action — it
-auto-advances once `kb/gates/artifact-review.json` exists, same as any other output-only agent
+instead of the silently-optional default. `redteam` and `artifact-review` are agent phases with no
+registered action — each auto-advances once its declared output artifact exists
+(`reports/redteam-plan.md`, `kb/gates/artifact-review.json`), same as any other output-only agent
 phase. `run_audit(ctx)` walks `PHASE_TABLE` from the first phase not yet
 `done`: runs deterministic phases in place, and for an agent phase auto-advances only when it has
 an output path that is *not also* one of its inputs (several agent phases — `investigate`,

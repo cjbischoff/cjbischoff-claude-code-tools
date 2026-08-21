@@ -2,6 +2,63 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.4 - 2026-08-21
+
+### Fixed
+
+- Reconcile the maintainer-manual phase order with the wired `PHASE_TABLE`
+  (D-01). `redteam` moves after `report`/`selfscore` and before
+  `artifact-gate` (numbered `14.4`, was `13.5` positioned before `report`);
+  `postflight` is renumbered `15` as the pipeline's final phase (was `C2`).
+  Both entries note they now run automatically via `PHASE_TABLE`/
+  `DETERMINISTIC_ACTIONS`, with their standalone `python -m` invocations kept
+  as the manual re-run path. Applied to `skills/sec-overlay/CLAUDE.md`'s
+  phase-order block, `skills/sec-overlay/README.md`'s pipeline diagram,
+  worked-example table, and CLI legend, and
+  `skills/sec-overlay/helpers/README.md`'s deterministic-pipeline diagram.
+
+## 1.69.3 - 2026-08-21
+
+### Fixed
+
+- Register `postflight` in `DETERMINISTIC_ACTIONS` (D-01, part 2). The new
+  `_act_postflight` wraps `postflight.run_postflight(ctx.ws, ctx.sha)`,
+  matching the function-local-import cycle-avoidance convention its
+  siblings use; no try/except and no `PhaseHalt` — `run_postflight` returns
+  a merged-item count, not a verdict, so a low count is not a halt
+  condition. `redteam` gets no driver entry — it stays an agent phase, and
+  `test_every_deterministic_phase_has_a_registered_action` now derives its
+  expected key set from `PHASE_TABLE` so the two structures cannot drift
+  again without a failing test.
+
+## 1.69.2 - 2026-08-21
+
+### Fixed
+
+- Fix `redteam`/`postflight` being absent from `PHASE_TABLE`, so
+  `run.drive()`/`run.advance()` silently skipped both phases (D-01, part 1).
+  `redteam` is a new agent `PhaseSpec` (`agents/redteam.md`, input
+  `findings_dir`, output `reports/redteam-plan.md`) placed between
+  `selfscore` and `artifact-gate` — `artifact_gate.run_artifact_gate`
+  hard-requires `redteam-plan.md` to exist, so redteam must run first, not
+  after `artifact-review` as an earlier pattern draft suggested. `postflight`
+  is a new deterministic `PhaseSpec` (input `artifact-review`'s gate JSON,
+  output `context.prior_context_path`) appended as the table's final row.
+  `redteam`'s `kind="agent"` is confirmed against the real dispatch path —
+  the skill CLAUDE.md's phase-order list runs `agents/redteam.md` (sonnet)
+  then `agents/redteam-adversary.md` (opus), never a bare module call.
+
+## 1.69.1 - 2026-08-21
+
+### Added
+
+- Add failing tests pinning `redteam`/`postflight` into `PHASE_TABLE` and
+  `DETERMINISTIC_ACTIONS` (D-01): both phases are documented in the
+  maintainer manual but were absent from the mechanical phase table, so
+  `run.drive()`/`run.advance()` silently skipped them. `redteam` must sit
+  between `selfscore` and `artifact-gate` — `artifact_gate.run_artifact_gate`
+  hard-requires `redteam-plan.md` to exist. Implementation lands next.
+
 ## 1.69.0 - 2026-08-21
 
 ### Added

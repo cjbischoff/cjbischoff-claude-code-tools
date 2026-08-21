@@ -76,12 +76,18 @@ T1 Tier-1 substrate  python -m sec_overlay.graph build --target <T> --workspace 
    Validate-fix     agents/validate-fix.md (opus; personas: security-architect + penetration-tester)
 12 Verify           python -m sec_overlay.verify --workspace <WS> --target <T> --config <rules>
 13 Gate             python -m sec_overlay.findings_gate --workspace <WS>
-13.5 Red Team       agents/redteam.md (sonnet) → agents/redteam-adversary.md (opus)
-                    python -m sec_overlay.redteam --workspace <WS> [--min-risk N]  → redteam-plan.md
 14 Report           python -m sec_overlay.report --workspace <WS>   → report.sarif + report.md
+14.4 Red Team       agents/redteam.md (sonnet) → agents/redteam-adversary.md (opus)
+                    # PHASE_TABLE-wired (D-01): the driver dispatches this automatically after
+                    # selfscore, before artifact-gate — artifact_gate.run_artifact_gate hard-requires
+                    # redteam-plan.md to exist. `python -m sec_overlay.redteam --workspace <WS>
+                    # [--min-risk N]` remains available for a standalone manual re-run.
 14.5 Artifact gate  python -m sec_overlay.artifact_gate --workspace <WS>   # deterministic self-check (runs first)
 14.6 Artifact review agents/artifact-review.md (opus, DIFFERENT family) — claim↔evidence, cannot delete a receipt-backed finding
-C2 Postflight       python -m sec_overlay.postflight --workspace <WS> --sha <sha>  # durable prior_context
+15 Postflight       PHASE_TABLE-wired (D-01) as the driver's DETERMINISTIC_ACTIONS["postflight"] entry —
+                    the final phase, dispatched automatically after artifact-review. `python -m
+                    sec_overlay.postflight --workspace <WS> --sha <sha>` remains available for a
+                    standalone manual re-run.
 ```
 
 ### Quick deterministic scan (no agents)
