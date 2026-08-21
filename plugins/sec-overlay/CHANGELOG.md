@@ -2,6 +2,66 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.8 - 2026-08-21
+
+### Fixed
+
+- Correct the false claim that the vendored semgrep ruleset
+  (`helpers/rules/semgrep/`) is a tracked git submodule (D-04). No
+  `.gitmodules` entry exists anywhere in repo history; `preflight.py`'s real
+  remediation is a plain `git clone --depth 1
+  https://github.com/semgrep/semgrep-rules helpers/rules/semgrep`. Fixed the
+  wording across eight doc surfaces: `plugins/sec-overlay/CLAUDE.md`,
+  `skills/sec-overlay/CLAUDE.md` (two spots), `skills/sec-overlay/SKILL.md`,
+  `skills/sec-overlay/README.md`, `skills/sec-overlay/helpers/README.md`
+  (two spots), and `skills/sec-overlay/helpers/tests/README.md`. Added a
+  tree-walking doc guard (`test_no_live_doc_claims_a_git_submodule_that_does_not_exist`)
+  that walks every live `.md` file under the plugin (excluding historical
+  planning records and the vendored ruleset itself) so a future doc
+  repeating the same false claim fails the test suite instead of surviving
+  by chance.
+- Correct `skills/sec-overlay/helpers/tests/README.md`'s explanation of why
+  the cwd-scoping bug survived the test suite (WR-02). The prior text
+  claimed the passing tests "inject their own `runner`, which bypasses the
+  bug entirely" — they don't inject a `runner=` kwarg at all. They
+  `monkeypatch.setattr(subprocess, "run", ...)`, patching the stdlib
+  function underneath `run_review`'s `partial(subprocess.run, timeout=...,
+  cwd=root)` default; their fake ignores `cwd`, which is why none of them
+  caught the bug.
+
+## 1.69.7 - 2026-08-21
+
+### Fixed
+
+- Correct `agents/redteam.md`'s Discriminate section (D-02). It described a
+  three-way split with a "neither static-settled nor a live-exploit test"
+  category exempted from the runtime plan; `redteam.py`'s `wants_runtime()`
+  is a plain two-trigger OR (`runtime_disposition == "needs-runtime"` or
+  `status is FindingStatus.NEEDS_DEPLOYMENT_TESTING`) with no such
+  opt-out value, and `open_questions` never affects plan membership. Added
+  a code-derived doc guard in `test_docs_invariants.py` pinning both
+  trigger values from `sec_overlay.evidence`/`sec_overlay.models` with no
+  hardcoded copies.
+
+## 1.69.6 - 2026-08-21
+
+### Fixed
+
+- Fix the deps Fix-line package-name split for scoped npm-style identifiers
+  (D-04, GREEN phase). `render_finding` now splits `evidence` on the last
+  `@` instead of the first, so `@scope/name@version` no longer renders an
+  empty backtick pair; falls back to the untouched string when the split
+  empties out (a versionless scoped identifier has only the scope `@`).
+
+## 1.69.5 - 2026-08-21
+
+### Fixed
+
+- Add five failing tests pinning the deps Fix-line package-name bug (D-04,
+  RED phase): a scoped identifier (`@scope/name@version`) renders an empty
+  backtick pair in the `**Fix.**` line because `render_finding`'s deps branch
+  splits evidence on the first `@` instead of the last.
+
 ## 1.69.4 - 2026-08-21
 
 ### Fixed

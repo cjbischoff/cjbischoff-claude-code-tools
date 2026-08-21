@@ -1,8 +1,8 @@
 # `tests/` — the deterministic test suite
 
 105 pytest files, 1177 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
-checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
-[`CLAUDE.md`](../../CLAUDE.md) §1.
+checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
+skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
 The fake-response `R` classes in `test_review_tracer.py` and `test_diffscope.py` declare
 `stdout = ""` as a class attribute so `ty check` resolves the attribute; behavior is unchanged.
@@ -850,7 +850,9 @@ separate from pytest's own cwd, calls `run_review(base_sha, head_sha, str(repo),
 and asserts `review_plan.json` lists the repo's real changed file. Pre-fix, the production
 runner's git calls ran unscoped against pytest's cwd (this plugin's `helpers/` checkout) instead
 of the temp repo, so the plan came back empty — every other `run_review` test in this file
-injects its own `runner`, which bypasses the bug entirely.
+instead monkeypatches the stdlib `subprocess.run` with a fake that reads only `cmd` and ignores
+every keyword argument (including `cwd`), so a wrong `cwd` binding would not have made any of
+them fail either before or after this fix.
 
 `test_review_live.py` gained three tests pinning WR-01 (Phase 6 plan 01):
 `test_run_review_rejects_a_nonexistent_root_with_exit_2`,
@@ -884,3 +886,30 @@ the full suite raise `TypeError: fake_run_review() got an unexpected keyword arg
 The spy fix lands in the same commit as the implementation (1.69.0), not the RED commit above,
 since the `TypeError` only fires once `main()`'s `review` dispatch starts passing
 `workspace=args.workspace`.
+
+`test_report.py` gained five tests pinning the deps Fix-line package-name bug (Phase 6 plan 03,
+D-04): `test_fix_line_names_scoped_package_with_version`,
+`test_fix_line_names_unscoped_package_with_version`,
+`test_fix_line_falls_back_to_full_identifier_when_versionless_scoped`,
+`test_fix_line_uses_placeholder_when_identifier_absent`, and
+`test_fix_line_resolves_at_rightmost_separator_for_multi_at_identifier`, each also asserting the
+rendered Fix line never contains a hollow backtick pair (`` `` ``). Pre-fix, `render_finding`'s
+deps branch split the evidence string on the first `@`
+(`pkg.split('@')[0]`) to isolate the package name from its `@version` suffix — but a scoped
+npm-style identifier (`@scope/name@version`, produced by `sca.parse_osv_json` straight from
+osv-scanner's `package.name` field) begins with that same `@` character, so the first split
+lands on the scope delimiter and returns an empty string. The two unscoped-identifier tests
+already passed before the fix (no leading `@` to mis-split on); only the three scoped-identifier
+tests captured RED.
+
+`test_docs_invariants.py` gained
+`test_redteam_agent_describes_the_real_two_way_wants_runtime_predicate` (Phase 6 plan 03, D-02),
+a code-derived doc guard pinning `agents/redteam.md`'s Discriminate section against
+`redteam.py`'s `wants_runtime()`. It reads both trigger values from real code with no hardcoded
+copy — `"needs-runtime"` via set difference against the already-imported `RUNTIME_DISPOSITIONS`,
+and `FindingStatus.NEEDS_DEPLOYMENT_TESTING.value` from `sec_overlay.models` — and asserts the
+prompt no longer claims a third "neither static-settled nor a live-exploit test" disposition
+that opts a finding out of the runtime plan. `wants_runtime()` is a plain two-trigger OR: either
+condition alone forces inclusion; `open_questions` plays no role in that predicate at all — it
+is an independent mechanism `redteam.md` uses to flag human-answerable unknowns, never a bucket
+a finding can be routed into or out of.

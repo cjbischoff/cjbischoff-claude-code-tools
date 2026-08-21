@@ -953,3 +953,12 @@ reads the resolved `ws`'s coverage manifest, not how `ws` was resolved, so an ex
 `workspace=` override cannot bypass it. `test_rule_glob.py`'s `fake_run_review` spy gained
 `workspace=None` (same class of gap `model=None` closed there previously) once `main()`'s
 `review` dispatch started passing `workspace=args.workspace` unconditionally.
+
+Phase 6 plan 03 fixes D-04: `render_finding`'s deps branch named the wrong package on the
+`**Fix.**` line for a scoped npm-style identifier (`@scope/name@version`). It split `f.evidence`
+on the first `@` (`pkg.split('@')[0]`) to strip the trailing `@version`, but a scoped identifier
+already starts with `@`, so the first split lands on the scope delimiter and returns an empty
+string — the Fix line rendered `` Bump `` `` with nothing between the backticks. The fix splits
+on the last `@` instead (`pkg.rsplit('@', 1)[0] or pkg`), and falls back to the untouched string
+when that split empties out (a versionless scoped package like `@scope/name` has only one `@`,
+which is the scope delimiter, not a version separator).

@@ -508,6 +508,52 @@ def test_dep_view_has_no_hollow_slots():
     assert "GHSA-x" in out
 
 
+def _dep_with_evidence(evidence: str):
+    dep = _dep()
+    dep.evidence = evidence
+    return dep
+
+
+def test_fix_line_names_scoped_package_with_version():
+    from sec_overlay.report import render_finding
+
+    out = render_finding(_dep_with_evidence("@babel/core@7.1.0"))
+    assert "Bump `@babel/core`" in out
+    assert "``" not in out
+
+
+def test_fix_line_names_unscoped_package_with_version():
+    from sec_overlay.report import render_finding
+
+    out = render_finding(_dep_with_evidence("decompress@4.2.1"))
+    assert "Bump `decompress`" in out
+    assert "``" not in out
+
+
+def test_fix_line_falls_back_to_full_identifier_when_versionless_scoped():
+    from sec_overlay.report import render_finding
+
+    out = render_finding(_dep_with_evidence("@babel/core"))
+    assert "Bump `@babel/core`" in out
+    assert "``" not in out
+
+
+def test_fix_line_uses_placeholder_when_identifier_absent():
+    from sec_overlay.report import render_finding
+
+    out = render_finding(_dep_with_evidence(""))
+    assert "Bump `(package unknown)`" in out
+    assert "``" not in out
+
+
+def test_fix_line_resolves_at_rightmost_separator_for_multi_at_identifier():
+    from sec_overlay.report import render_finding
+
+    out = render_finding(_dep_with_evidence("@scope/name@1.2.3"))
+    assert "Bump `@scope/name`" in out
+    assert "``" not in out
+
+
 def test_condensed_tier_renumbers_without_gaps():
     from sec_overlay.report import render_finding
 

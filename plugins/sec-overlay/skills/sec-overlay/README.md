@@ -181,8 +181,9 @@ This runs semgrep → normalize → SARIF/Markdown only. It is the smoke path, *
 audit (no agents, no gate ladder).
 
 > **Semgrep ruleset is a prerequisite.** The bundled `rules/smoke.yaml` is a minimal
-> ruleset. The semgrep-rules submodule is not part of the plugin. For fuller coverage,
-> point `--config` (and the recon agent's `rulesets`) at your own semgrep ruleset.
+> ruleset. The vendored, gitignored semgrep-rules clone (`helpers/rules/semgrep/`) is not
+> part of the plugin. For fuller coverage, point `--config` (and the recon agent's
+> `rulesets`) at your own semgrep ruleset.
 
 ### Full agentic audit
 Driven by the main agent following [`SKILL.md`](SKILL.md). The short version:
