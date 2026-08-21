@@ -194,7 +194,7 @@ Plans:
   5. The audit report states its coverage denominator, and every attack-surface class without a finding has a logged coverage-ledger entry
   6. A full `review` run in both profiles completes end to end on a real diff, with the coverage manifest sealed and every reported line positioning-confirmed
 
-**Plans**: 2/4 plans executed
+**Plans**: 3/4 plans executed
 
 Plans:
 **Wave 1**
@@ -207,7 +207,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 05-03-PLAN.md — Read finding integrity back from the audit sidecar: the Tier-1 receipt ladder and runtime-dependent risk scoring (AUD-02, AUD-03)
+- [x] 05-03-PLAN.md — Read finding integrity back from the audit sidecar: the Tier-1 receipt ladder and runtime-dependent risk scoring (AUD-02, AUD-03)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -238,5 +238,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Diff Pipeline & Positioning | 5/5 | Complete    | 2026-08-19 |
 | 3. Rule Matching & Review Modes | 7/7 | Complete    | 2026-08-19 |
 | 4. Scale, Resume & Diff Output | 4/4 | Complete    | 2026-08-20 |
-| 5. End-to-End Verification (Audit & Review) | 2/4 | In Progress|  |
+| 5. End-to-End Verification (Audit & Review) | 3/4 | In Progress|  |
 | 6. Remediation and Governed Release | 0/TBD | Not started | - |

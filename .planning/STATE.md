@@ -5,15 +5,15 @@ milestone_name: Hybrid Diff-Review Architecture
 current_phase: 05
 current_phase_name: End-to-End Verification (Audit & Review)
 status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-08-21T04:06:44.280Z"
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-08-21T04:26:30.000Z"
 last_activity: 2026-08-20
-last_activity_desc: Phase 04 complete, verified 5/5; next is Phase 5
+last_activity_desc: Phase 5 Plan 3 complete — AUD-02/AUD-03 proven on real audit output
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 24
-  completed_plans: 22
+  completed_plans: 23
   percent: 71
 ---
 
@@ -30,17 +30,17 @@ governed releases, receipt-backed findings.
 ## Current Position
 
 Phase: 05 — End-to-End Verification (Audit & Review)
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
-Last activity: 2026-08-20 — Phase 04 complete and verified (5/5); Phase 04.1 was already complete (2026-08-19), so position advances to Phase 5
+Last activity: 2026-08-20 — Plan 03 complete: AUD-02 and AUD-03 proven on Plan 02's real audit output (0 ladder violations, 0 missing/zero risk scores, report headline matches); position advances to Plan 4 of 4
 
-Progress: [█████████░] 92%
+Progress: [█████████░] 96%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 20
+- Total plans completed: 21
 - Average duration: -
 - Total execution time: -
 
@@ -86,6 +86,7 @@ Progress: [█████████░] 92%
 | Phase 04 P04 | 26min | 3 tasks | 10 files |
 | Phase 05 P01 | 87m | 2 tasks | 10 files |
 | Phase 05 P02 | 84min | 3 tasks | 5 files |
+| Phase 05 P03 | 22min | 3 tasks | 1 file |
 
 ## Accumulated Context
 
@@ -154,6 +155,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 05-01: security-kept subseteq general-kept subset check passed vacuously (empty set); flagged as E-12 in 05-DEFECTS.md for Phase 6 to re-verify against non-empty findings
 - [Phase ?]: Triaged redteam/postflight PHASE_TABLE gap as run-blocker; closed via documented standalone module calls, deferred wiring fix to Phase 6
 - [Phase ?]: Corrected CRYPTO-0001 runtime_disposition after discovering wants_runtime() also keys on status
+- [Phase ?]: 05-03: validate_findings() redirected to a scratch copy via Workspace(findings_dir_override=...) rather than called directly against the live D-09-retained sidecar, since it has an undocumented write side effect on receipt_tier mismatch; non-mutation proven via before/after MD5 checksums
+- [Phase ?]: 05-03: No evidence_sources string for the needs-deployment-testing findings is quoted in the committed receipt, since those strings embed real target-repo file paths — the plan's framing that evidence-source names are always safe tool identifiers does not hold universally for this pipeline's real data
+- [Phase ?]: 05-03: report.py's intentional "Needs runtime proof"/"needs-runtime" labeling (never the literal enum string) confirmed as by-design after re-verifying the visibility check against the actual rendered labels
 
 ### Pending Todos
 
@@ -183,6 +187,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-21T04:06:44.262Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-08-21T04:26:30.000Z
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None

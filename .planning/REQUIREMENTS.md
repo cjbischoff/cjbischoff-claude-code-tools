@@ -114,10 +114,10 @@ models.py/evidence.py contract, receipt gate as the sole authority on `confirmed
 - [x] **AUD-01**: A full `/sec-overlay:audit` run completes end to end on a real
   target repo, with per-phase receipts written and the working-tree fence intact
 
-- [ ] **AUD-02**: Every finding with status `confirmed` cites a mechanical tool
+- [x] **AUD-02**: Every finding with status `confirmed` cites a mechanical tool
   receipt; Tier-2-only or syntactic-match evidence never reaches `confirmed`
 
-- [ ] **AUD-03**: Runtime-dependent findings land in `needs-deployment-testing` with a
+- [x] **AUD-03**: Runtime-dependent findings land in `needs-deployment-testing` with a
   real risk score, visible in report headline counts
 
 - [ ] **AUD-04**: Architecture and threat-model artifacts pass the deterministic gates
@@ -208,8 +208,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OUT-01 | Phase 4 | Complete |
 | OUT-02 | Phase 4 | Complete |
 | AUD-01 | Phase 5 | Complete |
-| AUD-02 | Phase 5 | Pending |
-| AUD-03 | Phase 5 | Pending |
+| AUD-02 | Phase 5 | Complete |
+| AUD-03 | Phase 5 | Complete |
 | AUD-04 | Phase 5 | Pending |
 | AUD-05 | Phase 5 | Pending |
 | AUD-06 | Phase 5 | Complete |
