@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-105 pytest files, 1177 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+108 pytest files, 1280 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -324,6 +324,7 @@ the regression guard for the CLI no longer calling `state.begin_pass` on every i
 | `test_finding_schema.py` | The `Finding` record stays consistent with `references/finding.schema.json`. |
 | `test_wiring.py` | Silent-backend / clsmap / dead-link regressions and attack-class routing. |
 | `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules, and (new) the `EVIDENCE_VOCABULARY` block listing every `sec_overlay.evidence` tier/status/disposition value verbatim. |
+| `test_frozen_contract.py` | Byte-identity: `models.py`/`evidence.py` are frozen mirrors of a separate Go port (D-15) — a sha256 pin fails loudly on any edit. `fingerprint()` golden-value pins (fully-populated, minimally-populated, field-order-permuted) prove its behavior independent of that byte check. REL-03: `pyproject.toml`'s `[project] dependencies` stays `[]`. |
 
 ## The rest
 
@@ -913,3 +914,17 @@ that opts a finding out of the runtime plan. `wants_runtime()` is a plain two-tr
 condition alone forces inclusion; `open_questions` plays no role in that predicate at all — it
 is an independent mechanism `redteam.md` uses to flag human-answerable unknowns, never a bucket
 a finding can be routed into or out of.
+
+`test_frozen_contract.py` (new, Phase 6 plan 04, D-15/REL-03) is the frozen-contract
+tripwire suite. Two sha256 byte-identity guards pin `models.py`/`evidence.py` against
+their committed digests — either file is a byte-identical mirror of a separate Go
+port, and a mismatch fails with an actionable message naming the required sign-off
+and Go-port update. Three `fingerprint()` golden-value tests reach the same pinned
+12-hex value from a fully-populated `Finding`, a minimally-populated one (every
+optional field at its dataclass default), and one built with the same required
+fields passed in reverse keyword order — proving the digest depends only on
+`rule_id`/`cls`/`anchor` and is inert to every other field and to construction
+order, independent of the byte-identity guards above. `test_helpers_declare_zero_runtime_dependencies`
+reads the real `pyproject.toml` via stdlib `tomllib` and asserts `[project]
+dependencies == []` (REL-03), closing the requirement with a running check instead
+of a one-time manual read.

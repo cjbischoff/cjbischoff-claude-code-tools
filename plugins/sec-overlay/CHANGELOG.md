@@ -2,6 +2,18 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.9 - 2026-08-21
+
+### Added
+
+- `helpers/tests/test_frozen_contract.py` (D-15, REL-03): a sha256 byte-identity
+  guard pinning `models.py`/`evidence.py` against their committed digests (both
+  are byte-identical mirrors of a separate Go port and must never be edited
+  alone), three `fingerprint()` golden-value tests proving its output depends
+  only on `rule_id`/`cls`/`anchor` regardless of every other `Finding` field or
+  construction order, and a REL-03 test reading `pyproject.toml` via stdlib
+  `tomllib` to assert `[project] dependencies` stays empty.
+
 ## 1.69.8 - 2026-08-21
 
 ### Fixed
