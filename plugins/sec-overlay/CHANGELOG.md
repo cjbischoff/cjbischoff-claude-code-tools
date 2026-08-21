@@ -2,6 +2,15 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.5 - 2026-08-21
+
+### Fixed
+
+- Add five failing tests pinning the deps Fix-line package-name bug (D-04,
+  RED phase): a scoped identifier (`@scope/name@version`) renders an empty
+  backtick pair in the `**Fix.**` line because `render_finding`'s deps branch
+  splits evidence on the first `@` instead of the last.
+
 ## 1.69.4 - 2026-08-21
 
 ### Fixed

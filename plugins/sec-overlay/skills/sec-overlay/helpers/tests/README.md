@@ -884,3 +884,18 @@ the full suite raise `TypeError: fake_run_review() got an unexpected keyword arg
 The spy fix lands in the same commit as the implementation (1.69.0), not the RED commit above,
 since the `TypeError` only fires once `main()`'s `review` dispatch starts passing
 `workspace=args.workspace`.
+
+`test_report.py` gained five tests pinning the deps Fix-line package-name bug (Phase 6 plan 03,
+D-04): `test_fix_line_names_scoped_package_with_version`,
+`test_fix_line_names_unscoped_package_with_version`,
+`test_fix_line_falls_back_to_full_identifier_when_versionless_scoped`,
+`test_fix_line_uses_placeholder_when_identifier_absent`, and
+`test_fix_line_resolves_at_rightmost_separator_for_multi_at_identifier`, each also asserting the
+rendered Fix line never contains a hollow backtick pair (`` `` ``). Pre-fix, `render_finding`'s
+deps branch split the evidence string on the first `@`
+(`pkg.split('@')[0]`) to isolate the package name from its `@version` suffix — but a scoped
+npm-style identifier (`@scope/name@version`, produced by `sca.parse_osv_json` straight from
+osv-scanner's `package.name` field) begins with that same `@` character, so the first split
+lands on the scope delimiter and returns an empty string. The two unscoped-identifier tests
+already passed before the fix (no leading `@` to mis-split on); only the three scoped-identifier
+tests captured RED.
