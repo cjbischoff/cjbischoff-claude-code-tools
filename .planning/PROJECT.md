@@ -59,15 +59,16 @@ All items below shipped before this project started.
 - ✓ Reflection filter retracts only, fails open, never confirms (REV-05) — Validated in Phase 3: Rule Matching & Review Modes, 2026-08-19
 - ✓ Review workspace isolated to the `<target>/.sec-overlay/<slug>/` sidecar; nothing written to the reviewed repo's tracked tree (DIFF-04) — Validated in Phase 04.1: Close gap: review sidecar workspace isolation, 2026-08-19
 - ✓ Bundling, bounded concurrency/timeouts, identity-checked SHA-pinned resume, and diff-anchored output with content-only SARIF fingerprints (REV-06; SCALE-01/02/03, OUT-01/02) — Validated in Phase 4: Scale, Resume & Diff Output, 2026-08-20
+- ✓ Full driven audit run completed on a real target with receipts; working-tree fence held (AUD-01) — Validated in Phase 5: End-to-End Verification, 2026-08-21
+- ✓ Confirmed findings receipt-backed; Tier-2-only never confirms (AUD-02) — Validated in Phase 5, 2026-08-21
+- ✓ Runtime-dependent findings scored and visible in headline counts (AUD-03) — Validated in Phase 5, 2026-08-21
+- ✓ Architecture/threat-model artifacts pass deterministic gates; CVSS v4.0 only (AUD-04) — Validated in Phase 5, 2026-08-21
+- ✓ Report states its 515-file coverage denominator; zero-finding classes ledgered (AUD-05) — Validated in Phase 5, 2026-08-21
+- ✓ Both-profile review run completed E2E on a real diff, manifest sealed, lines positioning-confirmed (AUD-06) — Validated in Phase 5, 2026-08-21; profile-superset contract passed vacuously (0 findings), substantive re-check deferred to Phase 6 (E-12)
 
 ### Active
 
-- [ ] Full driven audit run completes on a real target with receipts (AUD-01)
-- [ ] Confirmed findings are receipt-backed; Tier-2-only never confirms (AUD-02)
-- [ ] Runtime-dependent findings scored and visible, never hidden (AUD-03)
-- [ ] Architecture/threat-model artifacts pass gates; CVSS v4.0 only (AUD-04)
-- [ ] Report states coverage denominator; gaps logged, never dropped (AUD-05)
-- [ ] Run defects fixed or dispositioned; frozen contract unchanged (REL-01)
+- [ ] Run defects fixed or dispositioned; frozen contract unchanged (REL-01) — 05-DEFECTS.md carries 10 deferred rows plus review warnings WR-01/WR-02
 - [ ] Fixes ship through full governance with CodeRabbit review (REL-02)
 
 ### Out of Scope
@@ -123,6 +124,7 @@ All items below shipped before this project started.
 | Artifact layout replaced outright: workspace architecture/ and threat-model/ (ruling R3) | no shims; all consumers re-pointed | ✓ Delivered |
 | Invocation scope A1/B1/C1/D1: one command, thin driver, receipts + fence, inferred roles | latest authority on how a run is invoked and driven | ✓ Delivered |
 | Marketplace doc structure: root CLAUDE.md governs; per-plugin doc trio | plugin CLAUDE.md never auto-loads for installers | ✓ Delivered |
+| Phase 5 UAT sign-off: WR-01/WR-02 ride Phase 6's REL-01 sweep; vacuous AUD-06 superset pass accepted with E-12 tracking the substantive re-check | scope-boundary calls recorded in 05-UAT.md and 05-DEFECTS.md, 2026-08-21 | ✓ Decided |
 
 No decision is ADR-locked. ADR-2026-08-04 is the only ADR and remains proposed.
 
@@ -146,4 +148,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-20 after completing Phase 4 (Scale, Resume & Diff Output) of milestone v5.0*
+*Last updated: 2026-08-21 after completing Phase 5 (End-to-End Verification, Audit & Review) of milestone v5.0*

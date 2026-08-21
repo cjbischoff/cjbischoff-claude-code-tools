@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Diff-Review Architecture
-current_phase: 05
-current_phase_name: End-to-End Verification (Audit & Review)
-status: verifying
+current_phase: 6
+current_phase_name: Remediation and Governed Release
+status: planning
 stopped_at: Completed 05-04-PLAN.md
-last_updated: "2026-08-21T04:51:41.107Z"
-last_activity: 2026-08-20
-last_activity_desc: Phase 5 Plan 3 complete — AUD-02/AUD-03 proven on real audit output
+last_updated: "2026-08-21T17:02:36.685Z"
+last_activity: 2026-08-21
+last_activity_desc: Phase 05 complete, transitioned to Phase 6
 progress:
   total_phases: 7
   completed_phases: 6
@@ -21,26 +21,26 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-16)
+See: .planning/PROJECT.md (updated 2026-08-21)
 
 **Core value:** The marketplace never ships an unverified claim — validated plugins,
 governed releases, receipt-backed findings.
-**Current focus:** Phase 5 — End-to-End Verification (Audit & Review)
+**Current focus:** Phase 6 — Remediation and Governed Release
 
 ## Current Position
 
-Phase: 05 — End-to-End Verification (Audit & Review)
-Plan: 4 of 4
-Status: Phase complete — ready for verification
-Last activity: 2026-08-20 — Plan 03 complete: AUD-02 and AUD-03 proven on Plan 02's real audit output (0 ladder violations, 0 missing/zero risk scores, report headline matches); position advances to Plan 4 of 4
+Phase: 6 — Remediation and Governed Release
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-21 — Phase 05 complete, transitioned to Phase 6
 
-Progress: [██████████] 100%
+Progress: [████████████████████] 24/24 plans (100% of planned; Phase 6 plans TBD)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 21
+- Total plans completed: 24
 - Average duration: -
 - Total execution time: -
 
@@ -53,6 +53,7 @@ Progress: [██████████] 100%
 | 04.1 | 1 | - | - |
 | 02 | 5 | - | - |
 | 04 | 4 | - | - |
+| 05 | 4 | - | - |
 
 **Recent Trend:**
 
@@ -162,6 +163,8 @@ Recent decisions affecting current work:
 - [Phase ?]: AUD-04 gate verdicts live under kb/gates/, not kb/receipts/ as the plan's literal glob states; corrected inline, both arch-gate/tm-gate pass=true errors=0
 - [Phase ?]: deps class is deliberately excluded from build_coverage_ledger()'s loop by design, confirmed via source inspection, not a coverage gap; the real deps finding is already tracked in 05-DEFECTS.md
 - [Phase ?]: Task 3's sanitization gate raw count of 9 is fully explained as each plan's own self-referential verify-command text and planner-discipline-allow comment; refined re-run confirms true count is 0, reported transparently with both numbers
+- [Phase 5 UAT]: WR-01/WR-02 review warnings ride Phase 6's REL-01 defect-disposition sweep (two deferred rows added to 05-DEFECTS.md)
+- [Phase 5 UAT]: Vacuous AUD-06 profile-superset pass accepted for Phase 5 closure; substantive re-check tracked by the E-12 deferral for Phase 6
 
 ### Pending Todos
 
@@ -173,8 +176,9 @@ None yet.
   absent from the ingest set. Locate the spec or affirm the design doc as authority.
   See .planning/INGEST-CONFLICTS.md.
 
-- Phase 5 needs a real target repo for both the audit and review verification runs.
-  Pick one before planning Phase 5.
+- Phase 6 must disposition every deferred row in 05-DEFECTS.md (10 rows including
+  WR-01/WR-02) under REL-01, and re-verify the AUD-06 profile-superset contract on a
+  non-empty finding set (E-12).
 
 ### Roadmap Evolution
 
@@ -191,6 +195,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-21T04:51:41.090Z
-Stopped at: Completed 05-04-PLAN.md
+Last session: 2026-08-21T21:30:00Z
+Stopped at: Phase 5 complete (UAT 2/2 passed, verification passed), ready to plan Phase 6
 Resume file: None
