@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-108 pytest files, 1280 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+108 pytest files, 1284 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -700,6 +700,23 @@ runs over `_dual_run_fixture` plus one added kept thread-safety finding, asserti
 disposition is one of the two allowed values rather than only `UNCONFIRMED_DISPOSITION` — the
 committed-baseline comparison test is untouched, since the baseline never serialized a
 `disposition` field.
+
+Phase 6 plan 04 (Task 2, D-08/E-12) extends `test_review_profiles.py` with four probes closing the
+E-12 defect: the security-kept ⊆ general-kept relation had only ever been exercised on an empty
+comparison (`05-DEFECTS.md` row 5), so ∅ ⊆ ∅ passed vacuously and proved nothing.
+`test_apply_profile_vacuous_subset_is_distinguishable_from_a_real_pass` asserts the subset
+relation over two empty runs AND, as a separate assertion, that both sides were in fact empty —
+a subset check alone cannot tell "held" from "had nothing to hold".
+`test_apply_profile_subset_holds_at_a_single_kept_finding` exercises the same relation at size
+one. `test_apply_profile_narrowest_margin_boundary_finding_is_kept_by_both` keeps a `gate=None`
+finding whose `cls` is drawn from the real `GENERAL_DEFECT_CLASSES` table (`"injection"`, not
+invented) — `gate is None` is the only route by which the security profile ever keeps a finding,
+so this is the narrowest margin available, and it proves the subset holds even for a finding that
+looks classification-eligible but never reaches `classify()` because the `or` short-circuits first.
+`test_apply_profile_kept_set_is_stable_under_input_permutation` reruns `_dual_run_fixture()` and
+its reverse through both profiles, comparing kept sets by `finding.id` rather than list position.
+All four reuse `_dual_run_fixture()` (unmodified) or a slice/direct call of it — no second fixture
+was added.
 
 Phase 3 plan 07 (Task 3) adds `test_thread_safety_finding_ships_needs_deployment_testing_end_to_end`
 to `test_review_live.py` — the composed proof that Task 1's ledger wiring and Task 2's disposition
