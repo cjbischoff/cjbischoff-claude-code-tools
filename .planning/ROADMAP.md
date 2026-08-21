@@ -225,7 +225,14 @@ Plans:
   3. Each fix lands on a branch with a Conventional Commit, semver bump, and CHANGELOG entry in the same commit, merged only after CodeRabbit's walkthrough comment posts
   4. `helpers/pyproject.toml` dependencies stay empty across every new module — zero new runtime dependencies
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — CLI fixes: WR-01 root guard as the phase tracer, `review --workspace`, PR governance rail established
+- [ ] 06-02-PLAN.md — Pipeline wiring: `redteam` and `postflight` into `PHASE_TABLE` and `DETERMINISTIC_ACTIONS`, docs reconciled
+- [ ] 06-03-PLAN.md — Output and doc corrections: deps-finding package name, red-team prompt two-way split, two false doc claims
+- [ ] 06-04-PLAN.md — Guards: frozen-contract identity, `fingerprint()` golden values, empty dependency table, profile-subset edge probes
+- [ ] 06-05-PLAN.md — Dispatched run, E-12 evidence, sanitized receipts, defect ledger, phase close
 
 ## Progress
 
