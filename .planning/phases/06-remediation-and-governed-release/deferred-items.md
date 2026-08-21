@@ -22,3 +22,24 @@ fixed here; recorded for a later pass.
   message, but use a normal runner — a later git failure converted to exit 2
   would also pass. A runner stub that fails if invoked would pin the
   "before any git call" ordering claim. From PR #23 review.
+
+## 06-02
+
+- **`skills/sec-overlay/README.md`'s CLI-legend block already documented
+  `selfscore` in the wrong position** (after `postflight`, no phase number)
+  before this plan touched it. Task 3 moved the line to its correct spot
+  (right after `report`, before `redteam`) as a one-line adjacent fix while
+  already editing that block, but did not otherwise audit the file for
+  further pre-existing misorderings.
+- **`skills/sec-overlay/helpers/README.md`'s deterministic-pipeline mermaid
+  diagram never had nodes for `selfscore`, `artifact-gate`, or
+  `artifact-review`** — it jumps from `findings_gate.py` (post-verify) to
+  `report.py` and then (pre-06-02) straight to `postflight.py`. Task 3
+  fixed the `redteam`/`report`/`postflight` ordering it changed, but did not
+  add the three missing nodes — that is a pre-existing simplification of
+  the diagram, not something D-01 caused.
+- **`skills/sec-overlay/CLAUDE.md`'s numbered "Phase order (one pass)" list
+  never had a numbered `selfscore` entry**, before or after this plan
+  (confirmed via `git diff 9e3892e -- .../CLAUDE.md`). `selfscore` runs
+  between `report` and `redteam` per `PHASE_TABLE`, so the list is missing a
+  step, not misordered. Pre-existing gap; out of scope for D-01.
