@@ -5,15 +5,15 @@ milestone_name: Hybrid Diff-Review Architecture
 current_phase: 06
 current_phase_name: remediation-and-governed-release
 status: executing
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-08-21T21:46:12.842Z"
+stopped_at: Completed 06-04 local work; checkpoint for PR ship steps
+last_updated: "2026-08-21T22:13:33.793Z"
 last_activity: 2026-08-21
 last_activity_desc: Phase 05 complete, transitioned to Phase 6
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 29
-  completed_plans: 27
+  completed_plans: 28
   percent: 86
 ---
 
@@ -30,11 +30,11 @@ governed releases, receipt-backed findings.
 ## Current Position
 
 Phase: 06 (remediation-and-governed-release) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-08-21 — Phase 06 execution started
 
-Progress: [████████████████████] 24/24 plans ([█████████░] 93% of planned; Phase 6 plans TBD)
+Progress: [████████████████████] 24/24 plans ([██████████] 97% of planned; Phase 6 plans TBD)
 
 ## Performance Metrics
 
@@ -92,6 +92,7 @@ Progress: [████████████████████] 24/24 p
 | Phase 06 P01 | unavailable | 3 tasks | 7 files |
 | Phase 06 P02 | 14min | 3 tasks | 11 files |
 | Phase 06 P03 | 45min | 3 tasks | 15 files |
+| Phase 06 P04 | 150m | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -175,6 +176,7 @@ Recent decisions affecting current work:
 - [Phase ?]: CodeRabbit review on PR 24 hit the reviewer's OSS rate limit; user waived the wait-for-walkthrough requirement for this PR, so no CodeRabbit findings exist for this diff
 - [Phase ?]: REL-01 doc-surface search found 6 files / 8 mentions of the false git-submodule claim for the vendored semgrep ruleset, corrected every live surface found rather than stopping at the ledger's one named file
 - [Phase ?]: PR #25 merge executed by orchestrator (gh pr merge blocked by Claude Code auto-mode classifier as an outward-facing action); CodeRabbit review triggered once per phase's standing non-default-base-branch override, merged without waiting further
+- [Phase ?]: Boundary category for E-12 probe: gate=None finding with cls=injection (real GENERAL_DEFECT_CLASSES member) -- narrowest margin by which security ever keeps a finding
 
 ### Pending Todos
 
@@ -189,6 +191,8 @@ None yet.
 - Phase 6 must disposition every deferred row in 05-DEFECTS.md (10 rows including
   WR-01/WR-02) under REL-01, and re-verify the AUD-06 profile-superset contract on a
   non-empty finding set (E-12).
+
+- Task 2 PR ship steps (push, gh pr create, CodeRabbit wait, merge, branch delete) blocked in this executor -- orchestrator must complete
 
 ### Roadmap Evolution
 
@@ -205,6 +209,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-21T21:46:12.821Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-08-21T22:13:33.759Z
+Stopped at: Completed 06-04 local work; checkpoint for PR ship steps
 Resume file: None
