@@ -120,10 +120,10 @@ models.py/evidence.py contract, receipt gate as the sole authority on `confirmed
 - [x] **AUD-03**: Runtime-dependent findings land in `needs-deployment-testing` with a
   real risk score, visible in report headline counts
 
-- [ ] **AUD-04**: Architecture and threat-model artifacts pass the deterministic gates
+- [x] **AUD-04**: Architecture and threat-model artifacts pass the deterministic gates
   (Mermaid caps, derivation headers, STE lint) and score with CVSS v4.0 only
 
-- [ ] **AUD-05**: The audit report states its coverage denominator; every
+- [x] **AUD-05**: The audit report states its coverage denominator; every
   attack-surface class without a finding has a logged coverage-ledger entry
 
 - [x] **AUD-06**: A full `review` run (both profiles) completes end to end on a real
@@ -210,8 +210,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUD-01 | Phase 5 | Complete |
 | AUD-02 | Phase 5 | Complete |
 | AUD-03 | Phase 5 | Complete |
-| AUD-04 | Phase 5 | Pending |
-| AUD-05 | Phase 5 | Pending |
+| AUD-04 | Phase 5 | Complete |
+| AUD-05 | Phase 5 | Complete |
 | AUD-06 | Phase 5 | Complete |
 | REL-01 | Phase 6 | Pending |
 | REL-02 | Phase 6 | Pending |

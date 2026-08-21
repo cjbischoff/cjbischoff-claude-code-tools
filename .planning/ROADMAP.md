@@ -194,7 +194,7 @@ Plans:
   5. The audit report states its coverage denominator, and every attack-surface class without a finding has a logged coverage-ledger entry
   6. A full `review` run in both profiles completes end to end on a real diff, with the coverage manifest sealed and every reported line positioning-confirmed
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans executed
 
 Plans:
 **Wave 1**
@@ -211,7 +211,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 05-04-PLAN.md — Read artifact gates and coverage back: deterministic gates, CVSS v4.0 only, coverage denominator, and the coverage ledger (AUD-04, AUD-05)
+- [x] 05-04-PLAN.md — Read artifact gates and coverage back: deterministic gates, CVSS v4.0 only, coverage denominator, and the coverage ledger (AUD-04, AUD-05)
 
 ### Phase 6: Remediation and Governed Release
 
@@ -238,5 +238,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Diff Pipeline & Positioning | 5/5 | Complete    | 2026-08-19 |
 | 3. Rule Matching & Review Modes | 7/7 | Complete    | 2026-08-19 |
 | 4. Scale, Resume & Diff Output | 4/4 | Complete    | 2026-08-20 |
-| 5. End-to-End Verification (Audit & Review) | 3/4 | In Progress|  |
+| 5. End-to-End Verification (Audit & Review) | 4/4 | In Progress|  |
 | 6. Remediation and Governed Release | 0/TBD | Not started | - |

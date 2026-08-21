@@ -4,17 +4,17 @@ milestone: v5.0
 milestone_name: Hybrid Diff-Review Architecture
 current_phase: 05
 current_phase_name: End-to-End Verification (Audit & Review)
-status: executing
-stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-08-21T04:26:30.000Z"
+status: verifying
+stopped_at: Completed 05-04-PLAN.md
+last_updated: "2026-08-21T04:51:41.107Z"
 last_activity: 2026-08-20
 last_activity_desc: Phase 5 Plan 3 complete — AUD-02/AUD-03 proven on real audit output
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 24
-  completed_plans: 23
-  percent: 71
+  completed_plans: 24
+  percent: 86
 ---
 
 # Project State
@@ -31,10 +31,10 @@ governed releases, receipt-backed findings.
 
 Phase: 05 — End-to-End Verification (Audit & Review)
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-20 — Plan 03 complete: AUD-02 and AUD-03 proven on Plan 02's real audit output (0 ladder violations, 0 missing/zero risk scores, report headline matches); position advances to Plan 4 of 4
 
-Progress: [█████████░] 96%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -87,6 +87,7 @@ Progress: [█████████░] 96%
 | Phase 05 P01 | 87m | 2 tasks | 10 files |
 | Phase 05 P02 | 84min | 3 tasks | 5 files |
 | Phase 05 P03 | 22min | 3 tasks | 1 file |
+| Phase 05 P04 | 45min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -158,6 +159,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 05-03: validate_findings() redirected to a scratch copy via Workspace(findings_dir_override=...) rather than called directly against the live D-09-retained sidecar, since it has an undocumented write side effect on receipt_tier mismatch; non-mutation proven via before/after MD5 checksums
 - [Phase ?]: 05-03: No evidence_sources string for the needs-deployment-testing findings is quoted in the committed receipt, since those strings embed real target-repo file paths — the plan's framing that evidence-source names are always safe tool identifiers does not hold universally for this pipeline's real data
 - [Phase ?]: 05-03: report.py's intentional "Needs runtime proof"/"needs-runtime" labeling (never the literal enum string) confirmed as by-design after re-verifying the visibility check against the actual rendered labels
+- [Phase ?]: AUD-04 gate verdicts live under kb/gates/, not kb/receipts/ as the plan's literal glob states; corrected inline, both arch-gate/tm-gate pass=true errors=0
+- [Phase ?]: deps class is deliberately excluded from build_coverage_ledger()'s loop by design, confirmed via source inspection, not a coverage gap; the real deps finding is already tracked in 05-DEFECTS.md
+- [Phase ?]: Task 3's sanitization gate raw count of 9 is fully explained as each plan's own self-referential verify-command text and planner-discipline-allow comment; refined re-run confirms true count is 0, reported transparently with both numbers
 
 ### Pending Todos
 
@@ -187,6 +191,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-21T04:26:30.000Z
-Stopped at: Completed 05-03-PLAN.md
+Last session: 2026-08-21T04:51:41.090Z
+Stopped at: Completed 05-04-PLAN.md
 Resume file: None
