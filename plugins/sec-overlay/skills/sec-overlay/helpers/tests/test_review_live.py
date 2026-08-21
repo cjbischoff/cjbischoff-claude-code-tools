@@ -385,9 +385,48 @@ def test_exit_codes_unchanged_invalid_ref_partial_seal_complete(tmp_path, monkey
         )
 
     monkeypatch.setattr(subprocess, "run", failing_diff)
-    rc_partial = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path / "partial"), profile="security")
+    partial_root = tmp_path / "partial"
+    partial_root.mkdir()
+    rc_partial = run_review(_BASE_SHA, _HEAD_SHA, str(partial_root), profile="security")
     assert rc_partial == 3
 
     monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
-    rc_complete = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path / "complete"), profile="security")
+    complete_root = tmp_path / "complete"
+    complete_root.mkdir()
+    rc_complete = run_review(_BASE_SHA, _HEAD_SHA, str(complete_root), profile="security")
     assert rc_complete == 0
+
+
+# --- WR-01: --root existence guard (06-01) -----------------------------------------------
+
+
+def test_run_review_rejects_a_nonexistent_root_with_exit_2(tmp_path, capsys):
+    """WR-01: a missing `--root` must exit 2 with one stderr line, never raise."""
+    missing = tmp_path / "does-not-exist"
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(missing), profile="security")
+    assert rc == 2
+    err = capsys.readouterr().err.strip()
+    assert err.startswith("error:")
+    assert "--root" in err
+    assert str(missing) in err
+
+
+def test_run_review_rejects_an_empty_root_with_exit_2(tmp_path, capsys):
+    """WR-01: an empty `--root` string exits 2 through the same guard."""
+    rc = run_review(_BASE_SHA, _HEAD_SHA, "", profile="security")
+    assert rc == 2
+    err = capsys.readouterr().err.strip()
+    assert err.startswith("error:")
+    assert "--root" in err
+
+
+def test_run_review_rejects_a_file_as_root_with_exit_2(tmp_path, capsys):
+    """WR-01: a regular file (wrong type, not missing) exits 2 through the same guard."""
+    a_file = tmp_path / "not-a-directory.txt"
+    a_file.write_text("x")
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(a_file), profile="security")
+    assert rc == 2
+    err = capsys.readouterr().err.strip()
+    assert err.startswith("error:")
+    assert "--root" in err
+    assert str(a_file) in err

@@ -2,6 +2,13 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.68.8 - 2026-08-21
+
+### Added
+
+- Add three failing tests pinning WR-01's `--root` guard (missing, empty, and
+  file-as-root cases) ahead of the fix in 1.68.9.
+
 ## 1.68.7 - 2026-08-20
 
 ### Fixed
