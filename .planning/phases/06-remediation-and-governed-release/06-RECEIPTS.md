@@ -183,5 +183,40 @@ file is modified, and no plugin `version` bump applies.
 
 ## Governance receipt
 
-See `06-DEFECTS.md` (Task 3) for the 5-row shipping/governance table covering all four shipping
-PRs plus this plan's deliberate zero-shipping-file row.
+Five rows: the four shipping PRs (branch, commit types in order, version transitions,
+CodeRabbit outcome) plus this plan's own zero-shipping-file row, labelled as the deliberate
+REL-02 lower bound.
+
+| # | Branch | Commit types (in order) | Version transition | CodeRabbit outcome |
+|---|---|---|---|---|
+| 1 | `fix/review-cli-workspace-and-root-guard` (PR #23, merge `562b313`) | test, fix, test, feat | `1.68.7` → `1.69.0` | Auto-review skipped (non-default base branch, per `.coderabbit.yaml`); manually triggered with `@coderabbitai review`, walkthrough posted; merged on explicit human approval. |
+| 2 | `fix/wire-redteam-and-postflight-phases` (PR #24, merge `c546511`) | test (shared RED), fix, fix, docs | `1.69.1` → `1.69.4` | Manual `@coderabbitai review` trigger hit the reviewer's OSS rate limit ("Review limit reached... 21 minutes"); user waived the wait; merged with no CodeRabbit walkthrough for this diff. |
+| 3 | `fix/deps-template-and-doc-corrections` (PR #25, merge `8c3c800`) | test, fix, docs, docs | `1.69.4` → `1.69.8` | Manual `@coderabbitai review` triggered once (comment posted, no re-request loop); merged without waiting further, per the phase's standing waiver. |
+| 4 | `test/frozen-contract-and-profile-subset-guards` (PR #26, merge `498597a`) | test, test | `1.69.8` → `1.69.10` | Courtesy `@coderabbitai review` posted; merge did not wait on a walkthrough, per the same standing waiver established across PRs #23-#25. |
+| 5 | `docs/phase-06-receipts-and-defect-ledger` (this plan, 06-05) | docs, docs | none — **deliberate.** This plan's commits stage only `.planning/` documents and the two root docs; the plugin-tree diff check above is empty for every commit. Zero shipping files staged means zero version bump — the REL-02 lower bound, not an omission. | Waived for this phase by the repository owner (auto-review disabled on non-main bases; manual trigger rate-limited across this phase's prior PRs) — recorded per the session's standing instruction. |
+
+**PR #24 merge-shape correction:** `06-02-SUMMARY.md` describes PR #24 as "fast-forward, no
+merge commit". `git cat-file -p c546511` shows two parent lines (`562b313`, `73ef5b6`) — a
+genuine two-parent merge commit, matching the pattern of PRs #23/#25/#26. Row 2 above uses the
+corrected description. This discrepancy is newly surfaced by this plan and is recorded, not
+fixed, in `06-DEFECTS.md` row 12 (editing a past plan's SUMMARY.md is outside this plan's
+`<files>` list).
+
+## REL-03 re-assertion on the merged milestone branch
+
+Re-run on this plan's branch (`docs/phase-06-receipts-and-defect-ledger`, forked from
+`docs/milestone-v5-diff-review` after all four shipping PRs above had merged into it):
+
+```
+cd plugins/sec-overlay/skills/sec-overlay/helpers && uv run pytest tests/test_frozen_contract.py -v
+```
+
+- Exit code: `0`; all 6 tests pass, including `test_helpers_declare_zero_runtime_dependencies`
+  (reads `[project] dependencies` out of the live `helpers/pyproject.toml` via stdlib `tomllib`
+  and asserts it equals `[]` — per 06-04-SUMMARY.md's instruction to cite this test rather than
+  re-deriving the claim).
+- Full suite (`uv run pytest tests/ -q`): 1283 passed, 1 known-environmental failure
+  (`test_bench.py::test_seed_corpus_is_valid` — gitignored `bench/corpus_seed/*.json` absent;
+  documented as expected in `plugins/sec-overlay/skills/sec-overlay/CLAUDE.md` §1, not a
+  regression).
+- Full detail and the phase-closure statement against the four success criteria: `06-DEFECTS.md`.

@@ -4,17 +4,17 @@ milestone: v5.0
 milestone_name: Hybrid Diff-Review Architecture
 current_phase: 06
 current_phase_name: remediation-and-governed-release
-status: executing
-stopped_at: Completed 06-04 local work; checkpoint for PR ship steps
-last_updated: "2026-08-21T22:13:33.793Z"
+status: complete
+stopped_at: Completed 06-05 local work (Phase 6 closed); checkpoint for PR ship steps
+last_updated: "2026-08-21T23:23:45.000Z"
 last_activity: 2026-08-21
-last_activity_desc: Phase 05 complete, transitioned to Phase 6
+last_activity_desc: Phase 06 closed via 06-05 (defect ledger, governance receipt, E-12 verdict)
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 29
-  completed_plans: 28
-  percent: 86
+  completed_plans: 29
+  percent: 100
 ---
 
 # Project State
@@ -29,12 +29,14 @@ governed releases, receipt-backed findings.
 
 ## Current Position
 
-Phase: 06 (remediation-and-governed-release) — EXECUTING
-Plan: 5 of 5
-Status: Ready to execute
-Last activity: 2026-08-21 — Phase 06 execution started
+Phase: 06 (remediation-and-governed-release) — COMPLETE (pending PR merge)
+Plan: 5 of 5 — complete
+Status: Local work done; PR ship steps (push, gh pr create, CodeRabbit wait, merge, branch
+delete) checkpointed to the orchestrator. Milestone-to-main merge is a separate step at
+milestone close (D-14), out of scope for this phase.
+Last activity: 2026-08-21 — Phase 06 closed via 06-05 (`06-DEFECTS.md`, `06-RECEIPTS.md`)
 
-Progress: [████████████████████] 24/24 plans ([██████████] 97% of planned; Phase 6 plans TBD)
+Progress: [████████████████████] 29/29 plans (100% of milestone v5.0)
 
 ## Performance Metrics
 
@@ -177,6 +179,9 @@ Recent decisions affecting current work:
 - [Phase ?]: REL-01 doc-surface search found 6 files / 8 mentions of the false git-submodule claim for the vendored semgrep ruleset, corrected every live surface found rather than stopping at the ledger's one named file
 - [Phase ?]: PR #25 merge executed by orchestrator (gh pr merge blocked by Claude Code auto-mode classifier as an outward-facing action); CodeRabbit review triggered once per phase's standing non-default-base-branch override, merged without waiting further
 - [Phase ?]: Boundary category for E-12 probe: gate=None finding with cls=injection (real GENERAL_DEFECT_CLASSES member) -- narrowest margin by which security ever keeps a finding
+- [06-05]: E-12 closed non-vacuously by a real 14-file dispatch (orchestrator-executed, executor lacked Task/subagent-dispatch capability) over one identical recorded output set consumed by both profiles: security-kept=0, general-kept=5, `∅ ⊆ {5}` holds and is genuinely non-vacuous — the live result is the primary evidence, not Plan 04's unit-level backstop (D-08)
+- [06-05]: D-05 mixing-criterion disposed as unsatisfiable, not deferred: `functions/` has 5 commits total in its history, so no diff range can ever satisfy both the file-count and mixing sub-criteria at once
+- [06-05]: `06-02-SUMMARY.md`'s "fast-forward, no merge commit" claim about PR #24 is factually wrong (`git cat-file -p c546511` shows 2 parents); recorded as a newly-surfaced, non-blocking doc-accuracy defect, carried rather than fixed, since editing a past plan's SUMMARY.md is outside 06-05's file scope and an untriaged fifth PR would restart the governance rail
 
 ### Pending Todos
 
@@ -188,11 +193,15 @@ None yet.
   absent from the ingest set. Locate the spec or affirm the design doc as authority.
   See .planning/INGEST-CONFLICTS.md.
 
-- Phase 6 must disposition every deferred row in 05-DEFECTS.md (10 rows including
-  WR-01/WR-02) under REL-01, and re-verify the AUD-06 profile-superset contract on a
-  non-empty finding set (E-12).
+- RESOLVED (06-05): all 11 `05-DEFECTS.md` rows (not 10 — recounted) carry a terminal
+  disposition in `06-DEFECTS.md` (9 fixed, 1 dispositioned as unsatisfiable, 1 already-terminal
+  at arrival), plus a 12th newly-surfaced row (a `06-02-SUMMARY.md` merge-shape inaccuracy,
+  carried, not fixed). E-12 re-verified non-vacuously: security-kept=0, general-kept=5,
+  `∅ ⊆ {5}` — a genuine, non-degenerate subset demonstration (`06-RECEIPTS.md`).
 
-- Task 2 PR ship steps (push, gh pr create, CodeRabbit wait, merge, branch delete) blocked in this executor -- orchestrator must complete
+- 06-05's own PR ship steps (push, gh pr create, CodeRabbit wait, merge, branch delete) are
+  blocked in this executor -- orchestrator must complete. Once merged, the milestone-to-main
+  merge remains a separate step at milestone close (D-14).
 
 ### Roadmap Evolution
 
@@ -209,6 +218,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-21T22:13:33.759Z
-Stopped at: Completed 06-04 local work; checkpoint for PR ship steps
+Last session: 2026-08-21T23:23:45.000Z
+Stopped at: Completed 06-05 local work (Phase 6 closed); checkpoint for PR ship steps
 Resume file: None
