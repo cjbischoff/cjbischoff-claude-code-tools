@@ -923,3 +923,26 @@ runner `r` is now scoped correctly with no other call-site change. No existing t
 this: both `test_diffscope.py` and `test_review_live.py` fully mock the runner, so a new
 `test_review_live.py` regression test uses a real temporary git repo and the real
 (uninjected) `subprocess.run` path to prove the fix.
+
+Phase 6 plan 01 fixes WR-01: `run_review` now rejects a `--root` that is missing, empty, or
+not a directory before any workspace or git subprocess call, exiting 2 with `error: --root
+must be an existing directory (got ...)` — the same shape as the `_bounded_int` exit-2
+convention. Pre-fix, the three cases each crashed differently depending on where
+`Workspace.ensure()`'s `mkdir(parents=True)` landed: a missing root was silently
+auto-vivified and the run failed later with an unrelated "unresolvable ref" message; an
+empty-string root reached a real `subprocess.run(cwd="")` and raised `FileNotFoundError`; a
+file-as-root raised `NotADirectoryError` from `Workspace.ensure()`'s own `mkdir`. The guard is
+a single `if not root or not Path(root).is_dir():` — `Path("").is_dir()` normalizes to `"."`
+and reports `True` (the CWD exists), so the empty-string case needs the explicit `not root`
+check rather than relying on `is_dir()` alone.
+
+Phase 6 plan 01 adds D-03: a `--workspace` override on `review`, mirroring `audit`'s existing
+flag. `run_review` gained a keyword-only `workspace: str | None = None` parameter; when truthy
+it resolves via `workspace.load_paths(workspace=workspace)` in place of the unconditional
+`RepoMemory.for_target(root, runner=r)` / `memory.ensure(target=root)` / `memory.workspace`
+sequence, matching `audit`'s own `if args.workspace: ws = load_paths(...)` shape exactly
+(`cli.py`'s `audit` branch). The SCALE-03 resume-identity check runs unchanged either way — it
+reads the resolved `ws`'s coverage manifest, not how `ws` was resolved, so an explicit
+`workspace=` override cannot bypass it. `test_rule_glob.py`'s `fake_run_review` spy gained
+`workspace=None` (same class of gap `model=None` closed there previously) once `main()`'s
+`review` dispatch started passing `workspace=args.workspace` unconditionally.

@@ -2,6 +2,46 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.0 - 2026-08-21
+
+### Added
+
+- Add `--workspace` to `review`, mirroring `audit`'s existing flag (D-03).
+  `run_review` gains a keyword-only `workspace` parameter: when supplied it
+  resolves via `workspace.load_paths(workspace=...)`; otherwise it falls back
+  to the existing per-repo sidecar resolved beneath `--root` via
+  `RepoMemory.for_target`. The SCALE-03 resume-identity guard is unaffected
+  either way — it checks the resolved workspace's manifest, not how that
+  workspace was resolved.
+
+## 1.68.10 - 2026-08-21
+
+### Added
+
+- Add three tests pinning `review`'s new `--workspace` override (D-03): the
+  override case, the no-override fallback (regression guard), and a
+  two-profile resume-identity check confirming the override does not weaken
+  SCALE-03. Implementation lands in 1.69.0.
+
+## 1.68.9 - 2026-08-21
+
+### Fixed
+
+- Fix `review` raising an unhandled filesystem exception (`FileNotFoundError`,
+  `NotADirectoryError`, or an `OSError` variant, depending on platform and
+  permissions) when `--root` names a path that is missing, empty, or not a
+  directory (WR-01). `run_review` now checks `--root` before any workspace or
+  git subprocess call and exits 2 with a one-line `error: --root must be an
+  existing directory (got ...)` message, matching the existing `_bounded_int`
+  exit-2 convention.
+
+## 1.68.8 - 2026-08-21
+
+### Added
+
+- Add three failing tests pinning WR-01's `--root` guard (missing, empty, and
+  file-as-root cases) ahead of the fix in 1.68.9.
+
 ## 1.68.7 - 2026-08-20
 
 ### Fixed

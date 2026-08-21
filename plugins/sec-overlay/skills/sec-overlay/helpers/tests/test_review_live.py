@@ -385,9 +385,110 @@ def test_exit_codes_unchanged_invalid_ref_partial_seal_complete(tmp_path, monkey
         )
 
     monkeypatch.setattr(subprocess, "run", failing_diff)
-    rc_partial = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path / "partial"), profile="security")
+    partial_root = tmp_path / "partial"
+    partial_root.mkdir()
+    rc_partial = run_review(_BASE_SHA, _HEAD_SHA, str(partial_root), profile="security")
     assert rc_partial == 3
 
     monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
-    rc_complete = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path / "complete"), profile="security")
+    complete_root = tmp_path / "complete"
+    complete_root.mkdir()
+    rc_complete = run_review(_BASE_SHA, _HEAD_SHA, str(complete_root), profile="security")
     assert rc_complete == 0
+
+
+# --- WR-01: --root existence guard (06-01) -----------------------------------------------
+
+
+def test_run_review_rejects_a_nonexistent_root_with_exit_2(tmp_path, capsys):
+    """WR-01: a missing `--root` must exit 2 with one stderr line, never raise."""
+    missing = tmp_path / "does-not-exist"
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(missing), profile="security")
+    assert rc == 2
+    err = capsys.readouterr().err.strip()
+    assert err.startswith("error:")
+    assert "--root" in err
+    assert str(missing) in err
+
+
+def test_run_review_rejects_an_empty_root_with_exit_2(tmp_path, capsys):
+    """WR-01: an empty `--root` string exits 2 through the same guard."""
+    rc = run_review(_BASE_SHA, _HEAD_SHA, "", profile="security")
+    assert rc == 2
+    err = capsys.readouterr().err.strip()
+    assert err.startswith("error:")
+    assert "--root" in err
+
+
+def test_run_review_rejects_a_file_as_root_with_exit_2(tmp_path, capsys):
+    """WR-01: a regular file (wrong type, not missing) exits 2 through the same guard."""
+    a_file = tmp_path / "not-a-directory.txt"
+    a_file.write_text("x")
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(a_file), profile="security")
+    assert rc == 2
+    err = capsys.readouterr().err.strip()
+    assert err.startswith("error:")
+    assert "--root" in err
+    assert str(a_file) in err
+
+
+# --- D-03: --workspace override (06-01) --------------------------------------------------
+
+
+def test_run_review_uses_the_workspace_override_when_supplied(tmp_path):
+    """An explicit `workspace=` writes artifacts there, not the --root sidecar."""
+    target = tmp_path / "repo"
+    target.mkdir()
+    custom_ws = tmp_path / "custom-workspace"
+    runner = _fake_run_for({"app.py": _diff_for("app.py")})
+
+    rc = run_review(
+        _BASE_SHA, _HEAD_SHA, str(target), runner=runner, workspace=str(custom_ws), profile="security"
+    )
+    assert rc == 0
+    assert (custom_ws / "artifacts" / "coverage_manifest.json").is_file()
+    # The per-repo sidecar under --root must stay untouched by the override.
+    assert not _sidecar_ws(str(target)).artifacts.exists()
+
+
+def test_run_review_falls_back_to_the_repo_sidecar_when_workspace_is_absent(tmp_path):
+    """No `workspace=` keeps the existing per-repo sidecar resolution (regression guard)."""
+    target = tmp_path / "repo"
+    target.mkdir()
+    runner = _fake_run_for({"app.py": _diff_for("app.py")})
+
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(target), runner=runner, profile="security")
+    assert rc == 0
+    assert (_sidecar_ws(str(target)).artifacts / "coverage_manifest.json").is_file()
+
+
+def test_review_workspace_override_permits_a_second_profile_without_weakening_the_resume_guard(
+    tmp_path,
+):
+    """A `workspace=` override must not bypass the SCALE-03 resume-identity guard."""
+    target = tmp_path / "repo"
+    target.mkdir()
+    custom_ws = tmp_path / "custom-workspace"
+    runner = _fake_run_for({"app.py": _diff_for("app.py")})
+
+    rc1 = run_review(
+        _BASE_SHA,
+        _HEAD_SHA,
+        str(target),
+        runner=runner,
+        workspace=str(custom_ws),
+        model="model-a",
+        profile="security",
+    )
+    assert rc1 == 0
+
+    rc2 = run_review(
+        _BASE_SHA,
+        _HEAD_SHA,
+        str(target),
+        runner=runner,
+        workspace=str(custom_ws),
+        model="model-b",
+        profile="security",
+    )
+    assert rc2 == 2

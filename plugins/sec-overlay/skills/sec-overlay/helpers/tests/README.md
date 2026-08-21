@@ -833,3 +833,36 @@ and asserts `review_plan.json` lists the repo's real changed file. Pre-fix, the 
 runner's git calls ran unscoped against pytest's cwd (this plugin's `helpers/` checkout) instead
 of the temp repo, so the plan came back empty — every other `run_review` test in this file
 injects its own `runner`, which bypasses the bug entirely.
+
+`test_review_live.py` gained three tests pinning WR-01 (Phase 6 plan 01):
+`test_run_review_rejects_a_nonexistent_root_with_exit_2`,
+`test_run_review_rejects_an_empty_root_with_exit_2`, and
+`test_run_review_rejects_a_file_as_root_with_exit_2`. Each asserts `run_review` returns 2 with a
+single `error: --root ...` line on stderr (`capsys`) instead of raising. Pre-fix, the three cases
+failed three different ways depending on where `Workspace.ensure()`'s `mkdir(parents=True)`
+happened to land: a missing root was silently auto-vivified by the mkdir side effect (no crash,
+but the run proceeded against a non-git directory and failed later with an unrelated "unresolvable
+ref" message); an empty-string root reached a real `subprocess.run(cwd="")` and raised
+`FileNotFoundError`; and a file-as-root raised `NotADirectoryError` from `Workspace.ensure()`'s own
+`mkdir` before any git call. The guard normalizes all three to the same exit-2 message before any
+workspace or subprocess work starts. Adding the guard also meant
+`test_exit_codes_unchanged_invalid_ref_partial_seal_complete`'s `partial`/`complete` roots — which
+previously relied on that same auto-vivification to spring into existence — now `mkdir()` those
+directories explicitly before calling `run_review`.
+
+`test_review_live.py` gained three tests covering `run_review`'s new `workspace=` override
+(D-03, Phase 6 plan 01): `test_run_review_uses_the_workspace_override_when_supplied` asserts an
+explicit `workspace=` writes `artifacts/coverage_manifest.json` under that path and leaves the
+`--root` sidecar untouched; `test_run_review_falls_back_to_the_repo_sidecar_when_workspace_is_absent`
+pins the pre-existing no-override behavior as a regression guard (it already passed before the
+`workspace` parameter existed — TypeError only fires when the kwarg is actually passed); and
+`test_review_workspace_override_permits_a_second_profile_without_weakening_the_resume_guard` runs
+`run_review` twice against the same `workspace=` override with two different `model` values and
+asserts the second call still exits 2 — the SCALE-03 resume-identity check reads the resolved
+workspace's manifest, so it applies the same whether that workspace came from `load_paths` or the
+`RepoMemory` sidecar. `test_rule_glob.py`'s `fake_run_review` spy also gained `workspace=None`
+(same class of gap `model=None` closed there previously) once the new keyword-only parameter made
+the full suite raise `TypeError: fake_run_review() got an unexpected keyword argument 'workspace'`.
+The spy fix lands in the same commit as the implementation (1.69.0), not the RED commit above,
+since the `TypeError` only fires once `main()`'s `review` dispatch starts passing
+`workspace=args.workspace`.
