@@ -5,15 +5,15 @@ milestone_name: Hybrid Diff-Review Architecture
 current_phase: 05
 current_phase_name: End-to-End Verification (Audit & Review)
 status: executing
-stopped_at: Phase 5 context gathered
-last_updated: "2026-08-20T23:51:31.016Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-08-21T02:23:47.128Z"
 last_activity: 2026-08-20
 last_activity_desc: Phase 04 complete, verified 5/5; next is Phase 5
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 24
-  completed_plans: 20
+  completed_plans: 21
   percent: 71
 ---
 
@@ -30,11 +30,11 @@ governed releases, receipt-backed findings.
 ## Current Position
 
 Phase: 05 — End-to-End Verification (Audit & Review)
-Plan: Not started
+Plan: 2 of 4
 Status: Ready to execute
 Last activity: 2026-08-20 — Phase 04 complete and verified (5/5); Phase 04.1 was already complete (2026-08-19), so position advances to Phase 5
 
-Progress: [██████████] 100%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -84,6 +84,7 @@ Progress: [██████████] 100%
 | Phase 04 P02 | 55min | 3 tasks | 10 files |
 | Phase 04 P03 | 18min | 2 tasks | 8 files |
 | Phase 04 P04 | 26min | 3 tasks | 10 files |
+| Phase 05 P01 | 87m | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -147,6 +148,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Zero-reviewable early-return path keeps writing comments from an unsealed manifest.to_dict() rather than sealing an empty manifest, since CoverageManifest.seal() raises by design on an empty manifest (T-02-05).
 - [Phase ?]: Production runner default becomes partial(subprocess.run, timeout=timeout) at the single r = runner or ... assignment, so every git call in run_review inherits the kill deadline through the shared r variable with no other call-site change.
 - [Phase ?]: Per-call subprocess timeout equals the declared --timeout (not a fraction of it) so the future-level timeout always fires first and TIMEOUT_NOTE bookkeeping stays deterministic.
+- [Phase ?]: 05-01: Zero live findings from the CLI-only review run is by-design (D-13/D-15), not a gap — AUD-06 grounds in CoverageManifest.seal()/apply_profile(), not genuine LLM findings
+- [Phase ?]: 05-01: Used SEC_OVERLAY_HOME override for Task 2's general-profile run since review has no --workspace flag and the SCALE-03 resume-identity guard rejects a second profile against the default sidecar
+- [Phase ?]: 05-01: security-kept subseteq general-kept subset check passed vacuously (empty set); flagged as E-12 in 05-DEFECTS.md for Phase 6 to re-verify against non-empty findings
 
 ### Pending Todos
 
@@ -176,6 +180,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-20T22:50:18.139Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-end-to-end-verification-audit-review/05-CONTEXT.md
+Last session: 2026-08-21T02:23:47.112Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None

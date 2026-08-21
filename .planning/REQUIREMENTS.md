@@ -126,7 +126,7 @@ models.py/evidence.py contract, receipt gate as the sole authority on `confirmed
 - [ ] **AUD-05**: The audit report states its coverage denominator; every
   attack-surface class without a finding has a logged coverage-ledger entry
 
-- [ ] **AUD-06**: A full `review` run (both profiles) completes end to end on a real
+- [x] **AUD-06**: A full `review` run (both profiles) completes end to end on a real
   diff, with the coverage manifest sealed and positioning-confirmed line numbers
 
 ### Release Governance (REL)
@@ -212,7 +212,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUD-03 | Phase 5 | Pending |
 | AUD-04 | Phase 5 | Pending |
 | AUD-05 | Phase 5 | Pending |
-| AUD-06 | Phase 5 | Pending |
+| AUD-06 | Phase 5 | Complete |
 | REL-01 | Phase 6 | Pending |
 | REL-02 | Phase 6 | Pending |
 | REL-03 | Phase 6 | Pending |

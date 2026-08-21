@@ -145,6 +145,16 @@ status: complete
 - Plans 05-02 through 05-04 (full audit run, finding-integrity readback, artifact-coverage readback) can proceed against the same pinned target and SHA range.
 - `05-DEFECTS.md` now exists and carries five rows for Phase 6 to triage: the `review --workspace` gap, the D-05 mixing-criterion deferral, the reviewer-dispatch deferral, and the E-12 superset-contract flag (all `deferred`); the cwd bug is `fixed-here` and closed.
 
+## Self-Check: PASSED
+
+- FOUND: `05-01-review-security-receipt.md`
+- FOUND: `05-01-review-general-receipt.md`
+- FOUND: `05-DEFECTS.md`
+- FOUND: `05-01-SUMMARY.md`
+- FOUND commit `841c5d8` (fix: cwd-scoping bug)
+- FOUND commit `e25c0b6` (docs: sanitized receipts)
+- FOUND commit `2b4936e` (docs: this SUMMARY.md)
+
 ---
 *Phase: 05-end-to-end-verification-audit-review*
 *Plan: 01*

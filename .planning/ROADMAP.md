@@ -194,12 +194,12 @@ Plans:
   5. The audit report states its coverage denominator, and every attack-surface class without a finding has a logged coverage-ledger entry
   6. A full `review` run in both profiles completes end to end on a real diff, with the coverage manifest sealed and every reported line positioning-confirmed
 
-**Plans**: 4 plans
+**Plans**: 1/4 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 05-01-PLAN.md — Tracer: run the diff-review pipeline end to end on a real diff in both profiles, seal the manifest, and establish the sanitized receipt format and defect ledger (AUD-06)
+- [x] 05-01-PLAN.md — Tracer: run the diff-review pipeline end to end on a real diff in both profiles, seal the manifest, and establish the sanitized receipt format and defect ledger (AUD-06)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -238,5 +238,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Diff Pipeline & Positioning | 5/5 | Complete    | 2026-08-19 |
 | 3. Rule Matching & Review Modes | 7/7 | Complete    | 2026-08-19 |
 | 4. Scale, Resume & Diff Output | 4/4 | Complete    | 2026-08-20 |
-| 5. End-to-End Verification (Audit & Review) | 0/TBD | Not started | - |
+| 5. End-to-End Verification (Audit & Review) | 1/4 | In Progress|  |
 | 6. Remediation and Governed Release | 0/TBD | Not started | - |
