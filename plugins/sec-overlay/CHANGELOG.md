@@ -2,6 +2,33 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.8 - 2026-08-21
+
+### Fixed
+
+- Correct the false claim that the vendored semgrep ruleset
+  (`helpers/rules/semgrep/`) is a tracked git submodule (D-04). No
+  `.gitmodules` entry exists anywhere in repo history; `preflight.py`'s real
+  remediation is a plain `git clone --depth 1
+  https://github.com/semgrep/semgrep-rules helpers/rules/semgrep`. Fixed the
+  wording across eight doc surfaces: `plugins/sec-overlay/CLAUDE.md`,
+  `skills/sec-overlay/CLAUDE.md` (two spots), `skills/sec-overlay/SKILL.md`,
+  `skills/sec-overlay/README.md`, `skills/sec-overlay/helpers/README.md`
+  (two spots), and `skills/sec-overlay/helpers/tests/README.md`. Added a
+  tree-walking doc guard (`test_no_live_doc_claims_a_git_submodule_that_does_not_exist`)
+  that walks every live `.md` file under the plugin (excluding historical
+  planning records and the vendored ruleset itself) so a future doc
+  repeating the same false claim fails the test suite instead of surviving
+  by chance.
+- Correct `skills/sec-overlay/helpers/tests/README.md`'s explanation of why
+  the cwd-scoping bug survived the test suite (WR-02). The prior text
+  claimed the passing tests "inject their own `runner`, which bypasses the
+  bug entirely" — they don't inject a `runner=` kwarg at all. They
+  `monkeypatch.setattr(subprocess, "run", ...)`, patching the stdlib
+  function underneath `run_review`'s `partial(subprocess.run, timeout=...,
+  cwd=root)` default; their fake ignores `cwd`, which is why none of them
+  caught the bug.
+
 ## 1.69.7 - 2026-08-21
 
 ### Fixed

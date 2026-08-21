@@ -25,15 +25,17 @@ Recall matters too: coverage is pursued until a phase can defend it to its adver
 
 Before a *full* audit, satisfy these environment prerequisites (a clean checkout lacks them):
 
-- **Semgrep rules submodule** — `rules/semgrep/` must be checked out (`git submodule update --init
-  --recursive`) or `test_preflight.py::...vendored_rules` fails for lack of rules.
+- **Vendored semgrep ruleset** — `rules/semgrep/` is a gitignored, shallow-cloned directory
+  (`git clone --depth 1 https://github.com/semgrep/semgrep-rules rules/semgrep`, per
+  `preflight.py`'s remediation), not a tracked sub-repository. It must be present or
+  `test_preflight.py::...vendored_rules` fails for lack of rules.
 - **External tool binaries** — `uv run python -m sec_overlay.preflight` must show `semgrep`,
   `codeql` (+ query packs), `ast-grep`, `osv-scanner`; a missing pack drops that dataflow (§2).
 - **Bench corpus is local-only** — `bench/corpus_seed/*.json` is gitignored (confirmed vulns in
   private code); its absence fails `test_bench.py::test_seed_corpus_is_valid` and
   `test_citations.py::test_all_mapped_ids_exist_in_seed` — both **dev/bench**, not part of a run.
   Seed locally — see the plugin `CLAUDE.md`'s "Developing the skill" section. Both failures are
-  **environmental** — never "fix" by committing submodule/seed data.
+  **environmental** — never "fix" by committing vendored-ruleset/seed data.
 
 ---
 ## 2. How to run an audit

@@ -13,6 +13,15 @@ from sec_overlay.models import FindingStatus
 _SKILL = Path(__file__).resolve().parents[2] / "SKILL.md"
 _CONSTS = Path(__file__).resolve().parents[2] / "references" / "prompt-constants.md"
 _REDTEAM_AGENT = Path(__file__).resolve().parents[2] / "agents" / "redteam.md"
+_PLUGIN_ROOT = Path(__file__).resolve().parents[4]
+
+# Dated planning records are historical, like CHANGELOG entries — never corrected retroactively.
+_HISTORICAL_DIR_MARKERS = ("/docs/plans/", "/docs/superpowers/plans/")
+# Third-party vendored ruleset, only present locally when cloned — not this plugin's own docs.
+_VENDORED_DIR_MARKERS = ("/rules/semgrep/",)
+# The actionable false instruction, not a bare mention of the word "submodule" (a doc may
+# correctly explain that something is *not* a submodule).
+_SUBMODULE_INSTRUCTION_PHRASES = ("recurse-submodules", "submodule update", "is a git submodule")
 
 
 def test_skill_documents_scope_tokens():
@@ -80,6 +89,28 @@ def test_redteam_agent_describes_the_real_two_way_wants_runtime_predicate():
     assert "OR" in txt or " or " in txt
     assert "no third disposition value" in txt
     assert "neither static-settled nor a live-exploit test" not in txt
+
+
+def test_no_live_doc_claims_a_git_submodule_that_does_not_exist():
+    """No live doc surface instructs a submodule-init step when no `.gitmodules` tracks one.
+
+    Walks the whole plugin doc tree (no hardcoded path list) so a future doc that repeats the
+    same false claim fails this test too, instead of relying on someone finding it by hand.
+    """
+    has_gitmodules = (_PLUGIN_ROOT.parent.parent / ".gitmodules").exists()
+    assert not has_gitmodules, "a real .gitmodules now exists — this guard's premise is stale"
+
+    offenders = []
+    for md_file in _PLUGIN_ROOT.rglob("*.md"):
+        rel = "/" + md_file.relative_to(_PLUGIN_ROOT).as_posix()
+        if md_file.name == "CHANGELOG.md":
+            continue
+        if any(marker in rel for marker in _HISTORICAL_DIR_MARKERS + _VENDORED_DIR_MARKERS):
+            continue
+        txt = md_file.read_text().lower()
+        if any(phrase in txt for phrase in _SUBMODULE_INSTRUCTION_PHRASES):
+            offenders.append(rel)
+    assert not offenders, f"live docs still claim a git submodule that doesn't exist: {offenders}"
 
 
 def test_evidence_vocabulary_block_lists_all_values():

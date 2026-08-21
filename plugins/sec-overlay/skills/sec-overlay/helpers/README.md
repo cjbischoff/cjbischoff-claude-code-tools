@@ -23,7 +23,7 @@ helpers/
 ├── bench/                    dev-only detection benchmark — see bench/README.md
 ├── tests/                    95 pytest files (828 tests)
 ├── fixtures/                 golden JSON + a deliberately vulnerable_repo/ for tests
-└── rules/                    vendored semgrep rules (git submodule) + smoke.yaml
+└── rules/                    vendored semgrep rules (gitignored shallow clone) + smoke.yaml
 ```
 
 ---
@@ -311,7 +311,7 @@ flowchart LR
   knowing: `test_contracts.py` catches **prompt↔schema drift** (a Finding JSON example in an
   agent prompt must parse against the real `models.py`), and `test_wiring.py` catches
   **silent-backend / clsmap / dead-link regressions**. Two failures on a clean checkout are
-  *environmental* (gitignored bench corpus, excluded semgrep submodule) — see skill
+  *environmental* (gitignored bench corpus, excluded vendored semgrep clone) — see skill
   [`CLAUDE.md`](../CLAUDE.md) §1, do not "fix" them by committing the missing data.
 - **`bench/`** — the dev-only detection benchmark (precision/recall on a labelled corpus +
   regression lock). **Not part of an audit run.** Its own docs: [`bench/README.md`](bench/README.md).

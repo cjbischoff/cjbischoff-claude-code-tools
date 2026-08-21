@@ -62,7 +62,8 @@ uv run python -m sec_overlay.cli scan \
 
 The bundled `rules/smoke.yaml` is a minimal ruleset. For fuller semgrep
 coverage, point `--config` (and the recon agent's `rulesets`) at your own
-semgrep ruleset; the semgrep-rules submodule is not shipped with this plugin.
+semgrep ruleset; the vendored, gitignored semgrep-rules clone (`helpers/rules/semgrep/`) is
+not shipped with this plugin.
 
 Outputs, under the workspace directory:
 - `findings/F-*.json` — one file per normalized finding (the contract for later phases).

@@ -1,8 +1,8 @@
 # `tests/` — the deterministic test suite
 
 105 pytest files, 1177 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
-checkout are environmental (gitignored bench corpus, excluded semgrep submodule) — see the skill
-[`CLAUDE.md`](../../CLAUDE.md) §1.
+checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
+skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
 The fake-response `R` classes in `test_review_tracer.py` and `test_diffscope.py` declare
 `stdout = ""` as a class attribute so `ty check` resolves the attribute; behavior is unchanged.
@@ -850,7 +850,9 @@ separate from pytest's own cwd, calls `run_review(base_sha, head_sha, str(repo),
 and asserts `review_plan.json` lists the repo's real changed file. Pre-fix, the production
 runner's git calls ran unscoped against pytest's cwd (this plugin's `helpers/` checkout) instead
 of the temp repo, so the plan came back empty — every other `run_review` test in this file
-injects its own `runner`, which bypasses the bug entirely.
+instead monkeypatches the stdlib `subprocess.run` with a fake that reads only `cmd` and ignores
+every keyword argument (including `cwd`), so a wrong `cwd` binding would not have made any of
+them fail either before or after this fix.
 
 `test_review_live.py` gained three tests pinning WR-01 (Phase 6 plan 01):
 `test_run_review_rejects_a_nonexistent_root_with_exit_2`,
