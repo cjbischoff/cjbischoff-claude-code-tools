@@ -225,7 +225,7 @@ Plans:
   3. Each fix lands on a branch with a Conventional Commit, semver bump, and CHANGELOG entry in the same commit, merged only after CodeRabbit's walkthrough comment posts
   4. `helpers/pyproject.toml` dependencies stay empty across every new module — zero new runtime dependencies
 
-**Plans**: 4/5 plans executed
+**Plans**: 5/5 plans executed
 
 Plans:
 **Wave 1**
@@ -246,7 +246,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 06-05-PLAN.md — Dispatched run, E-12 evidence, sanitized receipts, defect ledger, phase close
+- [x] 06-05-PLAN.md — Dispatched run, E-12 evidence, sanitized receipts, defect ledger, phase close
 
 ## Progress
 
@@ -260,4 +260,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Rule Matching & Review Modes | 7/7 | Complete    | 2026-08-19 |
 | 4. Scale, Resume & Diff Output | 4/4 | Complete    | 2026-08-20 |
 | 5. End-to-End Verification (Audit & Review) | 4/4 | Complete    | 2026-08-21 |
-| 6. Remediation and Governed Release | 4/5 | In Progress|  |
+| 6. Remediation and Governed Release | 5/5 | In Progress|  |

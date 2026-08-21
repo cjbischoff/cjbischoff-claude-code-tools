@@ -5,8 +5,8 @@ milestone_name: Hybrid Diff-Review Architecture
 current_phase: 06
 current_phase_name: remediation-and-governed-release
 status: complete
-stopped_at: Completed 06-05 local work (Phase 6 closed); checkpoint for PR ship steps
-last_updated: "2026-08-21T23:23:45.000Z"
+stopped_at: "Completed 06-05-PLAN.md (Phase 6 closed, PR #27 merged as 2a93058)"
+last_updated: "2026-08-21T23:29:46.127Z"
 last_activity: 2026-08-21
 last_activity_desc: Phase 06 closed via 06-05 (defect ledger, governance receipt, E-12 verdict)
 progress:
@@ -36,7 +36,7 @@ delete) checkpointed to the orchestrator. Milestone-to-main merge is a separate 
 milestone close (D-14), out of scope for this phase.
 Last activity: 2026-08-21 — Phase 06 closed via 06-05 (`06-DEFECTS.md`, `06-RECEIPTS.md`)
 
-Progress: [████████████████████] 29/29 plans (100% of milestone v5.0)
+Progress: [████████████████████] 29/29 plans ([██████████] 100% of milestone v5.0)
 
 ## Performance Metrics
 
@@ -95,6 +95,7 @@ Progress: [████████████████████] 29/29 p
 | Phase 06 P02 | 14min | 3 tasks | 11 files |
 | Phase 06 P03 | 45min | 3 tasks | 15 files |
 | Phase 06 P04 | 150m | 2 tasks | 5 files |
+| Phase 06 P05 | unavailable (context-compaction boundary) | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -182,6 +183,11 @@ Recent decisions affecting current work:
 - [06-05]: E-12 closed non-vacuously by a real 14-file dispatch (orchestrator-executed, executor lacked Task/subagent-dispatch capability) over one identical recorded output set consumed by both profiles: security-kept=0, general-kept=5, `∅ ⊆ {5}` holds and is genuinely non-vacuous — the live result is the primary evidence, not Plan 04's unit-level backstop (D-08)
 - [06-05]: D-05 mixing-criterion disposed as unsatisfiable, not deferred: `functions/` has 5 commits total in its history, so no diff range can ever satisfy both the file-count and mixing sub-criteria at once
 - [06-05]: `06-02-SUMMARY.md`'s "fast-forward, no merge commit" claim about PR #24 is factually wrong (`git cat-file -p c546511` shows 2 parents); recorded as a newly-surfaced, non-blocking doc-accuracy defect, carried rather than fixed, since editing a past plan's SUMMARY.md is outside 06-05's file scope and an untriaged fifth PR would restart the governance rail
+- [Phase ?]: Task 1 boundary: d09-as-written — the D-09 sanitization boundary is used exactly as recorded, no widening or narrowing
+- [Phase ?]: E-12 closed non-vacuously by the live dispatch (security-kept=0, general-kept={5}); the primary D-08 path, not merely Plan 04's unit-level backstop
+- [Phase ?]: D-05 mixing-criterion row dispositioned as unsatisfiable: functions/ has only 5 commits total, so no diff range can ever satisfy both sub-criteria
+- [Phase ?]: 06-02-SUMMARY.md's PR #24 fast-forward claim is factually wrong (git cat-file shows 2 parents); recorded as a carried, not-fixed defect rather than silently corrected out-of-scope or left unrecorded
+- [Phase ?]: Governance receipt and REL-03 re-assertion consolidated into 06-RECEIPTS.md as single source of truth; 06-DEFECTS.md references it instead of duplicating
 
 ### Pending Todos
 
@@ -218,6 +224,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-21T23:23:45.000Z
-Stopped at: Completed 06-05 local work (Phase 6 closed); checkpoint for PR ship steps
+Last session: 2026-08-21T23:29:46.097Z
+Stopped at: Completed 06-05-PLAN.md (Phase 6 closed, PR #27 merged as 2a93058)
 Resume file: None
