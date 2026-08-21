@@ -111,7 +111,7 @@ models.py/evidence.py contract, receipt gate as the sole authority on `confirmed
 
 ### Audit Integrity (AUD)
 
-- [ ] **AUD-01**: A full `/sec-overlay:audit` run completes end to end on a real
+- [x] **AUD-01**: A full `/sec-overlay:audit` run completes end to end on a real
   target repo, with per-phase receipts written and the working-tree fence intact
 
 - [ ] **AUD-02**: Every finding with status `confirmed` cites a mechanical tool
@@ -207,7 +207,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SCALE-03 | Phase 4 | Complete |
 | OUT-01 | Phase 4 | Complete |
 | OUT-02 | Phase 4 | Complete |
-| AUD-01 | Phase 5 | Pending |
+| AUD-01 | Phase 5 | Complete |
 | AUD-02 | Phase 5 | Pending |
 | AUD-03 | Phase 5 | Pending |
 | AUD-04 | Phase 5 | Pending |

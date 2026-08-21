@@ -5,15 +5,15 @@ milestone_name: Hybrid Diff-Review Architecture
 current_phase: 05
 current_phase_name: End-to-End Verification (Audit & Review)
 status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-08-21T02:23:47.128Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-08-21T04:06:44.280Z"
 last_activity: 2026-08-20
 last_activity_desc: Phase 04 complete, verified 5/5; next is Phase 5
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 24
-  completed_plans: 21
+  completed_plans: 22
   percent: 71
 ---
 
@@ -30,11 +30,11 @@ governed releases, receipt-backed findings.
 ## Current Position
 
 Phase: 05 — End-to-End Verification (Audit & Review)
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-08-20 — Phase 04 complete and verified (5/5); Phase 04.1 was already complete (2026-08-19), so position advances to Phase 5
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -85,6 +85,7 @@ Progress: [█████████░] 88%
 | Phase 04 P03 | 18min | 2 tasks | 8 files |
 | Phase 04 P04 | 26min | 3 tasks | 10 files |
 | Phase 05 P01 | 87m | 2 tasks | 10 files |
+| Phase 05 P02 | 84min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -151,6 +152,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 05-01: Zero live findings from the CLI-only review run is by-design (D-13/D-15), not a gap — AUD-06 grounds in CoverageManifest.seal()/apply_profile(), not genuine LLM findings
 - [Phase ?]: 05-01: Used SEC_OVERLAY_HOME override for Task 2's general-profile run since review has no --workspace flag and the SCALE-03 resume-identity guard rejects a second profile against the default sidecar
 - [Phase ?]: 05-01: security-kept subseteq general-kept subset check passed vacuously (empty set); flagged as E-12 in 05-DEFECTS.md for Phase 6 to re-verify against non-empty findings
+- [Phase ?]: Triaged redteam/postflight PHASE_TABLE gap as run-blocker; closed via documented standalone module calls, deferred wiring fix to Phase 6
+- [Phase ?]: Corrected CRYPTO-0001 runtime_disposition after discovering wants_runtime() also keys on status
 
 ### Pending Todos
 
@@ -180,6 +183,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-21T02:23:47.112Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-08-21T04:06:44.262Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
