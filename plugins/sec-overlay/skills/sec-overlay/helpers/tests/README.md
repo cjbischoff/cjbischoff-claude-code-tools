@@ -863,3 +863,6 @@ workspace's manifest, so it applies the same whether that workspace came from `l
 `RepoMemory` sidecar. `test_rule_glob.py`'s `fake_run_review` spy also gained `workspace=None`
 (same class of gap `model=None` closed there previously) once the new keyword-only parameter made
 the full suite raise `TypeError: fake_run_review() got an unexpected keyword argument 'workspace'`.
+The spy fix lands in the same commit as the implementation (1.69.0), not the RED commit above,
+since the `TypeError` only fires once `main()`'s `review` dispatch starts passing
+`workspace=args.workspace`.

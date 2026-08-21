@@ -2,6 +2,18 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.0 - 2026-08-21
+
+### Added
+
+- Add `--workspace` to `review`, mirroring `audit`'s existing flag (D-03).
+  `run_review` gains a keyword-only `workspace` parameter: when supplied it
+  resolves via `workspace.load_paths(workspace=...)`; otherwise it falls back
+  to the existing per-repo sidecar resolved beneath `--root` via
+  `RepoMemory.for_target`. The SCALE-03 resume-identity guard is unaffected
+  either way — it checks the resolved workspace's manifest, not how that
+  workspace was resolved.
+
 ## 1.68.10 - 2026-08-21
 
 ### Added

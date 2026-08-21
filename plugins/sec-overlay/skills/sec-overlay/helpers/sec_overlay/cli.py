@@ -245,6 +245,7 @@ def run_review(
     timeout: int = DEFAULT_TIMEOUT_SECONDS,
     max_git_procs: int = DEFAULT_MAX_GIT_PROCS,
     model: str | None = None,
+    workspace: str | None = None,
 ) -> int:
     """Run one review pass end to end: resolve refs, select files, position, seal.
 
@@ -309,6 +310,12 @@ def run_review(
             manifest on first write. Resuming a workspace whose manifest already
             recorded a different ``model`` or ``profile`` is rejected before any
             write — a resumed run must not silently switch identity mid-review.
+        workspace: Explicit workspace override (``--workspace``, mirrors ``audit``'s
+            flag), resolved via :func:`workspace.load_paths`. ``None`` (default)
+            falls back to the existing per-repo sidecar resolved beneath ``root``
+            via :func:`repo_memory.RepoMemory.for_target`. The SCALE-03 resume
+            guard applies identically either way -- it checks the resolved
+            workspace's manifest, not how that workspace was resolved.
 
     Returns:
         0 when the coverage manifest seals ``complete`` (including a diff with no
@@ -343,9 +350,12 @@ def run_review(
     # the CLI process's own cwd, which diffscope.py never passes explicitly.
     r = runner or partial(subprocess.run, timeout=timeout, cwd=root)
 
-    memory = RepoMemory.for_target(root, runner=r)
-    memory.ensure(target=root)
-    ws = memory.workspace
+    if workspace:
+        ws = load_paths(workspace=workspace)
+    else:
+        memory = RepoMemory.for_target(root, runner=r)
+        memory.ensure(target=root)
+        ws = memory.workspace
 
     manifest_path = ws.artifacts / MANIFEST_FILENAME
     prior_manifest: CoverageManifest | None = None
@@ -658,6 +668,12 @@ def main(argv: list[str] | None = None) -> int:
         help="Opaque model identity string recorded on the coverage manifest; a resumed "
         "run with a different --model is rejected (exit 2).",
     )
+    review.add_argument(
+        "--workspace",
+        default=None,
+        help="Override the workspace; mirrors `audit`'s flag "
+        "(default: per-repo sidecar beneath --root).",
+    )
     args = parser.parse_args(argv)
 
     if args.cmd == "scan":
@@ -729,6 +745,7 @@ def main(argv: list[str] | None = None) -> int:
             timeout=args.timeout,
             max_git_procs=args.max_git_procs,
             model=args.model,
+            workspace=args.workspace,
         )
     return 1
 
