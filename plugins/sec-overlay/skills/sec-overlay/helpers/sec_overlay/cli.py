@@ -332,7 +332,9 @@ def run_review(
     # binding the process-level timeout here reaches every git call the
     # review path makes, since `r` is the shared runner passed through the
     # rest of this function (SCALE-02). An injected `runner` is untouched.
-    r = runner or partial(subprocess.run, timeout=timeout)
+    # `cwd=root` scopes every diffscope git call to the target repo instead of
+    # the CLI process's own cwd, which diffscope.py never passes explicitly.
+    r = runner or partial(subprocess.run, timeout=timeout, cwd=root)
 
     memory = RepoMemory.for_target(root, runner=r)
     memory.ensure(target=root)

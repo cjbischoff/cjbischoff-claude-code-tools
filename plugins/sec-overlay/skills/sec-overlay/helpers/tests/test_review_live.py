@@ -165,6 +165,45 @@ def test_profile_split_null_dereference_security_excludes_general_includes(tmp_p
     assert ledger_general["review_findings"][0]["defect_class"] == "null-dereference"
 
 
+def test_run_review_scopes_git_calls_to_root_not_process_cwd(tmp_path):
+    """Regression (Phase 5 tracer, D-05-01-01): a real, uninjected runner must run every
+    git diff/rev-parse call against `--root`, not wherever the CLI process's cwd happens
+    to be. Uses a real subprocess-backed git repo deliberately unrelated to pytest's own
+    cwd (this plugin's helpers/ checkout) — pre-fix, `resolve_ref_sha`/`changed_file_records`
+    ran unscoped, silently reading pytest's cwd repo and reporting zero changed files.
+    """
+    repo = tmp_path / "target-repo"
+    repo.mkdir()
+
+    def git(*args):
+        subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+
+    def git_out(*args):
+        return subprocess.run(
+            ["git", *args], cwd=repo, check=True, capture_output=True, text=True
+        ).stdout.strip()
+
+    git("init", "-q")
+    git("config", "user.email", "t@example.com")
+    git("config", "user.name", "t")
+    (repo / "app.py").write_text("print('hi')\n")
+    git("add", "app.py")
+    git("commit", "-q", "-m", "base")
+    base_sha = git_out("rev-parse", "HEAD")
+    (repo / "app.py").write_text("print('hi')\nprint('bye')\n")
+    git("add", "app.py")
+    git("commit", "-q", "-m", "head")
+    head_sha = git_out("rev-parse", "HEAD")
+
+    # No `runner=` injected: exercises the real `partial(subprocess.run, ...)` path.
+    rc = run_review(base_sha, head_sha, str(repo), prepare=True)
+    assert rc == 0
+
+    ws = _sidecar_ws(str(repo))
+    plan = json.loads((ws.runs / "review_plan.json").read_text())
+    assert {e["path"] for e in plan} == {"app.py"}
+
+
 def test_finding_outside_every_hunk_dropped_as_outside_diff(tmp_path, monkeypatch):
     # A real head file with 999 lines, a unique marker at line 999 — far outside the
     # 3-line diff hunk `_diff_for` describes, so the position gate's whole-file rung

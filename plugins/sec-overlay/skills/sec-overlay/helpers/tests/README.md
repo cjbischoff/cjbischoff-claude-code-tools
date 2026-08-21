@@ -824,3 +824,12 @@ Fixing SCALE-02 also surfaced a latent regression from the SCALE-03 `--model` wi
 so the full suite raised `TypeError: fake_run_review() got an unexpected keyword argument 'model'`
 once Task 3's fix forced a full-suite run. Added `model=None` to the spy's signature to match
 `run_review`'s real keyword-only parameters.
+
+`test_review_live.py` gained `test_run_review_scopes_git_calls_to_root_not_process_cwd` (Phase 5
+plan 01, D-05-01-01), the suite's first `run_review` test with no injected `runner` at all: it
+builds a real temporary git repo (real `subprocess.run`, `git init`/`commit`) deliberately
+separate from pytest's own cwd, calls `run_review(base_sha, head_sha, str(repo), prepare=True)`,
+and asserts `review_plan.json` lists the repo's real changed file. Pre-fix, the production
+runner's git calls ran unscoped against pytest's cwd (this plugin's `helpers/` checkout) instead
+of the temp repo, so the plan came back empty — every other `run_review` test in this file
+injects its own `runner`, which bypasses the bug entirely.

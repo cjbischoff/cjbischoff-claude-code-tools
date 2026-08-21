@@ -2,6 +2,20 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.68.7 - 2026-08-20
+
+### Fixed
+
+- Fix `review`'s git calls silently scoping to the CLI process's own working
+  directory instead of `--root` (05-01 tracer, Phase 5 D-05-01-01): the
+  shared production runner (`partial(subprocess.run, ...)`) now binds
+  `cwd=root`, since `diffscope.py`'s `git diff`/`rev-parse` calls carry no
+  `-C <path>` of their own. Without the binding, invoking `review` from any
+  directory other than `--root` produced an empty changed-file set and a
+  zero-file sealed coverage manifest with no error — discovered running the
+  real pipeline end to end against a live target repo, where every existing
+  test mocked the runner and never exercised a real subprocess/cwd mismatch.
+
 ## 1.68.6 - 2026-08-20
 
 ### Fixed

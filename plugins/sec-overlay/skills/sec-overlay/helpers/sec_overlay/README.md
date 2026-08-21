@@ -905,3 +905,21 @@ consumes its own budget) and, once past that deadline, records a unit's remainin
 timed out instead of fetching them — an abandoned worker stops doing pointless work rather
 than working through every member. An injected `runner` (tests) is untouched; only the
 bare-`subprocess.run` default changed.
+
+Phase 5 plan 01 (D-05-01-01, discovered running the tracer end to end against a live target
+repo) fixes `run_review`'s production runner silently scoping every git call to the CLI
+process's own working directory instead of `--root`. `diffscope.py`'s `resolve_ref_sha`,
+`changed_file_records`, `file_diff_line_count`, and `binary_paths` all build raw `git`
+commands with no `-C <path>` of their own — unlike `repo_memory.repo_slug`'s own git call,
+which does pass `-C str(target)` — so they were entirely dependent on the caller's `runner`
+having the right cwd. The production default, `partial(subprocess.run, timeout=timeout)`, had
+none: invoking `review` from any directory other than `--root` (the realistic invocation
+pattern) made every diff/rev-parse call run against the wrong repository, producing an empty
+changed-file set and a zero-file sealed coverage manifest with no error — `check=False` on
+these calls means a `git diff` against a nonexistent ref pair fails only on stderr, and
+`changed_file_records` only reads `stdout`. The fix adds `cwd=root` to the same
+`partial(...)` assignment used by SCALE-02's `timeout` fix, so every call through the shared
+runner `r` is now scoped correctly with no other call-site change. No existing test caught
+this: both `test_diffscope.py` and `test_review_live.py` fully mock the runner, so a new
+`test_review_live.py` regression test uses a real temporary git repo and the real
+(uninjected) `subprocess.run` path to prove the fix.
