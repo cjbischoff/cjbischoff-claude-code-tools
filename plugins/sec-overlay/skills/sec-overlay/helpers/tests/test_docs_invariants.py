@@ -8,9 +8,11 @@ from sec_overlay.evidence import (
     TIER1_RECEIPTS,
     TIER2_RECEIPTS,
 )
+from sec_overlay.models import FindingStatus
 
 _SKILL = Path(__file__).resolve().parents[2] / "SKILL.md"
 _CONSTS = Path(__file__).resolve().parents[2] / "references" / "prompt-constants.md"
+_REDTEAM_AGENT = Path(__file__).resolve().parents[2] / "agents" / "redteam.md"
 
 
 def test_skill_documents_scope_tokens():
@@ -62,6 +64,22 @@ def test_finding_template_documents_triage_ndt_dep_views():
     assert "dep-view" in txt or "dependency view" in txt
     assert "reachability" in txt                       # dep-view binding
     assert "renumber" in txt                           # condensed tier no-gap note
+
+
+def test_redteam_agent_describes_the_real_two_way_wants_runtime_predicate():
+    """`wants_runtime()`'s OR-predicate has two triggers and no opt-out third bucket.
+
+    Pins both trigger values from real code (no hardcoded copy), and asserts the prompt
+    doesn't claim a third disposition that keeps a finding out of the runtime plan.
+    """
+    needs_runtime_value = next(iter(RUNTIME_DISPOSITIONS - {"static-settled", "unassessed"}))
+    needs_deployment_value = FindingStatus.NEEDS_DEPLOYMENT_TESTING.value
+    txt = _REDTEAM_AGENT.read_text()
+    assert needs_runtime_value in txt
+    assert needs_deployment_value in txt
+    assert "OR" in txt or " or " in txt
+    assert "no third disposition value" in txt
+    assert "neither static-settled nor a live-exploit test" not in txt
 
 
 def test_evidence_vocabulary_block_lists_all_values():

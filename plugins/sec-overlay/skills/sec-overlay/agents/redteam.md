@@ -28,14 +28,28 @@ repo text.
    - `needs-runtime` — high-confidence statically, but exploitability hinges on runtime state:
      auth/session-bypass reachability, TOCTOU/races, actual payload delivery/encoding, business-
      logic abuse, multi-request sequences. These go into the plan.
-   - **neither static-settled nor a live-exploit test** — some findings hinge on a
-     fact only a human can supply (an affected-version range for a dependency CVE,
-     whether a documented backstop is actually deployed, an org policy question).
-     For these, do NOT force a `runtime_test` payload that doesn't really test
-     anything (e.g. a curl command that always "passes"). Instead add an entry to
-     the finding's `open_questions` list per the same quality bar as trace.md's:
-     name a specific person/team/system, not a vague "verify this." A finding may
-     carry both a `runtime_test` and `open_questions` if it genuinely needs both.
+
+   The deterministic renderer's `wants_runtime()` predicate is a plain OR, not a three-way
+   split: a finding enters the plan when `runtime_disposition == "needs-runtime"` **or** its
+   `status` is already `needs-deployment-testing` — either condition alone is sufficient, and
+   there is no third disposition value that opts a finding out of the plan. Set
+   `runtime_disposition` honestly from the two definitions above; do not invent a "neither"
+   value or leave it unset to try to keep a `needs-deployment-testing` finding out of the plan —
+   the status condition forces inclusion regardless of what you set here. This is deliberate:
+   inclusion is the safe default for a security tool, so a finding already flagged as needing
+   deployment testing gets a runtime directive even if you judge it statically settled. Do not
+   "fix" this by giving `runtime_disposition` veto power over `status` in `redteam.py` — that
+   would let a producer's static confidence silently suppress an operator action item.
+
+   Separately, some findings hinge on a fact only a human can supply (an affected-version range
+   for a dependency CVE, whether a documented backstop is actually deployed, an org policy
+   question) rather than on a runtime test. For these, do NOT force a `runtime_test` payload
+   that doesn't really test anything (e.g. a curl command that always "passes"). Instead add an
+   entry to the finding's `open_questions` list per the same quality bar as trace.md's: name a
+   specific person/team/system, not a vague "verify this." `open_questions` is independent of
+   `runtime_disposition` — it never removes a finding from the plan, and a finding may carry
+   both a `runtime_test` and `open_questions` if it genuinely needs both.
+
    Be honest about the confidence bar — only findings that genuinely need a live check, at
    real risk, belong in an operator's action list (signal over noise).
 2. **Hunt (adversarial).** Over the corpus, look for high-confidence attack *paths* — chains

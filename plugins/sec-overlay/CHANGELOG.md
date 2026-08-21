@@ -2,6 +2,20 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.7 - 2026-08-21
+
+### Fixed
+
+- Correct `agents/redteam.md`'s Discriminate section (D-02). It described a
+  three-way split with a "neither static-settled nor a live-exploit test"
+  category exempted from the runtime plan; `redteam.py`'s `wants_runtime()`
+  is a plain two-trigger OR (`runtime_disposition == "needs-runtime"` or
+  `status is FindingStatus.NEEDS_DEPLOYMENT_TESTING`) with no such
+  opt-out value, and `open_questions` never affects plan membership. Added
+  a code-derived doc guard in `test_docs_invariants.py` pinning both
+  trigger values from `sec_overlay.evidence`/`sec_overlay.models` with no
+  hardcoded copies.
+
 ## 1.69.6 - 2026-08-21
 
 ### Fixed

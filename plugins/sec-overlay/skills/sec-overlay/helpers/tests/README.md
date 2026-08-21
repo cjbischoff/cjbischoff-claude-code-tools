@@ -899,3 +899,15 @@ osv-scanner's `package.name` field) begins with that same `@` character, so the 
 lands on the scope delimiter and returns an empty string. The two unscoped-identifier tests
 already passed before the fix (no leading `@` to mis-split on); only the three scoped-identifier
 tests captured RED.
+
+`test_docs_invariants.py` gained
+`test_redteam_agent_describes_the_real_two_way_wants_runtime_predicate` (Phase 6 plan 03, D-02),
+a code-derived doc guard pinning `agents/redteam.md`'s Discriminate section against
+`redteam.py`'s `wants_runtime()`. It reads both trigger values from real code with no hardcoded
+copy — `"needs-runtime"` via set difference against the already-imported `RUNTIME_DISPOSITIONS`,
+and `FindingStatus.NEEDS_DEPLOYMENT_TESTING.value` from `sec_overlay.models` — and asserts the
+prompt no longer claims a third "neither static-settled nor a live-exploit test" disposition
+that opts a finding out of the runtime plan. `wants_runtime()` is a plain two-trigger OR: either
+condition alone forces inclusion; `open_questions` plays no role in that predicate at all — it
+is an independent mechanism `redteam.md` uses to flag human-answerable unknowns, never a bucket
+a finding can be routed into or out of.
