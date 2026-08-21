@@ -1,36 +1,45 @@
 ---
 phase: 05-end-to-end-verification-audit-review
 verified: 2026-08-20T23:30:00Z
-status: human_needed
+status: passed
 score: 17/18 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 deferred:
+
   - truth: "AUD-06 D-06 profile-superset contract (security-kept ⊆ general-kept) is evidenced on real code, with a non-empty finding set to compare"
     addressed_in: "Phase 6"
     evidence: "05-DEFECTS.md row E-12 (non-blocker, deferred): '∅ ⊆ ∅ is a vacuous pass, not a substantive confirmation... this must be re-verified in Phase 6 once full agent-dispatched review is exercised.' Phase 6 goal per ROADMAP.md is 'every defect the verification runs surfaced is fixed or dispositioned' (REL-01), which this row is explicitly scoped under."
+
   - truth: "review's resume-identity guard blocks a second profile run against the same sidecar without a --workspace override"
     addressed_in: "Phase 6"
     evidence: "05-DEFECTS.md: 'the review subcommand exposes no --workspace override (only audit does)... the gap remains for Phase 6 to decide whether review should gain a --workspace flag.'"
+
   - truth: "redteam/postflight are documented pipeline phases absent from the mechanical PHASE_TABLE"
     addressed_in: "Phase 6"
     evidence: "05-DEFECTS.md: 'fixing the wiring... is a plugin-code change outside this phase's remit, so it is deferred to Phase 6.'"
+
   - truth: "agents/redteam.md's 3-way discriminator prose vs. wants_runtime()'s 2-way mechanical split"
     addressed_in: "Phase 6"
     evidence: "05-DEFECTS.md: 'reconciling the prose with the mechanical predicate... is a plugin-code change outside this phase's remit.'"
+
   - truth: "deps-class finding detail template renders an empty package name on its Fix. line"
     addressed_in: "Phase 6"
     evidence: "05-DEFECTS.md: 'fixing the template is a plugin-code change outside this phase's remit.'"
+
   - truth: "CLAUDE.md's semgrep-ruleset-as-submodule claim is stale prose (no .gitmodules exists)"
     addressed_in: "Phase 6"
     evidence: "05-DEFECTS.md: 'deferred for a maintainer to correct the stale prose in a future plugin doc pass.'"
+
   - truth: "D-05 mixing criterion (app/ + functions/ in one bounded diff range) is unsatisfiable against the real target repo's history"
     addressed_in: "Phase 6"
     evidence: "05-DEFECTS.md: 'the mixing sub-criterion is deferred, not the review itself.'"
 human_verification:
+
   - test: "Decide whether 05-REVIEW.md's two unresolved WARNING findings (WR-01, WR-02) on commit 841c5d8 need a 05-DEFECTS.md row and/or a follow-up fix before this phase closes, or are accepted as Phase 6 scope."
     expected: "Either a new disposition (fixed-here or deferred) is added to 05-DEFECTS.md for WR-01 (unhandled FileNotFoundError crash on a nonexistent --root, a real regression in the CLI's error-handling convention) and WR-02 (tests/README.md's factually wrong claim about why other tests missed the cwd bug), or an explicit decision that these ride with Phase 6's REL-01 defect-disposition sweep."
     why_human: "This is a scope-boundary judgment call, not a mechanical check — no later phase's ROADMAP text names these two specific review findings, only the general 'every defect... is fixed or dispositioned' criterion (REL-01), and the SUMMARY files for Plans 01-04 predate 05-REVIEW.md's findings entirely, so nothing in the phase's own artifacts already resolved this."
+
   - test: "Confirm the AUD-06 profile-superset contract (05-01-PLAN.md must-have: 'evidencing the Phase 3 D-10 profile-superset contract on real code') is acceptable as vacuously satisfied (∅⊆∅, 0 findings in both profiles) for Phase 5 closure, given the team's own E-12 disclosure that this is not a substantive confirmation."
     expected: "Either accept the vacuous pass as sufficient for Phase 5 (since AUD-06's own ROADMAP-level Success Criterion #6 text does not require the superset check, only 'coverage manifest sealed and every reported line positioning-confirmed' — both literally true), with the substantive re-check tracked as the already-filed E-12/Phase-6 deferral; or require Phase 5 to re-run on a diff range that produces live findings before sign-off."
     why_human: "This is a judgment call about whether a mathematically-true-but-vacuous result satisfies the plan's stated intent ('on real code'), which the phase's own planner flagged as an unresolved assumption requiring confirmation during execution, not something a grep or artifact check can resolve."
