@@ -139,7 +139,7 @@ models.py/evidence.py contract, receipt gate as the sole authority on `confirmed
   Commit, semver bump plus CHANGELOG entry in the same commit, PR merged only after
   CodeRabbit's walkthrough comment
 
-- [ ] **REL-03**: `helpers/pyproject.toml` dependencies stay empty — zero new runtime
+- [x] **REL-03**: `helpers/pyproject.toml` dependencies stay empty — zero new runtime
   dependencies across all new modules
 
 ## v2 Requirements
@@ -215,7 +215,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUD-06 | Phase 5 | Complete |
 | REL-01 | Phase 6 | Complete |
 | REL-02 | Phase 6 | Complete |
-| REL-03 | Phase 6 | Pending |
+| REL-03 | Phase 6 | Complete |
 
 Coverage: 32/32 v1 requirements mapped. No orphans, no duplicates.
 
