@@ -131,11 +131,11 @@ models.py/evidence.py contract, receipt gate as the sole authority on `confirmed
 
 ### Release Governance (REL)
 
-- [ ] **REL-01**: Every defect observed in the verification runs is fixed or given a
+- [x] **REL-01**: Every defect observed in the verification runs is fixed or given a
   written disposition, with models.py/evidence.py and `fingerprint()` identity
   unchanged, asserted by tests
 
-- [ ] **REL-02**: Every change ships through governance — branch, Conventional
+- [x] **REL-02**: Every change ships through governance — branch, Conventional
   Commit, semver bump plus CHANGELOG entry in the same commit, PR merged only after
   CodeRabbit's walkthrough comment
 
@@ -213,8 +213,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUD-04 | Phase 5 | Complete |
 | AUD-05 | Phase 5 | Complete |
 | AUD-06 | Phase 5 | Complete |
-| REL-01 | Phase 6 | Pending |
-| REL-02 | Phase 6 | Pending |
+| REL-01 | Phase 6 | Complete |
+| REL-02 | Phase 6 | Complete |
 | REL-03 | Phase 6 | Pending |
 
 Coverage: 32/32 v1 requirements mapped. No orphans, no duplicates.

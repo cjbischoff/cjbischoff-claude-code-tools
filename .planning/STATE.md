@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Diff-Review Architecture
-current_phase: 6
-current_phase_name: Remediation and Governed Release
+current_phase: 06
+current_phase_name: remediation-and-governed-release
 status: executing
-stopped_at: Phase 6 context gathered
-last_updated: "2026-08-21T18:15:50.284Z"
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-08-21T18:59:43.987Z"
 last_activity: 2026-08-21
 last_activity_desc: Phase 05 complete, transitioned to Phase 6
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 29
-  completed_plans: 24
-  percent: 83
+  completed_plans: 25
+  percent: 86
 ---
 
 # Project State
@@ -25,16 +25,16 @@ See: .planning/PROJECT.md (updated 2026-08-21)
 
 **Core value:** The marketplace never ships an unverified claim — validated plugins,
 governed releases, receipt-backed findings.
-**Current focus:** Phase 6 — Remediation and Governed Release
+**Current focus:** Phase 06 — remediation-and-governed-release
 
 ## Current Position
 
-Phase: 6 — Remediation and Governed Release
-Plan: Not started
+Phase: 06 (remediation-and-governed-release) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-08-21 — Phase 05 complete, transitioned to Phase 6
+Last activity: 2026-08-21 — Phase 06 execution started
 
-Progress: [████████████████████] 24/24 plans (100% of planned; Phase 6 plans TBD)
+Progress: [████████████████████] 24/24 plans ([█████████░] 86% of planned; Phase 6 plans TBD)
 
 ## Performance Metrics
 
@@ -89,6 +89,7 @@ Progress: [████████████████████] 24/24 p
 | Phase 05 P02 | 84min | 3 tasks | 5 files |
 | Phase 05 P03 | 22min | 3 tasks | 1 file |
 | Phase 05 P04 | 45min | 3 tasks | 3 files |
+| Phase 06 P01 | unavailable | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -165,6 +166,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Task 3's sanitization gate raw count of 9 is fully explained as each plan's own self-referential verify-command text and planner-discipline-allow comment; refined re-run confirms true count is 0, reported transparently with both numbers
 - [Phase 5 UAT]: WR-01/WR-02 review warnings ride Phase 6's REL-01 defect-disposition sweep (two deferred rows added to 05-DEFECTS.md)
 - [Phase 5 UAT]: Vacuous AUD-06 profile-superset pass accepted for Phase 5 closure; substantive re-check tracked by the E-12 deferral for Phase 6
+- [Phase ?]: CodeRabbit auto-review is restricted to the default branch (main); PRs against docs/milestone-v5-diff-review need a manual @coderabbitai review trigger
+- [Phase ?]: Pushed docs/milestone-v5-diff-review to origin (no new commits) to unblock gh pr create, which requires the base ref to exist remotely
 
 ### Pending Todos
 
@@ -195,6 +198,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-21T17:23:08.348Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-remediation-and-governed-release/06-CONTEXT.md
+Last session: 2026-08-21T18:59:43.970Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: None
