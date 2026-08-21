@@ -228,10 +228,24 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 06-01-PLAN.md — CLI fixes: WR-01 root guard as the phase tracer, `review --workspace`, PR governance rail established
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 06-02-PLAN.md — Pipeline wiring: `redteam` and `postflight` into `PHASE_TABLE` and `DETERMINISTIC_ACTIONS`, docs reconciled
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 06-03-PLAN.md — Output and doc corrections: deps-finding package name, red-team prompt two-way split, two false doc claims
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 06-04-PLAN.md — Guards: frozen-contract identity, `fingerprint()` golden values, empty dependency table, profile-subset edge probes
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 06-05-PLAN.md — Dispatched run, E-12 evidence, sanitized receipts, defect ledger, phase close
 
 ## Progress
