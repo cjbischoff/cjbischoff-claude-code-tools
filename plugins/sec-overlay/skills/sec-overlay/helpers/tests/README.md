@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-105 pytest files, 1177 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+108 pytest files, 1284 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -324,6 +324,7 @@ the regression guard for the CLI no longer calling `state.begin_pass` on every i
 | `test_finding_schema.py` | The `Finding` record stays consistent with `references/finding.schema.json`. |
 | `test_wiring.py` | Silent-backend / clsmap / dead-link regressions and attack-class routing. |
 | `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules, and (new) the `EVIDENCE_VOCABULARY` block listing every `sec_overlay.evidence` tier/status/disposition value verbatim. |
+| `test_frozen_contract.py` | Byte-identity: `models.py`/`evidence.py` are frozen mirrors of a separate Go port (D-15) — a sha256 pin fails loudly on any edit. `fingerprint()` golden-value pins (fully-populated, minimally-populated, field-order-permuted) prove its behavior independent of that byte check. REL-03: `pyproject.toml`'s `[project] dependencies` stays `[]`. |
 
 ## The rest
 
@@ -700,6 +701,23 @@ disposition is one of the two allowed values rather than only `UNCONFIRMED_DISPO
 committed-baseline comparison test is untouched, since the baseline never serialized a
 `disposition` field.
 
+Phase 6 plan 04 (Task 2, D-08/E-12) extends `test_review_profiles.py` with four probes closing the
+E-12 defect: the security-kept ⊆ general-kept relation had only ever been exercised on an empty
+comparison (`05-DEFECTS.md` row 5), so ∅ ⊆ ∅ passed vacuously and proved nothing.
+`test_apply_profile_vacuous_subset_is_distinguishable_from_a_real_pass` asserts the subset
+relation over two empty runs AND, as a separate assertion, that both sides were in fact empty —
+a subset check alone cannot tell "held" from "had nothing to hold".
+`test_apply_profile_subset_holds_at_a_single_kept_finding` exercises the same relation at size
+one. `test_apply_profile_narrowest_margin_boundary_finding_is_kept_by_both` keeps a `gate=None`
+finding whose `cls` is drawn from the real `GENERAL_DEFECT_CLASSES` table (`"injection"`, not
+invented) — `gate is None` is the only route by which the security profile ever keeps a finding,
+so this is the narrowest margin available, and it proves the subset holds even for a finding that
+looks classification-eligible but never reaches `classify()` because the `or` short-circuits first.
+`test_apply_profile_kept_set_is_stable_under_input_permutation` reruns `_dual_run_fixture()` and
+its reverse through both profiles, comparing kept sets by `finding.id` rather than list position.
+All four reuse `_dual_run_fixture()` (unmodified) or a slice/direct call of it — no second fixture
+was added.
+
 Phase 3 plan 07 (Task 3) adds `test_thread_safety_finding_ships_needs_deployment_testing_end_to_end`
 to `test_review_live.py` — the composed proof that Task 1's ledger wiring and Task 2's disposition
 ladder hold together through the real CLI path, not only at unit level. A single recorded
@@ -913,3 +931,17 @@ that opts a finding out of the runtime plan. `wants_runtime()` is a plain two-tr
 condition alone forces inclusion; `open_questions` plays no role in that predicate at all — it
 is an independent mechanism `redteam.md` uses to flag human-answerable unknowns, never a bucket
 a finding can be routed into or out of.
+
+`test_frozen_contract.py` (new, Phase 6 plan 04, D-15/REL-03) is the frozen-contract
+tripwire suite. Two sha256 byte-identity guards pin `models.py`/`evidence.py` against
+their committed digests — either file is a byte-identical mirror of a separate Go
+port, and a mismatch fails with an actionable message naming the required sign-off
+and Go-port update. Three `fingerprint()` golden-value tests reach the same pinned
+12-hex value from a fully-populated `Finding`, a minimally-populated one (every
+optional field at its dataclass default), and one built with the same required
+fields passed in reverse keyword order — proving the digest depends only on
+`rule_id`/`cls`/`anchor` and is inert to every other field and to construction
+order, independent of the byte-identity guards above. `test_helpers_declare_zero_runtime_dependencies`
+reads the real `pyproject.toml` via stdlib `tomllib` and asserts `[project]
+dependencies == []` (REL-03), closing the requirement with a running check instead
+of a one-time manual read.

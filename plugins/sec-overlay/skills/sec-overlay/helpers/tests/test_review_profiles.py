@@ -205,3 +205,75 @@ def test_dual_run_general_profile_is_a_strict_superset_of_the_security_baseline(
     added = {rf.finding.id: rf for rf in general_kept if rf.finding.id in added_ids}
     for rf in added.values():
         assert rf.defect_class in GENERAL_DEFECT_CLASSES
+
+
+def test_apply_profile_vacuous_subset_is_distinguishable_from_a_real_pass():
+    """E-12: an empty-versus-empty comparison (05-DEFECTS.md row 5) is a vacuous
+
+    pass, not a substantive confirmation. A subset assertion alone cannot tell
+    "held" from "had nothing to hold" — both read identically. This test
+    asserts the subset relation AND, as a separate assertion, that the
+    comparison was in fact empty on both sides, so an all-empty run can never
+    be mistaken for a substantive pass by a reader of this test.
+    """
+    security_kept, _ = apply_profile([], "security")
+    general_kept, _ = apply_profile([], "general")
+    security_ids = {rf.finding.id for rf in security_kept}
+    general_ids = {rf.finding.id for rf in general_kept}
+
+    assert security_ids.issubset(general_ids)
+    assert not security_ids and not general_ids, "expected a vacuous (empty) comparison"
+
+
+def test_apply_profile_subset_holds_at_a_single_kept_finding():
+    """E-12: the subset relation exercised at size one, not size zero."""
+    fixture = _dual_run_fixture()[:1]  # F-1: unmarked, kept unconditionally by both profiles
+    security_kept, _ = apply_profile(fixture, "security")
+    general_kept, _ = apply_profile(fixture, "general")
+    security_ids = {rf.finding.id for rf in security_kept}
+    general_ids = {rf.finding.id for rf in general_kept}
+
+    assert security_ids == {"F-1"}
+    assert security_ids.issubset(general_ids)
+
+
+def test_apply_profile_narrowest_margin_boundary_finding_is_kept_by_both():
+    """E-12 boundary: gate=None is the only way ``apply_profile`` ever keeps a
+
+    finding under the security profile — there is no broader route (bypass
+    only fires under ``profile == "general"``), so a gate=None finding is kept
+    "by the narrowest possible margin" the security profile has. Marking it
+    with a real ``GENERAL_DEFECT_CLASSES`` category (drawn from
+    ``review_findings.py``'s actual table, not invented) proves the subset
+    holds even at a finding that looks classification-eligible but never
+    needs the bypass path: ``gate is None`` short-circuits the ``or`` in
+    ``apply_profile`` before ``classify()`` is ever consulted.
+    """
+    category = "injection"
+    assert category in GENERAL_DEFECT_CLASSES
+    finding = _finding("F-BOUNDARY", category, file="boundary.py", line=1, rule_id="RB")
+    fixture = [GatedFinding(finding, gate=None)]
+
+    security_kept, _ = apply_profile(fixture, "security")
+    general_kept, _ = apply_profile(fixture, "general")
+    security_ids = {rf.finding.id for rf in security_kept}
+    general_ids = {rf.finding.id for rf in general_kept}
+
+    assert security_ids == {"F-BOUNDARY"}
+    assert security_ids.issubset(general_ids)
+
+
+def test_apply_profile_kept_set_is_stable_under_input_permutation():
+    """E-12 ordering: the kept set does not depend on input order, for either profile.
+
+    Compared by ``finding.id`` — a stable identifier — never by list position.
+    """
+    forward = _dual_run_fixture()
+    shuffled = list(reversed(forward))
+
+    for profile in ("security", "general"):
+        forward_kept, _ = apply_profile(forward, profile)
+        shuffled_kept, _ = apply_profile(shuffled, profile)
+        forward_ids = {rf.finding.id for rf in forward_kept}
+        shuffled_ids = {rf.finding.id for rf in shuffled_kept}
+        assert forward_ids == shuffled_ids

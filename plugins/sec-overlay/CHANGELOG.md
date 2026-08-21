@@ -2,6 +2,31 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.10 - 2026-08-21
+
+### Added
+
+- Four probes in `helpers/tests/test_review_profiles.py` (D-08, E-12) closing
+  the vacuous-subset defect: `apply_profile`'s security-kept ⊆ general-kept
+  relation had only ever been exercised on an empty comparison (`∅ ⊆ ∅`),
+  which passes without confirming anything. New probes assert the relation at
+  size zero (with vacuity checked as a separate assertion from the subset
+  relation), size one, at the narrowest-margin `gate=None` boundary finding,
+  and under a permuted input order compared by stable finding ID. All four
+  reuse the existing `_dual_run_fixture()` unmodified.
+
+## 1.69.9 - 2026-08-21
+
+### Added
+
+- `helpers/tests/test_frozen_contract.py` (D-15, REL-03): a sha256 byte-identity
+  guard pinning `models.py`/`evidence.py` against their committed digests (both
+  are byte-identical mirrors of a separate Go port and must never be edited
+  alone), three `fingerprint()` golden-value tests proving its output depends
+  only on `rule_id`/`cls`/`anchor` regardless of every other `Finding` field or
+  construction order, and a REL-03 test reading `pyproject.toml` via stdlib
+  `tomllib` to assert `[project] dependencies` stays empty.
+
 ## 1.69.8 - 2026-08-21
 
 ### Fixed
