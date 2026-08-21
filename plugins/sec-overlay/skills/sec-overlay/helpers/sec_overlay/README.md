@@ -923,3 +923,15 @@ runner `r` is now scoped correctly with no other call-site change. No existing t
 this: both `test_diffscope.py` and `test_review_live.py` fully mock the runner, so a new
 `test_review_live.py` regression test uses a real temporary git repo and the real
 (uninjected) `subprocess.run` path to prove the fix.
+
+Phase 6 plan 01 fixes WR-01: `run_review` now rejects a `--root` that is missing, empty, or
+not a directory before any workspace or git subprocess call, exiting 2 with `error: --root
+must be an existing directory (got ...)` — the same shape as the `_bounded_int` exit-2
+convention. Pre-fix, the three cases each crashed differently depending on where
+`Workspace.ensure()`'s `mkdir(parents=True)` landed: a missing root was silently
+auto-vivified and the run failed later with an unrelated "unresolvable ref" message; an
+empty-string root reached a real `subprocess.run(cwd="")` and raised `FileNotFoundError`; a
+file-as-root raised `NotADirectoryError` from `Workspace.ensure()`'s own `mkdir`. The guard is
+a single `if not root or not Path(root).is_dir():` — `Path("").is_dir()` normalizes to `"."`
+and reports `True` (the CWD exists), so the empty-string case needs the explicit `not root`
+check rather than relying on `is_dir()` alone.

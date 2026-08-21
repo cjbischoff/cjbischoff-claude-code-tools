@@ -279,7 +279,10 @@ def run_review(
             prior manifest's sealed ``head_sha``.
         root: Target repo under review; the workspace and its ``artifacts/`` dir live in
             the per-repo sidecar resolved beneath it (``<root>/.sec-overlay/<slug>/``),
-            not at ``root`` itself.
+            not at ``root`` itself. Must already exist as a directory -- a missing,
+            empty, or non-directory value exits 2 before any git subprocess runs
+            (WR-01), rather than surfacing as an unhandled filesystem error from the
+            sidecar's own directory creation.
         profile: Review profile (``"security"`` or ``"general"``); gates the position
             gate's kept findings through :func:`review_findings.apply_profile` (REV-01).
         rule_path: Path to a custom rule.json (``--rule``); resolved as the highest-priority
@@ -324,6 +327,10 @@ def run_review(
         _bounded_int(max_git_procs, flag="--max-git-procs", ceiling=MAX_WORKERS)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    if not root or not Path(root).is_dir():
+        print(f"error: --root must be an existing directory (got {root!r})", file=sys.stderr)
         return 2
 
     import subprocess

@@ -2,6 +2,18 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.68.9 - 2026-08-21
+
+### Fixed
+
+- Fix `review` raising an unhandled filesystem exception (`FileNotFoundError`,
+  `NotADirectoryError`, or an `OSError` variant, depending on platform and
+  permissions) when `--root` names a path that is missing, empty, or not a
+  directory (WR-01). `run_review` now checks `--root` before any workspace or
+  git subprocess call and exits 2 with a one-line `error: --root must be an
+  existing directory (got ...)` message, matching the existing `_bounded_int`
+  exit-2 convention.
+
 ## 1.68.8 - 2026-08-21
 
 ### Added
