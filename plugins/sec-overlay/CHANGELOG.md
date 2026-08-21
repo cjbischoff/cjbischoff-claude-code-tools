@@ -2,6 +2,20 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.3 - 2026-08-21
+
+### Fixed
+
+- Register `postflight` in `DETERMINISTIC_ACTIONS` (D-01, part 2). The new
+  `_act_postflight` wraps `postflight.run_postflight(ctx.ws, ctx.sha)`,
+  matching the function-local-import cycle-avoidance convention its
+  siblings use; no try/except and no `PhaseHalt` — `run_postflight` returns
+  a merged-item count, not a verdict, so a low count is not a halt
+  condition. `redteam` gets no driver entry — it stays an agent phase, and
+  `test_every_deterministic_phase_has_a_registered_action` now derives its
+  expected key set from `PHASE_TABLE` so the two structures cannot drift
+  again without a failing test.
+
 ## 1.69.2 - 2026-08-21
 
 ### Fixed
