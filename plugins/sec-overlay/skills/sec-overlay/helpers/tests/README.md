@@ -258,6 +258,24 @@ and that `artifact-review` is an agent phase naming `agents/artifact-review.md`.
 `test_arch_tm_gate_rows` (new) asserts the deterministic `arch-gate`/`tm-gate` rows sit immediately
 after `architecture`/`threat_model`.
 
+`test_phases.py` gained six tests wiring `redteam`/`postflight` into `PHASE_TABLE` (D-01):
+`test_phase_table_contains_redteam_and_postflight` (both names present),
+`test_redteam_precedes_the_artifact_gate` (`redteam` sits between `selfscore` and `artifact-gate`
+— `artifact_gate.run_artifact_gate` hard-requires `redteam-plan.md`, kind `agent`, prompt
+`redteam.md`), `test_postflight_is_the_final_phase` (last table row, kind `deterministic`, no
+prompt), `test_original_phase_order_is_preserved` (the 22 pre-existing rows keep their relative
+order), and `test_missing_inputs_reports_absent_artifacts_for_the_new_phases` /
+`test_outputs_present_tracks_the_postflight_artifact` covering the two new rows' input/output
+path helpers against an unensured and an ensured `Workspace`.
+
+`test_driver.py` gained `test_postflight_is_a_registered_deterministic_action` (calls
+`DETERMINISTIC_ACTIONS["postflight"]` and asserts `kb/prior_context.json` is written),
+`test_redteam_is_not_a_deterministic_action` (redteam stays an agent phase, dispatched via
+`agents/redteam.md`, never through `DETERMINISTIC_ACTIONS`), and
+`test_every_deterministic_phase_has_a_registered_action` — a table-derived regression guard
+iterating `PHASE_TABLE` so a future deterministic phase with no matching action fails loudly
+instead of silently no-oping at dispatch time.
+
 `test_driver.py` covers `sec_overlay/driver.py`'s `run_deterministic_phase`: raises
 `PhaseHalt` on a missing input, raises `PhaseHalt` when the action ran but a declared output is
 still absent, records the stage `"done"` on success, and (`test_deterministic_phase_records_timing`,

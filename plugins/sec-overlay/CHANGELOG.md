@@ -2,6 +2,17 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.1 - 2026-08-21
+
+### Added
+
+- Add failing tests pinning `redteam`/`postflight` into `PHASE_TABLE` and
+  `DETERMINISTIC_ACTIONS` (D-01): both phases are documented in the
+  maintainer manual but were absent from the mechanical phase table, so
+  `run.drive()`/`run.advance()` silently skipped them. `redteam` must sit
+  between `selfscore` and `artifact-gate` — `artifact_gate.run_artifact_gate`
+  hard-requires `redteam-plan.md` to exist. Implementation lands next.
+
 ## 1.69.0 - 2026-08-21
 
 ### Added

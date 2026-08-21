@@ -423,3 +423,33 @@ def test_run_audit_calls_on_complete_before_recording(tmp_path):
     result = run_audit(ctx, table=table, on_complete=seen.append)
     assert seen == ["noop"]
     assert result == "AUDIT COMPLETE"
+
+
+def test_postflight_is_a_registered_deterministic_action(tmp_path):
+    # D-01: postflight is a deterministic driver action, wired the same way
+    # artifact-gate/selfscore/etc. are.
+    from sec_overlay.driver import DETERMINISTIC_ACTIONS
+
+    ctx = _ctx(tmp_path)
+    assert "postflight" in DETERMINISTIC_ACTIONS
+    DETERMINISTIC_ACTIONS["postflight"](ctx)
+    assert (ctx.ws.kb / "prior_context.json").exists()
+
+
+def test_redteam_is_not_a_deterministic_action():
+    # redteam stays an agent phase — the orchestrator dispatches agents/redteam.md,
+    # it is never called through DETERMINISTIC_ACTIONS.
+    from sec_overlay.driver import DETERMINISTIC_ACTIONS
+
+    assert "redteam" not in DETERMINISTIC_ACTIONS
+
+
+def test_every_deterministic_phase_has_a_registered_action():
+    # Table-derived regression guard: any future deterministic PhaseSpec with no
+    # matching DETERMINISTIC_ACTIONS entry would silently no-op at dispatch time.
+    from sec_overlay.driver import DETERMINISTIC_ACTIONS
+    from sec_overlay.phases import PHASE_TABLE
+
+    for phase in PHASE_TABLE:
+        if phase.kind == "deterministic":
+            assert phase.name in DETERMINISTIC_ACTIONS, phase.name
