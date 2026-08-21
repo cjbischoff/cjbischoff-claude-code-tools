@@ -88,7 +88,7 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
                 f"{f.message.split('|', 1)[0].strip()}"
             ),
             "",
-            (f"**Fix.** Bump `{pkg.split('@')[0]}` to a release that resolves `{adv}`."),
+            (f"**Fix.** Bump `{pkg.rsplit('@', 1)[0] or pkg}` to a release that resolves `{adv}`."),
             "",
         ]
         if f.status is FindingStatus.FIXED and patch_status is not None:

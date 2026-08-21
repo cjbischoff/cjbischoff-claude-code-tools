@@ -2,6 +2,16 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.6 - 2026-08-21
+
+### Fixed
+
+- Fix the deps Fix-line package-name split for scoped npm-style identifiers
+  (D-04, GREEN phase). `render_finding` now splits `evidence` on the last
+  `@` instead of the first, so `@scope/name@version` no longer renders an
+  empty backtick pair; falls back to the untouched string when the split
+  empties out (a versionless scoped identifier has only the scope `@`).
+
 ## 1.69.5 - 2026-08-21
 
 ### Fixed
