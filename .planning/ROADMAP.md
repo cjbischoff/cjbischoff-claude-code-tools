@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Rule Matching & Review Modes** - Per-language rule selection, the `review` verb's security/general profiles, and the retract-only reflection filter (completed 2026-08-19)
 - [x] **Phase 4: Scale, Resume & Diff Output** - Semantic bundling, concurrency/resume limits, and the diff-anchored output payload (completed 2026-08-20)
 - [x] **Phase 5: End-to-End Verification (Audit & Review)** - Drive full audit and review runs on a real target and verify honest, receipt-backed output (completed 2026-08-21)
-- [ ] **Phase 6: Remediation and Governed Release** - Fix what the runs surfaced and ship through governance with the frozen contract intact
+- [x] **Phase 6: Remediation and Governed Release** - Fix what the runs surfaced and ship through governance with the frozen contract intact (completed 2026-08-22)
 
 ## Phase Details
 
@@ -225,7 +225,7 @@ Plans:
   3. Each fix lands on a branch with a Conventional Commit, semver bump, and CHANGELOG entry in the same commit, merged only after CodeRabbit's walkthrough comment posts
   4. `helpers/pyproject.toml` dependencies stay empty across every new module — zero new runtime dependencies
 
-**Plans**: 6 plans (5/6 executed; 06-06 is gap closure from 06-VERIFICATION.md)
+**Plans**: 6 plans (6/6 executed; 06-06 closed the gaps 06-VERIFICATION.md found)
 
 Plans:
 **Wave 1**
@@ -250,7 +250,7 @@ Plans:
 
 **Wave 6** *(gap closure from 06-VERIFICATION.md; blocked on Wave 5 completion)*
 
-- [ ] 06-06-PLAN.md — Close both verification gaps: correct the three `review --workspace` doc denials behind a code-derived guard, ledger 06-REVIEW.md WR-01, close Phase 6 tracking state
+- [x] 06-06-PLAN.md — Close both verification gaps: correct the three `review --workspace` doc denials behind a code-derived guard, ledger 06-REVIEW.md WR-01, close Phase 6 tracking state
 
 ## Progress
 
@@ -264,4 +264,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Rule Matching & Review Modes | 7/7 | Complete    | 2026-08-19 |
 | 4. Scale, Resume & Diff Output | 4/4 | Complete    | 2026-08-20 |
 | 5. End-to-End Verification (Audit & Review) | 4/4 | Complete    | 2026-08-21 |
-| 6. Remediation and Governed Release | 5/5 | In Progress|  |
+| 6. Remediation and Governed Release | 6/6 | Complete    | 2026-08-22 |

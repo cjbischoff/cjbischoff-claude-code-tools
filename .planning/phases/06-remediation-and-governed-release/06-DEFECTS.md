@@ -10,8 +10,9 @@ clause: no row stays in the deferred state it arrived in. Three terminal states 
 
 `05-DEFECTS.md` has **11 data rows**, not the ten the plan's `must_haves.truths` text assumes —
 reported as counted, not forced to match the estimate (the same discipline `06-03-SUMMARY.md`
-applied to its 6-file/8-mention count). All 11 receive a terminal state below, plus one
-newly-surfaced row this plan's own governance-data verification found. 12 rows total.
+applied to its 6-file/8-mention count). All 11 receive a terminal state below, plus two
+newly-surfaced rows: one from this plan's own governance-data verification, and one from
+`06-VERIFICATION.md`'s post-closure gap check (06-06). 13 rows total.
 
 | # | Defect (05-DEFECTS.md row) | Severity | Terminal Disposition |
 |---|---|---|---|
@@ -27,6 +28,7 @@ newly-surfaced row this plan's own governance-data verification found. 12 rows t
 | 10 | 05-REVIEW.md WR-01: `run_review` raises an unhandled `FileNotFoundError` for a nonexistent `--root` instead of a clean exit-2 message. | non-blocker | **fixed.** Plan 06-01, Task 1 (RED `dbac919`, GREEN `dfa112c`, `fix(06-01): reject a bad --root with exit 2 (WR-01)`). A single `if not root or not Path(root).is_dir():` guard now runs before any workspace or git subprocess call, exiting 2 with a one-line message for a missing, empty, or non-directory `--root`. |
 | 11 | 05-REVIEW.md WR-02: `helpers/tests/README.md` claims other tests missed the cwd-scoping bug because they "bypass `main()`"; the actual cause is a mocked git runner. | non-blocker | **fixed.** Plan 06-03, Task 3, commit `3e1b7e8` (same commit as row 6). The README now correctly attributes the miss to `monkeypatch.setattr(subprocess, "run", ...)` patching the stdlib function underneath `run_review`'s `partial(subprocess.run, cwd=root)` default, whose fake ignores `cwd`. |
 | 12 | *(newly surfaced this plan)* `06-02-SUMMARY.md` states PR #24 "merged ... (fast-forward, no merge commit)". `git cat-file -p c546511` (PR #24's actual merge commit) shows two `parent:` lines (`562b313`, `73ef5b6`) — a genuine two-parent merge commit, not a fast-forward. | non-blocker | **carried, not fixed here.** Discovered while gathering this plan's governance-receipt data (`git cat-file -p c546511`, re-run and reconfirmed for this ledger). This is a documentation-accuracy defect in a Phase 6 plan's own SUMMARY.md, with no functional or code impact — PR #24 is correctly merged into `docs/milestone-v5-diff-review` either way. Not fixed here per the plan's own instruction: the four shipping PRs are merged, and an untriaged fifth commit editing a past plan's SUMMARY.md would restart the governance rail for a defect that has not been triaged. Left for whoever next touches `06-02-SUMMARY.md` or a future doc-accuracy pass. |
+| 13 | `06-REVIEW.md` WR-01 *(unrelated to row 10's WR-01, a different 05-REVIEW.md finding)*: three doc surfaces (`SKILL.md:95`, `skills/sec-overlay/README.md:34-36`, `helpers/README.md:267`) still stated `review` has no `--workspace` override, directly contradicted by the flag Plan 06-01 shipped (commit `3354f44`). | non-blocker | **fixed.** Plan 06-06, Task 1, commit `83da4e0` (`docs(06-06): correct review --workspace doc claims`). All three passages corrected to state the override exists and to name the identical-value + SCALE-03 (`--model`) requirements. A code-derived TDD guard, `test_no_live_doc_denies_the_review_workspace_override`, was written RED against the unmodified docs (all three offending paths reported), then GREEN after the fix; its premise is pinned against `run_review`'s real signature so a future flag removal fails the guard's premise loudly instead of leaving a now-true claim unchecked. |
 
 ## Governance receipt and REL-03 re-assertion
 
@@ -62,7 +64,7 @@ on this plan's branch, forked from the milestone branch's tip after all four mer
 
 **4. All Phase 5 defect rows carry a terminal state, every committed line respects the
 sanitization boundary confirmed in Task 1, and Phase 6 is closed in STATE.md.**
-Met. All 11 original rows plus the 1 newly-surfaced row above carry `fixed`, `dispositioned`, or
+Met. All 11 original rows plus the 2 newly-surfaced rows above carry `fixed`, `dispositioned`, or
 `carried` — none reads as `deferred`. `06-RECEIPTS.md` was re-read line by line against the
 prohibitions before staging (Task 2's action); this file contains no path below the target
 repository root, no code excerpt, and no finding body — only commit SHAs, branch names, commit
@@ -73,3 +75,12 @@ file.
 No criterion above is labelled partial — all four are met in full, including the E-12 criterion,
 which per D-08 would have been equally valid to close on the vacuous-plus-backstop path had the
 live run produced an empty comparison. It did not; the non-vacuous result is reported as such.
+
+## 06-06 gap closure (post-closure verification)
+
+`06-VERIFICATION.md`, run after Phase 6's original closure, found two gaps: row 13 above (the
+`--workspace` doc-claim blocker) and a tracking-only gap where `.planning/ROADMAP.md` had not yet
+been updated to show Phase 6 complete. Row 13 is fixed per its own entry. The ROADMAP.md tracking
+gap is closed in this same plan's Task 2 (three tracking locations corrected: the header checkbox,
+the Plans rollup, and the Progress table) — no code or defect-ledger row was needed for that gap,
+since ROADMAP.md is a tracking artifact, not a shipped surface.
