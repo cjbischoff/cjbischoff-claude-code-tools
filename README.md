@@ -56,7 +56,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | Path | Purpose |
 |------|---------|
 | `.claude-plugin/marketplace.json` | Marketplace manifest; lists all plugins |
-| `.planning/` | GSD planning setup: PROJECT.md, ROADMAP.md, STATE.md, MILESTONES.md, synthesized intel from the 50 ingested design docs, the ingest conflict report, and the onboarding summary. Milestone v5.0 Hybrid Diff-Review Architecture shipped 2026-08-22 (7 phases, 30 plans, 32/32 requirements). Its roadmap, requirements, audit, and phase directories are archived under `.planning/milestones/`. The next milestone starts with `/gsd-new-milestone`. |
+| `.planning/` | GSD planning setup: PROJECT.md, ROADMAP.md, STATE.md, MILESTONES.md, synthesized intel from the 50 ingested design docs, the ingest conflict report, and the onboarding summary. Milestone v5.0 Hybrid Diff-Review Architecture shipped 2026-08-22 (7 phases, 30 plans, 32/32 requirements). Its roadmap, requirements, audit, and phase directories are archived under `.planning/milestones/`; `RETROSPECTIVE.md` holds the milestone retrospective. `REQUIREMENTS.md` is absent between milestones — the next one starts with `/gsd-new-milestone`. |
 | `plugins/sec-overlay/.claude-plugin/plugin.json` | sec-overlay plugin manifest |
 | `plugins/sec-overlay/README.md` | sec-overlay user-facing README: install, prerequisites, quick start |
 | `plugins/sec-overlay/CHANGELOG.md` | sec-overlay Common Changelog |

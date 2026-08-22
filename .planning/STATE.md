@@ -21,11 +21,11 @@ current_phase_name: remediation-and-governed-release
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-21)
+See: .planning/PROJECT.md (updated 2026-08-22)
 
 **Core value:** The marketplace never ships an unverified claim — validated plugins,
 governed releases, receipt-backed findings.
-**Current focus:** Phase 06 — remediation-and-governed-release
+**Current focus:** Planning next milestone (`/gsd-new-milestone`)
 
 ## Current Position
 
