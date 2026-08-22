@@ -2,10 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Diff-Review Architecture
-current_phase: 06
-status: completed
-stopped_at: "Completed 06-06-PLAN.md (Phase 6 fully closed, PR #29 merged as 3333dca)"
-last_updated: "2026-08-22T16:09:57.831Z"
+status: Awaiting next milestone
+stopped_at: Phase 06 UAT complete (2/2 passed), verification passed — milestone v5.0 ready to close
+last_updated: "2026-08-22T17:47:19.977Z"
 last_activity: 2026-08-22
 last_activity_desc: "Completed 06-06-PLAN.md — Phase 06 fully closed, PR #29 merged"
 progress:
@@ -14,6 +13,7 @@ progress:
   total_plans: 30
   completed_plans: 30
   percent: 100
+current_phase: 06
 current_phase_name: remediation-and-governed-release
 ---
 
@@ -29,13 +29,10 @@ governed releases, receipt-backed findings.
 
 ## Current Position
 
-Phase: 06
-Plan: Not started
-Status: All phases complete
-Milestone-to-main merge is a separate step at milestone close (D-14), out of scope for this phase.
-Last activity: 2026-08-22 — Phase 06 complete
-
-Progress: [████████████████████] 30/30 plans ([██████████] 100% of milestone v5.0)
+Phase: Milestone v5.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-22 — Milestone v5.0 completed and archived
 
 ## Performance Metrics
 
@@ -230,8 +227,23 @@ Items acknowledged and carried forward from previous milestone close:
 | Growth | GROW-01 second plugin onboarding | v2 | 2026-08-16 |
 | Growth | GROW-02 automated plugin-validate gate | v2 | 2026-08-16 |
 
+Items acknowledged and deferred at v5.0 milestone close on 2026-08-22:
+
+| Category | Item | Status | Deferred At |
+|----------|------|--------|-------------|
+| deferred_item | Phase 06: pre-existing ruff `I001` in `plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_cli.py:778` | open | 2026-08-22 |
+| deferred_item | Phase 06: CodeRabbit nitpick — `test_rule_glob.py:231` does not assert `--workspace` forwarding (PR #23) | open | 2026-08-22 |
+| deferred_item | Phase 06: CodeRabbit nitpick — WR-01 tests do not prove the guard runs before git (`test_review_live.py:403-432`, PR #23) | open | 2026-08-22 |
+| deferred_item | Phase 06: `skills/sec-overlay/README.md` CLI-legend block not audited for further pre-existing misorderings | open | 2026-08-22 |
+| deferred_item | Phase 06: `skills/sec-overlay/helpers/README.md` pipeline diagram misses `selfscore`, `artifact-gate`, `artifact-review` nodes | open | 2026-08-22 |
+| deferred_item | Phase 06: `skills/sec-overlay/CLAUDE.md` "Phase order (one pass)" list misses a numbered `selfscore` entry | open | 2026-08-22 |
+
 ## Session Continuity
 
 Last session: 2026-08-22T16:07:12Z
 Stopped at: Phase 06 UAT complete (2/2 passed), verification passed — milestone v5.0 ready to close
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

@@ -12,26 +12,26 @@ Conventional Commits, prek hooks, README/CHANGELOG routing, and automatic semver
 The marketplace never ships an unverified claim: every plugin passes validation, every
 release follows governance, and every confirmed sec-overlay finding is receipt-backed.
 
-## Current Milestone: v5.0 Hybrid Diff-Review Architecture
+## Current State
 
-**Goal:** Extend sec-overlay with diff-scoped review (security and general-defect
-profiles) that absorbs open-code-review capabilities, then prove the full pipeline
-end to end and ship through governance.
+**Shipped:** v5.0 Hybrid Diff-Review Architecture (2026-08-22).
 
-**Target features:**
-- Baseline health verification: plugin validate, pytest/ruff/ty, prek hooks (from v4.0)
-- `review` verb with `--profile security|general` in `sec_overlay.cli`
-- Diff pipeline: `diffscope.py` extension, `file_select.py`, per-file coverage manifest
-- Hunk parser + deterministic positioning + position-vs-hunk gate in `phase_gate.py`
-- Glob rule matcher, 4-layer rule resolution, rule-file safety, per-language rule docs
-  (NPE, thread-safety, XSS, SQL injection)
-- Reflection filter: retract-only, fail-open, composed under the receipt gate
-- Semantic file bundling (sec-overlay addition beyond OCR) with concurrency limits
-- Diff-anchored output payload and per-file resume manifest
-- End-to-end verification run (audit and review) on a real target, receipt-backed
-- Remediation and governed release with CodeRabbit review
+sec-overlay now has a `review` verb with `security` and `general` profiles. The diff
+pipeline covers diff acquisition, file selection, a sealed coverage manifest, hunk
+positioning, per-language rule resolution, a retract-only reflection filter, bounded
+concurrency, identity-checked resume, and diff-anchored SARIF output. Both the audit
+and the review pipeline are verified end to end on real targets with receipts. The
+core stays stdlib-only and the frozen JSON contract is unchanged.
 
-**Spec source:** `/Users/christopher/Workspace/review_open-code-review/spec_sec-overlay-improvement_20260816_0920.md`
+**Milestone stats:** 7 phases, 30 plans, 116 tasks, 212 files changed,
++38,296/−294 lines, 2026-08-17 through 2026-08-22.
+
+## Next Milestone Goals
+
+Not defined yet. Run `/gsd-new-milestone` to define them. Candidates carried forward:
+- GROW-01: second plugin onboarding (deferred since v2 planning)
+- GROW-02: automated plugin-validate gate (deferred since v2 planning)
+- Six acknowledged Phase 06 tech-debt items (see STATE.md Deferred Items)
 
 ## Requirements
 
@@ -66,10 +66,13 @@ All items below shipped before this project started.
 - ✓ Report states its 515-file coverage denominator; zero-finding classes ledgered (AUD-05) — Validated in Phase 5, 2026-08-21
 - ✓ Both-profile review run completed E2E on a real diff, manifest sealed, lines positioning-confirmed (AUD-06) — Validated in Phase 5, 2026-08-21; profile-superset contract passed vacuously (0 findings), substantive re-check deferred to Phase 6 (E-12)
 
+- ✓ Run defects fixed or dispositioned; frozen contract unchanged (REL-01) — Validated in Phase 6: Remediation and Governed Release, 2026-08-22; every Phase 5 defect row carries a terminal disposition
+- ✓ Fixes ship through full governance with CodeRabbit review (REL-02) — Validated in Phase 6, 2026-08-22; PRs merged after CodeRabbit review
+- ✓ Substantive profile-superset re-check (E-12): security-kept ⊆ general-kept proven non-vacuously on a real 14-file dispatch — Validated in Phase 6, 2026-08-22
+
 ### Active
 
-- [ ] Run defects fixed or dispositioned; frozen contract unchanged (REL-01) — 05-DEFECTS.md carries 10 deferred rows plus review warnings WR-01/WR-02
-- [ ] Fixes ship through full governance with CodeRabbit review (REL-02)
+(None — define with `/gsd-new-milestone`)
 
 ### Out of Scope
 
@@ -94,9 +97,11 @@ All items below shipped before this project started.
 - Open ingest question: the 2026-08-11 kb-redesign design references a 2026-08-09 spec
   absent from the ingest set (see `.planning/INGEST-CONFLICTS.md` WARNING). Resolve by
   locating the spec or affirming the design doc as authority.
-- Existing dogfooding evidence (2026-08-03 and 2026-08-07 runs) predates the audit
-  driver, CVSS v4.0, and the architecture/threat-model rebuild. The current pipeline
-  has no end-to-end verification run yet.
+- End-to-end verification now exists: Phase 5 ran a full driven audit (515-file
+  coverage denominator) and a both-profile review on real targets, receipt-backed
+  (AUD-01 through AUD-06, 2026-08-21).
+- Known tech debt: six acknowledged Phase 06 items (one ruff `I001`, two CodeRabbit
+  test nitpicks, three sec-overlay doc gaps). See STATE.md Deferred Items.
 
 ## Constraints
 
@@ -124,7 +129,9 @@ All items below shipped before this project started.
 | Artifact layout replaced outright: workspace architecture/ and threat-model/ (ruling R3) | no shims; all consumers re-pointed | ✓ Delivered |
 | Invocation scope A1/B1/C1/D1: one command, thin driver, receipts + fence, inferred roles | latest authority on how a run is invoked and driven | ✓ Delivered |
 | Marketplace doc structure: root CLAUDE.md governs; per-plugin doc trio | plugin CLAUDE.md never auto-loads for installers | ✓ Delivered |
-| Phase 5 UAT sign-off: WR-01/WR-02 ride Phase 6's REL-01 sweep; vacuous AUD-06 superset pass accepted with E-12 tracking the substantive re-check | scope-boundary calls recorded in 05-UAT.md and 05-DEFECTS.md, 2026-08-21 | ✓ Decided |
+| Phase 5 UAT sign-off: WR-01/WR-02 ride Phase 6's REL-01 sweep; vacuous AUD-06 superset pass accepted with E-12 tracking the substantive re-check | scope-boundary calls recorded in 05-UAT.md and 05-DEFECTS.md, 2026-08-21 | ✓ Good — E-12 re-check passed non-vacuously in Phase 6 |
+| D-01 fix: `redteam` and `postflight` added to the 22-entry `PHASE_TABLE` so `run.drive()` reaches both phases | documented pipeline steps were silently skipped by the mechanical table | ✓ Good |
+| Review workspace resolves through `RepoMemory.for_target` sidecar (DIFF-04) | review artifacts leaked at bare `--root`; audit/scan already used the sidecar | ✓ Good |
 
 No decision is ADR-locked. ADR-2026-08-04 is the only ADR and remains proposed.
 
@@ -148,4 +155,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-22 after completing Phase 6 (Remediation and Governed Release) of milestone v5.0 — UAT passed 2/2, verification passed*
+*Last updated: 2026-08-22 after v5.0 milestone*
