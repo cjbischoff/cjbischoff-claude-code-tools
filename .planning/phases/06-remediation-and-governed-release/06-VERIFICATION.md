@@ -1,56 +1,25 @@
 ---
 phase: 06-remediation-and-governed-release
-verified: 2026-08-22T00:01:11Z
-status: gaps_found
-score: 6/8 must-haves verified
+verified: 2026-08-22T15:45:00Z
+status: human_needed
+score: 11/13 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
-gaps:
-  - truth: "Documentation accurately reflects the shipped `review --workspace` behavior (no self-contradicting docs)"
-    status: failed
-    reason: >
-      06-REVIEW.md (this phase's own code-review artifact, committed at 01818ed, the current
-      HEAD) flagged three doc files as still stating `review` has no `--workspace` override —
-      directly contradicted by the `--workspace` flag this same phase (06-01) shipped. Confirmed
-      by direct grep against the live files: the stale claim is still present, verbatim, in all
-      three. No commit after 01818ed touches any of them, and neither 06-DEFECTS.md nor
-      deferred-items.md records a disposition for this finding (it is a distinct issue from
-      05-REVIEW.md's identically-numbered but unrelated WR-01 FileNotFoundError bug, which *is*
-      closed — see 06-DEFECTS.md row 10). This is a hard-rule violation per the plugin's own
-      `plugins/sec-overlay/CLAUDE.md`: "docs track code in the same commit."
-    artifacts:
-      - path: "plugins/sec-overlay/skills/sec-overlay/SKILL.md:95"
-        issue: "States '`--root` has no `--workspace` override for review (unlike `scan`/`audit`)' — false as of 06-01's `3354f44`."
-      - path: "plugins/sec-overlay/skills/sec-overlay/README.md:34-36"
-        issue: "States 'review... has no `--workspace` override, so pass the same `--root` string to every invocation' — false."
-      - path: "plugins/sec-overlay/skills/sec-overlay/helpers/README.md:267"
-        issue: "States '`review` has no `--workspace` override, so the same `--root` string must be passed to every invocation of one run' — false."
-    missing:
-      - "Update all three passages to describe the real `--workspace` flag (06-REVIEW.md's own \"Fix\" section gives exact before/after text for SKILL.md:95)."
-      - "Add a disposition row for this finding to 06-DEFECTS.md, or a fix commit, before closing the phase."
-      - "Consider the doc-invariant assertion 06-REVIEW.md suggests (grep the three files for the stale phrase) so a future flag addition can't silently leave documentation behind again."
-  - truth: "ROADMAP.md accurately reflects Phase 6's completion state"
-    status: failed
-    reason: >
-      .planning/ROADMAP.md line 30 still lists Phase 6 with an unchecked `- [ ]` box, and the
-      Progress table (line 263) still reads "In Progress" with no completion date — both stale
-      relative to STATE.md (`status: complete`, `current_phase: 06`, all 5 plans `[x]`), the
-      merged PR history, and 06-DEFECTS.md's own closure statement ("Phase 6 is closed"). Every
-      other completed phase in the same table (1-5) carries "Complete" plus a date; Phase 6 does
-      not. This is a tracking inconsistency the phase's own closure commit (`45660a9`) partially
-      fixed (bumped the plans list to 5/5 and checked 06-05's box) but did not finish.
-    artifacts:
-      - path: ".planning/ROADMAP.md:30"
-        issue: "Phase 6 header checkbox still `- [ ]`, unlike Phases 1-5 (`- [x]`)."
-      - path: ".planning/ROADMAP.md:263"
-        issue: "Progress table row still reads 'In Progress' with an empty completion-date cell."
-    missing:
-      - "Check the Phase 6 header box and set the Progress-table status/date to match Phases 1-5's format."
-deferred: []
+re_verification:
+  previous_status: gaps_found
+  previous_score: 10/13
+  gaps_closed:
+    - "Documentation accurately reflects the shipped `review --workspace` behavior (original Gap 1) — all three doc surfaces corrected in 83da4e0/07ed797, guarded by test_no_live_doc_denies_the_review_workspace_override."
+    - "ROADMAP.md's Phase 6 Progress-table row (line 267) — fixed in bf6e65a, reverted by b7c7a01, now re-fixed by the orchestrator (not yet committed at verification time): line 267 reads '| 6. Remediation and Governed Release | 6/6 | Complete    | 2026-08-22 |', matching Phases 1-5's format and consistent with the header checkbox (line 30) and Plans rollup (lines 228, 253)."
+  gaps_remaining: []
+  regressions: []
 human_verification:
-  - test: "Confirm the three shipping PRs (#24-#27, four of five total) that merged without a CodeRabbit walkthrough — due to the OSS rate limit and a standing waiver — were each an explicit, informed decision by the repository owner at merge time, not an automated bypass."
+  - test: "Confirm the three shipping PRs (#24-#27, four of the original five) that merged without a CodeRabbit walkthrough — due to the OSS rate limit and a standing waiver — were each an explicit, informed decision by the repository owner at merge time, not an automated bypass."
     expected: "Each merge was a deliberate human call, matching the receipt's stated reasoning (rate limit / waiver), not a default that happened silently."
-    why_human: "This is a policy judgment about whether the root CLAUDE.md's 'wait for CodeRabbit's walkthrough before merging' rule was legitimately waived case-by-case versus habitually skipped; the git/GitHub evidence corroborates the receipt's factual claims (rate-limit message on PR #24, no walkthrough comment on PRs #24/#25/#26/#27) but cannot establish intent or whether the waiver should stand as project policy going forward."
+    why_human: "06-RECEIPTS.md narrates 'user waived the wait' / 'waived for this phase by the repository owner' / 'per the phase's standing waiver' for PRs #24-#26, and 06-06-SUMMARY.md documents the same pattern for PR #29's post-fix commit (rate-limited re-review, accepted per threat T-06-06-07) — but these are the executing agent's own self-narrated claims about the human's intent, not an independent record of the repository owner confirming the waiver (no quoted approval, no decision-log entry, no ADR). This is still a policy judgment only the rule's owner can settle, not something this verifier can resolve from the git/GitHub record alone. PR #29 itself is not part of this concern — its walkthrough posted at 2026-08-22T13:44:59Z, over an hour before the 15:01:51Z merge, satisfying the rule."
+  - test: "Confirm both 06-06 commits (83da4e0, bf6e65a) were staged with explicit file paths only (no `git add -A`/`git add .`/`git commit -a`) and that no commit in the PR used `--no-verify` to bypass the prek hook."
+    expected: "Session transcript or hook-run log confirms explicit staging and an unbypassed prek run for both commits."
+    why_human: "06-06-PLAN.md's own prohibitions list marks this claim `status: recalled` — a self-attestation by the executing session, not independently checkable from git history (the resulting commit tree is identical whether staged via `-A` or explicit paths, and a `--no-verify` bypass leaves no trace in the commit object). Both commits' diffs are cleanly scoped to exactly their plan's declared `files_modified`, which is consistent with the claim but does not prove it; no other prohibition in this plan or phase has this structural limitation, since all four others (frozen-contract files, branch-not-main, no 06-01..05 edits, no new dependency) are independently checkable via `git diff`/`git branch` and were confirmed clean."
 ---
 
 # Phase 6: Remediation and Governed Release Verification Report
@@ -60,9 +29,10 @@ runs is fixed or given a written disposition, all fixes ship through full repo g
 the milestone's remaining claims (REL-01, REL-02, REL-03) are backed by evidence: the frozen
 contract asserted by tests, a real per-file reviewer dispatch with a non-vacuous profile-subset
 verdict, and a governance receipt covering the shipping PRs.
-**Verified:** 2026-08-22T00:01:11Z
-**Status:** gaps_found
-**Re-verification:** No — initial verification
+**Verified:** 2026-08-22T15:45:00Z
+**Status:** human_needed
+**Re-verification:** Yes — second re-verification pass, after the orchestrator re-fixed the
+Progress-table regression this report's prior pass found
 
 ## Goal Achievement
 
@@ -70,76 +40,77 @@ verdict, and a governance receipt covering the shipping PRs.
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Every defect logged during Phase 5's verification runs (05-DEFECTS.md, 11 rows) has a merged fix or a written disposition | ✓ VERIFIED | 06-DEFECTS.md's 12-row table (11 original + 1 newly-surfaced) all resolve to `fixed`, `dispositioned`, or `carried`, never `deferred`. Cross-checked rows 2, 4, 5, 6, 7, 8, 9, 10, 11 against the actual code/tests below — every citation resolves. |
-| 2 | `models.py`, `evidence.py`, and `fingerprint()` identity are unchanged after fixes, asserted by the test suite | ✓ VERIFIED | `helpers/tests/test_frozen_contract.py` — sha256 pins on both files (`_MODELS_SHA256`, `_EVIDENCE_SHA256`) plus three `fingerprint()` golden-value tests (fully/minimally-populated, field-order-permuted). `git diff 0095550..HEAD -- .../models.py .../evidence.py` is empty (zero commits touched either file). All 6 tests in the file pass (`uv run pytest tests/test_frozen_contract.py -q` → 6 passed). |
-| 3 | A real per-file reviewer dispatch ran against the target range, and the receipt shows the count flip proving it | ✓ VERIFIED | 06-RECEIPTS.md "Command 2"/"Command 4": `review_source_skipped: 0` (both profiles) against Phase 5's documented `review_source_skipped: 14` baseline for the identical 14-file set — a genuine count flip, not a re-narrated claim. |
-| 4 | The E-12 profile-superset verdict (security-kept ⊆ general-kept) is recorded as non-vacuous, computed over one identical reviewer-output set | ✓ VERIFIED | 06-RECEIPTS.md: security-kept=0, general-kept=5, `∅ ⊆ {5 ids}`. Confirmed architecturally sound at `review_findings.py:100-160` — the general profile is a strict superset by construction (only relaxes gates A/B for `GENERAL_DEFECT_CLASSES` members; never drops anything security keeps) — and empirically at the unit level: `test_review_profiles.py`'s 4 new subset-boundary tests (vacuous/single-element/boundary/permutation, added at `cdfbe49`) all pass. |
-| 5 | Each fix lands on a branch with a Conventional Commit, semver bump, and CHANGELOG entry in the same commit (adjacency), version sequence strictly increasing (ordering) | ✓ VERIFIED | Walked all 14 shipping commits (`dbac919` → `cdfbe49`) individually: each stages its own `plugins/sec-overlay/.claude-plugin/plugin.json` bump + `plugins/sec-overlay/CHANGELOG.md` entry; version sequence `1.68.8 → 1.68.9 → 1.68.10 → 1.69.0 → 1.69.1 → ... → 1.69.10` with no skip or reuse. `feat` commit (`3354f44`) bumps minor (`1.68.10→1.69.0`); every other commit type (`test`/`fix`/`docs`) bumps patch. `06-05`'s two commits (`c5ea810`, `188ff37`) touch zero `plugins/` files — the deliberate zero-bump row, confirmed by `git show --stat`. |
-| 6 | Every shipping PR is merged only after CodeRabbit's walkthrough comment posts, and targets the milestone branch, never `main` | ⚠️ PARTIAL — see human verification | All 4 PRs confirmed merged into `docs/milestone-v5-diff-review` (never `main`) via `gh pr view`. Walkthrough posted for PR #23 only. PRs #24 (rate-limited, confirmed via `gh pr view 24` — CodeRabbit's own "Review limit reached... 21 minutes" comment), #25, #26, and #27 (this phase's own PR) merged **without** a walkthrough, per a "standing waiver" the receipt attributes to the repository owner. This is a literal deviation from ROADMAP Success Criterion 3's text ("merged only after CodeRabbit's walkthrough comment posts") for 3 of 4 original shipping PRs plus the phase's own closing PR — transparently disclosed in 06-RECEIPTS.md, not hidden, but not something a static check can validate as an intentional policy exception versus habit. Routed to human verification. |
-| 7 | `helpers/pyproject.toml` dependencies stay empty across every new module | ✓ VERIFIED | `pyproject.toml` line 8: `dependencies = []`. `test_helpers_declare_zero_runtime_dependencies` reads this live via `tomllib` and asserts `== []`; passes. `git diff 0095550..HEAD -- .../pyproject.toml` is empty. |
-| 8 | Documentation shipped by this phase does not contradict the code it documents | ✗ FAILED | See Gaps — three doc files (`SKILL.md`, `skills/sec-overlay/README.md`, `helpers/README.md`) still falsely state `review` has no `--workspace` override, a claim this same phase's own 06-01 plan disproved. Flagged by 06-REVIEW.md (this phase's own code-review artifact) and never fixed or dispositioned. |
+| 1 | Every defect logged during Phase 5's verification runs has a merged fix or a written disposition | ✓ VERIFIED | 06-DEFECTS.md carries 13 rows (12 from the initial pass + row 13 for 06-REVIEW.md's own WR-01), none `deferred`. Row 13 explicitly distinguishes itself from row 10's unrelated 05-REVIEW.md WR-01. |
+| 2 | `models.py`, `evidence.py`, and `fingerprint()` identity are unchanged after fixes, asserted by the test suite | ✓ VERIFIED | `git diff 4c4377d..HEAD --name-only` contains no `models.py`/`evidence.py`. `uv run pytest tests/test_frozen_contract.py -q` → `6 passed`. |
+| 3 | A real per-file reviewer dispatch ran against the target range, and the receipt shows the count flip proving it | ✓ VERIFIED | Unchanged — 06-RECEIPTS.md's count-flip evidence; 06-06 touched no review-dispatch code. |
+| 4 | The E-12 profile-superset verdict (security-kept ⊆ general-kept) is recorded as non-vacuous | ✓ VERIFIED | Unchanged — 06-06 touched no `review_findings.py` or related tests. |
+| 5 | Each fix lands on a branch with a Conventional Commit, semver bump, and CHANGELOG entry in the same commit, version sequence strictly increasing | ✓ VERIFIED | 06-06 adds 3 commits: `83da4e0` (`1.69.11→1.69.12`), `07ed797` (`1.69.12→1.69.13`), both stage `plugin.json` + `CHANGELOG.md` together. `bf6e65a` touches no `plugins/` path — correctly zero-bump. |
+| 6 | Every shipping PR is merged only after CodeRabbit's walkthrough comment posts, and targets the milestone branch, never `main` | ⚠️ PARTIAL — see human verification | PR #29 (06-06's own) is compliant: base `docs/milestone-v5-diff-review`, walkthrough posted at `13:44:59Z`, merged at `15:01:51Z`. PRs #24-#27's waiver remains an open policy question — see human verification. |
+| 7 | `helpers/pyproject.toml` dependencies stay empty across every new module | ✓ VERIFIED | `git diff 4c4377d..HEAD -- .../pyproject.toml` is empty. |
+| 8 | Documentation shipped by this phase does not contradict the code it documents (original Gap 1) | ✓ VERIFIED | `grep -n -i "workspace override\|does not support\|lacks a" SKILL.md README.md helpers/README.md` — zero matches. All three now describe both `--workspace` branches, matching `run_review`'s real signature. |
+| 9 | A code-derived pytest guard fails if any live plugin doc reintroduces the `--workspace` denial, and its premise assertion fails if `run_review` ever loses the parameter | ✓ VERIFIED | `test_no_live_doc_denies_the_review_workspace_override` asserts `"workspace" in inspect.signature(run_review).parameters` before walking `_PLUGIN_ROOT.rglob("*.md")`. `uv run pytest tests/test_docs_invariants.py -q` → `13 passed`. |
+| 10 | `06-DEFECTS.md` carries a terminal disposition row for `06-REVIEW.md` WR-01, textually distinguished from row 10's unrelated `05-REVIEW.md` WR-01 | ✓ VERIFIED | Row 13: `` `06-REVIEW.md` WR-01 *(unrelated to row 10's WR-01, a different 05-REVIEW.md finding)* `` — cites commit `83da4e0` and the guard by name. |
+| 11 | `ROADMAP.md`'s Phase 6 header checkbox, Progress-table row, and plan rollup all read as complete with a real completion date, in the same format Phases 1-5 use (original Gap 2) | ✓ VERIFIED (re-fixed) | Line 30: `- [x] **Phase 6...** (completed 2026-08-22)`. Line 228: `**Plans**: 6/6 plans executed...`. Line 253: `- [x] 06-06-PLAN.md`. Line 267: `\| 6. Remediation and Governed Release \| 6/6 \| Complete    \| 2026-08-22 \|` — all three surfaces now agree, matching Phases 1-5's exact formatting. This line was fixed once (`bf6e65a`), reverted by the next commit touching the file (`b7c7a01`), and has now been re-applied by the orchestrator (uncommitted at verification time). |
+| 12 | The plugin-internal commit carries its own `plugin.json` patch bump and plugin `CHANGELOG.md` entry in the same commit | ✓ VERIFIED | Confirmed for both `83da4e0` and `07ed797`. |
+| 13 | Governance rail held: fix branch forked from `docs/milestone-v5-diff-review`, explicit-path staging, prek hook passing unbypassed, prohibited files untouched | ⚠️ PARTIAL | Branch fork point confirmed (`83da4e0`'s parent is `4c4377d`, on the milestone branch); all 5 prohibitions structurally confirmed except staging/hook-bypass, which is self-attested only — see human verification. |
 
-**Score:** 6/8 truths verified (1 partial routed to human verification, 1 failed)
+**Score:** 11/13 truths verified (0 failed, 2 partial routed to human verification)
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `sec_overlay/cli.py` (`run_review`) | Root guard + `--workspace` flag | ✓ VERIFIED | `cli.py:339-341` guard (`is_dir()` check, `error:` stderr, `return 2`) precedes `cli.py:343-358`'s subprocess runner/workspace resolution — order matches the WR-01 fix intent. `workspace` param threaded into `load_paths(workspace=workspace)` at line 353-354. |
-| `sec_overlay/phases.py` (`PHASE_TABLE`) | `redteam` + `postflight` entries, correctly ordered | ✓ VERIFIED | Lines 119 (`redteam`, between `selfscore` and `artifact-gate`) and 128 (`postflight`, last entry). |
-| `sec_overlay/driver.py` (`DETERMINISTIC_ACTIONS`) | `postflight` key added; `redteam` absent (agent phase) | ✓ VERIFIED | Lines 292-308: `postflight` present, `redteam` correctly absent. |
-| `sec_overlay/report.py` (deps Fix-line) | Package name split on last `@` | ✓ VERIFIED | Line 91: `pkg.rsplit('@', 1)[0] or pkg`. |
-| `agents/redteam.md` | Two-way mechanical split, not three-way | ✓ VERIFIED | Line 33 describes the real `needs-runtime` OR `NEEDS_DEPLOYMENT_TESTING` predicate, matching `redteam.py:39-41`'s `wants_runtime()`. Pinned by `test_redteam_agent_describes_the_real_two_way_wants_runtime_predicate`. |
-| `helpers/tests/test_frozen_contract.py` | 6 tests: byte-identity ×2, fingerprint golden ×3, zero-deps ×1 | ✓ VERIFIED | All present, all pass. |
-| `helpers/tests/test_review_profiles.py` | Profile-subset boundary probes | ✓ VERIFIED | 4 new tests (vacuous/single-element/boundary/permutation) present and passing, alongside pre-existing profile tests (23 total in file, all pass). |
-| `06-DEFECTS.md` | Terminal disposition for all 11 Phase-5 rows + newly-surfaced row | ✓ VERIFIED | 12 rows, none `deferred`. |
-| `06-RECEIPTS.md` | Governance receipt (4 PRs + zero-bump row), REL-03 re-assertion | ✓ VERIFIED, cross-corroborated | Commit SHAs, version transitions, and CodeRabbit outcomes all independently confirmed against `git log`/`gh pr view` (not merely restated from the receipt). |
-| `SKILL.md`, `skills/sec-overlay/README.md`, `helpers/README.md` | Docs describe the code accurately | ✗ STUB (stale claim) | See Gaps — three files retain a disproven claim about `--workspace`. |
-| `.planning/ROADMAP.md` | Phase 6 marked complete | ✗ STUB (stale) | Header checkbox unchecked, Progress-table status/date not updated to match Phases 1-5's pattern. |
+| `plugins/sec-overlay/skills/sec-overlay/SKILL.md` | Describes `--workspace` accurately | ✓ VERIFIED | Two explicit branches; no denial phrase present. |
+| `plugins/sec-overlay/skills/sec-overlay/README.md` | Describes `--workspace` accurately | ✓ VERIFIED | Two explicit branches; no denial phrase present. |
+| `plugins/sec-overlay/skills/sec-overlay/helpers/README.md` | Describes `--workspace` accurately | ✓ VERIFIED | Corrected passage present; no denial phrase present. |
+| `plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_docs_invariants.py` | New guard test, premise pinned to real code | ✓ VERIFIED | `test_no_live_doc_denies_the_review_workspace_override` present; all 13 tests in file pass. |
+| `plugins/sec-overlay/skills/sec-overlay/helpers/tests/README.md` | Documents the new guard | ✓ VERIFIED | Modified in `83da4e0`; reworded in `07ed797` to avoid a self-referential regex match. |
+| `plugins/sec-overlay/.claude-plugin/plugin.json` | Version bumped per commit | ✓ VERIFIED | `1.69.11 → 1.69.12 → 1.69.13`, strictly increasing, patch-level. |
+| `plugins/sec-overlay/CHANGELOG.md` | Entry per version bump | ✓ VERIFIED | Entries for `1.69.12` and `1.69.13`, each in the same commit as its version bump. |
+| `.planning/phases/06-remediation-and-governed-release/06-DEFECTS.md` | Terminal row for 06-REVIEW.md WR-01 | ✓ VERIFIED | Row 13 present, correctly disambiguated from row 10. |
+| `.planning/ROADMAP.md` | Phase 6 marked complete in all 3 locations | ✓ VERIFIED | Header checkbox, Plans rollup, and Progress-table row all agree. |
+| `README.md` (root) | Reflects 06-06's work | ✓ VERIFIED | Updated in `bf6e65a`. |
+| `CHANGELOG.md` (root) | Reflects 06-06's work | ✓ VERIFIED | Updated in `bf6e65a`. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|-----|-----|--------|---------|
-| `run_review`'s root guard | git subprocess construction | Guard at `cli.py:339` precedes `r = partial(subprocess.run, ...)` at `cli.py:351` | ✓ WIRED | Confirmed by line order and by the 3 dedicated tests (missing/empty/file-as-root) all asserting no exception escapes. |
-| `args.workspace` (CLI parse) | `run_review(workspace=...)` | Threaded, not a silent no-op | ✓ WIRED | `cli.py:353-354`: `if workspace: ws = load_paths(workspace=workspace)`. `06-REVIEW.md` independently traced this and found no defect. |
-| `PHASE_TABLE`'s `redteam`/`postflight` entries | `run.drive()`/`run.advance()` | Table walk in `driver.py` | ✓ WIRED | `test_phase_table_contains_redteam_and_postflight`, `test_redteam_precedes_the_artifact_gate`, `test_postflight_is_the_final_phase` all pass; `missing_inputs`/`outputs_present` tested for both new entries including the empty case. |
-| 14 recorded reviewer returns (security workspace) | general-profile consume pass | Byte-for-byte copy into a fresh workspace, not a re-dispatch | ✓ WIRED | 06-RECEIPTS.md "Command 3"/"Command 4" — sha256sum-verified copy; both consume passes read the same 14 returns, satisfying the "one identical reviewer output set" requirement for the E-12 comparison. |
+| `test_no_live_doc_denies_the_review_workspace_override`'s premise assertion | `sec_overlay.cli.run_review`'s real signature | `inspect.signature(run_review).parameters` | ✓ WIRED | Reads the live signature at test time — a future flag removal fails the premise assertion. |
+| `test_no_live_doc_denies_the_review_workspace_override`'s doc walk | Every live `*.md` under the plugin | `_PLUGIN_ROOT.rglob("*.md")` | ✓ WIRED | Whole-tree walk — a fourth doc repeating the denial would fail too. |
+| `06-DEFECTS.md` row 13 | `06-REVIEW.md` WR-01 finding | Row cites the finding and commit `83da4e0` by name | ✓ WIRED | Confirmed by direct read of row 13's text. |
+| `plugin.json` version | `CHANGELOG.md` top section | Same commit, same version number | ✓ WIRED | Confirmed for both `83da4e0` (1.69.12) and `07ed797` (1.69.13). |
+| ROADMAP.md line 30 (header checkbox) | ROADMAP.md line 267 (Progress table) | Both should state Phase 6 status; move together | ✓ WIRED | Now consistent — both read complete with the same date. |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| Frozen-contract + fingerprint golden tests pass | `uv run pytest tests/test_frozen_contract.py -q` | `6 passed` | ✓ PASS |
-| Profile-subset boundary tests pass | `uv run pytest tests/test_review_profiles.py -q` | `23 passed` | ✓ PASS |
-| `PHASE_TABLE`/`DETERMINISTIC_ACTIONS`/doc-invariant tests pass | `uv run pytest tests/test_phases.py tests/test_driver.py tests/test_docs_invariants.py tests/test_report.py -q` | `113 passed` | ✓ PASS |
-| Full suite matches the receipt's claimed 1283/1 split exactly | `uv run pytest tests/ -q` | `1 failed, 1283 passed` — the one failure is `test_bench.py::test_seed_corpus_is_valid`, the documented pre-existing environmental gap (gitignored bench corpus absent) | ✓ PASS (matches documented baseline, not a regression) |
-| Stale `--workspace` doc claim is actually gone from the shipped docs | `grep -n "has no.*workspace override" SKILL.md README.md helpers/README.md` | Claim still present, verbatim, in all three files | ✗ FAIL (see Gaps) |
+| Doc-invariant guard (incl. new `--workspace` guard) passes | `uv run pytest tests/test_docs_invariants.py -q` | `13 passed` | ✓ PASS |
+| Frozen-contract tests still pass on current HEAD | `uv run pytest tests/test_frozen_contract.py -q` | `6 passed` | ✓ PASS |
+| Stale `--workspace` doc claim is gone from shipped docs | `grep -n -i "workspace override\|does not support\|lacks a" SKILL.md README.md helpers/README.md` | No matches | ✓ PASS |
+| Full suite matches the documented 1287/1 split (accepted environmental gap) | `uv run pytest tests/ -q` | `1 failed, 1287 passed` — sole failure is `test_bench.py::test_seed_corpus_is_valid` (gitignored bench corpus, disclosed pre-existing gap) | ✓ PASS (matches documented baseline, not a regression) |
+| ROADMAP.md Progress-table row for Phase 6 reads "Complete" with a date | `sed -n '267p' .planning/ROADMAP.md` | `\| 6. Remediation and Governed Release \| 6/6 \| Complete    \| 2026-08-22 \|` | ✓ PASS |
 
 ### Requirements Coverage
 
 | Requirement | Source Plan(s) | Description | Status | Evidence |
 |-------------|-----------------|--------------|--------|----------|
-| REL-01 | 06-01, 06-02, 06-03, 06-04, 06-05 | Every observed defect fixed or dispositioned; frozen contract unchanged, asserted by tests | ✓ SATISFIED | 06-DEFECTS.md's 12-row terminal-disposition table; `test_frozen_contract.py`'s byte-identity + fingerprint-golden tests, all passing; zero commits touch `models.py`/`evidence.py`. (The undisposed WR-01 doc-drift finding in Gaps is a defect surfaced by this phase's *own* review, not one of the Phase-5-ledger rows REL-01's text scopes to — reported separately, not counted against REL-01's literal satisfaction.) |
-| REL-02 | 06-01 through 06-05 | Governance: branch, Conventional Commit, semver bump + CHANGELOG in the same commit, CodeRabbit walkthrough before merge | ⚠️ PARTIALLY SATISFIED | Branch/commit/semver/CHANGELOG discipline fully verified (Truth 5, VERIFIED). The CodeRabbit-walkthrough clause held for only 1 of 4 shipping PRs; the other 3 (plus this phase's own closing PR) merged on a disclosed rate-limit waiver — see Truth 6 and Human Verification. |
-| REL-03 | 06-04, 06-05 | `helpers/pyproject.toml` dependencies stay empty | ✓ SATISFIED | `dependencies = []` confirmed live; test passes; re-asserted on the merged milestone branch per 06-RECEIPTS.md (re-run independently in this verification: `test_frozen_contract.py` 6/6 pass on the current `docs/milestone-v5-diff-review` HEAD). |
+| REL-01 | 06-01 through 06-06 | Every observed defect fixed or dispositioned; frozen contract unchanged, asserted by tests | ✓ SATISFIED | 06-DEFECTS.md's 13-row terminal-disposition table; `test_frozen_contract.py` 6/6 passing; both verification gaps (doc contradiction, ROADMAP tracking) now closed. |
+| REL-02 | 06-01 through 06-06 | Governance: branch, Conventional Commit, semver bump + CHANGELOG in the same commit, CodeRabbit walkthrough before merge | ⚠️ PARTIALLY SATISFIED | Branch/commit/semver/CHANGELOG discipline fully verified across all 17 shipping commits. PR #29 itself satisfies the walkthrough-before-merge clause. The pre-existing PRs #24-#27 waiver question remains open per human verification. |
+| REL-03 | 06-04, 06-05, 06-06 | `helpers/pyproject.toml` dependencies stay empty | ✓ SATISFIED | `dependencies = []` confirmed live; zero-deps test passes; 06-06 added no dependency. |
 
-No orphaned requirements: `grep -n "^requirements:" 06-0{1..5}-PLAN.md` shows REL-01/REL-02 on all five plans and REL-03 added at 06-04/06-05 — every ID REQUIREMENTS.md maps to Phase 6 appears in at least one plan's `requirements` field.
+No orphaned requirements: `grep -n "^requirements:" 06-0{1..6}-PLAN.md` shows REL-01/REL-02 on plans 06-01 through 06-03, and REL-01/REL-02/REL-03 on 06-04 through 06-06 — every ID REQUIREMENTS.md maps to Phase 6 (`.planning/REQUIREMENTS.md:216-218`) appears in at least one plan's `requirements` field.
 
 ### Anti-Patterns Found
 
-| File | Line | Pattern | Severity | Impact |
-|------|------|---------|----------|--------|
-| `plugins/sec-overlay/skills/sec-overlay/SKILL.md` | 95 | Documentation directly contradicts shipped behavior (`review` does have `--workspace`, doc says it doesn't) | 🛑 Blocker | Misleads a user or agent driving a review run into believing per-run workspace isolation is impossible for `review`, when it shipped and is tested in this same phase. |
-| `plugins/sec-overlay/skills/sec-overlay/README.md` | 34-36 | Same contradiction | 🛑 Blocker | Same as above; violates the plugin's own hard "docs track code" rule. |
-| `plugins/sec-overlay/skills/sec-overlay/helpers/README.md` | 267 | Same contradiction | 🛑 Blocker | Same as above. |
-| `.planning/ROADMAP.md` | 30, 263 | Stale tracking state — Phase 6 shown incomplete/in-progress despite STATE.md and 06-DEFECTS.md both recording it closed | ⚠️ Warning | Not a code defect, but a real inconsistency in the milestone's own source of truth; could mislead a future `roadmap.get-phase` query or a person skimming the roadmap. |
+No `TBD`/`FIXME`/`XXX` markers found in any file 06-06 modified. No stub patterns, no empty implementations, no hardcoded-empty data flowing to rendered output.
 
-No `TBD`/`FIXME`/`XXX` markers found in any file this phase modified.
+The prior anti-pattern finding (ROADMAP.md Progress-table row silently reverted by commit `b7c7a01`) is resolved — the orchestrator re-applied the fix. No open anti-patterns remain.
 
 ### Human Verification Required
 
-#### 1. CodeRabbit-walkthrough waiver policy
+#### 1. CodeRabbit-walkthrough waiver policy (carried forward, unchanged)
 
 **Test:** Confirm each of the 4 non-walkthrough merges (PRs #24, #25, #26, #27) was a deliberate,
 informed decision at merge time, consistent with root `CLAUDE.md`'s "wait for CodeRabbit's
@@ -147,41 +118,49 @@ walkthrough before merging" rule being explicitly and knowingly waived rather th
 skipped.
 **Expected:** The repository owner confirms these were intentional case-by-case waivers (or a
 standing policy the owner accepts going forward), not an oversight.
-**Why human:** The factual record (rate-limit message on PR #24, absence of a walkthrough
-comment on #24/#25/#26/#27) is confirmed by `gh pr view`, but intent — whether waiving the rule
-was the right call each time, and whether it should be normalized as policy — is a judgment call
-for the person who owns that rule, not something this verifier can settle from the git/GitHub
-record alone.
+**Why human:** 06-RECEIPTS.md narrates the waiver as the "repository owner['s]" decision, but this
+is the executing agent's own account of the human's intent, not an independently recorded human
+confirmation (no quoted approval, no decision-log entry). Policy judgment, not a fact this
+verifier can settle from the git/GitHub record. PR #29 itself is not part of this concern — it
+received a walkthrough over an hour before merge.
+
+#### 2. Explicit-path staging and unbypassed hook claims
+
+**Test:** Confirm both 06-06 commits were staged with explicit file paths (never `git add -A`/
+`git add .`/`git commit -a`) and that no commit used `--no-verify`.
+**Expected:** Session transcript or hook-run log confirms explicit staging and an unbypassed
+prek run for both commits.
+**Why human:** 06-06-PLAN.md's own prohibitions list marks this `status: recalled` — a
+self-attestation, not independently checkable from git history (the resulting commit tree looks
+identical regardless of staging method, and a hook bypass leaves no trace in the commit object).
+Diffs are cleanly scoped, consistent with the claim but not proof of it.
 
 ### Gaps Summary
 
-Two gaps block a clean pass, both objectively confirmed against the live codebase rather than
-inferred from SUMMARY.md narrative:
+No gaps remain. Both defects this phase's original verification found are now closed and
+independently confirmed against the live codebase:
 
-1. **Stale, self-contradicting documentation (blocker).** This phase's own code-review pass
-   (06-REVIEW.md, committed at the current HEAD `01818ed`) found that three files — `SKILL.md`,
-   `skills/sec-overlay/README.md`, and `helpers/README.md` — still claim `review` has no
-   `--workspace` override, a claim this same phase's 06-01 plan disproved by shipping exactly
-   that flag. The review even wrote out the exact fix text. No commit after the review report
-   applies it, and no disposition for this finding exists in 06-DEFECTS.md or
-   `deferred-items.md`. This is a real, fixable, already-diagnosed gap — not a matter of
-   interpretation.
+1. **Documentation contradiction (original Gap 1) — closed.** All three doc surfaces
+   (`SKILL.md`, `skills/sec-overlay/README.md`, `helpers/README.md`) now correctly describe
+   `review`'s `--workspace` override, and a code-derived pytest guard
+   (`test_no_live_doc_denies_the_review_workspace_override`) pins the fix against `run_review`'s
+   real signature and walks the whole plugin doc tree, so a future regression fails CI rather
+   than waiting for the next manual review.
 
-2. **Stale ROADMAP.md tracking state (warning).** Phase 6's header checkbox and Progress-table
-   status/date were not brought in line with STATE.md's `status: complete` and 06-DEFECTS.md's
-   own closure statement, even though the phase's plans list within the same file was updated to
-   `5/5` and all five plan checkboxes were checked. A small, mechanical fix (check the box, set
-   status to "Complete" with the closure date, matching Phases 1-5's format).
+2. **ROADMAP.md tracking state (original Gap 2) — closed, after one regression.** Commit
+   `bf6e65a` fixed all three tracking surfaces; the next commit touching the file (`b7c7a01`)
+   silently reverted the Progress-table row while fixing an unrelated adjacent line; the
+   orchestrator has now re-applied the fix. All three surfaces (header checkbox, Plans rollup,
+   Progress table) currently agree and match Phases 1-5's format.
 
-Everything else checked — the frozen-contract identity guarantee, the real 14-file dispatched
-review with its non-vacuous E-12 subset verdict, the per-commit governance discipline (branch,
-Conventional Commit, strictly-increasing semver, CHANGELOG adjacency), the zero-runtime-
-dependency claim, and all 12 Phase-5-ledger dispositions — is independently verified against the
-live code, git history, and GitHub PR record, not merely restated from 06-RECEIPTS.md or
-06-DEFECTS.md. The CodeRabbit-walkthrough clause of REL-02 is the one item this verifier cannot
-close on its own and routes to human judgment.
+Two items remain that this verifier cannot resolve from repository state alone and are routed to
+human verification: the CodeRabbit-walkthrough waiver policy for PRs #24-#27 (a judgment call for
+the rule's owner), and the explicit-path-staging/unbypassed-hook attestation for 06-06's two
+commits (a self-reported claim with no independent record). Neither blocks on code correctness —
+both are governance-process attestations this verifier is structurally unable to confirm or deny
+from the git/GitHub record.
 
 ---
 
-_Verified: 2026-08-22T00:01:11Z_
+_Verified: 2026-08-22T15:45:00Z_
 _Verifier: Claude (gsd-verifier)_
