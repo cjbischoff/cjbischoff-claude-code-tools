@@ -2,6 +2,18 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.11 - 2026-08-21
+
+### Added
+
+- `test_claude_md_phase_order_tracks_phase_table` in
+  `helpers/tests/test_docs_invariants.py` (T-06-02-06): asserts every phase the
+  `CLAUDE.md` "Phase order" block names appears in the same relative order as
+  the live `PHASE_TABLE`, so a table reorder now fails the suite instead of
+  silently drifting from the maintainer manual. The block is a condensed
+  operator view, so omitted rows (`factcheck`, `demote-noise`, `selfscore`)
+  are exempt; order of the named rows is enforced.
+
 ## 1.69.10 - 2026-08-21
 
 ### Added
