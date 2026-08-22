@@ -953,3 +953,11 @@ order, independent of the byte-identity guards above. `test_helpers_declare_zero
 reads the real `pyproject.toml` via stdlib `tomllib` and asserts `[project]
 dependencies == []` (REL-03), closing the requirement with a running check instead
 of a one-time manual read.
+
+Phase 7 (v5.1 tech-debt cleanup, PR #23 nitpicks) tightens two existing suites without
+adding tests. `test_rule_glob.py`'s CLI-forwarding test now passes `--workspace` and
+asserts the value reaches `run_review` (TEST-01). `test_review_live.py`'s three WR-01
+guard tests share a `_git_spy` helper that monkeypatches `subprocess.run` with a
+recording spy and assert an empty call list, proving the `--root` guard exits 2 before
+any git subprocess runs (TEST-02). `test_cli.py`'s pre-existing ruff `I001` import
+order is fixed, so a full-repo `ruff check` runs clean (LINT-01).

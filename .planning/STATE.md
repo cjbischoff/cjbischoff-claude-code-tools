@@ -1,20 +1,20 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.0
-milestone_name: Hybrid Diff-Review Architecture
-status: Awaiting next milestone
-stopped_at: Phase 06 UAT complete (2/2 passed), verification passed — milestone v5.0 ready to close
-last_updated: "2026-08-22T17:47:19.977Z"
+milestone: v5.1
+milestone_name: Tech-Debt Cleanup
+current_phase: 7
+current_phase_name: Test & Lint Debt Cleanup
+status: ready_to_plan
+stopped_at: Phase 7 context gathered
+last_updated: "2026-08-22T20:28:04.586Z"
 last_activity: 2026-08-22
-last_activity_desc: "Completed 06-06-PLAN.md — Phase 06 fully closed, PR #29 merged"
+last_activity_desc: Roadmap created (Phases 7-8), 7/7 requirements mapped
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 30
-  completed_plans: 30
-  percent: 100
-current_phase: 06
-current_phase_name: remediation-and-governed-release
+  total_phases: 2
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,14 +25,16 @@ See: .planning/PROJECT.md (updated 2026-08-22)
 
 **Core value:** The marketplace never ships an unverified claim — validated plugins,
 governed releases, receipt-backed findings.
-**Current focus:** Planning next milestone (`/gsd-new-milestone`)
+**Current focus:** Phase 7 — Test & Lint Debt Cleanup
 
 ## Current Position
 
-Phase: Milestone v5.0 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-08-22 — Milestone v5.0 completed and archived
+Phase: 7 of 8 (Test & Lint Debt Cleanup)
+Plan: Not yet planned
+Status: Ready to plan
+Last activity: 2026-08-22 — Roadmap created (Phases 7-8), 7/7 requirements mapped
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -60,40 +62,6 @@ Last activity: 2026-08-22 — Milestone v5.0 completed and archived
 - Trend: -
 
 *Updated after each plan completion*
-**Per-Plan Metrics:**
-
-| Plan | Duration | Tasks | Files |
-|------|----------|-------|-------|
-| Phase 01 P01 | 48min | 3 tasks | 3 files |
-| Phase 01 P02 | 33min | 2 tasks | 24 files |
-| Phase 01 P03 | 14min | 2 tasks | 3 files |
-| Phase 02 P01 | 2h35m | 3 tasks | 15 files |
-| Phase 02 P02 | 1 session | 3 tasks | 6 files |
-| Phase 02 P03 | 1 session | 3 tasks | 10 files |
-| Phase 02 P04 | one session | 3 tasks | 10 files |
-| Phase 02 P05 | 1 session | 3 tasks | 6 files |
-| Phase 03 P01 | 1h31m | 2 tasks | 14 files |
-| Phase 03 P02 | 1h10m | 3 tasks | 7 files |
-| Phase 03 P03 | 55min | 3 tasks | 15 files |
-| Phase 03 P04 | 40min | 3 tasks | 14 files |
-| Phase 03 P05 | 150m | 3 tasks | 12 files |
-| Phase 03 P06 | ~2 hours across two sessions | 3 tasks | 11 files |
-| Phase 03 P07 | 55min | 3 tasks | 8 files |
-| Phase 04.1 P01 | 55min | 3 tasks | 12 files |
-| Phase 04 P01 | 47min | 3 tasks | 12 files |
-| Phase 04 P02 | 55min | 3 tasks | 10 files |
-| Phase 04 P03 | 18min | 2 tasks | 8 files |
-| Phase 04 P04 | 26min | 3 tasks | 10 files |
-| Phase 05 P01 | 87m | 2 tasks | 10 files |
-| Phase 05 P02 | 84min | 3 tasks | 5 files |
-| Phase 05 P03 | 22min | 3 tasks | 1 file |
-| Phase 05 P04 | 45min | 3 tasks | 3 files |
-| Phase 06 P01 | unavailable | 3 tasks | 7 files |
-| Phase 06 P02 | 14min | 3 tasks | 11 files |
-| Phase 06 P03 | 45min | 3 tasks | 15 files |
-| Phase 06 P04 | 150m | 2 tasks | 5 files |
-| Phase 06 P05 | unavailable (context-compaction boundary) | 3 tasks | 5 files |
-| Phase 06 P06 | unavailable | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -105,89 +73,9 @@ Recent decisions affecting current work:
 - ADR-2026-08-04 (aghast/OpenAnt native adoption) is proposed, not locked
 - CVSS v4.0 pinned harness-wide (ruling R2); Mermaid caps hard-enforced
 - All 50 ingested docs are delivered baseline — do not re-plan delivered work
-- Phase 2 must rename or extend the new coverage-manifest module to avoid colliding
-  with the already-shipped `helpers/sec_overlay/coverage.py`
-
-- Phase 3 must state its Python-version floor for `**`-aware globbing explicitly
-  (`pathlib.PurePath.full_match` needs 3.13; fall back to a custom matcher otherwise)
-
-- [Phase ?]: Recorded the real observed pytest failure instead of a stale documented one (test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd vs test_citations.py::test_all_mapped_ids_exist_in_seed, which now passes)
-- [Phase ?]: VAL-03 prek receipt cannot show conventional-commit-msg under --all-files (stages: [commit-msg] never fires); recorded honestly with a config disposition instead of forcing a match
-- [Phase ?]: Maintainer selected proceed-as-triaged: no ty diagnostic touches sec_overlay/models.py or evidence.py (frozen contract, D-02); Plan 02 executes ruff/ty fixes under normal governance
-- [Phase ?]: Stayed on docs/milestone-v5-diff-review branch for Plan 02 fixes rather than opening a new fix/* branch
-- [Phase ?]: VAL-03 config-dispositioned row got no fix commit per maintainer's proceed-as-triaged Remediation Route, despite generic template language listing config as actionable
-- [Phase ?]: Applied deviation Rule 2 in stage_validate.py: adapter wrappers close a real crash-on-malformed-input gap while also satisfying ty
-- [Phase ?]: Recorded pytest's final receipt honestly at Exit code 1 (2 environmental failures unchanged from baseline) rather than fabricate a green result to satisfy the plan's literal six-line automated-verify count
-- [Phase ?]: Proceeded past two untracked GSD-orchestration files that made Task 1's precondition literally unmet, rather than halting, since they touch none of the six gates and are outside this plan's files_modified scope
-- [Phase ?]: Confirmed all 9 Plan 02 fix commits carried plugin.json + CHANGELOG.md together (9 consecutive patch bumps 1.37.3-1.37.11), proving governance compliance across every fix
-- [Phase ?]: Coverage manifest shape/path confirmed: artifacts/coverage_manifest.json, {version, base_sha, head_sha, seal, files}
-- [Phase ?]: PositionResult kept as phase-owned dataclass, not a models.FindingStatus member — models.py stays frozen
-- [Phase ?]: positioning.py uses exact consecutive-string matching only; no difflib, no fuzzy-match-as-exact risk
-- [Phase ?]: partition's new keyword params (diff_line_counts, binary_paths, max_diff_lines) default to no-op values so cli.py's call site needs no change
-- [Phase ?]: CoverageTransitionError extends RuntimeError (plan spec), not ValueError
-- [Phase ?]: seal() raises on empty manifest instead of vacuously returning complete (T-02-05)
-- [Phase ?]: review_ledger.json is a separate artifact from findings.json because models.py is the frozen milestone contract and a new FindingStatus member would break the Go port's byte mirror
-- [Phase ?]: PositionResult carries the original claimed snippet on every result, including declines, so the report can show the claim without a second file lookup
-- [Phase ?]: Partial coverage seal isolated via try/except around parse_hunks; no organic trigger exists today, so tests drive it by monkeypatching parse_hunks (D-15)
-- [Phase ?]: Kept Python floor at 3.12 (D-01): rule_glob.glob_match hand-rolls a **-aware segment matcher instead of the 3.13-only pathlib.PurePath.full_match
-- [Phase ?]: reflection.apply_verdict is retract-only: a verdict can remove only a finding the code submitted, never add/rank/rewrite; PROTECTED_SUBJECT_CLASSES is a hardcoded veto (D-16)
-- [Phase ?]: read_rule_file_safe's repo_root is the per-layer resolution base, not a separately threaded true project root
-- [Phase ?]: Rule-file safety gate hard-raises on any violation; no OCR-style warn-and-fallthrough (D-08)
-- [Phase ?]: Boundary check runs against the symlink-resolved path, stronger than OCR's pre-resolution check
-- [Phase ?]: BUILTIN_PATH_RULE_MAP trailing **/* catch-all makes default.md a reachable, testable map value
-- [Phase ?]: default.md rewritten to five-family/exclusion-block structure to satisfy the parametrized conformance test (Rule 2)
-- [Phase ?]: REV-01: option-a — new review_findings.py module wraps findings in ReviewFinding, keeping models.py/evidence.py frozen (D-11)
-- [Phase ?]: apply_profile returns a 2-tuple (kept, dropped), deliberately diverging from review_position_gate's 3-tuple since profile gating cannot produce a decline
-- [Phase ?]: Security-profile baseline captured as a committed JSON fixture, not recomputed inline, so a future regression fails the comparison
-- [Phase ?]: Injection assigned to STATIC_CHECKABLE_CLASSES explicitly (ships unconfirmed) since its sink matches Tier-1 static-tool reachability targets
-- [Phase ?]: disposition_without_receipt raises ValueError on unknown class instead of defaulting, forcing explicit classification of future general-defect classes
-- [Phase ?]: diffscope.file_text_at_ref added (Rule 2): finding.evidence is derived by the harness from real file text at a ref, never trusted from the model's claim
-- [Phase ?]: run_review gate-chain order fixed: position gate -> apply_profile -> apply_verdict -> receipt gate, never reordered for test convenience
-- [Phase ?]: recorded_return_source treats missing return, stale base/head, and ReviewResponseError identically as one review_source_skipped entry (D-15 fail-open)
-- [Phase ?]: Task 2 disposition-ladder tests use a fixture local to each test, never a mutation of _dual_run_fixture (its thread-safety entry is gate-C, an unconditional drop)
-- [Phase ?]: Task 3's composed test relies on the real reflection.apply_verdict called with an empty verdict dict, which keeps everything by construction, instead of a mock
-- [Phase ?]: DIFF-04 closed: run_review resolves workspace via RepoMemory.for_target, matching scan/audit
-- [Phase ?]: Task 3 found sarif.py/review_comments.py already correct from tracer plan; closed test coverage gap only, no implementation change
-- [Phase ?]: Rewrote Finding(**overrides) test helpers as explicit-parameter functions after ty check flagged the dict-splat as untypeable against the dataclass constructor
-- [Phase ?]: Chose the locale-sibling grouping rule (uncapped member count) over the impl/test pairing rule (capped at 2) to build a genuine three-file ReviewUnit for the timeout acceptance test
-- [Phase ?]: Reused TimeoutError(TIMEOUT_NOTE) through the existing str(exception)-as-note manifest.fail() path so the timeout branch needs no special-casing versus an ordinary per-file fetch failure
-- [Phase ?]: SCALE-03 Task 1: identity lives on CoverageManifest itself (option-a), not a sibling artifact
-- [Phase ?]: SCALE-03 Task 3: resumed reads sourced from prior manifest, round-tripped through resolve_ref_sha; no changes needed in diffscope.py
-- [Phase ?]: Split test_review_live.py's profile-comparison test into two independent targets (Rule 1 fix for Task 2's identity gate regression)
-- [Phase ?]: Zero-reviewable early-return path keeps writing comments from an unsealed manifest.to_dict() rather than sealing an empty manifest, since CoverageManifest.seal() raises by design on an empty manifest (T-02-05).
-- [Phase ?]: Production runner default becomes partial(subprocess.run, timeout=timeout) at the single r = runner or ... assignment, so every git call in run_review inherits the kill deadline through the shared r variable with no other call-site change.
-- [Phase ?]: Per-call subprocess timeout equals the declared --timeout (not a fraction of it) so the future-level timeout always fires first and TIMEOUT_NOTE bookkeeping stays deterministic.
-- [Phase ?]: 05-01: Zero live findings from the CLI-only review run is by-design (D-13/D-15), not a gap — AUD-06 grounds in CoverageManifest.seal()/apply_profile(), not genuine LLM findings
-- [Phase ?]: 05-01: Used SEC_OVERLAY_HOME override for Task 2's general-profile run since review has no --workspace flag and the SCALE-03 resume-identity guard rejects a second profile against the default sidecar
-- [Phase ?]: 05-01: security-kept subseteq general-kept subset check passed vacuously (empty set); flagged as E-12 in 05-DEFECTS.md for Phase 6 to re-verify against non-empty findings
-- [Phase ?]: Triaged redteam/postflight PHASE_TABLE gap as run-blocker; closed via documented standalone module calls, deferred wiring fix to Phase 6
-- [Phase ?]: Corrected CRYPTO-0001 runtime_disposition after discovering wants_runtime() also keys on status
-- [Phase ?]: 05-03: validate_findings() redirected to a scratch copy via Workspace(findings_dir_override=...) rather than called directly against the live D-09-retained sidecar, since it has an undocumented write side effect on receipt_tier mismatch; non-mutation proven via before/after MD5 checksums
-- [Phase ?]: 05-03: No evidence_sources string for the needs-deployment-testing findings is quoted in the committed receipt, since those strings embed real target-repo file paths — the plan's framing that evidence-source names are always safe tool identifiers does not hold universally for this pipeline's real data
-- [Phase ?]: 05-03: report.py's intentional "Needs runtime proof"/"needs-runtime" labeling (never the literal enum string) confirmed as by-design after re-verifying the visibility check against the actual rendered labels
-- [Phase ?]: AUD-04 gate verdicts live under kb/gates/, not kb/receipts/ as the plan's literal glob states; corrected inline, both arch-gate/tm-gate pass=true errors=0
-- [Phase ?]: deps class is deliberately excluded from build_coverage_ledger()'s loop by design, confirmed via source inspection, not a coverage gap; the real deps finding is already tracked in 05-DEFECTS.md
-- [Phase ?]: Task 3's sanitization gate raw count of 9 is fully explained as each plan's own self-referential verify-command text and planner-discipline-allow comment; refined re-run confirms true count is 0, reported transparently with both numbers
-- [Phase 5 UAT]: WR-01/WR-02 review warnings ride Phase 6's REL-01 defect-disposition sweep (two deferred rows added to 05-DEFECTS.md)
-- [Phase 5 UAT]: Vacuous AUD-06 profile-superset pass accepted for Phase 5 closure; substantive re-check tracked by the E-12 deferral for Phase 6
-- [Phase ?]: CodeRabbit auto-review is restricted to the default branch (main); PRs against docs/milestone-v5-diff-review need a manual @coderabbitai review trigger
-- [Phase ?]: Pushed docs/milestone-v5-diff-review to origin (no new commits) to unblock gh pr create, which requires the base ref to exist remotely
-- [Phase ?]: redteam wired as an agent PhaseSpec between selfscore and artifact-gate (not after artifact-review), confirmed against real dispatch path and artifact_gate's hard requirement on redteam-plan.md
-- [Phase ?]: postflight registered in DETERMINISTIC_ACTIONS as the table's final phase, closing D-01 for both new phases
-- [Phase ?]: CodeRabbit review on PR 24 hit the reviewer's OSS rate limit; user waived the wait-for-walkthrough requirement for this PR, so no CodeRabbit findings exist for this diff
-- [Phase ?]: REL-01 doc-surface search found 6 files / 8 mentions of the false git-submodule claim for the vendored semgrep ruleset, corrected every live surface found rather than stopping at the ledger's one named file
-- [Phase ?]: PR #25 merge executed by orchestrator (gh pr merge blocked by Claude Code auto-mode classifier as an outward-facing action); CodeRabbit review triggered once per phase's standing non-default-base-branch override, merged without waiting further
-- [Phase ?]: Boundary category for E-12 probe: gate=None finding with cls=injection (real GENERAL_DEFECT_CLASSES member) -- narrowest margin by which security ever keeps a finding
-- [06-05]: E-12 closed non-vacuously by a real 14-file dispatch (orchestrator-executed, executor lacked Task/subagent-dispatch capability) over one identical recorded output set consumed by both profiles: security-kept=0, general-kept=5, `∅ ⊆ {5}` holds and is genuinely non-vacuous — the live result is the primary evidence, not Plan 04's unit-level backstop (D-08)
-- [06-05]: D-05 mixing-criterion disposed as unsatisfiable, not deferred: `functions/` has 5 commits total in its history, so no diff range can ever satisfy both the file-count and mixing sub-criteria at once
-- [06-05]: `06-02-SUMMARY.md`'s "fast-forward, no merge commit" claim about PR #24 is factually wrong (`git cat-file -p c546511` shows 2 parents); recorded as a newly-surfaced, non-blocking doc-accuracy defect, carried rather than fixed, since editing a past plan's SUMMARY.md is outside 06-05's file scope and an untriaged fifth PR would restart the governance rail
-- [Phase ?]: Task 1 boundary: d09-as-written — the D-09 sanitization boundary is used exactly as recorded, no widening or narrowing
-- [Phase ?]: E-12 closed non-vacuously by the live dispatch (security-kept=0, general-kept={5}); the primary D-08 path, not merely Plan 04's unit-level backstop
-- [Phase ?]: D-05 mixing-criterion row dispositioned as unsatisfiable: functions/ has only 5 commits total, so no diff range can ever satisfy both sub-criteria
-- [Phase ?]: 06-02-SUMMARY.md's PR #24 fast-forward claim is factually wrong (git cat-file shows 2 parents); recorded as a carried, not-fixed defect rather than silently corrected out-of-scope or left unrecorded
-- [Phase ?]: Governance receipt and REL-03 re-assertion consolidated into 06-RECEIPTS.md as single source of truth; 06-DEFECTS.md references it instead of duplicating
-- [Phase ?]: 06-06: reconstructed RED output from git history (git show + committed regex) rather than fabricating it, since original console output predated context compaction
-- [Phase ?]: 06-06: gh pr merge and gh pr view were denied by the Claude Code auto-mode classifier; user merged PR #29 manually (3333dca) rather than the executor routing around the denial
+- v5.1 roadmap: Phase 7 (TEST-01, TEST-02, LINT-01) and Phase 8 (DOC-01, DOC-02,
+  DOC-03, ING-01) chosen as the only two phases — both independent, no cross-phase
+  dependency, kept small per cleanup-milestone granularity guidance
 
 ### Pending Todos
 
@@ -195,28 +83,15 @@ None yet.
 
 ### Blockers/Concerns
 
-- Ingest WARNING: the 2026-08-11 kb-redesign design references a 2026-08-09 spec
-  absent from the ingest set. Locate the spec or affirm the design doc as authority.
-  See .planning/INGEST-CONFLICTS.md.
-
-- RESOLVED (06-05): all 11 `05-DEFECTS.md` rows (not 10 — recounted) carry a terminal
-  disposition in `06-DEFECTS.md` (9 fixed, 1 dispositioned as unsatisfiable, 1 already-terminal
-  at arrival), plus a 12th newly-surfaced row (a `06-02-SUMMARY.md` merge-shape inaccuracy,
-  carried, not fixed). E-12 re-verified non-vacuously: security-kept=0, general-kept=5,
-  `∅ ⊆ {5}` — a genuine, non-degenerate subset demonstration (`06-RECEIPTS.md`).
-
-- 06-05's own PR ship steps (push, gh pr create, CodeRabbit wait, merge, branch delete) are
-  blocked in this executor -- orchestrator must complete. Once merged, the milestone-to-main
-  merge remains a separate step at milestone close (D-14).
-
-- RESOLVED (06-06): `gh pr merge` and `gh pr view` on PR #29 were both denied by the Claude
-  Code auto-mode classifier ("Blocked by classifier"), confirmed `gh`-specific since plain
-  `git log` worked immediately after. No workaround attempted. User merged PR #29 directly
-  under their own authority, producing merge commit `3333dca` on `docs/milestone-v5-diff-review`.
+- Ingest WARNING (Phase 8, ING-01): the 2026-08-11 kb-redesign design references a
+  2026-08-09 spec absent from the ingest set. Locate the spec or affirm the design
+  doc as authority. See .planning/INGEST-CONFLICTS.md.
 
 ### Roadmap Evolution
 
-- Phase 04.1 inserted after Phase 4: Close gap: DIFF-04 — review sidecar workspace isolation (URGENT)
+- Roadmap created for v5.1 (2026-08-22): Phase 7 (Test & Lint Debt Cleanup) and
+  Phase 8 (Documentation Accuracy & Ingest Closure), continuing numbering from
+  v5.0's Phase 6 (+ inserted Phase 04.1). Coverage: 7/7 v5.1 requirements mapped.
 
 ## Deferred Items
 
@@ -227,23 +102,24 @@ Items acknowledged and carried forward from previous milestone close:
 | Growth | GROW-01 second plugin onboarding | v2 | 2026-08-16 |
 | Growth | GROW-02 automated plugin-validate gate | v2 | 2026-08-16 |
 
-Items acknowledged and deferred at v5.0 milestone close on 2026-08-22:
+Items acknowledged and deferred at v5.0 milestone close on 2026-08-22, now active
+work in this milestone (see Phase 7 / Phase 8 above):
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| deferred_item | Phase 06: pre-existing ruff `I001` in `plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_cli.py:778` | open | 2026-08-22 |
-| deferred_item | Phase 06: CodeRabbit nitpick — `test_rule_glob.py:231` does not assert `--workspace` forwarding (PR #23) | open | 2026-08-22 |
-| deferred_item | Phase 06: CodeRabbit nitpick — WR-01 tests do not prove the guard runs before git (`test_review_live.py:403-432`, PR #23) | open | 2026-08-22 |
-| deferred_item | Phase 06: `skills/sec-overlay/README.md` CLI-legend block not audited for further pre-existing misorderings | open | 2026-08-22 |
-| deferred_item | Phase 06: `skills/sec-overlay/helpers/README.md` pipeline diagram misses `selfscore`, `artifact-gate`, `artifact-review` nodes | open | 2026-08-22 |
-| deferred_item | Phase 06: `skills/sec-overlay/CLAUDE.md` "Phase order (one pass)" list misses a numbered `selfscore` entry | open | 2026-08-22 |
+| deferred_item | Phase 06: pre-existing ruff `I001` in `plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_cli.py:778` | in progress (Phase 7, LINT-01) | 2026-08-22 |
+| deferred_item | Phase 06: CodeRabbit nitpick — `test_rule_glob.py:231` does not assert `--workspace` forwarding (PR #23) | in progress (Phase 7, TEST-01) | 2026-08-22 |
+| deferred_item | Phase 06: CodeRabbit nitpick — WR-01 tests do not prove the guard runs before git (`test_review_live.py:403-432`, PR #23) | in progress (Phase 7, TEST-02) | 2026-08-22 |
+| deferred_item | Phase 06: `skills/sec-overlay/README.md` CLI-legend block not audited for further pre-existing misorderings | in progress (Phase 8, DOC-01) | 2026-08-22 |
+| deferred_item | Phase 06: `skills/sec-overlay/helpers/README.md` pipeline diagram misses `selfscore`, `artifact-gate`, `artifact-review` nodes | in progress (Phase 8, DOC-02) | 2026-08-22 |
+| deferred_item | Phase 06: `skills/sec-overlay/CLAUDE.md` "Phase order (one pass)" list misses a numbered `selfscore` entry | in progress (Phase 8, DOC-03) | 2026-08-22 |
 
 ## Session Continuity
 
-Last session: 2026-08-22T16:07:12Z
-Stopped at: Phase 06 UAT complete (2/2 passed), verification passed — milestone v5.0 ready to close
-Resume file: None
+Last session: 2026-08-22T20:28:04.573Z
+Stopped at: Phase 7 context gathered
+Resume file: .planning/phases/07-test-lint-debt-cleanup/07-CONTEXT.md
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Approve the roadmap, then run `/gsd-plan-phase 7`

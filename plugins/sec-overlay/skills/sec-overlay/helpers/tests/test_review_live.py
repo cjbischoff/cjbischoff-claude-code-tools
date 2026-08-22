@@ -400,32 +400,55 @@ def test_exit_codes_unchanged_invalid_ref_partial_seal_complete(tmp_path, monkey
 # --- WR-01: --root existence guard (06-01) -----------------------------------------------
 
 
-def test_run_review_rejects_a_nonexistent_root_with_exit_2(tmp_path, capsys):
+def _git_spy(monkeypatch):
+    """Install a recording spy over `subprocess.run` and return its call list.
+
+    `run_review` resolves its runner as `runner or subprocess.run`, so with no
+    injected runner every git call lands here. The spy raises so a guard that
+    fires late fails loudly; an empty call list proves the guard ran first.
+    """
+    calls: list = []
+
+    def spy(*args, **kwargs):
+        calls.append(args)
+        raise AssertionError("WR-01: git ran before the --root guard")
+
+    monkeypatch.setattr(subprocess, "run", spy)
+    return calls
+
+
+def test_run_review_rejects_a_nonexistent_root_with_exit_2(tmp_path, capsys, monkeypatch):
     """WR-01: a missing `--root` must exit 2 with one stderr line, never raise."""
+    git_calls = _git_spy(monkeypatch)
     missing = tmp_path / "does-not-exist"
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(missing), profile="security")
     assert rc == 2
+    assert git_calls == []
     err = capsys.readouterr().err.strip()
     assert err.startswith("error:")
     assert "--root" in err
     assert str(missing) in err
 
 
-def test_run_review_rejects_an_empty_root_with_exit_2(tmp_path, capsys):
+def test_run_review_rejects_an_empty_root_with_exit_2(tmp_path, capsys, monkeypatch):
     """WR-01: an empty `--root` string exits 2 through the same guard."""
+    git_calls = _git_spy(monkeypatch)
     rc = run_review(_BASE_SHA, _HEAD_SHA, "", profile="security")
     assert rc == 2
+    assert git_calls == []
     err = capsys.readouterr().err.strip()
     assert err.startswith("error:")
     assert "--root" in err
 
 
-def test_run_review_rejects_a_file_as_root_with_exit_2(tmp_path, capsys):
+def test_run_review_rejects_a_file_as_root_with_exit_2(tmp_path, capsys, monkeypatch):
     """WR-01: a regular file (wrong type, not missing) exits 2 through the same guard."""
+    git_calls = _git_spy(monkeypatch)
     a_file = tmp_path / "not-a-directory.txt"
     a_file.write_text("x")
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(a_file), profile="security")
     assert rc == 2
+    assert git_calls == []
     err = capsys.readouterr().err.strip()
     assert err.startswith("error:")
     assert "--root" in err

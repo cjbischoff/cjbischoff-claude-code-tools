@@ -775,9 +775,9 @@ def test_review_accepts_model_flag_and_forwards_it_to_run_review(tmp_path, monke
 def test_review_resume_with_changed_model_exits_2_via_main_entrypoint(
     tmp_path, monkeypatch, capsys
 ):
-    from sec_overlay import cli
-
     import subprocess
+
+    from sec_overlay import cli
 
     monkeypatch.setattr(subprocess, "run", _make_review_runner(["a.py"]))
 

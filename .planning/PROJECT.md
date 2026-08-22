@@ -26,12 +26,22 @@ core stays stdlib-only and the frozen JSON contract is unchanged.
 **Milestone stats:** 7 phases, 30 plans, 116 tasks, 212 files changed,
 +38,296/−294 lines, 2026-08-17 through 2026-08-22.
 
-## Next Milestone Goals
+## Current Milestone: v5.1 Tech-Debt Cleanup
 
-Not defined yet. Run `/gsd-new-milestone` to define them. Candidates carried forward:
-- GROW-01: second plugin onboarding (deferred since v2 planning)
-- GROW-02: automated plugin-validate gate (deferred since v2 planning)
-- Six acknowledged Phase 06 tech-debt items (see STATE.md Deferred Items)
+**Goal:** Clear all 6 acknowledged Phase 06 tech-debt items and resolve the open
+ingest question, so the project has zero deferred items and zero open blockers.
+
+**Target features:**
+- Fix the pre-existing ruff `I001` in `helpers/tests/test_cli.py:778`
+- Close both CodeRabbit test nitpicks from PR #23 (`--workspace` forwarding
+  assertion; WR-01 guard-before-git proof)
+- Close the three sec-overlay doc gaps (CLI-legend audit, pipeline diagram
+  nodes, phase-order `selfscore` entry)
+- Resolve the ingest question: locate the missing 2026-08-09 spec or affirm
+  the 2026-08-11 kb-redesign design doc as authority
+
+GROW-01 (second plugin onboarding) and GROW-02 (automated plugin-validate gate)
+defer again: no second-plugin candidate is named.
 
 ## Requirements
 
@@ -72,7 +82,17 @@ All items below shipped before this project started.
 
 ### Active
 
-(None — define with `/gsd-new-milestone`)
+Milestone v5.1 scope (REQ-IDs assigned in REQUIREMENTS.md):
+
+- Lint debt: ruff `I001` fix in `helpers/tests/test_cli.py:778`
+- Test debt: `test_rule_glob.py:231` asserts `--workspace` forwarding
+- Test debt: WR-01 tests prove the guard runs before git
+- Doc debt: `skills/sec-overlay/README.md` CLI-legend block audited
+- Doc debt: `helpers/README.md` pipeline diagram carries `selfscore`,
+  `artifact-gate`, `artifact-review` nodes
+- Doc debt: `skills/sec-overlay/CLAUDE.md` phase-order list carries `selfscore`
+- Ingest: 2026-08-09 spec located, or the 2026-08-11 kb-redesign design doc
+  affirmed as authority
 
 ### Out of Scope
 
@@ -155,4 +175,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-22 after v5.0 milestone*
+*Last updated: 2026-08-22 at v5.1 milestone start*

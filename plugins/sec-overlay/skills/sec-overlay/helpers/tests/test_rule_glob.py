@@ -231,18 +231,22 @@ def test_review_cli_parses_rule_and_exclude_and_reaches_run_review(tmp_path, mon
                          timeout=600, max_git_procs=16, model=None, workspace=None):
         captured["rule_path"] = rule_path
         captured["excludes"] = excludes
+        captured["workspace"] = workspace
         return 0
 
     monkeypatch.setattr(cli, "run_review", fake_run_review)
     rule_file = tmp_path / "custom-rule.json"
     rule_file.write_text(json.dumps({"rules": []}))
+    ws_dir = tmp_path / "ws-override"
     rc = cli.main([
         "review", "--base", "main", "--head", "HEAD", "--root", str(tmp_path),
         "--rule", str(rule_file), "--exclude", "a", "--exclude", "b",
+        "--workspace", str(ws_dir),
     ])
     assert rc == 0
     assert captured["rule_path"] == str(rule_file)
     assert captured["excludes"] == ["a", "b"]
+    assert captured["workspace"] == str(ws_dir)
 
 
 def test_run_review_excludes_filtered_files_from_reviewable_set(tmp_path):

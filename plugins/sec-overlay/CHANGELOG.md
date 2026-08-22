@@ -2,6 +2,20 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.14 - 2026-08-22
+
+### Fixed
+
+- `helpers/tests/test_rule_glob.py`: the CLI-forwarding test now passes
+  `--workspace` and asserts the value reaches `run_review`, instead of only
+  asserting the call occurs (TEST-01, CodeRabbit nitpick, PR #23).
+- `helpers/tests/test_review_live.py`: all three WR-01 guard tests install a
+  recording spy over `subprocess.run` and assert an empty call list, proving
+  the `--root` guard exits 2 before any git subprocess runs (TEST-02,
+  CodeRabbit nitpick, PR #23).
+- `helpers/tests/test_cli.py:778`: fixed the pre-existing ruff `I001`
+  import-order finding; a full-repo `ruff check` now runs clean (LINT-01).
+
 ## 1.69.13 - 2026-08-22
 
 ### Fixed
