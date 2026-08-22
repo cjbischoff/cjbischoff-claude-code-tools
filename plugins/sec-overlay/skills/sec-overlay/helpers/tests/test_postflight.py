@@ -23,7 +23,7 @@ def test_build_prior_context_captures_confirmed_and_rejected(tmp_path):
     kinds = {i.kind for i in c.items}
     assert "prior_finding" in kinds and "note" in kinds
     assert all(i.trust == "prior-scan" for i in c.items)
-    rej = [i for i in c.items if i.kind == "note"][0]
+    rej = next(i for i in c.items if i.kind == "note")
     assert "dead code" in rej.text and "do not re-litigate" in rej.text
     assert len(c.items) == 2   # candidate excluded
 

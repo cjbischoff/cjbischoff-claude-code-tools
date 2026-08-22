@@ -112,11 +112,11 @@ def test_cli_boundary(capsys):
 
 
 def test_callers_requires_call_shape():
-    out = "\n".join([
-        "app/x.ts:3:import { multipass } from './m'",   # import, not a call
-        "app/y.ts:9:  const u = multipass(token)",        # real call
-        "app/z.ts:1:// multipass docs mention",           # prose
-    ])
+    out = (
+        "app/x.ts:3:import { multipass } from './m'\n"  # import, not a call
+        "app/y.ts:9:  const u = multipass(token)\n"  # real call
+        "app/z.ts:1:// multipass docs mention"  # prose
+    )
 
     class R:
         stdout = out

@@ -16,6 +16,16 @@ entry point; read the parent map for the full inventory.
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
 
+`review_findings.py` (new, REV-01) adds the review-profile gate `apply_profile` — see the
+module map entry in [`../README.md`](../README.md) for the full contract; `cli.py`'s
+`run_review` and `report.py`'s `write_report`/`write_review_ledger` now thread its
+`ReviewFinding` output through, both documented at the same map entries.
+
+`workspace.py`'s `Workspace` now coerces `str` path arguments via a hand-written `__init__`
+instead of a dataclass `__post_init__` — the stored fields stay `Path`-typed, but the
+constructor accepts `str | Path` so `Workspace('<path>')` (as agent-authored prompts write it)
+type-checks under `ty` as well as running correctly. No behavior change.
+
 `kb.py` gained the arc42/threat-model tree path helpers (`arch_dir`/`arc42_path`/
 `container_diagram_path`, `threat_dir`/`threat_model_path`/`dfd_path`), replacing the old
 `kb/architecture.md` and `kb/THREAT_MODEL.md` single-file paths; `kb_status` now reports
@@ -63,6 +73,12 @@ silent partial result (ISSUE-034). Pass `strict=False` only for a deliberately p
 is a planning decision, not a coverage hole (R14).
 
 `context.py` also gained `cited_source_docs()` (every `source_doc` an item or its history cites); `stage_validate.py`'s `_validate_context` now appends an error when a cited doc is absent from `provenance["docs_read"]` (ISSUE-021).
+
+`stage_validate.py`'s `_VALIDATORS` dict now routes every entry through `_adapt_dict`/
+`_adapt_optional_dict`, two small factories that isinstance-check the stage payload before
+delegating to the real validator. Previously only `_validate_runtime_test` guarded against a
+non-dict stage output; the other validators would raise `AttributeError` on malformed subagent
+JSON instead of returning a validation error. No behavior change for well-formed input.
 
 `findings_gate.py` gained `validate_citations(ws, root, *, statuses=None)`, a resolver-backed
 citation/anchor check: it rejects any finding at a gated status (default
@@ -182,10 +198,14 @@ review-improvements branch; keep them that way (run `ruff format` before committ
 
 `phases.py` (new) is the ordered phase table (`PhaseSpec`, `PHASE_TABLE`) plus pure sequencer
 helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit driver walks —
-see the module map entry. `PHASE_TABLE` now ends with `artifact-gate` (deterministic, input
-`_report`/`_sarif`, output `_artifact_gate_json`) then `artifact-review` (agent,
-`agents/artifact-review.md`, input `_artifact_gate_json`, output `_artifact_review_json`), both
-after `selfscore`. `architecture` now outputs `_arc42`/`_container` (`kb.arc42_path` /
+see the module map entry. `PHASE_TABLE` now ends with `redteam` (agent, `agents/redteam.md`,
+input `_findings_dir`, output `_redteam_plan` — `reports/redteam-plan.md`) after `selfscore` and
+before `artifact-gate` (deterministic, input `_report`/`_sarif`, output `_artifact_gate_json`) —
+`artifact_gate.run_artifact_gate` hard-requires `redteam-plan.md` to exist, so redteam must run
+first (D-01) — then `artifact-review` (agent, `agents/artifact-review.md`, input
+`_artifact_gate_json`, output `_artifact_review_json`), and finally `postflight`
+(deterministic, input `_artifact_review_json`, output `context.prior_context_path` —
+`kb/prior_context.json`), the durable cross-scan distillation that closes the pipeline. `architecture` now outputs `_arc42`/`_container` (`kb.arc42_path` /
 `kb.container_diagram_path`, i.e. `architecture/arc42.md` + `architecture/container-diagram.mmd`,
 not the old `kb/architecture.md`), immediately followed by the deterministic `arch-gate` row
 (input those same two paths, output `_arch_gate_json` — `kb/gates/arch-gate.json`). `threat_model`
@@ -221,14 +241,17 @@ reconciled class list passed to `render_dispatch(classes=...)` (no triage block,
 `demote-noise` → `partition.demote_noise`, `report` → `report.write_report`, `selfscore` →
 `selfscore.write_self_score`, `artifact-gate` → `_act_artifact_gate` (calls
 `artifact_gate.run_artifact_gate`, raising `PhaseHalt` naming every error when the gate rejects the
-run's own artifacts), `arch-gate` → `_act_arch_gate`, `tm-gate` → `_act_tm_gate`. Both new actions
+run's own artifacts), `arch-gate` → `_act_arch_gate`, `tm-gate` → `_act_tm_gate`, `postflight` →
+`_act_postflight` (calls `postflight.run_postflight(ctx.ws, ctx.sha)`, which distills the finished
+scan into `kb/prior_context.json` and records its own stage — D-01). Both `arch-gate`/`tm-gate`
 run `diagram_gate.run_diagram_gate` over `architecture/` (and `threat-model/` where present) plus
 `ste_lint.lint_prose` over their doc, write `{"passed", "errors", "warnings"}` to
 `kb/gates/<name>.json` via the shared `_write_gate` helper, and raise `PhaseHalt` naming every
 error; `_act_tm_gate` additionally runs `artifact_gate.check_duplication` against `arc42.md` and
 calls `run_diagram_gate(..., require_threat_model=True)` so a missing `dfd.mmd` is a gate error
-instead of the silently-optional default. `artifact-review` is an agent phase with no registered action — it
-auto-advances once `kb/gates/artifact-review.json` exists, same as any other output-only agent
+instead of the silently-optional default. `redteam` and `artifact-review` are agent phases with no
+registered action — each auto-advances once its declared output artifact exists
+(`reports/redteam-plan.md`, `kb/gates/artifact-review.json`), same as any other output-only agent
 phase. `run_audit(ctx)` walks `PHASE_TABLE` from the first phase not yet
 `done`: runs deterministic phases in place, and for an agent phase auto-advances only when it has
 an output path that is *not also* one of its inputs (several agent phases — `investigate`,
@@ -419,3 +442,523 @@ instead of re-reading HEAD. `run.py` gained `advance(target, phase, *, workspace
 runner=subprocess.run) -> Path`, the closing call for the six agent phases (`drive` never
 auto-advances past them): it loads the persisted baseline, fences, writes a receipt, and calls
 `campaign.record_stage`.
+
+`workspace.py`'s `Workspace` gained an `artifacts` property (`self.root / "artifacts"`) for
+review-mode run state — the coverage manifest and review ledger the new `review` CLI mode writes.
+It is never routed through `reports_dir`: review-mode run state is not a report. `ensure()` now
+also creates it.
+
+Four new modules wire the `sec-overlay review` tracer path — one changed file, one hunk, one
+finding through the full pipeline: `diffhunks.py` (`parse_hunks`/`added_line_numbers`/
+`line_in_hunk`), `file_select.py` (`partition` — path-shaped, never imports `Finding`),
+`positioning.py` (`resolve_position` — decline discipline, never a fuzzy match presented as
+exact), and `review_coverage.py` (`CoverageManifest`, sealing `complete`/`partial`, raising
+rather than sealing over a `pending`/`in_review` entry). `diffscope.py` (additive:
+`validate_ref`/`resolve_ref_sha`/`changed_file_records`/`file_diff_text`) and `phase_gate.py`
+(additive: `review_position_gate`) gained the ref/file and gate layers respectively — every
+pre-existing symbol in both is unchanged. `cli.py` gained the `review` subparser and
+`run_review`, matching the existing `scan`/`memory`/`audit` structure. Tracer scope only:
+batching, exit codes 2/3, the full extension allowlist, and the diff-line size cap land in a
+later plan. `coverage.py`, `models.py`, and `evidence.py` — the frozen milestone contracts —
+are untouched; no new runtime dependency. See the module map entries.
+
+`diffscope.py` and `cli.py` reached full ref-validation behavior: the allowlist pattern now
+also permits `~` (so `HEAD~1`-style ancestor refs validate), `changed_file_records` parses the
+full `--name-status` vocabulary including renames and copies (both carry `old_path`), and two
+new functions — `file_diff_line_count` and `binary_paths` — give `file_select.partition` its
+size-cap and binary inputs. `cli.py`'s `review` branch now catches a `ValueError` from ref
+resolution and exits `2` with one stderr line naming the ref, without laundering any other
+`ValueError` in the run into the same exit code. `resolve_ref_sha` itself now raises that
+`ValueError` when `git rev-parse --verify` exits non-zero (CR-02): a syntactically valid but
+nonexistent ref used to resolve to `""` instead of raising, silently defeating the exit-2 path
+this paragraph describes.
+
+`file_select.py`'s `ALLOWED_EXTENSIONS` is now the full 86-extension allowlist ported from
+open-code-review's `supported_file_types.json`, and a new `DEFAULT_EXCLUDE_GLOBS` tuple (40
+fnmatch-compatible patterns, brace-expanded from the OCR source's 34) drives a new
+`_is_generated(path)` check. `partition` now normalizes a git-quoted non-ASCII path
+(`_normalize_path`) before matching, lowercases the extension, and orders its checks deleted →
+generated → not-allowlisted; binary detection and the diff-line size cap land in a later task
+of the same plan. `fnmatch` approximates `doublestar`'s `**` (no true zero-or-more-segment
+matching) — the parametrised glob test in `tests/test_file_select.py` holds that gap honest.
+
+`file_select.py`'s `EXCLUSION_REASONS` is now enforced, not just documented: `ExcludedFile`
+raises `ValueError` in `__post_init__` for any reason outside the closed set. `partition` gained
+`diff_line_counts`, `binary_paths`, and `max_diff_lines` (default `DEFAULT_MAX_DIFF_LINES` =
+5000, D-11) keyword parameters, all defaulting to no-op values so a caller that omits them still
+works. The full check order is now deleted → binary → generated → not-allowlisted → too-large; a
+file at exactly the cap is reviewable. No `--max-diff-lines` CLI flag exists — a cap override is
+deferred to Phase 4.
+
+`cli.py`'s `run_review` now computes `diff_line_counts` (via `file_diff_line_count`, one call per
+changed file) and `binary_paths` before calling `partition`, and passes both through (CR-03): the
+tracer-path call left both kwargs at their no-op defaults, so an oversized or binary file stayed
+`reviewable` instead of landing in `selection.excluded` with reason `too-large`/`binary`.
+`run_review`'s docstring now states plainly that batching and exit codes 2/3 are implemented,
+not future work (WR-02) — only finding-source integration remains pending.
+
+`review_coverage.py`'s `CoverageManifest` reached full behavior (DIFF-03): a single
+`_ALLOWED_TRANSITIONS` table gates every state change, `seal()` now raises `CoverageTransitionError`
+(a `RuntimeError`, per the plan's Artifacts spec) on an empty manifest — sealing `complete` with
+nothing reviewed is a T-02-05 violation, not a vacuous pass — and `cli.py`'s `run_review` gained an
+early `if not selection.reviewable: return 0` before `seal()` so a diff with zero reviewable files
+exits cleanly instead of hitting that new raise (Rule 1 fix, caused by this same change).
+
+`diffhunks.py` reached full behavior (DIFF-04): `Hunk` is now a frozen dataclass with
+`tuple`-typed `added`/`deleted`/`context` fields, built through an internal mutable `_MutableHunk`
+builder during the parse loop and frozen on hunk close, so `parse_hunks` is provably pure. Line
+splitting moved from `str.replace("\r\n", "\n").split("\n")` to `str.splitlines()`, fixing a real
+bug where a diff ending in a newline produced a spurious trailing empty context line. New
+`hunk_for_line(hunks, line) -> Hunk | None` and module constant `NO_NEWLINE_MARKER`.
+
+`positioning.py` reached full behavior (POS-01, POS-02): `resolve_position` now runs a
+four-rung ladder in order — hunk match in the claimed file (`exact`), whole-file match in the
+claimed file (`relocated`/`whole-file-match`), match in exactly one other changed file
+(`relocated`/`cross-file-match`), else decline (`needs-position-review`/`no-hunk-match`) — and
+stops at the first rung producing exactly one match; two or more matches at any rung decline
+(`ambiguous-multiple-matches` or `cross-file-ambiguous`) instead of picking one. An absent or
+whitespace-only snippet declines (`no-snippet`) before any rung runs. `PositionResult` gained a
+`snippet` field (default `None`, backward-compatible), carried on every result including
+declines, so a report can show the claim without a second lookup. `phase_gate.py`'s
+`review_position_gate` gained an optional `file_text_by_path` parameter (default `None`, which
+disables the ladder's whole-file and cross-file rungs) to match `resolve_position`'s new
+five-argument signature — a Rule 3 fix for the signature this same plan's earlier task changed.
+
+`report.py` gained two additive functions (D-13, POS-02), wired into neither `to_markdown` nor
+`write_report` — plan 02-05 does that wiring once the drop ledger exists.
+`render_position_review_section(results: list[PositionResult]) -> str` renders one
+`## Position review required` markdown table, one row per declined result (claimed path,
+claimed line, snippet, reason), with pipe characters escaped and newlines collapsed in the
+snippet cell so a decline can never corrupt the table into a hidden row; an empty list still
+renders the heading plus an explicit none-required line.
+`write_review_ledger(ws, *, position_reviews, dropped) -> Path` writes
+`artifacts/review_ledger.json` (via the same `_atomic_write` shape as `review_coverage.py`)
+with `position_reviews`/`dropped` keys always present, each `position_reviews` entry carrying
+`state: "needs-position-review"`. A separate artifact rather than a `findings.json` state,
+since `models.py`'s `FindingStatus` enum has no review-position member and adding one would
+break the Go port's byte mirror. Both functions ship in plan 02-04, task 3.
+
+Plan 02-05, task 1 replaced `phase_gate.py`'s `review_position_gate` with the shape POS-03
+needs: a three-way split into `(kept, dropped, declines)` instead of the earlier two-way
+`(kept, dropped)`. A finding declines (`needs-position-review`) when the ladder cannot resolve
+it at all; every other finding is checked against `diffhunks.hunk_for_line` at its RESOLVED
+position (not its claimed one, since a relocated match can land outside every hunk's range) —
+inside a hunk keeps the finding at that resolved position, outside drops it with reason
+`outside-diff`. `DroppedFinding` now carries `path`, `line`, `rule_id`, and `reason` instead of
+a bare `finding_id`, and `DROP_REASONS` is a frozen set of the reason(s) the gate can emit —
+currently just `outside-diff`; `UNRESOLVED_POSITION_REASON` was removed (WR-01) since the gate
+never assigned it — a decline goes to `declines`, never `dropped`, so there was no second reason
+to reserve. The gate never mutates an input finding: a relocated keep copies the finding to its resolved
+position with `copy.copy`, so calling the gate twice on the same input is idempotent. `declines`
+entries are the `positioning.PositionResult` `resolve_position` returned (not the raw `Finding`) —
+that is the shape `report.write_report(..., position_reviews=...)` already requires.
+
+Plan 02-05, task 2 wires those drops into the human and machine reports. `report.py` gained
+`DROPPED_FINDINGS_HEADING` and `render_dropped_findings_section(dropped)`, matching the heading
+level, table style, and none-dropped fallback `render_position_review_section` already used for
+declines. `to_markdown` now takes `dropped` and `position_reviews` arguments and renders both
+sections unconditionally, right after the findings body — an empty run states none-dropped
+rather than omitting the section, for the same reason a declined finding is never silently
+dropped. `write_report` takes the same two arguments and threads them into both `to_markdown`
+and `write_review_ledger` from a single call, so the markdown table and the JSON ledger can
+never disagree about what was dropped in one run.
+
+Plan 02-05, task 3 wires the coverage manifest's seal to `run_review`'s exit code (D-15). The
+per-file loop now wraps `parse_hunks(file_diff_text(...))` in a `try`/`except`: on success the
+file transitions `pending` -> `in_review` -> `done` as before; on any exception the file
+transitions to `failed` with the exception text as its `note`, and the loop moves to the next
+file rather than aborting the run. A `complete` seal (including a diff with zero reviewable
+files) returns 0; a `partial` seal — one or more `failed` files — prints one "unfinished file"
+line per non-`done` entry, read through `manifest.entries()`, naming its path, state, and note,
+then returns 3. The pre-existing exit-2 ref-validation path is unaffected — it runs before the
+manifest exists at all. No `--max-diff-lines` override flag and no `logging` import: both stay
+out of scope for this milestone.
+
+Plan 03-06, task 3 wires the recorded review-agent returns into `run_review` as the review-mode
+finding source, closing the last gap noted above (`file_text_by_path` and a real position-gate
+snippet). `diffscope.py` gained `file_text_at_ref(path, ref, *, runner) -> str`, matching the
+module's existing injectable-runner convention (`git show <ref>:<path>`, empty string if the path
+did not exist at that ref) — every pre-existing symbol in the module is unchanged. `run_review`
+now builds `file_text_by_path` alongside `hunks_by_path`/`diff_text_by_path` in its per-file loop,
+then, before calling `review_position_gate`, sets each live finding's `evidence` field itself from
+the real file text at the finding's claimed line — never from the agent's own claim (the
+`code_comment` tool has no snippet field at all; D-13's tool-receipt discipline never trusts an
+LLM's claim of code content). This makes the position gate's whole-file "relocated" rung reachable
+for the first time in a live run, so a finding claimed outside every diff hunk is now correctly
+dropped with reason `outside-diff` instead of declining earlier as `no-snippet`. The gate chain
+order is unchanged: position gate → `review_findings.apply_profile` → `reflection.apply_verdict`
+→ the receipt gate.
+
+`cli.py`'s `run_review` closed the last gap in the drop/decline wiring (T-02-15, T-02-18):
+task 2/3 above wired the gate's output into `to_markdown`/`write_review_ledger`, but
+`run_review` itself still discarded `review_position_gate`'s returned `(kept, dropped,
+declines)` tuple and never called `report.write_report` — so no review-mode run actually
+produced `report.md`'s drop/decline sections or `artifacts/review_ledger.json`, in production
+or in the zero-drop/zero-decline case. `run_review` now captures `dropped`/`declines` and calls
+`write_report(ws, dropped=dropped, position_reviews=declines)` right after the gate call —
+before the reviewable/seal exit-code branches, so both a `0` (complete seal, including zero
+reviewable files) and a `3` (partial seal) run write both outputs from the same gate call. The
+exit-2 ref-validation path returns before the gate runs at all and is unaffected.
+
+Two new modules wire rule-doc resolution and reflection into the review tracer (Phase 3 plan
+01). `rule_glob.py` (`expand_braces`, `glob_match`, `resolve_rule_doc`, `builtin_rule_docs_dir`)
+ports OCR's brace-expansion + `**`-aware segment matcher to stdlib-only Python (case-insensitive,
+first-match-wins over `BUILTIN_PATH_RULE_MAP`, falling back to `rules/rule_docs/default.md`); the
+docs dir resolves from `Path(__file__)`, never cwd. `reflection.py` (`apply_verdict`,
+`build_payload`) is a retract-only LLM-verdict filter mirroring `evidence.py`'s "code decides, not
+the LLM's claim" discipline — a verdict can only remove a finding the code submitted, never add or
+rank one, and `PROTECTED_SUBJECT_CLASSES` is a hardcoded veto no verdict can override. `report.py`
+gained `reflection_retractions`/`reflection_skips` keyword params on `write_review_ledger`/
+`write_report`, added to the same ledger dict (`reflection_retractions`, `reflection_skipped`) —
+no second artifact file. `cli.py`'s `run_review` gained `--profile` (`security`/`general`,
+reserved for a later plan), resolves each reviewable file's rule doc, and runs its kept findings
+through `apply_verdict` (an always-empty verdict in this tracer slice — no finding source is wired
+into review mode yet) inside a `try`/`except` that records a `ReflectionSkip` and fails open on
+error rather than aborting the run.
+
+Phase 3 plan 05 (Task 1) adds the prompt and verdict-validation half of that filter.
+`render_reflection_prompt` renders the new `agents/review-filter.md` prompt wholesale via
+`sec_overlay.prompts.render_prompt`, substituting only `{{PATH}}`/`{{DIFF}}`/`{{COMMENTS}}`.
+`validate_verdict` parses the LLM's raw JSON tool-call response and raises `ReflectionResponseError`
+on invalid JSON, an unnamed tool, or a `report_incorrect_comments` id outside what the file's
+payload actually submitted — reading only the named tool, `comment_ids`, and `analysis`, so an
+extra field (severity, message, a would-be new finding) is silently ignored. `apply_verdict` now
+records a refused protected-class retraction (`REFUSED_REASON`) in the same `retractions` list as
+an applied one (`RETRACTED_REASON`) rather than dropping it — the finding still survives in `kept`,
+but the attempt is never silent (D-14).
+
+Phase 3 plan 05 (Task 2) closes the never-silent ledger's markdown-rendering half (D-15).
+`report.py` gains `render_reflection_skipped_section`/`REFLECTION_SKIPPED_HEADING`, mirroring
+`render_reflection_retractions_section`'s pattern — a table of `path`/`reason`/`error` per
+`ReflectionSkip`, or "No file was skipped." when empty, rendered unconditionally so a run with
+zero skips still shows the section rather than omitting it. `to_markdown` gains a
+`reflection_skips` keyword param and now calls both retraction and skip renderers back to back;
+`write_report` passes `reflection_skips` through to `to_markdown` (it already reached
+`write_review_ledger`). SKILL.md's "Diff-scoped review" section documents the dispatch: a
+`review-filter` subagent renders `render_reflection_prompt`, returns a verdict `validate_verdict`
+parses, and `apply_verdict` retracts — `cli.py review`'s tracer slice still calls it with an
+always-empty verdict, so live dispatch remains a later plan.
+
+Phase 3 plan 05 (Task 3) attaches the D-12 receipt-gate disposition ladder to
+`findings_gate.py`, beside the existing `confirms_alone` check it leaves untouched.
+`STATIC_CHECKABLE_CLASSES` (`null-dereference`, `error-swallowing`, `resource-leak`,
+`injection`) and `RUNTIME_DEPENDENT_CLASSES` (`thread-safety`) partition
+`review_findings.GENERAL_DEFECT_CLASSES` exactly — a module-level assert enforces the union
+and the empty intersection, so a sixth class added there without a matching entry here fails
+at import time rather than silently landing in neither set. `disposition_without_receipt`
+maps a general-defect class with no Tier-1 receipt to `unconfirmed` or
+`needs-deployment-testing` and raises `ValueError` on anything else — it never touches
+`FindingStatus`; `unconfirmed` stays a plain `review_findings` string, not a member of the
+frozen enum `models.py` byte-mirrors for the Go port.
+
+Phase 3 plan 02 (Task 1) expands `rule_glob.py`'s built-in-only resolution into RULE-02's four-layer
+resolver. `ProjectRuleEntry`/`ProjectRule` mirror OCR's `rule.json` shape byte-for-byte (D-06):
+an ordered `entries` list (`path` glob, `rule` text, `merge_system_rule` bool) plus `include`/
+`exclude` lists Task 2's whole-layer filter selection consumes — never per-path resolution.
+`load_project_rule(path, repo_root)` reads a layer defensively (`None` when absent, following
+`exclusions.load_exclusions`'s idiom) and resolves each entry's `rule` file at load time through
+`read_rule_file_safe` (Task 3's safety gate, below). `match_project_rule_entry(layer,
+path)` is the per-path fallthrough building block — first entry in JSON array order whose pattern
+matches wins. `resolve_rule_doc` now takes an optional `RuleResolution` and walks
+`[custom, project, global]` before falling back to the built-in map, deciding independently per
+path; an entry with `merge_system_rule` routes through `merge_with_system_rule(builtin_text,
+user_text)`, which reproduces OCR's `## System-Specific Rules (Mandatory)` /
+`## User-Specific Rules (Mandatory)` header format across all three empty-input cases. Per-path
+fallthrough and Task 2's whole-layer filter selection are deliberately separate functions with
+separate loops — the phase's single highest-risk mis-implementation is collapsing them into one.
+
+Task 2 adds the whole-layer filter and the two CLI flags it powers. `build_file_filter(layers)`
+walks `[custom, project, global]` and returns the first layer whose `include` or `exclude` is
+non-empty — lower-cased at build time (D-04) — skipping a layer where both are empty rather than
+selecting it as an empty filter; `None` when no layer qualifies. It shares no loop or helper with
+`match_project_rule_entry`: one answers per-path, the other picks one whole layer, and the two
+never call each other. `build_resolution(rule_path, excludes, repo_root)` assembles all three
+layers — mirroring OCR's `NewResolver`, the custom (`--rule`) and global layers resolve a relative
+`rule` field against their OWN file's directory (`Path(rule_path).parent`, `_global_rule_path()
+.parent`), while only the project layer resolves against `repo_root` — then calls
+`build_file_filter` and appends the lower-cased CLI `--exclude` values to whichever filter comes
+back (or builds an excludes-only `FileFilter` when no layer had one). `cli.py`'s `review`
+subparser gained `--rule` (single path) and `--exclude` (repeatable); `run_review` calls
+`build_resolution` once, passes the `RuleResolution` into `resolve_rule_doc` for each reviewable
+file, and narrows `selection.reviewable` by the resulting `FileFilter` before the manifest loop —
+`dataclasses.replace` rebuilds the frozen `Selection` rather than mutating it — so an excluded
+file never enters coverage accounting.
+
+Task 3 adds RULE-03's hard-reject rule-file safety gate. `read_rule_file_safe(path, repo_root)`
+runs a fixed check order — `Path.resolve(strict=True)` to collapse symlinks, extension check
+against `ALLOWED_RULE_EXTENSIONS` (`.md`/`.txt`/`.markdown`) on the RESOLVED path's suffix so a
+`.md` symlink pointing at a `.yaml` target is caught, `Path.is_relative_to` containment against
+the resolved `repo_root`, then a capped `open("rb")` read of at most `MAX_RULE_FILE_BYTES + 1`
+(524288 + 1) bytes rejecting anything over the cap before any UTF-8 decode — and raises
+`RuleSafetyError` naming the path and reason on any violation, never falling through to another
+layer. `_entry_rule_path(rule, repo_root)` joins a layer's relative `rule` field the same way
+`build_resolution` already did in Task 2; `read_rule_file_safe` itself does no relative-path
+resolution, only symlink resolution. Three deliberate divergences from OCR's `system_rules.go`,
+documented in the function's docstring: the boundary check runs against the RESOLVED path
+(stronger than OCR's pre-resolution check, closing a symlink-escape gap OCR has), a violation is
+always a hard raise rather than OCR's warn-and-fallthrough, and the size cap is enforced on the
+read itself (TOCTOU-safe) rather than via a separate `stat` call, measured in bytes not
+characters. `cli.py`'s `run_review` catches `RuleSafetyError` around both `build_resolution` and
+the per-file `resolve_rule_doc` call, prints the message to stderr, and returns exit code 2 — the
+gate's `repo_root` is exactly whatever base `load_project_rule` was already passed for that layer
+(true `repo_root` for the project layer, the layer's own config file's parent directory for
+custom/global), not a separately threaded true project root, since a global config under
+`~/.sec-overlay/` is essentially never nested under an arbitrary project's `repo_root`.
+
+Phase 3 plan 03 (Task 1) extends `BUILTIN_PATH_RULE_MAP` from its single `python.md` entry to
+nine, mirroring OCR's `system_rules.json` pattern strings and doc filenames exactly (D-02): one
+entry per built-in language plus a trailing `"**/*": "default.md"` catch-all, so `default.md` is
+a reachable, testable map value like every other doc instead of a fallback living outside the
+map (`_resolve_builtin_or_default`'s post-loop fallback keeps working unchanged, since the
+catch-all matches everything the fallback did). `REQUIRED_RULE_SECTIONS` names the five defect
+families every built-in doc must cover, in the fixed order `python.md` established; a sibling
+`RULE_SECTION_SYNONYMS` dict carries the accepted per-language heading wording for each family
+(a Rust doc says panic/unwrap where a Java doc says null pointer) as data, not scattered test
+logic — `tests/test_rule_docs.py` drives every assertion from these two constants and the map
+itself, never a hardcoded filename list.
+
+Phase 3 plan 06 (Task 1) adds the review-file agent seam, mirroring `reflection.py`'s
+render/parse-only discipline (no subprocess, no network client, no model SDK — `SKILL.md` owns
+dispatch, D-13). `review_agent.py`'s `render_review_prompt` renders `agents/review-file.md`
+(Task 2's file, not this one's) for a single file's review pass; `parse_review_response` is the
+REV-03 elevation-of-privilege backstop — every finding it builds carries `REVIEW_AGENT_CLAIM`
+(`evidence.as_llm_claim("review-agent")`) as its only evidence source and `FindingStatus.RAW`,
+both fixed in code rather than read from the model's response, so `evidence.confirms_alone` is
+false for every agent-authored finding regardless of what the response claims. A `code_comment`
+naming a path other than the one under review is discarded and counted, never converted —
+the Strict Focus Rule enforced mechanically, not only asked for in the prompt.
+
+Phase 3 plan 07 (Task 1) closes a gap in that same gate chain (REV-02): `run_review`'s
+reflection loop read its per-file selection from the position gate's `_kept` list and then
+discarded `apply_verdict`'s returned kept half entirely, so a retraction never actually
+removed anything from the reported `review_findings` — the retracted finding still shipped
+in the ledger next to its own `RETRACTED_REASON` entry. The loop now selects each reviewable
+file's findings from `apply_profile`'s kept output (`review_findings`, not `_kept`), passes
+the inner `Finding` objects (`.finding`) to `apply_verdict`, and accumulates every retracted
+id (submitted ids minus the ids `apply_verdict` returned as kept) into one `retracted_ids` set
+across the loop. After the loop, `review_findings` is rebound to the entries whose
+`.finding.id` is not in `retracted_ids` — filtering the original list, never reconstructing it
+by union, so a finding on a path the loop never visits (absent from `selection.reviewable`)
+stays in place instead of being silently dropped (D-14). A per-file `apply_verdict` failure
+still records a `ReflectionSkip` and contributes no retracted ids, so that file's findings
+survive untouched (fail-open, D-15) without affecting any other file's retractions.
+
+Phase 3 plan 07 (Task 2) closes the other REV-03 gap: `apply_profile` hardcoded
+`UNCONFIRMED_DISPOSITION` for every kept finding, so `findings_gate.disposition_without_receipt`
+(the D-12 ladder above) was dead code and a kept thread-safety finding never shipped
+`needs-deployment-testing`. `apply_profile` now calls `disposition_without_receipt(defect_class)`
+for every kept finding whose `classify` result is not `None`, and keeps the
+`UNCONFIRMED_DISPOSITION` fallback only for a kept finding `classify` returns `None` for (a
+gate-unmarked finding outside the general-defect allowlist). The import is function-local inside
+`apply_profile` — `findings_gate` already imports `GENERAL_DEFECT_CLASSES` and both disposition
+constants from this module at module level, so a module-level reverse import would cycle.
+
+Phase 4.1 plan 01 fixes DIFF-04: `cli.py`'s `run_review` used to construct `Workspace(args.root)`
+directly, writing every review artifact at the bare `--root` instead of the per-repo sidecar
+`scan` and `audit` already use. `run_review` now resolves its workspace through
+`RepoMemory.for_target(root, runner=r).workspace`, the same call `_target_workspace` makes for
+`audit`, threading the same `r = runner or subprocess.run` default the rest of the function
+already used. `build_resolution` and `render_review_prompt` still take the bare `root` — they
+never touched the workspace, only the rule/prompt resolution paths — so they are unchanged.
+Every test in `test_review_live.py`, `test_review_tracer.py`, and `test_rule_glob.py` that reads
+back a review artifact now resolves it through the same sidecar rather than joining `tmp_path`
+directly, so a passing test proves the production path, not the bug.
+
+Phase 4 plan 01 (Task 1, tracer) adds two new modules and extends `sarif.py`, wired end to end
+through `cli.run_review` — see the module map entries in [`../README.md`](../README.md) for the
+full contract. `bundle.py` is SCALE-01's grouping unit (`ReviewUnit`, `group_bundles`); this
+plan's grouping is the degenerate one-unit-per-file case only, called on `selection.reviewable`
+downstream of `file_select.partition`. `review_comments.py` is OUT-01's diff-anchored comment
+writer (`DiffComment`, `comment_from_finding`, `write_review_comments`), called once after
+`write_report` with `CoverageManifest.to_dict()`'s own dict, writing
+`artifacts/review_comments.json`. `sarif.py` gained `_sarif_fingerprint` + the `FINGERPRINT_KEY`
+constant: every SARIF result now carries a `partialFingerprints` entry keyed on
+`file|cls|evidence.strip()`, deliberately excluding `message` so a wording tweak does not churn
+result identity, and deliberately not reusing `fingerprint.fingerprint()` (a different identity
+contract).
+
+Phase 4 plan 01 (Task 2) gives `group_bundles` its real grouping semantics, replacing Task 1's
+degenerate one-unit-per-file placeholder: an impl/test pair (`foo.py`/`test_foo.py`,
+`foo.go`/`foo_test.go`, `foo.ts`/`foo.test.ts` or `foo.spec.ts`) and locale/config siblings in the
+same directory (`en.json`/`fr.json`, `config.dev.yaml`/`config.prod.yaml`) now share one
+`ReviewUnit`; every file a rule does not claim still falls back to its own single-member unit, so
+no path is ever dropped. The fallback key strips a `test`/`tests` directory segment before
+comparing, so this repo's own `tests/test_foo.py` convention pairs with a root-level `foo.py`.
+`parse_review_response` gained a keyword-only `bundle_paths: frozenset[str] | None = None`
+parameter widening the Strict Focus Rule from "this exact path" to "any member of the reviewing
+unit" — a kept comment is now attributed to *its own* claimed path (`Finding.file`,
+`_stable_finding_id`), not the outer `path`, since a multi-file unit's comment may name any
+member. `bundle_paths=None` (the default) keeps the single-file behavior byte-identical to before
+this task. `recorded_return_source` gained a matching `bundle_paths_by_path: dict[str,
+frozenset[str]] | None = None` parameter, looked up per file and passed through unchanged.
+`cli.run_review` now builds that map from `group_bundles(selection.reviewable)`'s output and
+passes it to the default `recorded_return_source` call — the per-file dispatch loop shape is
+unchanged; only the membership each file's parse call sees is widened. Known heuristic scope
+limit: the `test`/`tests` segment strip only matches a literal directory component, so a
+non-conventional parallel source/test tree (e.g. `sec_overlay/bundle.py` vs
+`tests/test_bundle.py`, this very codebase's own layout) does not pair under this rule — both
+still ship as correct, safe single-member units via the fallback, so no path is ever mis-grouped
+or dropped, only left unpaired.
+
+Phase 4 plan 02 (task 1, SCALE-02) gave `cli.py`'s `review` subcommand three bounded flags:
+`--concurrency` (`DEFAULT_CONCURRENCY = 8`, ceiling `MAX_WORKERS = 128`), `--timeout`
+(`DEFAULT_TIMEOUT_SECONDS = 600`, ceiling `MAX_TIMEOUT_SECONDS = 3600`), and `--max-git-procs`
+(`DEFAULT_MAX_GIT_PROCS = 16`, ceiling `MAX_WORKERS`). Two separate ceiling constants, not one
+shared value, because a worker-count ceiling sized for `--concurrency`/`--max-git-procs` would
+reject `--timeout`'s own, much larger, order of magnitude (seconds, not workers). A new
+`_bounded_int(value, *, flag, ceiling)` helper rejects (never clamps) a value outside `[1,
+ceiling]`, raising `ValueError` with a message naming the flag and its range; `run_review` calls
+it on all three kwonly params as its first executable statement, before any git subprocess call,
+and `main()` maps the `ValueError` to exit 2 exactly like an unknown profile or bad ref.
+`--concurrency` has no enforcement point in `cli.py` itself — the Python core never dispatches a
+review agent — so it is validated here and its bound is otherwise enforced by `SKILL.md`'s
+dispatch loop.
+
+Task 2 (SCALE-02) wrapped `run_review`'s two serial per-file git loops in a bounded
+`ThreadPoolExecutor` via a new `_bounded_map(items, workers, fn)` helper: sizes the pool to
+`min(workers, len(items))` (never `max(1, min(...))`, never wider than the item count), consumes
+through `.map()` — never `as_completed()` — so results land in submission order regardless of
+completion order, and builds no pool at all for an empty `items`. The diff-line-count
+comprehension now calls `_bounded_map(records, max_git_procs, ...)` then zips the result back
+onto `record.path`. The manifest loop's three git calls (`file_diff_text`, `parse_hunks`,
+`file_text_at_ref`) moved into a new `_fetch_file_review_inputs(path, base, head, runner)`
+worker function that catches its own exception and returns it instead of raising.
+
+Task 3 (SCALE-02) replaced the manifest loop's `_bounded_map` dispatch with a per-`ReviewUnit`
+dispatch so `--timeout` fails a whole bundle together, not just its slow member. `group_bundles
+(selection.reviewable)` is now retained as `units` (previously computed and discarded inline) and
+reused for both `bundle_paths_by_path` and the fetch dispatch. A new `_fetch_review_unit_files
+(paths, base, head, runner)` calls `_fetch_file_review_inputs` once per member path, so a normal
+per-file error still fails only that file. `run_review` opens one `ThreadPoolExecutor` sized to
+`min(max_git_procs, len(units))`, submits one future per unit via `ex.submit(...)` (never `.map
+()` here — each future needs its own timeout), and reads results back with `future.result
+(timeout=timeout)` in submission order (zipped with `units`, never `as_completed()`). A
+`TimeoutError` from `.result()` fails every member path of that unit with the module-level
+`TIMEOUT_NOTE = "review unit exceeded --timeout"` constant instead of re-raising. The consuming
+(main) thread still iterates `selection.reviewable` in original order, looking each path up in
+the accumulated `fetch_by_path` dict, performing every `manifest.add`/`start`/`finish`/`fail`
+transition exactly as before — parallel fetch, serial manifest mutation, and a `seal()` of
+`"partial"` (rc 3) when any unit times out, unchanged for every other path.
+
+Phase 4 plan 03 (Task 2, SCALE-03) adds a resume-identity gate. `review_coverage.py`'s
+`MANIFEST_VERSION` is now 2: `CoverageManifest` gains keyword-only `model`/`profile` fields,
+round-tripped through `to_dict`/`load` (a version-1 manifest, or a version-2 one written before
+either was ever supplied, loads both as `None`). A new `check_resume_identity(prior, *, model,
+profile)` raises `ResumeIdentityError` — naming both the prior and current value — when the
+current run's `model` or `profile` differs from `prior`'s recorded value; a `None` prior value
+permits any current one, so identity pinning starts from the run that first supplies it, never
+enforced retroactively. `cli.py`'s `run_review` gained a keyword-only `model` parameter and now
+loads any existing `coverage_manifest.json` and runs this check immediately after resolving the
+workspace — before resolving `base`/`head` refs or constructing this run's own
+`CoverageManifest` — so a resumed run that switched identity is rejected (exit 2) with the
+on-disk workspace left byte-identical and no new file written.
+
+Phase 4 plan 03 (Task 3, SCALE-03/T-04-12) pins a resumed run's reads to the SHAs the prior
+run sealed. `cli.py`'s `run_review` now branches past the identity check: when a prior
+manifest exists, `base_sha`/`head_sha` come from `prior_manifest.base_sha`/`head_sha` — never
+from a fresh `resolve_ref_sha(base, ...)`/`resolve_ref_sha(head, ...)` on the CLI's own
+`--base`/`--head` — so a branch that moved since the prior run cannot change what a resumed
+run reads. Each persisted SHA is still round-tripped through `resolve_ref_sha`, reusing the
+same `try`/`except ValueError` → exit 2 path a bad ref already took, so a rewritten or
+collected SHA fails the run loudly instead of silently reading a different tree as an empty
+diff. No change was needed in `diffscope.py`: every ref-consuming function there
+(`changed_file_records`, `file_diff_line_count`, `binary_paths`, `file_diff_text`,
+`file_text_at_ref`) already takes a pre-resolved SHA string, so the fix is entirely in *which*
+SHA `cli.py` resolves and passes down, not in how any downstream call uses it. A pre-existing
+`test_review_live.py` test that ran `run_review` twice against one target with two different
+`profile` values (to compare finding output across profiles) now hits the Task 2 identity gate
+on its second call — that test was split into two independent targets, since its intent was
+never to model a resume.
+
+Phase 4 plan 04 (Task 1, OUT-01 gap closure) fixes `run_review` calling
+`write_review_comments` before `manifest.seal()` ran, which left the embedded
+`coverage_manifest.seal` in `review_comments.json` permanently `null` regardless of the
+on-disk manifest's real seal. The zero-reviewable early return still writes an unsealed
+dict and returns 0 unchanged (there is nothing to seal). Every other path now assigns
+`manifest.seal()` to a local before calling `write_review_comments` exactly once with the
+post-seal dict, branching the exit code on that local instead of re-deriving it — so the
+embedded seal always matches the on-disk manifest, for both a complete and a partial run.
+
+Phase 4 plan 04 (Task 2, SCALE-03 gap closure) gives the `review` subcommand a `--model`
+argparse flag (default `None`), forwarded as `model=args.model` at `main()`'s single
+`run_review(...)` call site. `run_review`'s `model` keyword parameter, `CoverageManifest`'s
+`model` field, and `check_resume_identity`'s model-mismatch check were already fully wired
+from Task 2 of plan 04-03 — this closes the CLI surface only, nothing in `run_review`,
+`CoverageManifest`, or `check_resume_identity` changed. Before this fix, `--model` had no
+argparse surface, so a resumed run could never actually change model identity through the
+CLI, leaving the resume-rejection gate dead code in production despite being fully tested
+at the `run_review` Python-function level.
+
+Phase 4 plan 04 (Task 3, SCALE-02 gap closure) bounds `run_review`'s wall-clock time on a
+hung unit fetch to `--timeout`. Two prior gaps combined to leave the process open past the
+declared timeout: the unit-fetch block's `with ThreadPoolExecutor(...) as ex:` blocked on
+exit until every submitted worker finished, even one `future.result(timeout=timeout)`
+already reported as timed out; and the production runner default was a bare
+`subprocess.run`, so a hung git child inside that abandoned worker was never killed, only
+orphaned. Both are now fixed together: the executor is built directly (not as a context
+manager) and shut down via `ex.shutdown(wait=False)` in a `finally`, so `run_review` returns
+without waiting for an abandoned worker; and the production runner default is
+`partial(subprocess.run, timeout=timeout)`, so every git call the review path makes — every
+unit fetch, `_bounded_map`'s line-count prefetch and binary-path detection, `resolve_ref_sha`,
+`RepoMemory.for_target` — inherits a kill deadline equal to the declared `--timeout` through
+the shared runner `r`, with no change needed to `_bounded_map` itself. `shutdown(wait=False)`
+alone would still leave the process open at interpreter exit (`concurrent.futures.thread`
+registers an atexit hook that joins every worker thread); killing the child closes that gap
+too, since a killed `subprocess.run` call returns (raising `TimeoutExpired`, caught by
+`_fetch_file_review_inputs`'s existing exception-return path) instead of blocking forever.
+`_fetch_review_unit_files` also gained its own `timeout` parameter: it computes a monotonic
+deadline at its own entry (not at submit time, so a queued unit's wait in the pool never
+consumes its own budget) and, once past that deadline, records a unit's remaining members as
+timed out instead of fetching them — an abandoned worker stops doing pointless work rather
+than working through every member. An injected `runner` (tests) is untouched; only the
+bare-`subprocess.run` default changed.
+
+Phase 5 plan 01 (D-05-01-01, discovered running the tracer end to end against a live target
+repo) fixes `run_review`'s production runner silently scoping every git call to the CLI
+process's own working directory instead of `--root`. `diffscope.py`'s `resolve_ref_sha`,
+`changed_file_records`, `file_diff_line_count`, and `binary_paths` all build raw `git`
+commands with no `-C <path>` of their own — unlike `repo_memory.repo_slug`'s own git call,
+which does pass `-C str(target)` — so they were entirely dependent on the caller's `runner`
+having the right cwd. The production default, `partial(subprocess.run, timeout=timeout)`, had
+none: invoking `review` from any directory other than `--root` (the realistic invocation
+pattern) made every diff/rev-parse call run against the wrong repository, producing an empty
+changed-file set and a zero-file sealed coverage manifest with no error — `check=False` on
+these calls means a `git diff` against a nonexistent ref pair fails only on stderr, and
+`changed_file_records` only reads `stdout`. The fix adds `cwd=root` to the same
+`partial(...)` assignment used by SCALE-02's `timeout` fix, so every call through the shared
+runner `r` is now scoped correctly with no other call-site change. No existing test caught
+this: both `test_diffscope.py` and `test_review_live.py` fully mock the runner, so a new
+`test_review_live.py` regression test uses a real temporary git repo and the real
+(uninjected) `subprocess.run` path to prove the fix.
+
+Phase 6 plan 01 fixes WR-01: `run_review` now rejects a `--root` that is missing, empty, or
+not a directory before any workspace or git subprocess call, exiting 2 with `error: --root
+must be an existing directory (got ...)` — the same shape as the `_bounded_int` exit-2
+convention. Pre-fix, the three cases each crashed differently depending on where
+`Workspace.ensure()`'s `mkdir(parents=True)` landed: a missing root was silently
+auto-vivified and the run failed later with an unrelated "unresolvable ref" message; an
+empty-string root reached a real `subprocess.run(cwd="")` and raised `FileNotFoundError`; a
+file-as-root raised `NotADirectoryError` from `Workspace.ensure()`'s own `mkdir`. The guard is
+a single `if not root or not Path(root).is_dir():` — `Path("").is_dir()` normalizes to `"."`
+and reports `True` (the CWD exists), so the empty-string case needs the explicit `not root`
+check rather than relying on `is_dir()` alone.
+
+Phase 6 plan 01 adds D-03: a `--workspace` override on `review`, mirroring `audit`'s existing
+flag. `run_review` gained a keyword-only `workspace: str | None = None` parameter; when truthy
+it resolves via `workspace.load_paths(workspace=workspace)` in place of the unconditional
+`RepoMemory.for_target(root, runner=r)` / `memory.ensure(target=root)` / `memory.workspace`
+sequence, matching `audit`'s own `if args.workspace: ws = load_paths(...)` shape exactly
+(`cli.py`'s `audit` branch). The SCALE-03 resume-identity check runs unchanged either way — it
+reads the resolved `ws`'s coverage manifest, not how `ws` was resolved, so an explicit
+`workspace=` override cannot bypass it. `test_rule_glob.py`'s `fake_run_review` spy gained
+`workspace=None` (same class of gap `model=None` closed there previously) once `main()`'s
+`review` dispatch started passing `workspace=args.workspace` unconditionally.
+
+Phase 6 plan 03 fixes D-04: `render_finding`'s deps branch named the wrong package on the
+`**Fix.**` line for a scoped npm-style identifier (`@scope/name@version`). It split `f.evidence`
+on the first `@` (`pkg.split('@')[0]`) to strip the trailing `@version`, but a scoped identifier
+already starts with `@`, so the first split lands on the scope delimiter and returns an empty
+string — the Fix line rendered `` Bump `` `` with nothing between the backticks. The fix splits
+on the last `@` instead (`pkg.rsplit('@', 1)[0] or pkg`), and falls back to the untouched string
+when that split empties out (a versionless scoped package like `@scope/name` has only one `@`,
+which is the scope delimiter, not a version separator).

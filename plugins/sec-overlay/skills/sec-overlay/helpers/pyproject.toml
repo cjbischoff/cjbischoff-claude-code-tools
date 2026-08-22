@@ -2,6 +2,8 @@
 name = "sec-overlay"
 version = "0.1.0"
 description = "Self-contained agentic security-audit harness (deterministic core)"
+# D-01: floor stays 3.12 — rule_glob.glob_match hand-rolls **-aware matching instead of
+# raising this to 3.13 for the stdlib whole-path matcher.
 requires-python = ">=3.12"
 dependencies = []
 

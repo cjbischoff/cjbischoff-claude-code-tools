@@ -2,6 +2,1091 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.13 - 2026-08-22
+
+### Fixed
+
+- `helpers/tests/test_docs_invariants.py`: `_STALE_WORKSPACE_CLAIM_PATTERN`
+  only matched the "has no ... override" wording, missing "does not support"
+  and "lacks (a)" phrasings of the same false claim. Broadened the pattern to
+  catch all three, with two new pattern tests pinning both denial and
+  corrected wording (CodeRabbit review, PR #29).
+- `SKILL.md` and `skills/sec-overlay/README.md`: reworded the `--workspace`
+  override explanation to state both branches explicitly (omit it and
+  `review` falls back to the per-repo sidecar; supply it and `load_paths`
+  uses that value) instead of one blended sentence that read as always
+  requiring an explicit flag (CodeRabbit review, PR #29).
+
+## 1.69.12 - 2026-08-22
+
+### Fixed
+
+- `SKILL.md:95`, `skills/sec-overlay/README.md:35-36`, and `helpers/README.md:267`
+  (06-06, WR-01): corrected three doc passages that falsely claimed `review` has
+  no `--workspace` override. `review` gained the flag in 1.68.10/1.69.0
+  (`cli.py:671-676`); these passages were never updated to match.
+
+### Added
+
+- `test_no_live_doc_denies_the_review_workspace_override` in
+  `helpers/tests/test_docs_invariants.py` (WR-01): asserts no live doc claims
+  `review` lacks a `--workspace` override. Pins its premise against
+  `run_review`'s real signature so a future removal of the flag fails the
+  guard's premise loudly instead of leaving a now-true claim unchecked.
+
+## 1.69.11 - 2026-08-21
+
+### Added
+
+- `test_claude_md_phase_order_tracks_phase_table` in
+  `helpers/tests/test_docs_invariants.py` (T-06-02-06): asserts every phase the
+  `CLAUDE.md` "Phase order" block names appears in the same relative order as
+  the live `PHASE_TABLE`, so a table reorder now fails the suite instead of
+  silently drifting from the maintainer manual. The block is a condensed
+  operator view, so omitted rows (`factcheck`, `demote-noise`, `selfscore`)
+  are exempt; order of the named rows is enforced.
+
+## 1.69.10 - 2026-08-21
+
+### Added
+
+- Four probes in `helpers/tests/test_review_profiles.py` (D-08, E-12) closing
+  the vacuous-subset defect: `apply_profile`'s security-kept ⊆ general-kept
+  relation had only ever been exercised on an empty comparison (`∅ ⊆ ∅`),
+  which passes without confirming anything. New probes assert the relation at
+  size zero (with vacuity checked as a separate assertion from the subset
+  relation), size one, at the narrowest-margin `gate=None` boundary finding,
+  and under a permuted input order compared by stable finding ID. All four
+  reuse the existing `_dual_run_fixture()` unmodified.
+
+## 1.69.9 - 2026-08-21
+
+### Added
+
+- `helpers/tests/test_frozen_contract.py` (D-15, REL-03): a sha256 byte-identity
+  guard pinning `models.py`/`evidence.py` against their committed digests (both
+  are byte-identical mirrors of a separate Go port and must never be edited
+  alone), three `fingerprint()` golden-value tests proving its output depends
+  only on `rule_id`/`cls`/`anchor` regardless of every other `Finding` field or
+  construction order, and a REL-03 test reading `pyproject.toml` via stdlib
+  `tomllib` to assert `[project] dependencies` stays empty.
+
+## 1.69.8 - 2026-08-21
+
+### Fixed
+
+- Correct the false claim that the vendored semgrep ruleset
+  (`helpers/rules/semgrep/`) is a tracked git submodule (D-04). No
+  `.gitmodules` entry exists anywhere in repo history; `preflight.py`'s real
+  remediation is a plain `git clone --depth 1
+  https://github.com/semgrep/semgrep-rules helpers/rules/semgrep`. Fixed the
+  wording across eight doc surfaces: `plugins/sec-overlay/CLAUDE.md`,
+  `skills/sec-overlay/CLAUDE.md` (two spots), `skills/sec-overlay/SKILL.md`,
+  `skills/sec-overlay/README.md`, `skills/sec-overlay/helpers/README.md`
+  (two spots), and `skills/sec-overlay/helpers/tests/README.md`. Added a
+  tree-walking doc guard (`test_no_live_doc_claims_a_git_submodule_that_does_not_exist`)
+  that walks every live `.md` file under the plugin (excluding historical
+  planning records and the vendored ruleset itself) so a future doc
+  repeating the same false claim fails the test suite instead of surviving
+  by chance.
+- Correct `skills/sec-overlay/helpers/tests/README.md`'s explanation of why
+  the cwd-scoping bug survived the test suite (WR-02). The prior text
+  claimed the passing tests "inject their own `runner`, which bypasses the
+  bug entirely" — they don't inject a `runner=` kwarg at all. They
+  `monkeypatch.setattr(subprocess, "run", ...)`, patching the stdlib
+  function underneath `run_review`'s `partial(subprocess.run, timeout=...,
+  cwd=root)` default; their fake ignores `cwd`, which is why none of them
+  caught the bug.
+
+## 1.69.7 - 2026-08-21
+
+### Fixed
+
+- Correct `agents/redteam.md`'s Discriminate section (D-02). It described a
+  three-way split with a "neither static-settled nor a live-exploit test"
+  category exempted from the runtime plan; `redteam.py`'s `wants_runtime()`
+  is a plain two-trigger OR (`runtime_disposition == "needs-runtime"` or
+  `status is FindingStatus.NEEDS_DEPLOYMENT_TESTING`) with no such
+  opt-out value, and `open_questions` never affects plan membership. Added
+  a code-derived doc guard in `test_docs_invariants.py` pinning both
+  trigger values from `sec_overlay.evidence`/`sec_overlay.models` with no
+  hardcoded copies.
+
+## 1.69.6 - 2026-08-21
+
+### Fixed
+
+- Fix the deps Fix-line package-name split for scoped npm-style identifiers
+  (D-04, GREEN phase). `render_finding` now splits `evidence` on the last
+  `@` instead of the first, so `@scope/name@version` no longer renders an
+  empty backtick pair; falls back to the untouched string when the split
+  empties out (a versionless scoped identifier has only the scope `@`).
+
+## 1.69.5 - 2026-08-21
+
+### Fixed
+
+- Add five failing tests pinning the deps Fix-line package-name bug (D-04,
+  RED phase): a scoped identifier (`@scope/name@version`) renders an empty
+  backtick pair in the `**Fix.**` line because `render_finding`'s deps branch
+  splits evidence on the first `@` instead of the last.
+
+## 1.69.4 - 2026-08-21
+
+### Fixed
+
+- Reconcile the maintainer-manual phase order with the wired `PHASE_TABLE`
+  (D-01). `redteam` moves after `report`/`selfscore` and before
+  `artifact-gate` (numbered `14.4`, was `13.5` positioned before `report`);
+  `postflight` is renumbered `15` as the pipeline's final phase (was `C2`).
+  Both entries note they now run automatically via `PHASE_TABLE`/
+  `DETERMINISTIC_ACTIONS`, with their standalone `python -m` invocations kept
+  as the manual re-run path. Applied to `skills/sec-overlay/CLAUDE.md`'s
+  phase-order block, `skills/sec-overlay/README.md`'s pipeline diagram,
+  worked-example table, and CLI legend, and
+  `skills/sec-overlay/helpers/README.md`'s deterministic-pipeline diagram.
+
+## 1.69.3 - 2026-08-21
+
+### Fixed
+
+- Register `postflight` in `DETERMINISTIC_ACTIONS` (D-01, part 2). The new
+  `_act_postflight` wraps `postflight.run_postflight(ctx.ws, ctx.sha)`,
+  matching the function-local-import cycle-avoidance convention its
+  siblings use; no try/except and no `PhaseHalt` — `run_postflight` returns
+  a merged-item count, not a verdict, so a low count is not a halt
+  condition. `redteam` gets no driver entry — it stays an agent phase, and
+  `test_every_deterministic_phase_has_a_registered_action` now derives its
+  expected key set from `PHASE_TABLE` so the two structures cannot drift
+  again without a failing test.
+
+## 1.69.2 - 2026-08-21
+
+### Fixed
+
+- Fix `redteam`/`postflight` being absent from `PHASE_TABLE`, so
+  `run.drive()`/`run.advance()` silently skipped both phases (D-01, part 1).
+  `redteam` is a new agent `PhaseSpec` (`agents/redteam.md`, input
+  `findings_dir`, output `reports/redteam-plan.md`) placed between
+  `selfscore` and `artifact-gate` — `artifact_gate.run_artifact_gate`
+  hard-requires `redteam-plan.md` to exist, so redteam must run first, not
+  after `artifact-review` as an earlier pattern draft suggested. `postflight`
+  is a new deterministic `PhaseSpec` (input `artifact-review`'s gate JSON,
+  output `context.prior_context_path`) appended as the table's final row.
+  `redteam`'s `kind="agent"` is confirmed against the real dispatch path —
+  the skill CLAUDE.md's phase-order list runs `agents/redteam.md` (sonnet)
+  then `agents/redteam-adversary.md` (opus), never a bare module call.
+
+## 1.69.1 - 2026-08-21
+
+### Added
+
+- Add failing tests pinning `redteam`/`postflight` into `PHASE_TABLE` and
+  `DETERMINISTIC_ACTIONS` (D-01): both phases are documented in the
+  maintainer manual but were absent from the mechanical phase table, so
+  `run.drive()`/`run.advance()` silently skipped them. `redteam` must sit
+  between `selfscore` and `artifact-gate` — `artifact_gate.run_artifact_gate`
+  hard-requires `redteam-plan.md` to exist. Implementation lands next.
+
+## 1.69.0 - 2026-08-21
+
+### Added
+
+- Add `--workspace` to `review`, mirroring `audit`'s existing flag (D-03).
+  `run_review` gains a keyword-only `workspace` parameter: when supplied it
+  resolves via `workspace.load_paths(workspace=...)`; otherwise it falls back
+  to the existing per-repo sidecar resolved beneath `--root` via
+  `RepoMemory.for_target`. The SCALE-03 resume-identity guard is unaffected
+  either way — it checks the resolved workspace's manifest, not how that
+  workspace was resolved.
+
+## 1.68.10 - 2026-08-21
+
+### Added
+
+- Add three tests pinning `review`'s new `--workspace` override (D-03): the
+  override case, the no-override fallback (regression guard), and a
+  two-profile resume-identity check confirming the override does not weaken
+  SCALE-03. Implementation lands in 1.69.0.
+
+## 1.68.9 - 2026-08-21
+
+### Fixed
+
+- Fix `review` raising an unhandled filesystem exception (`FileNotFoundError`,
+  `NotADirectoryError`, or an `OSError` variant, depending on platform and
+  permissions) when `--root` names a path that is missing, empty, or not a
+  directory (WR-01). `run_review` now checks `--root` before any workspace or
+  git subprocess call and exits 2 with a one-line `error: --root must be an
+  existing directory (got ...)` message, matching the existing `_bounded_int`
+  exit-2 convention.
+
+## 1.68.8 - 2026-08-21
+
+### Added
+
+- Add three failing tests pinning WR-01's `--root` guard (missing, empty, and
+  file-as-root cases) ahead of the fix in 1.68.9.
+
+## 1.68.7 - 2026-08-20
+
+### Fixed
+
+- Fix `review`'s git calls silently scoping to the CLI process's own working
+  directory instead of `--root` (05-01 tracer, Phase 5 D-05-01-01): the
+  shared production runner (`partial(subprocess.run, ...)`) now binds
+  `cwd=root`, since `diffscope.py`'s `git diff`/`rev-parse` calls carry no
+  `-C <path>` of their own. Without the binding, invoking `review` from any
+  directory other than `--root` produced an empty changed-file set and a
+  zero-file sealed coverage manifest with no error — discovered running the
+  real pipeline end to end against a live target repo, where every existing
+  test mocked the runner and never exercised a real subprocess/cwd mismatch.
+
+## 1.68.6 - 2026-08-20
+
+### Fixed
+
+- Fix a hung `review` unit fetch holding the process open past `--timeout`
+  (SCALE-02): `with ThreadPoolExecutor(...) as ex:` blocked on exit until
+  every submitted worker finished, even one already reported as timed out,
+  and the production runner never bounded the underlying git subprocess.
+  The executor now shuts down via `shutdown(wait=False)`, the production
+  runner default carries `timeout=--timeout` into every `subprocess.run`
+  call so a hung git child is killed, and `_fetch_review_unit_files` stops
+  fetching a timed-out unit's remaining members once its own deadline
+  passes.
+
+## 1.68.5 - 2026-08-20
+
+### Added
+
+- Add failing tests bounding a hung `review` unit fetch's wall-clock time
+  to `--timeout` (SCALE-02 gap closure, RED phase): a unit whose fetch
+  sleeps past the declared timeout must not hold `run_review` open, an
+  abandoned worker must stop fetching once its own deadline passes, and
+  every production `subprocess.run` call must carry a `timeout` equal to
+  `--timeout`.
+
+## 1.68.4 - 2026-08-20
+
+### Fixed
+
+- Fix `review --model` having no CLI surface (SCALE-03): `main()` never
+  forwarded a model value to `run_review`, leaving the already-wired
+  model-identity resume-rejection gate dead code in production. `review`
+  now accepts `--model` (default `None`) and forwards it unchanged.
+
+## 1.68.3 - 2026-08-20
+
+### Added
+
+- Add failing tests for a `review --model` argparse surface: forwarding
+  to `run_review` and resume rejection via `cli.main` (SCALE-03 gap
+  closure, RED phase).
+
+## 1.68.2 - 2026-08-20
+
+### Fixed
+
+- Fix `review_comments.json`'s embedded `coverage_manifest.seal` always
+  reading `null` (OUT-01): `run_review` called `write_review_comments`
+  before `manifest.seal()` ran on every path except the zero-reviewable
+  early return. `seal()` now runs first and its result is written once,
+  so the embedded seal matches the on-disk `coverage_manifest.json` for
+  both a complete and a partial run.
+
+## 1.68.1 - 2026-08-20
+
+### Added
+
+- Add failing tests asserting `review_comments.json`'s embedded
+  `coverage_manifest.seal` matches the on-disk `coverage_manifest.json`
+  for both a complete and a partial run (OUT-01 gap closure, RED phase).
+
+## 1.68.0 - 2026-08-20
+
+### Added
+
+- Pin a resumed run's reads to the SHAs the prior run sealed (SCALE-03,
+  T-04-12): `review` now sources `base_sha`/`head_sha` from an existing
+  `coverage_manifest.json` instead of freshly resolving `--base`/`--head`
+  when one is found, so a branch that moved since the prior run cannot
+  change what a resumed run reads. Each persisted SHA still round-trips
+  through the same ref-resolution path, so a rewritten or collected SHA
+  fails the run (exit 2) instead of silently reading a different tree as
+  an empty diff.
+
+### Fixed
+
+- Split `test_review_live.py`'s profile-comparison test into two
+  independent targets — running it against one target with two different
+  `profile` values now trips the resume-identity gate added in 1.67.0.
+
+## 1.67.1 - 2026-08-20
+
+### Added
+
+- Add failing tests for SHA-pinning on resume (SCALE-03, T-04-12): a resumed
+  run must read diffs at the head SHA the prior run sealed, not a freshly
+  resolved (possibly moved) ref, and an unresolvable persisted SHA must fail
+  the run rather than read an empty diff. `run_review` does not yet source
+  `base_sha`/`head_sha` from the prior manifest on resume — RED phase of a
+  TDD task.
+
+## 1.67.0 - 2026-08-20
+
+### Added
+
+- Add a resume-identity gate (SCALE-03): `CoverageManifest`'s `MANIFEST_VERSION`
+  is now 2 and carries `model`/`profile`. `review` rejects (exit 2) a resumed
+  run whose `model` or `profile` differs from the prior manifest's, before
+  resolving refs or writing anything — the on-disk workspace stays
+  byte-identical. A prior manifest with no recorded identity permits any
+  current value.
+
+## 1.66.1 - 2026-08-20
+
+### Added
+
+- Add failing tests for a resume-identity gate on `CoverageManifest`
+  (SCALE-03): `model`/`profile` will round-trip through `to_dict`/`load`
+  under a bumped `MANIFEST_VERSION`, and a resumed run whose model or
+  profile differs from the prior manifest's will be rejected before any
+  write. `ResumeIdentityError`/`check_resume_identity` are not yet
+  implemented — RED phase of a TDD task.
+
+## 1.66.0 - 2026-08-20
+
+### Added
+
+- Add a per-`ReviewUnit` `--timeout`: a unit's git-fetch work is dispatched
+  with `ThreadPoolExecutor.submit()` and read back with
+  `future.result(timeout=timeout)` in submission order; a unit that misses
+  the deadline fails every one of its member files with a fixed timeout
+  note, sealing the coverage manifest `"partial"` (exit 3) instead of
+  raising. The timeout test covers a three-member locale-sibling unit, so a
+  fix that only fails the first member (or the unit as a whole) and leaves
+  the rest unfinished cannot pass. Record `--concurrency`'s enforced
+  dispatch bound in `SKILL.md` beside the existing review-mode fan-out
+  guidance.
+
+## 1.65.0 - 2026-08-20
+
+### Added
+
+- Wrap `run_review`'s two serial per-file git-fetch loops in a bounded
+  `ThreadPoolExecutor` (`_bounded_map`, sized to `--max-git-procs`), consumed
+  via order-preserving `.map()` so coverage-manifest transitions still apply
+  in file order regardless of fetch-completion order. No pool is built for
+  zero reviewable files.
+
+## 1.64.0 - 2026-08-20
+
+### Added
+
+- Add three bounded `review` CLI flags: `--concurrency` (default 8, 1-128),
+  `--timeout` (default 600 seconds, 1-3600), and `--max-git-procs` (default
+  16, 1-128). Each is validated by a shared `_bounded_int` helper before any
+  git subprocess runs; an out-of-range value exits 2 naming the flag and its
+  range and is never silently clamped.
+
+## 1.63.1 - 2026-08-20
+
+### Added
+
+- Lock the `sarif.to_sarif` `partialFingerprints` contract (OUT-02) with 8
+  new tests: message-independence, file/cls/evidence sensitivity, an empty
+  finding list producing no fingerprint key anywhere, and a
+  decomposed-vs-precomposed Unicode evidence pair producing different
+  fingerprints (byte equality, no `unicodedata` normalization pass).
+- Add `tests/test_review_comments.py` locking the diff-anchored comment
+  contract (OUT-01): the empty-comment-list-still-has-manifest case, the
+  exact 5-key comment payload shape, and `comment_from_finding`'s field
+  mapping. No implementation change — both modules already satisfied the
+  contract from the tracer plan.
+
+## 1.63.0 - 2026-08-20
+
+### Added
+
+- Give `sec_overlay/bundle.py`'s `group_bundles` real grouping semantics:
+  impl/test pairs (Python, Go, JS/TS conventions) and locale/config siblings
+  in the same directory now share one `ReviewUnit`; every other file still
+  falls back to its own single-member unit.
+- Widen `review_agent.parse_review_response`'s focus rule with a
+  keyword-only `bundle_paths` parameter — a `code_comment` naming any member
+  of the reviewing unit becomes a finding attributed to that entry's own
+  path, instead of only the single file under review. `None` (the default)
+  keeps the prior single-file behavior unchanged.
+- Thread each `ReviewUnit`'s membership from `cli.run_review` through
+  `review_agent.recorded_return_source`'s new `bundle_paths_by_path`
+  parameter, so real bundling is live end to end without changing the
+  per-file dispatch loop shape.
+
+## 1.62.0 - 2026-08-20
+
+### Added
+
+- Add `sec_overlay/bundle.py` (`ReviewUnit`, `group_bundles`) and
+  `sec_overlay/review_comments.py` (`DiffComment`, `write_review_comments`),
+  wired into `run_review`: every review run now writes
+  `artifacts/review_comments.json`, a diff-anchored comment per shipped
+  finding plus the coverage manifest. This plan ships the degenerate
+  one-file-per-unit grouping only; real multi-file grouping is a later
+  plan. `sarif.to_sarif` now attaches a message-independent
+  `partialFingerprints` entry to every result. Progresses SCALE-01,
+  OUT-01, OUT-02.
+
+## 1.61.6 - 2026-08-19
+
+### Fixed
+
+- Fix `review` writing findings and reports at the bare `--root` instead of the
+  per-repo memory sidecar `scan` and `audit` already use. `run_review` now
+  resolves its workspace through `RepoMemory.for_target`, matching the
+  existing convention; a regression test pins it. Closes DIFF-04.
+
+## 1.61.5 - 2026-08-19
+
+### Added
+
+- Add tests for the `_adapt_dict` / `_adapt_optional_dict` rejection paths in
+  `sec_overlay/stage_validate.py`. A non-dict stage output now has a test that
+  asserts the validator returns an error list instead of raising. Closes the
+  Phase 1 Nyquist validation gap.
+
+## 1.61.4 - 2026-08-19
+
+### Fixed
+
+- Fix `ty check` diagnostics in `tests/test_review_tracer.py` and `tests/test_diffscope.py`.
+  The fake-response class `R` declared only `returncode` and assigned `stdout` after
+  construction, so `ty` could not resolve the attribute. Each `R` class now declares
+  `stdout = ""` as a class attribute. Test behavior does not change.
+
+## 1.61.3 - 2026-08-19
+
+### Added
+
+- `test_thread_safety_finding_ships_needs_deployment_testing_end_to_end`: composed proof that a
+  thread-safety finding ships `needs-deployment-testing` through the real `run_review` CLI path,
+  not only at the `apply_profile` unit level.
+
+## 1.61.2 - 2026-08-19
+
+### Fixed
+
+- `review_findings.apply_profile` now assigns a kept general-defect finding's disposition via
+  `findings_gate.disposition_without_receipt` (the D-12 ladder) instead of hardcoding
+  `unconfirmed`. A kept thread-safety finding now ships `needs-deployment-testing`; every kept
+  static-checkable class (`null-dereference`, `error-swallowing`, `resource-leak`, `injection`)
+  and every unclassified kept finding still ships `unconfirmed`.
+
+## 1.61.1 - 2026-08-19
+
+### Fixed
+
+- `cli.run_review`'s reflection loop now selects each reviewable file's findings from
+  `review_findings.apply_profile`'s kept output instead of the position gate's pre-profile
+  list, and rebinds `review_findings` to exclude every id `reflection.apply_verdict` retracted
+  across every file. A retraction previously never removed its finding from the reported
+  ledger; it now does, while a finding on a path the reflection loop never visits still
+  survives untouched.
+
+## 1.61.0 - 2026-08-18
+
+### Added
+
+- `sec_overlay.diffscope.file_text_at_ref`: reads a path's whole file text at a resolved ref via
+  `git show`, mirroring the module's existing injectable-runner convention.
+
+### Changed
+
+- `cli.run_review` now wires a real finding source into the review-mode gate chain: it derives
+  each recorded finding's position-gate snippet from the real file text at its claimed line (never
+  from the model's own claim), builds `file_text_by_path` per reviewable file, and passes both
+  through `review_position_gate` → `review_findings.apply_profile` → `reflection.apply_verdict` →
+  the receipt gate, in that order. This makes the position gate's whole-file "relocated" rung
+  reachable, so a finding claimed outside every diff hunk is now correctly dropped as
+  `outside-diff` instead of declining earlier as `no-snippet`.
+
+## 1.60.0 - 2026-08-19
+
+### Added
+
+- `agents/review-file.md`: the review-mode producer prompt, ported from open-code-review's main
+  task prompt (D-02) — role, capabilities, strict-focus rules, and reply limit, adapted to this
+  skill's single-shot no-tool dispatch and uppercase token/prompt-constants conventions. Reports
+  a `code_comment` per confirmed issue and a closing `task_done`; a comment naming a path other
+  than the file under review is discarded by `sec_overlay.review_agent.parse_review_response`,
+  never converted, and the reviewer never claims a mechanical tool receipt.
+- `SKILL.md`: a **Review mode (diff-scoped)** section documenting the prepare/dispatch/consume
+  subagent loop — `cli review --prepare` writes `runs/review_plan.json` and one rendered prompt
+  per reviewable file; the main agent dispatches one `review-file` subagent per entry in waves of
+  three to four and persists each return with `workspace.record_agent_return`; `cli review`
+  consumes the recorded returns through the position gate, profile gate, reflection filter, and
+  receipt gate. A file with no recorded or unparseable return contributes no findings and is
+  logged to the run's skip ledger rather than aborting the pass.
+
+## 1.59.0 - 2026-08-19
+
+### Added
+
+- `sec_overlay.review_agent`: `render_review_prompt(path, rule_text, diff, changed_files)` renders
+  the per-file `agents/review-file.md` prompt; `parse_review_response(text, *, path,
+  rule_id_prefix)` converts a `code_comment`/`task_done` tool-call array into `Finding`s. Every
+  finding carries `REVIEW_AGENT_CLAIM` (`evidence.as_llm_claim("review-agent")`) as its sole
+  evidence source and `FindingStatus.RAW`, both fixed in code rather than trusted from the
+  model's response — `evidence.confirms_alone` is false for every agent-authored finding
+  (REV-03 elevation-of-privilege backstop). A `code_comment` naming a path other than the one
+  under review is discarded and counted, never converted (Strict Focus Rule).
+
+## 1.58.0 - 2026-08-18
+
+### Added
+
+- `sec_overlay.findings_gate`: `STATIC_CHECKABLE_CLASSES`/`RUNTIME_DEPENDENT_CLASSES` partition
+  `review_findings.GENERAL_DEFECT_CLASSES`; `disposition_without_receipt(defect_class)` maps a
+  general-defect finding with no Tier-1 receipt to `unconfirmed` or `needs-deployment-testing`
+  and raises on an unknown class (D-12). `confirms_alone` remains the sole path to `confirmed`/
+  `fixed`; no member is added to the frozen `FindingStatus` enum.
+
+## 1.57.0 - 2026-08-18
+
+### Added
+
+- `sec_overlay.report`: `render_reflection_skipped_section`/`REFLECTION_SKIPPED_HEADING` render
+  every file whose reflection pass failed open, unconditionally, mirroring the existing
+  retractions section. `to_markdown` and `write_report` gain a `reflection_skips` param wiring it
+  in — `review_ledger.json` and `report.md` now both carry never-silent retraction AND skip
+  sections (D-14/D-15).
+- `SKILL.md`: documents the reflection dispatch in the diff-scoped `review` mode — the
+  `review-filter` subagent, `validate_verdict`'s parse-before-trust step, and `apply_verdict`'s
+  retract-only contract.
+
+## 1.56.0 - 2026-08-18
+
+### Added
+
+- `sec_overlay.reflection`: `render_reflection_prompt` renders the new `agents/review-filter.md`
+  prompt per file (`{{PATH}}`/`{{DIFF}}`/`{{COMMENTS}}` only); `validate_verdict` parses and
+  validates the LLM's raw JSON tool-call response before any finding sees it, reading only the
+  named tool, the retracted id list, and the analysis text. `apply_verdict` now records a refused
+  protected-class retraction (`REFUSED_REASON`) alongside applied ones (`RETRACTED_REASON`) rather
+  than silently dropping it (D-14).
+- `agents/review-filter.md`: the retract-only fact-checking prompt for diff review — a mechanical
+  `PROTECTED_SUBJECT_CLASSES` veto backstops the same veto stated in the prompt; the model output
+  is never trusted alone (D-16).
+
+## 1.55.2 - 2026-08-18
+
+### Fixed
+
+- `tests/test_review_profiles.py`: renamed the two D-10 dual-run tests to carry `dual_run` in
+  their name, matching the plan's `-k dual_run` acceptance criterion.
+
+## 1.55.1 - 2026-08-18
+
+### Fixed
+
+- `tests/test_review_profiles.py`: docstring cited the wrong commit for the committed
+  security-profile baseline (`15cb180` instead of `245d9e7`, the commit that actually added
+  `review_profiles_security_baseline.json`).
+
+## 1.55.0 - 2026-08-18
+
+### Added
+
+- `sec_overlay.review_findings`: the review-profile gate (REV-01). `apply_profile` reproduces
+  the security profile's gate ladder (A-E) byte-for-byte and adds a `general` profile that
+  bypasses gates A/B for a finding in one of five general-defect classes (null-dereference,
+  thread-safety, resource-leak, error-swallowing, injection) — a strict superset, proven by a
+  dual-run regression test against a committed baseline.
+- `references/prompt-constants.md`: `GENERAL_PROFILE_EXCLUSION_RULES`, the `general` profile's
+  gate wording, alongside the existing `EXCLUSION_RULES`.
+- `cli.py review --profile security|general`: wires `apply_profile` into `run_review`'s
+  position-gate output.
+
+### Changed
+
+- `report.write_report`/`write_review_ledger` gained a `review_findings` argument; the review
+  ledger now carries a `review_findings` key alongside `dropped`/`position_reviews`.
+
+## 1.54.1 - 2026-08-18
+
+### Added
+
+- `tests/test_review_profiles.py`: failing tests for review-profile gating (REV-01) — the
+  `sec_overlay.review_findings` module the tests import does not exist yet.
+- `tests/fixtures/review_profiles_security_baseline.json`: the committed dual-run baseline
+  (D-10) the `security` profile's output must never drift from.
+
+## 1.54.0 - 2026-08-18
+
+### Added
+
+- `rule_docs/go.md`, `java.md`, `php.md`, `rust.md`, `ts_js_tsx_jsx.md`, `kotlin.md`,
+  `swift.md`: the seven previously-missing per-language rule docs, each covering the same
+  five defect families in `python.md`'s fixed order (null/nil dereference, thread safety,
+  injection, resource leaks, swallowed errors) with a "Do not report in the following cases:"
+  exclusion block per section, ported from OCR's per-language checklists (D-02) and
+  restructured into this plan's fixed five-family contract (RULE-05).
+
+### Changed
+
+- `rule_docs/default.md`: rewritten to the same five-family/exclusion-block structure as the
+  other eight docs, replacing its prior generic Correctness/Security/Resource
+  Handling/Concurrency/Maintainability sections. Out of the plan's originally scoped task
+  list — added because `BUILTIN_PATH_RULE_MAP`'s trailing catch-all routes any unmatched
+  path to `default.md`, and `tests/test_rule_docs.py::test_doc_covers_required_families_with_exclusion_blocks`
+  is parametrized over every mapped doc, `default.md` included (deviation, Rule 2).
+
+## 1.53.1 - 2026-08-18
+
+### Added
+
+- `rule_glob.py`: `REQUIRED_RULE_SECTIONS`, the five defect families every built-in rule doc
+  must cover in `python.md`'s fixed order, and `RULE_SECTION_SYNONYMS`, the accepted per-language
+  heading wording for each family — data `tests/test_rule_docs.py` drives its assertions from,
+  not scattered test logic (RULE-05).
+- `rule_glob.py`: `BUILTIN_PATH_RULE_MAP` extended from one entry to nine, mirroring OCR's
+  `system_rules.json` pattern strings and doc filenames (D-02), including a trailing
+  `"**/*": "default.md"` catch-all so `default.md` is a reachable map value like every other doc.
+- `tests/test_rule_docs.py`: a conformance suite driven entirely from `BUILTIN_PATH_RULE_MAP`,
+  `BUILTIN_DEFAULT_RULE`, and the two new constants — no hardcoded doc filename. Currently red:
+  seven of the nine mapped docs (go, java, kotlin, php, rust, swift, ts_js_tsx_jsx) do not exist
+  on disk yet; plan 03-03 task 2 adds them.
+
+## 1.53.0 - 2026-08-18
+
+### Added
+
+- `rule_glob.py`: `read_rule_file_safe(path, repo_root)`, RULE-03's hard-reject rule-file safety
+  gate — resolves symlinks, rejects a resolved extension outside `.md`/`.txt`/`.markdown`, checks
+  containment of the resolved path under `repo_root`, and rejects a read over 512 KB
+  (`MAX_RULE_FILE_BYTES`) enforced on the read itself, before any UTF-8 decode. Raises the new
+  `RuleSafetyError` naming the path and reason, with no fallback to another layer. Diverges from
+  OCR's `system_rules.go` on purpose: boundary check runs on the resolved path (closes a
+  symlink-escape gap), a violation always hard-raises instead of warn-and-fallthrough, and the
+  size cap is TOCTOU-safe (checked on the read, not a separate `stat`).
+- `rule_glob.py`: `_entry_rule_path(rule, repo_root)`, joining a layer's relative `rule` field
+  before it reaches `read_rule_file_safe`; replaces the deleted Task 1 placeholder reader.
+- `cli.py`: catches `RuleSafetyError` around `build_resolution` and the per-file
+  `resolve_rule_doc` call in `run_review`, printing the message to stderr and exiting 2.
+
+## 1.52.1 - 2026-08-18
+
+### Added
+
+- `tests/test_rule_glob.py`: 6 failing tests (RED, Phase 3 Plan 2, Task 3) for the
+  not-yet-implemented rule-file safety gate (`read_rule_file_safe`, `RuleSafetyError`):
+  the 512 KB boundary at 524288/524289 bytes, a symlink escaping the repo root, a
+  disallowed extension on the resolved path (direct and via a `.md` symlink to
+  `.yaml`), trailing-newline stripping with inner blank lines preserved, byte-based
+  sizing on multi-byte UTF-8 text, and exit code 2 with no fallback from `run_review`.
+
+## 1.52.0 - 2026-08-18
+
+### Added
+
+- `rule_glob.py`: `build_file_filter(layers)`, the whole-layer first-non-empty exclude/include
+  filter selection (RULE-02) — structurally separate from `match_project_rule_entry`'s per-path
+  fallthrough, sharing no loop or helper with it.
+- `rule_glob.py`: `build_resolution(rule_path, excludes, repo_root)`, assembling the custom
+  (`--rule`), project, and global layers and their file filter, following OCR's rule that the
+  custom and global layers resolve a relative `rule` field against their own config directory
+  while only the project layer resolves against `repo_root`.
+- `cli.py`: `--rule` and `--exclude` (repeatable) on the `review` subparser, threaded into
+  `run_review`, which narrows the reviewable set by the resolved filter before the coverage
+  manifest loop so an excluded file never enters coverage accounting.
+
+### Changed
+
+- `tests/test_rule_glob.py`: added explicit `is not None` assertions before dereferencing an
+  `X | None` call result, so `ty check` narrows the type — no behavior change.
+
+## 1.51.1 - 2026-08-18
+
+### Added
+
+- `tests/test_rule_glob.py`: 9 failing tests (RED, Phase 3 Plan 2, Task 2) for the
+  not-yet-implemented whole-layer first-non-empty file filter (`build_file_filter`,
+  `build_resolution`) and the `--rule`/`--exclude` flags on the `review` subparser, including
+  a case proving the custom/global layers resolve a relative `rule` field against their own
+  config directory (unlike the project layer, which resolves against `repo_root`).
+
+### Changed
+
+- `tests/test_rule_glob.py`: removed an unused `subprocess` import left over from Task 1.
+
+## 1.51.0 - 2026-08-18
+
+### Added
+
+- `rule_glob.py`: the RULE-02 per-path four-layer rule resolver — `ProjectRuleEntry`/
+  `ProjectRule`/`RuleResolution` dataclasses mirroring OCR's `rule.json` shape (D-06),
+  `load_project_rule` (defensive load, absent file returns `None`), `match_project_rule_entry`
+  (first-match-wins per path in JSON array order), and RULE-04's `merge_with_system_rule`
+  (byte-exact `## System-Specific Rules (Mandatory)` / `## User-Specific Rules (Mandatory)`
+  headers). `resolve_rule_doc` now accepts an optional `RuleResolution`, falling back to the
+  built-in map alone when omitted.
+
+## 1.50.1 - 2026-08-18
+
+### Added
+
+- `tests/test_rule_glob.py`: 10 failing tests (RED, Phase 3 Plan 2) for the not-yet-implemented
+  four-layer rule resolver (`ProjectRuleEntry`/`ProjectRule`/`RuleResolution`, custom > project >
+  global > built-in per-path fallthrough) and `merge_with_system_rule`'s header concatenation.
+
+## 1.50.0 - 2026-08-18
+
+### Added
+
+- `rules/rule_docs/README.md`: what the directory is (per-language LLM prompt payloads), which
+  file covers which pattern, and the rule that adding a doc means adding its pattern to
+  `rule_glob.BUILTIN_PATH_RULE_MAP` in the same commit.
+
+### Changed
+
+- `helpers/pyproject.toml`: recorded the D-01 decision above `requires-python` — the floor
+  stays 3.12 because `rule_glob.glob_match` hand-rolls `**`-aware matching instead of the
+  3.13-only whole-path matcher.
+- `helpers/README.md`: added `rule_glob.py` and `reflection.py` to the diff-scoped review
+  module map.
+
+## 1.49.0 - 2026-08-18
+
+### Added
+
+- `rule_glob.py`: brace-expansion (`expand_braces`) plus a stdlib-only `**`-aware segment
+  glob matcher (`glob_match`), resolving a changed file's path to its per-language rule doc
+  (`resolve_rule_doc`), case-insensitive, first-match-wins, falling back to `default.md`.
+- `reflection.py`: a retract-only LLM-verdict filter (`apply_verdict`, `build_payload`) — a
+  verdict can only remove a finding the code submitted, never add or rank one;
+  `PROTECTED_SUBJECT_CLASSES` is a hardcoded veto no verdict can override.
+- `rules/rule_docs/default.md` and `rules/rule_docs/python.md`: built-in rule docs consumed
+  by `rule_glob.resolve_rule_doc`.
+- `cli.py`: `run_review` gained `--profile` (`security`/`general`, reserved for a later plan),
+  resolves each reviewable file's rule doc, and runs kept findings through
+  `reflection.apply_verdict`, recording a `ReflectionSkip` and failing open on a per-file error.
+- `report.py`: `write_review_ledger`/`write_report` gained keyword-only
+  `reflection_retractions`/`reflection_skips`, rendered into the same `review_ledger.json`
+  (`reflection_retractions`, `reflection_skipped` keys) — no second artifact file.
+
+## 1.48.7 - 2026-08-18
+
+### Added
+
+- `test_review_tracer.py`: 7 failing tests (RED, Phase 3 Plan 1) for the not-yet-implemented
+  `rule_glob` (brace-expand and `**`-aware glob-based rule-doc resolution) and `reflection`
+  (retract-only LLM-verdict filter) modules.
+
+## 1.48.6 - 2026-08-17
+
+### Fixed
+
+- `cli.py`: `run_review` now wires `review_position_gate`'s dropped/declined output into
+  `report.write_report`, so a review run writes `report.md`'s drop/decline sections and
+  `artifacts/review_ledger.json` on every path, including the zero-drop/zero-decline case
+  (T-02-15, T-02-18). Previously the gate's return value was discarded and no review-mode
+  run ever produced these outputs.
+
+## 1.48.5 - 2026-08-17
+
+### Fixed
+
+- `cli.py`: `run_review`'s docstring no longer claims batching and exit codes 2/3 are future
+  work — both were already implemented. Kept the accurate note that finding-source integration
+  is still pending (WR-02).
+
+## 1.48.4 - 2026-08-17
+
+### Fixed
+
+- `phase_gate.py`: removed the unused `UNRESOLVED_POSITION_REASON` constant. The gate never
+  assigned it — a finding it cannot position goes to `declines`, never `dropped` — so
+  `DROP_REASONS` now holds only `outside-diff`, the one reason the gate actually emits (WR-01).
+
+## 1.48.3 - 2026-08-17
+
+### Fixed
+
+- `cli.py`: `run_review` now computes `diff_line_counts` and `binary_paths` and passes them into
+  `partition(...)`. The tracer-path call left both at their no-op defaults, so an oversized
+  (>5000-line) or binary changed file stayed `reviewable` instead of landing in
+  `selection.excluded` with reason `too-large`/`binary` (CR-03).
+
+## 1.48.2 - 2026-08-17
+
+### Fixed
+
+- `diffscope.py`: `resolve_ref_sha` now raises `ValueError` when `git rev-parse --verify` exits
+  non-zero. A syntactically valid but nonexistent ref (e.g. `does-not-exist-branch`) previously
+  resolved to `""` instead of raising, silently defeating `run_review`'s documented "exit 2 on an
+  invalid ref" contract (CR-02).
+
+## 1.48.1 - 2026-08-17
+
+### Fixed
+
+- `phase_gate.py`: `review_position_gate`'s `declines` list now holds the `PositionResult`
+  `resolve_position` returned, not the raw `Finding`. `report.write_report(...,
+  position_reviews=declines)` requires `PositionResult`-only fields (`claimed_path`,
+  `claimed_line`, `snippet`, `reason`) that `Finding` does not have, so composing the two
+  functions raised `AttributeError` on the first decline (CR-01).
+
+## 1.48.0 - 2026-08-17
+
+### Added
+
+- `cli.py`: `run_review`'s per-file loop now catches any exception from
+  `parse_hunks(file_diff_text(...))`, transitions that file to `failed` with the exception text
+  as its note, and continues to the next file instead of aborting the run. The coverage
+  manifest's seal now drives the exit code — `complete` (including zero reviewable files)
+  returns 0, `partial` prints one "unfinished file" line per non-`done` entry (path, state,
+  note) and returns 3. The exit-2 ref-validation path is unchanged.
+
+## 1.47.1 - 2026-08-17
+
+### Added
+
+- `tests/test_cli.py`: failing tests for `run_review` mapping the coverage-manifest seal to an
+  exit code — a `complete` seal returns 0, a `partial` seal returns 3 and prints one line per
+  unfinished file naming its path, state, and note. RED phase for the next `cli.py` change — no
+  production code changed in this release.
+
+## 1.47.0 - 2026-08-17
+
+### Added
+
+- `report.py`: `DROPPED_FINDINGS_HEADING` and `render_dropped_findings_section(dropped)`,
+  matching `render_position_review_section`'s heading level, table style, and empty-list
+  none-dropped fallback. `to_markdown` gained `dropped` and `position_reviews` arguments and
+  now renders both sections unconditionally, right after the findings body. `write_report`
+  gained the same two arguments and threads them into both `to_markdown` and
+  `write_review_ledger` from one call, so the markdown report and the JSON ledger are built
+  from a single source and cannot disagree about what a review-mode run dropped.
+
+## 1.46.1 - 2026-08-17
+
+### Added
+
+- `tests/test_report.py`: failing tests for `render_dropped_findings_section`, `to_markdown`
+  wiring the dropped-findings and position-review sections after the findings body, and
+  `write_report` writing `review_ledger.json` once from the same `dropped`/`position_reviews`
+  arguments it renders into the markdown report. RED phase for the next `report.py` change —
+  no production code changed in this release.
+
+## 1.46.0 - 2026-08-17
+
+### Added
+
+- `phase_gate.py`: `review_position_gate` now splits findings three ways — `kept`, `dropped`,
+  and `declines` — instead of the earlier `(kept, dropped)` pair. A finding that the
+  positioning ladder cannot resolve at all is a decline, kept out of both other lists. Every
+  other finding is checked against `diffhunks.hunk_for_line` at its resolved position: inside a
+  hunk keeps the finding (moved there if relocated), outside drops it with reason
+  `outside-diff`. `DroppedFinding` now carries `path`, `line`, `rule_id`, `reason`; the drop
+  reasons are a frozen set, `DROP_REASONS`. The gate never mutates an input finding.
+
+## 1.45.1 - 2026-08-17
+
+### Added
+
+- `tests/test_phase_gate.py`: failing tests for the plan 02-05 shape of
+  `review_position_gate` — a three-way kept/dropped/declines split, sorted drop order, and
+  hunk-boundary adjacency checks. The implementation change lands in a follow-up commit.
+
+## 1.45.0 - 2026-08-17
+
+### Added
+
+- `report.py`: `render_position_review_section(results)` renders a `## Position review required`
+  markdown table, one row per declined finding, with pipe/newline escaping so a snippet cannot
+  corrupt the table; `write_review_ledger(ws, *, position_reviews, dropped)` writes
+  `artifacts/review_ledger.json` with `position_reviews`/`dropped` keys always present. Neither
+  function is wired into `to_markdown`/`write_report` yet — plan 02-05 wires them once the drop
+  ledger exists.
+
+## 1.44.0 - 2026-08-17
+
+### Added
+
+- `positioning.py`: `resolve_position` now runs the full four-rung ladder — hunk match in the
+  claimed file (`exact`), whole-file match in the claimed file (`relocated`/`whole-file-match`),
+  match in exactly one other changed file (`relocated`/`cross-file-match`), else decline
+  (`needs-position-review`). Two or more matches at any rung decline instead of picking one.
+  `PositionResult` gained a `snippet` field, carried on every result including declines.
+
+### Fixed
+
+- `phase_gate.py`: `review_position_gate` gained an optional `file_text_by_path` parameter to
+  match `resolve_position`'s new five-argument signature.
+
+## 1.43.0 - 2026-08-17
+
+### Added
+
+- `review_coverage.py`: `CoverageManifest.seal()` now raises `CoverageTransitionError` (a
+  `RuntimeError`) on an empty manifest instead of vacuously returning `complete` — a run must
+  never claim coverage it did not perform (T-02-05). `cli.py`'s `run_review` returns 0 before
+  calling `seal()` when there is nothing to review, so a zero-file diff still exits cleanly.
+- `diffhunks.py`: `Hunk` is now a frozen dataclass with tuple-typed `added`/`deleted`/`context`
+  fields, so `parse_hunks` is provably pure. Line splitting moved to `str.splitlines()`, fixing a
+  bug where a diff ending in a newline produced a spurious trailing empty context line. New
+  `hunk_for_line(hunks, line)` returns the containing `Hunk` or `None`.
+
+## 1.42.0 - 2026-08-17
+
+### Added
+
+- `file_select.py`: `EXCLUSION_REASONS` is now enforced, not just documented — `ExcludedFile`
+  raises `ValueError` for any reason outside the closed set. `partition` gained
+  `diff_line_counts`, `binary_paths`, and `max_diff_lines` (default 5000, D-11) keyword
+  parameters, defaulting to no-op values so existing callers are unaffected. The check order is
+  now deleted, then binary, then generated, then not-allowlisted, then too-large (strictly over
+  the cap; exactly at the cap stays reviewable). No `--max-diff-lines` CLI flag — a cap override
+  is deferred to Phase 4.
+
+## 1.41.0 - 2026-08-17
+
+### Added
+
+- `file_select.py`: full allowlist and default-exclude globs ported from open-code-review.
+  `ALLOWED_EXTENSIONS` is now the complete 86-extension set from
+  `supported_file_types.json`; `DEFAULT_EXCLUDE_GLOBS` is a new 40-pattern tuple, brace-expanded
+  from `default_exclude_patterns.json`, driving a new `_is_generated(path)` check. `partition`
+  normalizes a git-quoted non-ASCII path and lowercases the extension before matching, and
+  checks deleted status, then generated globs, then the allowlist, in that order.
+
+## 1.40.0 - 2026-08-17
+
+### Added
+
+- `diffscope.py`: full ref-validation and `changed_file_records` behavior. The allowlist pattern
+  now permits `~` so `HEAD~1`-style ancestor refs validate; `changed_file_records` parses the
+  full `--name-status` vocabulary and carries `old_path` for renames and copies; two new
+  functions, `file_diff_line_count` and `binary_paths`, give `file_select.partition` its
+  size-cap and binary inputs (landing in the next release). The `review` CLI branch now catches
+  a `ValueError` from ref resolution and exits `2` with one actionable stderr line naming the
+  ref, without laundering any other `ValueError` into the same exit code.
+
+## 1.39.0 - 2026-08-17
+
+### Added
+
+- New `sec-overlay review --base <ref> --head <ref> --root <path>` CLI verb: a diff-scoped,
+  position-verified review pass. Resolves both refs to SHAs before any other git call, selects
+  changed files (`file_select.partition`), parses their hunks (`diffhunks.parse_hunks`),
+  confirms or declines each finding's claimed position against the diff without fuzzy matching
+  (`positioning.resolve_position`), gates findings on that decision
+  (`phase_gate.review_position_gate`), and tracks per-file coverage to a terminal seal
+  (`review_coverage.CoverageManifest`, persisted to `artifacts/coverage_manifest.json`). Exits 0
+  only when the manifest seals `complete`. Wires exactly one changed file through every layer
+  (the tracer path) — batching, exit codes 2/3, the full extension allowlist, and the diff-line
+  size cap arrive in a later plan. No new runtime dependency; `coverage.py`, `models.py`, and
+  `evidence.py` are unchanged.
+
+## 1.38.0 - 2026-08-17
+
+### Added
+
+- `Workspace` gained an `artifacts` property (`root/artifacts`) for review-mode run state — the
+  coverage manifest and review ledger the upcoming `review` CLI mode writes. Never routed through
+  `reports_dir`. `ensure()` creates it.
+
+## 1.37.11 - 2026-08-17
+
+### Fixed
+
+- `tests/fixtures/graph_target/app/{db,api}.py` reference `cursor`/`app` names that only exist
+  at runtime through the fixture's structural-scan contract (`sec_overlay.graph` parses these
+  files without importing them). `ty` flagged both as unresolved references. Added a stub
+  binding for each (`cursor: Any = None`, `app: Any = None`) placed to preserve every line
+  number `test_graph.py` pins (`app/db.py:1:run_query`, `app/api.py:4:handler`,
+  `app/api.py:10:get_widget`). No behavior change — these files are never executed.
+
+## 1.37.10 - 2026-08-17
+
+### Fixed
+
+- `sec_overlay/stage_validate.py`'s `_VALIDATORS` dict held three differently-typed validator
+  signatures (`dict`-only, `dict | None`, and `object`), which `ty` flagged as a union-callable
+  mismatch at the `fn(obj)` call site. Added `_adapt_dict`/`_adapt_optional_dict` factories that
+  isinstance-check the stage payload before delegating, unifying every entry to
+  `Callable[[object], list[str]]`. This also closes a real gap: a non-dict subagent output to
+  most stages previously crashed with `AttributeError` instead of returning a validation error
+  (only `_validate_runtime_test` guarded against this before). No behavior change for
+  well-formed dict input.
+
+## 1.37.9 - 2026-08-17
+
+### Fixed
+
+- `test_patch_status.py`'s fake-runner helper monkey-patched a `calls` list onto a plain
+  function object, which `ty` cannot type (function objects have no declared attribute
+  namespace). Replaced with a small `_Runner` class holding `calls` as a real instance
+  attribute and a `__call__` method standing in for the function; fixes the remaining
+  `unresolved-attribute` VAL-02 row. No behavior change.
+
+## 1.37.8 - 2026-08-17
+
+### Fixed
+
+- `test_rule_matcher.py`, `test_bucket_b.py`, and `test_calibrate.py` add an explicit
+  `is not None` assertion before dereferencing a call result typed `X | None`
+  (`AsvsCatalog.get`, `emit_semgrep_rule`, `Finding.risk_score`) — each call is known to return
+  a non-`None` value at that point in the test, but `ty` cannot infer that without the guard.
+  Fixes 3 VAL-02 ledger rows (`unresolved-attribute` / `not-subscriptable` / `unsupported-operator`);
+  no behavior change.
+
+## 1.37.7 - 2026-08-17
+
+### Fixed
+
+- `test_bench.py`'s `CorpusEntry` builder and `test_profile.py`'s `ScanProfile` roundtrip test
+  now build the base object with explicit fields and layer overrides with `dataclasses.replace`,
+  instead of a `dict()` + `.update(kw)` + `Cls(**d)` / `Cls(**base, notes=...)` splat — the same
+  `ty` per-field argument-checking bypass fixed for `Finding` builders in 1.37.6. Clears the
+  remaining VAL-02 `invalid-argument-type` rows for both files; no behavior change.
+
+## 1.37.6 - 2026-08-17
+
+### Fixed
+
+- `test_citations.py`, `test_factcheck_baseline_envelope.py`, and `test_report.py`'s `Finding`
+  test-builders now use `dataclasses.replace(base, **kw)` over per-test overrides instead of
+  `dict()` + `.update(kw)` + `Finding(**d)` — `**d`'s concrete inferred dict type bypassed `ty`'s
+  per-field argument checking, which `replace`'s `**changes: Any` typing restores; fixes the
+  bulk of the VAL-02 `invalid-argument-type` ledger rows; no behavior change.
+
+## 1.37.5 - 2026-08-17
+
+### Fixed
+
+- `test_postflight.py` replaces a single-element list-slice with `next(...)`, and
+  `test_structural_index.py` replaces a `"\n".join([...])` with adjacent string literals —
+  fixes the two remaining VAL-02 ruff findings (`RUF015`, `FLY002`); no behavior change.
+
+## 1.37.4 - 2026-08-17
+
+### Fixed
+
+- `test_prefilter.py` and `test_wiring.py`'s `Exclusions([], [], [])` fixture calls now pass
+  `Exclusions(set(), [], set())`, matching the dataclass's `set[str]`-typed `rule_ids`/`classes`
+  fields — fixes 16 `invalid-argument-type` diagnostics (VAL-02 ty ledger row); no runtime
+  behavior change.
+
+## 1.37.3 - 2026-08-17
+
+### Fixed
+
+- `workspace.py`'s `Workspace` gains a hand-written `__init__` (replacing the dataclass
+  `__post_init__`) so the `str | Path` constructor argument type-checks under `ty` — fixes
+  three `invalid-argument-type` diagnostics in `test_workspace.py` without widening the
+  stored `Path`-typed fields (VAL-02 ty ledger row).
+
 ## 1.37.2 - 2026-08-16
 
 ### Fixed

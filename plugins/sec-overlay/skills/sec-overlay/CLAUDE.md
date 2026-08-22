@@ -25,15 +25,17 @@ Recall matters too: coverage is pursued until a phase can defend it to its adver
 
 Before a *full* audit, satisfy these environment prerequisites (a clean checkout lacks them):
 
-- **Semgrep rules submodule** — `rules/semgrep/` must be checked out (`git submodule update --init
-  --recursive`) or `test_preflight.py::...vendored_rules` fails for lack of rules.
+- **Vendored semgrep ruleset** — `rules/semgrep/` is a gitignored, shallow-cloned directory
+  (`git clone --depth 1 https://github.com/semgrep/semgrep-rules rules/semgrep`, per
+  `preflight.py`'s remediation), not a tracked sub-repository. It must be present or
+  `test_preflight.py::...vendored_rules` fails for lack of rules.
 - **External tool binaries** — `uv run python -m sec_overlay.preflight` must show `semgrep`,
   `codeql` (+ query packs), `ast-grep`, `osv-scanner`; a missing pack drops that dataflow (§2).
 - **Bench corpus is local-only** — `bench/corpus_seed/*.json` is gitignored (confirmed vulns in
   private code); its absence fails `test_bench.py::test_seed_corpus_is_valid` and
   `test_citations.py::test_all_mapped_ids_exist_in_seed` — both **dev/bench**, not part of a run.
   Seed locally — see the plugin `CLAUDE.md`'s "Developing the skill" section. Both failures are
-  **environmental** — never "fix" by committing submodule/seed data.
+  **environmental** — never "fix" by committing vendored-ruleset/seed data.
 
 ---
 ## 2. How to run an audit
@@ -76,12 +78,18 @@ T1 Tier-1 substrate  python -m sec_overlay.graph build --target <T> --workspace 
    Validate-fix     agents/validate-fix.md (opus; personas: security-architect + penetration-tester)
 12 Verify           python -m sec_overlay.verify --workspace <WS> --target <T> --config <rules>
 13 Gate             python -m sec_overlay.findings_gate --workspace <WS>
-13.5 Red Team       agents/redteam.md (sonnet) → agents/redteam-adversary.md (opus)
-                    python -m sec_overlay.redteam --workspace <WS> [--min-risk N]  → redteam-plan.md
 14 Report           python -m sec_overlay.report --workspace <WS>   → report.sarif + report.md
+14.4 Red Team       agents/redteam.md (sonnet) → agents/redteam-adversary.md (opus)
+                    # PHASE_TABLE-wired (D-01): the driver dispatches this automatically after
+                    # selfscore, before artifact-gate — artifact_gate.run_artifact_gate hard-requires
+                    # redteam-plan.md to exist. `python -m sec_overlay.redteam --workspace <WS>
+                    # [--min-risk N]` remains available for a standalone manual re-run.
 14.5 Artifact gate  python -m sec_overlay.artifact_gate --workspace <WS>   # deterministic self-check (runs first)
 14.6 Artifact review agents/artifact-review.md (opus, DIFFERENT family) — claim↔evidence, cannot delete a receipt-backed finding
-C2 Postflight       python -m sec_overlay.postflight --workspace <WS> --sha <sha>  # durable prior_context
+15 Postflight       PHASE_TABLE-wired (D-01) as the driver's DETERMINISTIC_ACTIONS["postflight"] entry —
+                    the final phase, dispatched automatically after artifact-review. `python -m
+                    sec_overlay.postflight --workspace <WS> --sha <sha>` remains available for a
+                    standalone manual re-run.
 ```
 
 ### Quick deterministic scan (no agents)

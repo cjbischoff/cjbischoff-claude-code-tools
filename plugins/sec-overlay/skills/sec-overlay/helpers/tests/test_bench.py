@@ -1,5 +1,6 @@
 """Tests for the bench eval harness (corpus, judge, tally, run)."""
 import json
+from dataclasses import replace
 
 from bench.adapter import WorkspaceAdapter, reportable
 from bench.corpus import Corpus, CorpusEntry, load_corpus
@@ -11,11 +12,10 @@ from sec_overlay.workspace import Workspace, write_findings
 
 
 def _entry(fid, **kw):
-    d = {"finding_id": fid, "kind": "positive", "source": "real-confirmed", "cls": "xss",
-         "repo_url": "https://github.com/o/r", "commit": "a" * 40, "file": "app.js",
-         "line": 10, "description": "d"}
-    d.update(kw)
-    return CorpusEntry(**d)
+    base = CorpusEntry(finding_id=fid, kind="positive", source="real-confirmed", cls="xss",
+                        repo_url="https://github.com/o/r", commit="a" * 40, file="app.js",
+                        line=10, description="d")
+    return replace(base, **kw) if kw else base
 
 
 def _f(id_, cls, file, line, status=FindingStatus.CONFIRMED, message="m", rule_id="r"):

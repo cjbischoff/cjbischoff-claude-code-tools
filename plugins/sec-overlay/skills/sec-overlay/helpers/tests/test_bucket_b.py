@@ -81,6 +81,7 @@ def test_githist_empty_on_error():
 def test_emit_semgrep_rule():
     f = _f("SQLI-1", file="app/db.py", evidence="cursor.execute('SELECT ' + q)", sev=Severity.HIGH)
     rule = emit_semgrep_rule(f)
+    assert rule is not None
     r = rule["rules"][0]
     assert r["languages"] == ["python"] and r["severity"] == "ERROR"
     assert r["patterns"][0]["pattern"] == "cursor.execute('SELECT ' + q)"

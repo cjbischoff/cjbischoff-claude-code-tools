@@ -10,6 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from sec_overlay.context import prior_context_path
 from sec_overlay.kb import arc42_path, container_diagram_path, dfd_path, threat_model_path
 from sec_overlay.models import CampaignState
 from sec_overlay.workspace import Workspace
@@ -85,6 +86,10 @@ def _artifact_review_json(ws: Workspace) -> Path:
     return ws.kb / "gates" / "artifact-review.json"
 
 
+def _redteam_plan(ws: Workspace) -> Path:
+    return ws.reports / "redteam-plan.md"
+
+
 PHASE_TABLE: tuple[PhaseSpec, ...] = (
     PhaseSpec("recon", "agent", (), (_profile,), prompt="recon.md"),
     PhaseSpec("architecture", "agent", (_profile,), (_arc42, _container), prompt="architecture.md"),
@@ -111,6 +116,7 @@ PHASE_TABLE: tuple[PhaseSpec, ...] = (
     PhaseSpec("demote-noise", "deterministic", (_findings_dir,), (_findings_dir,)),
     PhaseSpec("report", "deterministic", (_findings_dir,), (_report, _sarif)),
     PhaseSpec("selfscore", "deterministic", (_report,), (_findings_dir,)),
+    PhaseSpec("redteam", "agent", (_findings_dir,), (_redteam_plan,), prompt="redteam.md"),
     PhaseSpec("artifact-gate", "deterministic", (_report, _sarif), (_artifact_gate_json,)),
     PhaseSpec(
         "artifact-review",
@@ -119,6 +125,7 @@ PHASE_TABLE: tuple[PhaseSpec, ...] = (
         (_artifact_review_json,),
         prompt="artifact-review.md",
     ),
+    PhaseSpec("postflight", "deterministic", (_artifact_review_json,), (prior_context_path,)),
 )
 
 

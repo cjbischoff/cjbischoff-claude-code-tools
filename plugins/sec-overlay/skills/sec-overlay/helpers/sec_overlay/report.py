@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter
+from dataclasses import asdict, is_dataclass
+from pathlib import Path
 
 from sec_overlay import cost
 from sec_overlay.campaign import record_stage
@@ -12,10 +14,12 @@ from sec_overlay.coverage_ledger import render_markdown as render_coverage_ledge
 from sec_overlay.evidence import is_tool_receipt
 from sec_overlay.models import Finding, FindingStatus
 from sec_overlay.patch_status import PatchStatus, check_patch_applied, not_applied_caution
+from sec_overlay.positioning import PositionResult
 from sec_overlay.render_util import signal_lines
+from sec_overlay.review_findings import ReviewFinding
 from sec_overlay.sarif import to_sarif
 from sec_overlay.state import load_state
-from sec_overlay.workspace import Workspace, load_paths, read_findings
+from sec_overlay.workspace import Workspace, _atomic_write, load_paths, read_findings
 
 _ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 _REPORTABLE = {FindingStatus.CONFIRMED, FindingStatus.FIXED}
@@ -84,7 +88,7 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
                 f"{f.message.split('|', 1)[0].strip()}"
             ),
             "",
-            (f"**Fix.** Bump `{pkg.split('@')[0]}` to a release that resolves `{adv}`."),
+            (f"**Fix.** Bump `{pkg.rsplit('@', 1)[0] or pkg}` to a release that resolves `{adv}`."),
             "",
         ]
         if f.status is FindingStatus.FIXED and patch_status is not None:
@@ -260,6 +264,11 @@ def to_markdown(
     has_redteam_plan: bool = False,
     patch_statuses: dict[str, PatchStatus] | None = None,
     economics: dict | None = None,
+    dropped: list | None = None,
+    position_reviews: list[PositionResult] | None = None,
+    reflection_retractions: list | None = None,
+    reflection_skips: list | None = None,
+    review_source_skips: list | None = None,
 ) -> str:
     """Render findings and optional token accounting as Markdown.
 
@@ -286,6 +295,19 @@ def to_markdown(
         economics: Optional ``{"by_phase": dict, "by_model": dict, "by_phase_seconds": dict,
             "usd_estimate": float}`` from :func:`sec_overlay.cost`; renders a "Run economics"
             section and takes priority over ``token_spend`` when both are given.
+        dropped: Review-mode findings the position gate placed outside the diff
+            (``phase_gate.DroppedFinding``); rendered under ``DROPPED_FINDINGS_HEADING``
+            unconditionally, so an empty run states none-dropped rather than omitting the
+            section.
+        position_reviews: Review-mode declines (``needs-position-review``); rendered under
+            ``POSITION_REVIEW_HEADING`` the same way.
+        reflection_retractions: Findings the reflection filter retracted; rendered under
+            ``REFLECTION_RETRACTIONS_HEADING`` unconditionally, same as ``dropped``.
+        reflection_skips: Files whose reflection pass failed open; rendered under
+            ``REFLECTION_SKIPPED_HEADING`` unconditionally, same as ``dropped``.
+        review_source_skips: Files whose review source produced nothing (missing
+            return, stale base/head, or unparseable response); rendered under
+            ``REVIEW_SOURCE_SKIPPED_HEADING`` unconditionally, same as ``dropped``.
 
     Returns:
         A Markdown report string.
@@ -346,19 +368,27 @@ def to_markdown(
         lines += ["## Detail", ""]
         for f in detail:
             risk = f.risk_score if f.risk_score is not None else "-"
-            label = "needs-runtime" if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING else "confirmed"
+            label = (
+                "needs-runtime"
+                if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING
+                else "confirmed"
+            )
             lines.append(
                 f"- [{f.id}](findings/{f.id}.md) — risk {risk} — {label} — "
                 f"{_short_title((f.message or '').split('|', 1)[0].split('. ')[0].strip())}"
             )
         lines.append("")
         lines += [
-            (
-                "_Informational findings (not shipped in this report) remain in "
-                "`findings.json`._"
-            ),
+            ("_Informational findings (not shipped in this report) remain in `findings.json`._"),
             "",
         ]
+
+    # Review-mode drop/decline/retraction sections — always rendered, even when empty (D-14, POS-03)
+    lines += ["", render_dropped_findings_section(dropped or [])]
+    lines += ["", render_position_review_section(position_reviews or [])]
+    lines += ["", render_reflection_retractions_section(reflection_retractions or [])]
+    lines += ["", render_reflection_skipped_section(reflection_skips or [])]
+    lines += ["", render_review_source_skipped_section(review_source_skips or [])]
 
     # External-unverifiable leads — sink crosses into an un-ingested dependency
     if external:
@@ -496,7 +526,19 @@ def select_reportable(findings: list[Finding]) -> list[Finding]:
     return sorted(reportable, key=_risk_sort_key)
 
 
-def write_report(ws: Workspace, *, target: str | None = None, confirmed_only: bool = False) -> dict:
+def write_report(
+    ws: Workspace,
+    *,
+    target: str | None = None,
+    confirmed_only: bool = False,
+    dropped: list | None = None,
+    position_reviews: list[PositionResult] | None = None,
+    rule_docs: list[dict] | None = None,
+    reflection_retractions: list | None = None,
+    reflection_skips: list | None = None,
+    review_findings: list[ReviewFinding] | None = None,
+    review_source_skips: list | None = None,
+) -> dict:
     """Assemble the final SARIF + Markdown report from a workspace's findings.
 
     Overwrites ``report.sarif``, ``report.md``, and ``findings.json`` so they
@@ -515,10 +557,31 @@ def write_report(ws: Workspace, *, target: str | None = None, confirmed_only: bo
             implies a still-vulnerable finding's patch is deployed.
         confirmed_only: When true, SARIF excludes needs-deployment-testing findings
             entirely, matching the pre-suppression default output.
+        dropped: Review-mode findings the position gate placed outside the diff; rendered
+            into the markdown report and into ``artifacts/review_ledger.json`` from this one
+            argument, so the two outputs cannot disagree (D-14, POS-03).
+        position_reviews: Review-mode declines (``needs-position-review``); rendered and
+            ledgered the same way as ``dropped``.
+        rule_docs: Per-file resolved rule-doc records; ledgered only, no markdown rendering.
+        reflection_retractions: Findings the reflection filter retracted; rendered and
+            ledgered the same way as ``dropped`` (D-14).
+        reflection_skips: Files whose reflection pass failed open; ledgered only (D-15).
+        review_findings: :func:`review_findings.apply_profile`'s kept output (REV-01);
+            ledgered only, no markdown rendering — present as an empty list when
+            no finding survived profile gating.
+        review_source_skips: Files whose review source produced nothing; rendered and
+            ledgered the same way as ``reflection_skips`` (D-15).
 
     Returns:
         ``{"reported": <count>, "sarif": <path>, "report": <path>}``.
     """
+    dropped = dropped or []
+    position_reviews = position_reviews or []
+    rule_docs = rule_docs or []
+    reflection_retractions = reflection_retractions or []
+    reflection_skips = reflection_skips or []
+    review_findings = review_findings or []
+    review_source_skips = review_source_skips or []
     all_findings = read_findings(ws)
     reportable = select_reportable(all_findings)
     ndt = [f for f in all_findings if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING]
@@ -567,13 +630,261 @@ def write_report(ws: Workspace, *, target: str | None = None, confirmed_only: bo
             has_redteam_plan=has_redteam_plan,
             patch_statuses=patch_statuses,
             economics=economics,
+            dropped=dropped,
+            position_reviews=position_reviews,
+            reflection_retractions=reflection_retractions,
+            reflection_skips=reflection_skips,
+            review_source_skips=review_source_skips,
         )
     )
     write_finding_details(ws, reportable + ndt, patch_statuses=patch_statuses)
     findings_out = reportable + ndt
     ws.findings_json_path.write_text(json.dumps([f.to_dict() for f in findings_out], indent=2))
+    write_review_ledger(
+        ws,
+        position_reviews=position_reviews,
+        dropped=dropped,
+        rule_docs=rule_docs,
+        reflection_retractions=reflection_retractions,
+        reflection_skips=reflection_skips,
+        review_findings=review_findings,
+        review_source_skips=review_source_skips,
+    )
     record_stage(ws, "report")
     return {"reported": len(reportable), "sarif": str(ws.sarif_path), "report": str(ws.report_path)}
+
+
+DROPPED_FINDINGS_HEADING = "## Dropped findings"
+
+
+def render_dropped_findings_section(dropped: list) -> str:
+    """Render every review-mode drop as a dedicated markdown section (D-14, POS-03).
+
+    Args:
+        dropped: ``phase_gate.DroppedFinding``s the review-mode gate placed outside every
+            diff hunk. Rendered in the order given — the gate owns the sort order, so this
+            function never re-sorts; the report and the ledger must not disagree.
+
+    Returns:
+        A markdown string starting with ``DROPPED_FINDINGS_HEADING``.
+    """
+    if not dropped:
+        return f"{DROPPED_FINDINGS_HEADING}\n\nNo finding was dropped.\n"
+    lines = [
+        DROPPED_FINDINGS_HEADING,
+        "",
+        "| Path | Line | Rule | Reason |",
+        "| --- | --- | --- | --- |",
+    ]
+    for d in dropped:
+        lines.append(f"| {d.path} | {d.line} | {d.rule_id} | {d.reason} |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+POSITION_REVIEW_HEADING = "## Position review required"
+
+
+def _escape_snippet_cell(snippet: str | None) -> str:
+    """Make a snippet safe for one markdown table cell.
+
+    Args:
+        snippet: The claimed snippet, or ``None``.
+
+    Returns:
+        The snippet with pipe characters escaped and newlines collapsed to spaces, so the
+        cell cannot restructure the table and hide a neighbouring row.
+    """
+    text = snippet or ""
+    return text.replace("\r\n", " ").replace("\n", " ").replace("|", "\\|")
+
+
+def render_position_review_section(results: list[PositionResult]) -> str:
+    """Render every declined finding as a dedicated markdown section (D-13, POS-02).
+
+    Args:
+        results: `PositionResult`s that need human review (typically every
+            `needs-position-review` decision from a run). Declines are otherwise easy to
+            miss, so this section — and its explicit none-required line when empty — makes
+            them impossible to omit from the report.
+
+    Returns:
+        A markdown string starting with `POSITION_REVIEW_HEADING`.
+    """
+    if not results:
+        return f"{POSITION_REVIEW_HEADING}\n\nNo finding required position review.\n"
+    lines = [
+        POSITION_REVIEW_HEADING,
+        "",
+        "| Claimed path | Claimed line | Snippet | Reason |",
+        "| --- | --- | --- | --- |",
+    ]
+    for r in results:
+        snippet_cell = _escape_snippet_cell(r.snippet)
+        lines.append(f"| {r.claimed_path} | {r.claimed_line} | {snippet_cell} | {r.reason} |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+REFLECTION_RETRACTIONS_HEADING = "## Reflection retractions"
+
+
+def render_reflection_retractions_section(retractions: list) -> str:
+    """Render every reflection-filter retraction as a dedicated markdown section (D-14, D-15).
+
+    Args:
+        retractions: ``reflection.ReflectionRetraction``s the filter removed. Rendered in the
+            order given — ``reflection.apply_verdict`` owns the sort order.
+
+    Returns:
+        A markdown string starting with ``REFLECTION_RETRACTIONS_HEADING``.
+    """
+    if not retractions:
+        return f"{REFLECTION_RETRACTIONS_HEADING}\n\nNo finding was retracted.\n"
+    lines = [
+        REFLECTION_RETRACTIONS_HEADING,
+        "",
+        "| Path | Line | Rule | Reason |",
+        "| --- | --- | --- | --- |",
+    ]
+    for r in retractions:
+        lines.append(f"| {r.path} | {r.line} | {r.rule_id} | {r.reason} |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+REFLECTION_SKIPPED_HEADING = "## Reflection skipped"
+
+
+def render_reflection_skipped_section(skips: list) -> str:
+    """Render every file whose reflection pass failed open as its own section (D-15).
+
+    Args:
+        skips: ``reflection.ReflectionSkip``s recorded when a file's reflection pass raised
+            and the run failed open rather than aborting. Rendered in the order given.
+
+    Returns:
+        A markdown string starting with ``REFLECTION_SKIPPED_HEADING``.
+    """
+    if not skips:
+        return f"{REFLECTION_SKIPPED_HEADING}\n\nNo file was skipped.\n"
+    lines = [
+        REFLECTION_SKIPPED_HEADING,
+        "",
+        "| Path | Reason | Error |",
+        "| --- | --- | --- |",
+    ]
+    for s in skips:
+        lines.append(f"| {s.path} | {s.reason} | {s.error} |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+REVIEW_SOURCE_SKIPPED_HEADING = "## Review source skipped"
+
+
+def render_review_source_skipped_section(skips: list) -> str:
+    """Render every file whose review source produced nothing as its own section (D-15).
+
+    Args:
+        skips: ``review_agent.ReviewSourceSkip``s recorded when a file's review
+            source raised (missing return, stale base/head, or unparseable
+            response) and the run failed open rather than aborting.
+
+    Returns:
+        A markdown string starting with ``REVIEW_SOURCE_SKIPPED_HEADING``.
+    """
+    if not skips:
+        return f"{REVIEW_SOURCE_SKIPPED_HEADING}\n\nNo file's review source was skipped.\n"
+    lines = [
+        REVIEW_SOURCE_SKIPPED_HEADING,
+        "",
+        "| Path | Reason | Error |",
+        "| --- | --- | --- |",
+    ]
+    for s in skips:
+        lines.append(f"| {s.path} | {s.reason} | {s.error} |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_review_ledger(
+    ws: Workspace,
+    *,
+    position_reviews: list[PositionResult],
+    dropped: list,
+    rule_docs: list[dict] | None = None,
+    reflection_retractions: list | None = None,
+    reflection_skips: list | None = None,
+    review_findings: list[ReviewFinding] | None = None,
+    review_source_skips: list | None = None,
+) -> Path:
+    """Write the machine-readable record of every position decline (D-13, POS-02).
+
+    A separate artifact rather than a `findings.json` state, because `models.py` is the
+    frozen milestone contract, its `FindingStatus` enum has no review-position member, and
+    adding one would break the Go port's byte mirror — do not "simplify" this back into
+    `findings.json`.
+
+    Args:
+        ws: Workspace to write `artifacts/review_ledger.json` into.
+        position_reviews: `PositionResult`s needing review; each becomes a `position_reviews`
+            entry carrying `state` `needs-position-review`.
+        dropped: Findings the review-mode gate dropped; plan 02-05 supplies its content.
+            Dataclass instances are converted to dicts; plain dicts pass through unchanged.
+        rule_docs: Per-file resolved rule-doc records (``{"path": ..., "text": ...}``);
+            present as an empty list when no reviewable file was resolved.
+        reflection_retractions: `reflection.ReflectionRetraction`s the filter removed;
+            present as an empty list even when nothing was retracted (D-14).
+        reflection_skips: `reflection.ReflectionSkip`s recorded for a file whose reflection
+            pass failed open; present as an empty list even when nothing was skipped (D-15).
+        review_findings: `review_findings.apply_profile`'s kept output (REV-01); present as
+            an empty list even when nothing survived profile gating.
+        review_source_skips: `review_agent.ReviewSourceSkip`s recorded for a file whose
+            review source produced nothing; present as an empty list even when nothing
+            was skipped (D-15).
+
+    Returns:
+        The path written.
+    """
+    ledger = {
+        "position_reviews": [
+            {
+                "state": "needs-position-review",
+                "claimed_path": r.claimed_path,
+                "claimed_line": r.claimed_line,
+                "snippet": r.snippet,
+                "reason": r.reason,
+            }
+            for r in position_reviews
+        ],
+        "dropped": [asdict(d) if is_dataclass(d) else d for d in dropped],
+        "rule_docs": rule_docs or [],
+        "reflection_retractions": [
+            asdict(r) if is_dataclass(r) else r for r in (reflection_retractions or [])
+        ],
+        "reflection_skipped": [
+            asdict(s) if is_dataclass(s) else s for s in (reflection_skips or [])
+        ],
+        "review_source_skipped": [
+            asdict(s) if is_dataclass(s) else s for s in (review_source_skips or [])
+        ],
+        "review_findings": [
+            {
+                "id": rf.finding.id,
+                "path": rf.finding.file,
+                "line": rf.finding.line,
+                "rule_id": rf.finding.rule_id,
+                "profile": rf.profile,
+                "defect_class": rf.defect_class,
+                "disposition": rf.disposition,
+            }
+            for rf in (review_findings or [])
+        ],
+    }
+    path = ws.artifacts / "review_ledger.json"
+    _atomic_write(path, json.dumps(ledger, indent=2))
+    return path
 
 
 def main(argv: list[str] | None = None) -> int:

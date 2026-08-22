@@ -120,7 +120,7 @@ def test_security_only_drops_unknown_semgrep(tmp_path):
         {"semgrep": {"run": True, "rulesets": ["x"], "security_only": True}}, ["xss"], {})
     res = run_prefilter(ws, "t", prof, semgrep=lambda *a, **k: fake,
                         has_tool=lambda n: True, exclusions_fn=lambda w: __import__(
-                            "sec_overlay.exclusions", fromlist=["Exclusions"]).Exclusions([], [], []))
+                            "sec_overlay.exclusions", fromlist=["Exclusions"]).Exclusions(set(), [], set()))
     assert res["candidates"] == 1
     assert res["dropped_nonsecurity"] == 2
 
@@ -133,7 +133,7 @@ def test_security_only_false_keeps_unknown(tmp_path):
     prof = ScanProfile(["javascript"], [], [], True, ["xss"],
         {"semgrep": {"run": True, "rulesets": ["x"], "security_only": False}}, ["xss"], {})
     res = run_prefilter(ws, "t", prof, semgrep=lambda *a, **k: fake,
-                        has_tool=lambda n: True, exclusions_fn=lambda w: Exclusions([], [], []))
+                        has_tool=lambda n: True, exclusions_fn=lambda w: Exclusions(set(), [], set()))
     assert res["candidates"] == 2
     assert res["dropped_nonsecurity"] == 0
 
@@ -147,7 +147,7 @@ def test_semgrep_runs_without_explicit_run_key(tmp_path):
         {"semgrep": {"rulesets": ["x"]}}, ["xss"], {})   # NO run key
     res = run_prefilter(ws, "t", prof,
                         semgrep=lambda *a, **k: called.append(1) or [_cand("xss", "a.js", 1)],
-                        has_tool=lambda n: True, exclusions_fn=lambda w: Exclusions([], [], []))
+                        has_tool=lambda n: True, exclusions_fn=lambda w: Exclusions(set(), [], set()))
     assert "semgrep" in res["backends_run"]
     assert called
 
@@ -162,7 +162,7 @@ def test_disabled_and_absent_backends_recorded(tmp_path):
         ["xss"], {})
     res = run_prefilter(ws, "t", prof, semgrep=lambda *a, **k: [],
                         has_tool=lambda n: False,   # codeql binary absent
-                        exclusions_fn=lambda w: Exclusions([], [], []), strict=False)
+                        exclusions_fn=lambda w: Exclusions(set(), [], set()), strict=False)
     assert res["skipped_reasons"]["semgrep"] == "disabled"
     assert res["skipped_reasons"]["codeql"] == "absent"
     assert res["backends_run"] == []
@@ -186,7 +186,7 @@ def test_serial_and_concurrent_identical(tmp_path):
     def run(mw):
         ws = Workspace(tmp_path / f"w{mw}"); ws.ensure()
         run_prefilter(ws, "t", prof, semgrep=fake_semgrep, has_tool=lambda n: True,
-                      exclusions_fn=lambda w: Exclusions([], [], []), max_workers=mw)
+                      exclusions_fn=lambda w: Exclusions(set(), [], set()), max_workers=mw)
         return [(f.id, f.file, f.line, f.cls) for f in read_findings(ws)]
 
     serial = run(1)
@@ -206,7 +206,7 @@ def test_codeql_disabled_recorded(tmp_path):
         ["xss"], {})
     res = run_prefilter(ws, "t", prof, semgrep=lambda *a, **k: [],
                         has_tool=lambda n: True,
-                        exclusions_fn=lambda w: Exclusions([], [], []), strict=False)
+                        exclusions_fn=lambda w: Exclusions(set(), [], set()), strict=False)
     assert res["skipped_reasons"]["codeql"] == "disabled"
 
 
@@ -238,7 +238,7 @@ def test_prefilter_runs_secrets_and_sca_never_silent(tmp_path):
         has_tool=lambda n: True,
         secrets_fn=lambda target: fake_sec,
         sca_fn=lambda target, **k: (_ for _ in ()).throw(__import__("sec_overlay.sca", fromlist=["ScaError"]).ScaError("osv-scanner not installed")),
-        exclusions_fn=lambda w: Exclusions([], [], []), strict=False)
+        exclusions_fn=lambda w: Exclusions(set(), [], set()), strict=False)
     assert "secrets" in res["backends_run"]
     assert res["skipped_reasons"].get("sca") == "absent"   # NOT silent
     assert any(x["backend"] == "sca" for x in res["failed"])
@@ -256,7 +256,7 @@ def test_prefilter_never_silent_unimplemented_backend(tmp_path):
         [], {})
     res = run_prefilter(ws, "t", prof, semgrep=lambda *a, **k: [],
         has_tool=lambda n: True, secrets_fn=lambda t: [],
-        exclusions_fn=lambda w: Exclusions([], [], []), strict=False)
+        exclusions_fn=lambda w: Exclusions(set(), [], set()), strict=False)
     assert res["skipped_reasons"].get("sca") == "disabled"
 
 

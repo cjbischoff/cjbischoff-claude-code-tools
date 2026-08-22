@@ -7,7 +7,8 @@ from sec_overlay.rule_matcher import build_guided_context, match_function
 def test_asvs_seed_loads_and_indexes():
     c = AsvsCatalog.load(default_catalog_path())
     assert len(c.requirements) >= 10
-    assert c.get("1.2.5").full_id == "v5.0.0-1.2.5"
+    req = c.get("1.2.5")
+    assert req is not None and req.full_id == "v5.0.0-1.2.5"
     assert [r.id for r in c.by_cwe("CWE-78")] == ["1.2.5"]
     assert "1.2.5" in c.format_for_prompt(["1.2.5"])
 

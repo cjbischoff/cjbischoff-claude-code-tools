@@ -33,7 +33,7 @@ def test_every_declared_backend_is_accounted_for(tmp_path):
         qlpack_fn=lambda lang: True,
         secrets_fn=lambda target: [],
         sca_fn=lambda target, **k: [],
-        exclusions_fn=lambda w: Exclusions([], [], []),
+        exclusions_fn=lambda w: Exclusions(set(), [], set()),
     )
     accounted = set(res["backends_run"]) | set(res["skipped"]) | set(res["skipped_reasons"]) \
         | {f["backend"] for f in res["failed"]}

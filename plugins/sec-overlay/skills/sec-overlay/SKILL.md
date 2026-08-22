@@ -62,13 +62,92 @@ uv run python -m sec_overlay.cli scan \
 
 The bundled `rules/smoke.yaml` is a minimal ruleset. For fuller semgrep
 coverage, point `--config` (and the recon agent's `rulesets`) at your own
-semgrep ruleset; the semgrep-rules submodule is not shipped with this plugin.
+semgrep ruleset; the vendored, gitignored semgrep-rules clone (`helpers/rules/semgrep/`) is
+not shipped with this plugin.
 
 Outputs, under the workspace directory:
 - `findings/F-*.json` — one file per normalized finding (the contract for later phases).
 - `report.sarif` — SARIF 2.1.0.
 - `report.md` — human-readable report.
 - `state.json` — campaign state (pass number, pinned SHA).
+
+## Diff-scoped review (`review`)
+
+```bash
+cd "${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay/helpers"
+uv run python -m sec_overlay.cli review \
+  --base <base-ref> --head <head-ref> --root <path-to-code> \
+  --profile security   # or: general
+```
+
+`--profile security` (the default) reproduces the pre-REV-01 gate ladder byte-for-byte — every
+finding gates A-E (`references/prompt-constants.md`'s `EXCLUSION_RULES`) mark is dropped.
+`--profile general` relaxes gates A and B for a finding whose rule-doc defect class is one of
+`null-dereference`, `thread-safety`, `resource-leak`, `error-swallowing`, `injection`
+(`GENERAL_PROFILE_EXCLUSION_RULES`) — a strict superset of the security profile's output, never
+a change to it. `sec_overlay.review_findings.apply_profile` is the gate; `security` and
+`general` never mix rule sets. Exit 0 on a `complete` coverage seal, 2 on an invalid ref or an
+unsafe rule file, 3 when one or more files could not be reviewed.
+
+Like `scan` and `audit`, every review artifact — `coverage_manifest.json`, `runs/review_plan.json`,
+`runs/review_prompts/`, `report.md`, `review_ledger.json` — resolves under the same per-repo
+memory sidecar (`<root>/.sec-overlay/<repo-slug>/`), never at `--root` itself; see "Per-repo
+memory" below. `review` takes an optional `--workspace` override, mirroring `scan`/`audit`:
+omit it and `review` resolves the same per-repo sidecar beneath `--root`; supply it and
+`load_paths` uses that value instead. Whichever branch applies, pass the **identical** value,
+preferably absolute, to every `prepare`, dispatch, and `consume` invocation of one review — the
+sidecar slug is derived from that value, so a different spelling resolves to a different sidecar
+and silently orphans the prepared run.
+`--model` records an opaque model-identity string on the coverage manifest; pass the
+**identical** `--model` string to every invocation of one review the same way — a resumed
+run with a different `--model` is rejected (exit 2) rather than silently mixing findings
+from two different models on one manifest.
+
+### Reflection pass — fact-checking kept comments (D-16)
+
+Every kept finding for a reviewable file also runs through a **retract-only** reflection filter
+before the report is written: `sec_overlay.reflection.render_reflection_prompt` renders
+`agents/review-filter.md` for that file (path, diff, and the file's kept comments — no severity or
+category, so the filter has nothing to rank or rewrite); a `review-filter` subagent returns exactly
+one of `approve_all_comments` or `report_incorrect_comments`; `validate_verdict` parses that raw
+response before any finding sees it; `apply_verdict` is the only code path that may act on it, and
+only to retract — never to add, rank, or rewrite. `PROTECTED_SUBJECT_CLASSES` is a hardcoded veto
+no verdict can override: a retraction naming a protected-subject finding is refused and the finding
+stays kept, but the refusal is still recorded, never silently dropped (D-14). A file whose
+reflection pass raises fails open — the run records a `ReflectionSkip` and continues rather than
+aborting (D-15). `review_ledger.json` carries both `reflection_retractions` and
+`reflection_skipped` unconditionally, even when empty, and `report.md` renders both sections the
+same way. `cli.py review`'s tracer slice calls `apply_verdict` with an always-empty verdict — no
+finding source is wired into review mode yet — so live reflection dispatch is a later plan.
+
+### Review mode (diff-scoped) — prepare, dispatch, consume
+
+Review mode has no phase driver like the full audit above — it is a three-step loop the main
+agent runs directly, over one `review-file` subagent per reviewable file:
+
+1. **Prepare** — `uv run python -m sec_overlay.cli review --base <ref> --prepare` writes
+   `runs/review_plan.json` (one entry per reviewable file: path, resolved rule text, diff, other
+   changed files) and renders one prompt per entry from `agents/review-file.md` under
+   `runs/review_prompts/<slug>.md`.
+2. **Dispatch** — for each entry, spawn a `review-file` subagent (sonnet) in a fresh context with
+   that rendered prompt, then persist its final return with
+   `workspace.record_agent_return(ws, <label>, <text>)` — the same disk-is-truth convention the
+   full audit uses (never depend on the subagent's summary message propagating). Dispatch in
+   waves of three to four, matching the fan-out rule the audit pipeline already uses under
+   provider load, and never exceed `--concurrency` (default 8, ceiling 128) live subagents at
+   once — the Python core validates and records this bound but never dispatches an agent itself
+   (T-04-09), so the dispatching agent (you) is the enforcement point.
+3. **Consume** — `uv run python -m sec_overlay.cli review --base <ref> [--profile general]
+   [--model <id>]` reads the recorded returns back from disk and runs them through the same gate
+   chain the tracer slice already builds: position gate → `apply_profile` → the reflection filter
+   → the receipt gate. Pass the identical `--model` string used to `prepare`/`dispatch` this
+   review; a resumed consume with a different `--model` is rejected (exit 2).
+
+The skill never parses a subagent's return itself and never decides what a finding is — it only
+records the raw text; `sec_overlay.review_agent.parse_review_response` is the sole parser. The
+loop fails open: a file with no recorded return, or one whose return will not parse, contributes
+zero findings for that file and is listed in the run's skip ledger rather than aborting the pass
+— the same discipline as the reflection skip above.
 
 ## Running a full audit
 

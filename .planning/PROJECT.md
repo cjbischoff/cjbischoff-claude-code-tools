@@ -12,6 +12,27 @@ Conventional Commits, prek hooks, README/CHANGELOG routing, and automatic semver
 The marketplace never ships an unverified claim: every plugin passes validation, every
 release follows governance, and every confirmed sec-overlay finding is receipt-backed.
 
+## Current State
+
+**Shipped:** v5.0 Hybrid Diff-Review Architecture (2026-08-22).
+
+sec-overlay now has a `review` verb with `security` and `general` profiles. The diff
+pipeline covers diff acquisition, file selection, a sealed coverage manifest, hunk
+positioning, per-language rule resolution, a retract-only reflection filter, bounded
+concurrency, identity-checked resume, and diff-anchored SARIF output. Both the audit
+and the review pipeline are verified end to end on real targets with receipts. The
+core stays stdlib-only and the frozen JSON contract is unchanged.
+
+**Milestone stats:** 7 phases, 30 plans, 116 tasks, 212 files changed,
++38,296/−294 lines, 2026-08-17 through 2026-08-22.
+
+## Next Milestone Goals
+
+Not defined yet. Run `/gsd-new-milestone` to define them. Candidates carried forward:
+- GROW-01: second plugin onboarding (deferred since v2 planning)
+- GROW-02: automated plugin-validate gate (deferred since v2 planning)
+- Six acknowledged Phase 06 tech-debt items (see STATE.md Deferred Items)
+
 ## Requirements
 
 ### Validated
@@ -30,19 +51,28 @@ All items below shipped before this project started.
 - ✓ Defect remediation, 57 issues across T-themes (driver, vocab, coverage) — 2026-08-15
 - ✓ CVSS v4.0 migration, architecture/threat-model rebuild, diagram/STE gates — 2026-08-16
 - ✓ Driven invocation (/sec-overlay:audit, run.py, receipts, fence) — 2026-08-16
+- ✓ Baseline health verified: plugin validate, ruff/ty green, prek hooks (VAL-01/02/03) — Validated in Phase 1: Baseline Health Verification, 2026-08-17 (pytest carries a recorded maintainer override for two environmental failures)
+- ✓ Coverage manifest blocks a `complete` seal while any file is pending (REV-02) — Validated in Phase 2: Diff Pipeline & Positioning, 2026-08-18
+- ✓ Positioning confirms or declines every finding location; no guesses (REV-03) — Validated in Phase 2: Diff Pipeline & Positioning, 2026-08-18
+- ✓ `review` verb reviews a diff in `security` and `general` profiles (REV-01) — Validated in Phase 3: Rule Matching & Review Modes, 2026-08-19
+- ✓ Glob rule matching selects per-language rule docs with safe rule-file reads (REV-04) — Validated in Phase 3: Rule Matching & Review Modes, 2026-08-19
+- ✓ Reflection filter retracts only, fails open, never confirms (REV-05) — Validated in Phase 3: Rule Matching & Review Modes, 2026-08-19
+- ✓ Review workspace isolated to the `<target>/.sec-overlay/<slug>/` sidecar; nothing written to the reviewed repo's tracked tree (DIFF-04) — Validated in Phase 04.1: Close gap: review sidecar workspace isolation, 2026-08-19
+- ✓ Bundling, bounded concurrency/timeouts, identity-checked SHA-pinned resume, and diff-anchored output with content-only SARIF fingerprints (REV-06; SCALE-01/02/03, OUT-01/02) — Validated in Phase 4: Scale, Resume & Diff Output, 2026-08-20
+- ✓ Full driven audit run completed on a real target with receipts; working-tree fence held (AUD-01) — Validated in Phase 5: End-to-End Verification, 2026-08-21
+- ✓ Confirmed findings receipt-backed; Tier-2-only never confirms (AUD-02) — Validated in Phase 5, 2026-08-21
+- ✓ Runtime-dependent findings scored and visible in headline counts (AUD-03) — Validated in Phase 5, 2026-08-21
+- ✓ Architecture/threat-model artifacts pass deterministic gates; CVSS v4.0 only (AUD-04) — Validated in Phase 5, 2026-08-21
+- ✓ Report states its 515-file coverage denominator; zero-finding classes ledgered (AUD-05) — Validated in Phase 5, 2026-08-21
+- ✓ Both-profile review run completed E2E on a real diff, manifest sealed, lines positioning-confirmed (AUD-06) — Validated in Phase 5, 2026-08-21; profile-superset contract passed vacuously (0 findings), substantive re-check deferred to Phase 6 (E-12)
+
+- ✓ Run defects fixed or dispositioned; frozen contract unchanged (REL-01) — Validated in Phase 6: Remediation and Governed Release, 2026-08-22; every Phase 5 defect row carries a terminal disposition
+- ✓ Fixes ship through full governance with CodeRabbit review (REL-02) — Validated in Phase 6, 2026-08-22; PRs merged after CodeRabbit review
+- ✓ Substantive profile-superset re-check (E-12): security-kept ⊆ general-kept proven non-vacuously on a real 14-file dispatch — Validated in Phase 6, 2026-08-22
 
 ### Active
 
-- [ ] `claude plugin validate .` passes for the marketplace and every plugin (VAL-01)
-- [ ] sec-overlay quality gates green: pytest, ruff, ty, zero warnings (VAL-02)
-- [ ] prek hooks installed and passing repo-wide (VAL-03)
-- [ ] Full driven audit run completes on a real target with receipts (AUD-01)
-- [ ] Confirmed findings are receipt-backed; Tier-2-only never confirms (AUD-02)
-- [ ] Runtime-dependent findings scored and visible, never hidden (AUD-03)
-- [ ] Architecture/threat-model artifacts pass gates; CVSS v4.0 only (AUD-04)
-- [ ] Report states coverage denominator; gaps logged, never dropped (AUD-05)
-- [ ] Run defects fixed or dispositioned; frozen contract unchanged (REL-01)
-- [ ] Fixes ship through full governance with CodeRabbit review (REL-02)
+(None — define with `/gsd-new-milestone`)
 
 ### Out of Scope
 
@@ -67,9 +97,11 @@ All items below shipped before this project started.
 - Open ingest question: the 2026-08-11 kb-redesign design references a 2026-08-09 spec
   absent from the ingest set (see `.planning/INGEST-CONFLICTS.md` WARNING). Resolve by
   locating the spec or affirming the design doc as authority.
-- Existing dogfooding evidence (2026-08-03 and 2026-08-07 runs) predates the audit
-  driver, CVSS v4.0, and the architecture/threat-model rebuild. The current pipeline
-  has no end-to-end verification run yet.
+- End-to-end verification now exists: Phase 5 ran a full driven audit (515-file
+  coverage denominator) and a both-profile review on real targets, receipt-backed
+  (AUD-01 through AUD-06, 2026-08-21).
+- Known tech debt: six acknowledged Phase 06 items (one ruff `I001`, two CodeRabbit
+  test nitpicks, three sec-overlay doc gaps). See STATE.md Deferred Items.
 
 ## Constraints
 
@@ -97,10 +129,30 @@ All items below shipped before this project started.
 | Artifact layout replaced outright: workspace architecture/ and threat-model/ (ruling R3) | no shims; all consumers re-pointed | ✓ Delivered |
 | Invocation scope A1/B1/C1/D1: one command, thin driver, receipts + fence, inferred roles | latest authority on how a run is invoked and driven | ✓ Delivered |
 | Marketplace doc structure: root CLAUDE.md governs; per-plugin doc trio | plugin CLAUDE.md never auto-loads for installers | ✓ Delivered |
+| Phase 5 UAT sign-off: WR-01/WR-02 ride Phase 6's REL-01 sweep; vacuous AUD-06 superset pass accepted with E-12 tracking the substantive re-check | scope-boundary calls recorded in 05-UAT.md and 05-DEFECTS.md, 2026-08-21 | ✓ Good — E-12 re-check passed non-vacuously in Phase 6 |
+| D-01 fix: `redteam` and `postflight` added to the 22-entry `PHASE_TABLE` so `run.drive()` reaches both phases | documented pipeline steps were silently skipped by the mechanical table | ✓ Good |
+| Review workspace resolves through `RepoMemory.for_target` sidecar (DIFF-04) | review artifacts leaked at bare `--root`; audit/scan already used the sidecar | ✓ Good |
 
 No decision is ADR-locked. ADR-2026-08-04 is the only ADR and remains proposed.
 
 </decisions>
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-08-16 after ingest-driven project initialization*
+*Last updated: 2026-08-22 after v5.0 milestone*

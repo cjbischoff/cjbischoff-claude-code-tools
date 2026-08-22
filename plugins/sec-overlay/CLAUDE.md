@@ -32,7 +32,10 @@ uv run python -m sec_overlay.preflight             # tool availability
 - **`helpers/bench/` is dev-only** — a labelled-corpus precision/recall + regression harness, **not**
   part of an audit run. A `locked` positive that stops being detected is a hard failure. Run:
   `python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --workspaces <dir>`.
-- **Semgrep rules are a git submodule** (`helpers/rules/semgrep/`). Clone with `--recurse-submodules`.
+- **Semgrep rules are a vendored, gitignored clone** (`helpers/rules/semgrep/`), not a git
+  submodule — there is no `.gitmodules` entry. Seed it with
+  `git clone --depth 1 https://github.com/semgrep/semgrep-rules helpers/rules/semgrep`
+  (the exact command `preflight.py` prints when the directory is missing).
 - When editing an `agents/*.md` prompt, preserve its hard rules verbatim (model-family diversity,
   tool-receipt safety contract, count-invariant verdict tables) — these are load-bearing, not prose.
 - CLI-callable modules (`python -m sec_overlay.<module>`): `cli`, `preflight`, `postflight`,

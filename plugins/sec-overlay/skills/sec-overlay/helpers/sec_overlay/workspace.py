@@ -28,13 +28,20 @@ class Workspace:
     findings_dir_override: Path | None = None
     kb_dir_override: Path | None = None
 
-    def __post_init__(self) -> None:
+    def __init__(
+        self,
+        root: str | Path,
+        reports_dir: str | Path | None = None,
+        findings_dir_override: str | Path | None = None,
+        kb_dir_override: str | Path | None = None,
+    ) -> None:
         """Coerce str paths to Path so agent-authored ``Workspace('<path>')`` works."""
-        self.root = Path(self.root)
-        for attr in ("reports_dir", "findings_dir_override", "kb_dir_override"):
-            value = getattr(self, attr)
-            if value is not None:
-                setattr(self, attr, Path(value))
+        self.root = Path(root)
+        self.reports_dir = Path(reports_dir) if reports_dir is not None else None
+        self.findings_dir_override = (
+            Path(findings_dir_override) if findings_dir_override is not None else None
+        )
+        self.kb_dir_override = Path(kb_dir_override) if kb_dir_override is not None else None
 
     @property
     def kb(self) -> Path:
@@ -62,6 +69,11 @@ class Workspace:
         return self.reports
 
     @property
+    def artifacts(self) -> Path:
+        """Review-mode run artifacts directory (coverage manifest, review ledger)."""
+        return self.root / "artifacts"
+
+    @property
     def state_path(self) -> Path:
         """Path to the campaign state file."""
         return self.root / "state.json"
@@ -86,6 +98,7 @@ class Workspace:
         self.kb.mkdir(parents=True, exist_ok=True)
         self.findings_dir.mkdir(parents=True, exist_ok=True)
         self.runs.mkdir(parents=True, exist_ok=True)
+        self.artifacts.mkdir(parents=True, exist_ok=True)
         self._reports.mkdir(parents=True, exist_ok=True)
         (self.root / "architecture" / "runtime-view").mkdir(parents=True, exist_ok=True)
         (self.root / "threat-model" / "attack-sequences").mkdir(parents=True, exist_ok=True)

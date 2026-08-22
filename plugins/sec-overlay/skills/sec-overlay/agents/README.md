@@ -130,7 +130,7 @@ the agent doesn't re-raise known false positives.
 | Prompt | Model | Job |
 |--------|-------|-----|
 | `trace.md` | opus | backward-trace each confirmed sink to an entry point; verdict `reachable?` + blocker taxonomy; when the blocker is an external fact this repo can't answer, populates `open_questions` instead of guessing; when a sink resolves into an un-ingested dependency, sets `reachability.blocker = "external-boundary"` and records the package in `preconditions` rather than guessing reachable/confirmed. On a static-settled `reachable: true` verdict, also records `preconditions` (attacker position, required inputs, config/state) that feed calibrate's severity precondition check (ISSUE-008). |
-| `redteam.md` | sonnet | split confirmed findings into `static-settled` vs `needs-runtime`; write a `runtime_test` block (objective, preconditions, `$SHELL_VAR` payloads — **never literal secrets**, expected signal, telemetry). `expected_signal` must be an object `{secure, insecure}` — not a bare string — because the deterministic renderer reads both keys. For findings that hinge on a human-answerable fact rather than a runtime test, populates `open_questions` instead of forcing a hollow `runtime_test`. |
+| `redteam.md` | sonnet | split confirmed findings into `static-settled` vs `needs-runtime`; write a `runtime_test` block (objective, preconditions, `$SHELL_VAR` payloads — **never literal secrets**, expected signal, telemetry). `expected_signal` must be an object `{secure, insecure}` — not a bare string — because the deterministic renderer reads both keys. `redteam.py`'s `wants_runtime()` is a plain OR over two independent triggers — `runtime_disposition == "needs-runtime"` or `status is FindingStatus.NEEDS_DEPLOYMENT_TESTING` — either alone forces a finding into the plan; there is no third disposition value that opts one out. `open_questions` is a separate, non-bucket-affecting mechanism: for findings that hinge on a human-answerable fact rather than a runtime test, populates `open_questions` instead of forcing a hollow `runtime_test`. |
 | `redteam-adversary.md` | opus | strip items that are actually settleable from source, payloads not tied to a real sink, or claims resting on `llm-claimed` confidence alone. Writes verdicts to `kb/gates/redteam-adversary.json`; `redteam.py` owns `kb/gates/redteam.json`. |
 
 The deterministic `helpers/…/redteam.py` then renders `redteam-plan.md` (only findings at/above
@@ -155,6 +155,23 @@ unrunnable precondition, not a live directive — enforced deterministically dow
 | `bugchain.md` | look across the confirmed set for **chains** — individually low findings that compose into a critical (auth-bypass → IDOR → RCE). |
 | `tune-config.md` | optional ratcheted loop (≤3 rounds): author targeted semgrep rules for uncovered classes, test-fire them, add noise-floor exclusions. |
 | `correlate-combiner.md` + `cross-repo-adversary.md` | cross-repo: narrate the combined multi-repo artifacts (fill `<!-- NARRATIVE -->` slots only; never touch the code-authored diagrams/tables), then pressure-check. |
+
+### Diff-review pipeline (`review`) — a separate, lighter track
+
+The `sec-overlay review` tracer (`SKILL.md`'s "Diff-scoped review" section) runs a distinct,
+lighter pipeline over one diff — not the full audit above. It has two prompts so far:
+
+| Prompt | Model | Reads | Writes / does |
+|--------|-------|-------|----------------|
+| `review-file.md` | sonnet | one changed file's path and diff, the other changed files (context only), and the review checklist `rule_glob.resolve_rule_doc` resolved for that file's language | the producer: a `code_comment` per confirmed issue (`path`, `line`, `message`, `defect_class`) plus a closing `task_done`. Ported from open-code-review's main task prompt under D-02 (role/capabilities/strict-focus/reply-limit prose), adapted to this skill's single-shot, no-tool dispatch and its uppercase token/prompt-constants conventions. `sec_overlay.review_agent.parse_review_response` is the sole reader of its response — every finding it builds carries `REVIEW_AGENT_CLAIM` (`llm-claimed:review-agent`) as evidence and `FindingStatus.RAW`, both fixed in code, never trusted from the response; a `code_comment` naming a path other than the file under review is discarded, never converted (REV-03, Strict Focus Rules enforced mechanically). |
+| `review-filter.md` | sonnet | one changed file's path, diff, and the review comments (findings) that survived positioning + the hunk gate | a **retract-only** fact-checking verdict — `approve_all_comments` or `report_incorrect_comments` naming only ids it was shown. It does not fit the producer/adversary pair above: there is no separate adversary pass, because the real safety guarantee is a mechanical code-level veto (`sec_overlay.reflection.PROTECTED_SUBJECT_CLASSES`), not model tier or a second opinion. `sec_overlay.reflection.validate_verdict` parses its raw response before any finding sees it; `apply_verdict` is the sole code path that may act on it, and even then only to retract — never to add, rank, or rewrite. |
+
+`review-file.md` uses this skill's uppercase token set (`{{CURRENT_FILE_PATH}}`, `{{DIFF}}`,
+`{{CHANGE_FILES}}`, `{{SYSTEM_RULE}}`, plus the `{{OVERLAY_ROOT}}`/`{{REPO_ROOT}}` path anchors),
+rendered by `sec_overlay.review_agent.render_review_prompt`. `review-filter.md` uses its own
+token set (`{{PATH}}`, `{{DIFF}}`, `{{COMMENTS}}`), rendered by
+`sec_overlay.reflection.render_reflection_prompt` — none of the audit-pipeline tokens below apply
+to either, since both are dispatched per file rather than by the orchestrator's phase driver.
 
 ---
 

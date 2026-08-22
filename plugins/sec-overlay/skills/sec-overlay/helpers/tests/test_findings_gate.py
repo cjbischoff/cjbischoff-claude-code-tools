@@ -252,3 +252,52 @@ def test_nonshipping_finding_allows_empty_impact(tmp_path):
     _write(ws, "F-2", "rejected", "", ["semgrep:rule"])
     errs = validate_findings(ws)
     assert not any("impact must be non-empty" in e for e in errs)
+
+
+# --- D-12 receipt-gate disposition ladder for general-defect findings (Phase 3 Plan 05 Task 3) --
+
+from sec_overlay.findings_gate import disposition_without_receipt
+from sec_overlay.review_findings import (
+    NEEDS_DEPLOYMENT_TESTING_DISPOSITION,
+    UNCONFIRMED_DISPOSITION,
+)
+
+
+def test_general_defect_null_dereference_ships_unconfirmed():
+    assert disposition_without_receipt("null-dereference") == UNCONFIRMED_DISPOSITION
+
+
+def test_general_defect_error_swallowing_ships_unconfirmed():
+    assert disposition_without_receipt("error-swallowing") == UNCONFIRMED_DISPOSITION
+
+
+def test_general_defect_resource_leak_ships_unconfirmed():
+    assert disposition_without_receipt("resource-leak") == UNCONFIRMED_DISPOSITION
+
+
+def test_general_defect_thread_safety_ships_needs_deployment_testing():
+    assert disposition_without_receipt("thread-safety") == NEEDS_DEPLOYMENT_TESTING_DISPOSITION
+
+
+def test_general_defect_injection_has_explicit_assignment():
+    # Injection is assigned explicitly (not a fallthrough default) — see the comment
+    # above STATIC_CHECKABLE_CLASSES in findings_gate.py for the reasoning.
+    assert disposition_without_receipt("injection") == UNCONFIRMED_DISPOSITION
+
+
+def test_general_defect_unknown_class_raises():
+    import pytest
+
+    with pytest.raises(ValueError):
+        disposition_without_receipt("not-a-class")
+
+
+def test_general_defect_with_tier1_receipt_still_reaches_confirmed(tmp_path):
+    # No reflection outcome and no profile value can grant confirmed; only confirms_alone
+    # decides that, unchanged by the disposition ladder above.
+    ws = Workspace(tmp_path / "workspace"); ws.ensure()
+    f = _good(); f.cls = "injection"; f.status = FindingStatus.CONFIRMED
+    f.evidence_sources = ["semgrep:injection-rule"]
+    f.impact = "arbitrary command execution"
+    write_findings(ws, [f])
+    assert validate_findings(ws) == []

@@ -55,3 +55,4 @@ continues.
 | What changed between releases | [`CHANGELOG.md`](CHANGELOG.md) |
 | The skill in depth (architecture, worked example, output workspace) | [`skills/sec-overlay/README.md`](skills/sec-overlay/README.md) |
 | The full phase-by-phase operating playbook | [`skills/sec-overlay/SKILL.md`](skills/sec-overlay/SKILL.md) |
+| How to develop the skill, including the vendored (not submoduled) semgrep ruleset | [`CLAUDE.md`](CLAUDE.md) |

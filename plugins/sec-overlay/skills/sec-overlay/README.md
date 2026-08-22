@@ -14,7 +14,7 @@ the three folder READMEs and the operational playbook for detail.
 
 | To understand… | Read |
 |----------------|------|
-| The full phase-by-phase operating playbook | [`SKILL.md`](SKILL.md) |
+| The full phase-by-phase operating playbook, and the diff-scoped `review` mode (`--profile security\|general`, REV-01), including its prepare/dispatch/consume subagent loop (`agents/review-file.md`, bounded to `--concurrency` live subagents at once, SCALE-02) and its retract-only reflection pass (D-16) | [`SKILL.md`](SKILL.md) |
 | Environment setup, how to run an audit | [`CLAUDE.md`](CLAUDE.md) |
 | Git protocol, developing the skill | [`../../CLAUDE.md`](../../CLAUDE.md) |
 | The LLM prompts that investigate/validate/patch | [`agents/README.md`](agents/README.md) |
@@ -32,7 +32,12 @@ These hold everywhere and are enforced in code where possible, prompt otherwise:
 2. **Writes only its own sidecar.** All output lives in an in-repo, self-ignoring
    `<target>/.sec-overlay/<slug>/` directory (override the base with `$SEC_OVERLAY_HOME`, or
    the whole workspace with `--workspace`). A seeded `.sec-overlay/.gitignore` keeps output
-   out of the reviewed repo's git tree.
+   out of the reviewed repo's git tree. `review` shares this convention with one added branch:
+   omit `--workspace` and it falls back to the same per-repo sidecar as `scan`/`audit`; supply
+   `--workspace` and it uses that value instead. Whichever branch applies, pass the same value to
+   every invocation of one run.
+   Pass the same `--model` string too (SCALE-03) — a resumed `review` with a different
+   `--model` is rejected (exit 2) instead of mixing findings from two models on one manifest.
 3. **Tool-receipt gate.** A finding reaches `confirmed`/`fixed` only with ≥1 mechanical
    receipt (`semgrep` / `codeql` / `ast-grep` / `tree-sitter` / `ripgrep` /
    `structural-index` / `secrets` / `sca`). LLM reasoning is namespaced `llm-claimed:` and can
@@ -108,12 +113,12 @@ flowchart TD
     CAL --> PAT(("11 · patch(opus) → validate-fix"))
     PAT --> VER["12 · verify<br/>apply patch to COPY, re-scan"]
     VER --> GATE["13 · findings_gate"]
-    GATE --> RT(("13.5 · redteam → redteam-adversary"))
+    GATE --> REP["14 · report<br/>report.sarif + report.md"]
+    REP --> RT(("14.4 · redteam → redteam-adversary"))
     RT --> RTR["redteam.py → redteam-plan.md"]
-    RTR --> REP["14 · report<br/>report.sarif + report.md"]
-    REP --> AG["14.5 · artifact_gate<br/>deterministic self-check"]
+    RTR --> AG["14.5 · artifact_gate<br/>deterministic self-check (requires redteam-plan.md)"]
     AG --> AR(("14.6 · artifact-review (opus)<br/>claim↔evidence over the rendered report"))
-    AR --> C2["C2 · postflight<br/>durable prior_context.json"]
+    AR --> C2["15 · postflight<br/>durable prior_context.json"]
 ```
 
 The phase legend with exact commands is in [`SKILL.md`](SKILL.md); the hard operating rules
@@ -148,11 +153,11 @@ def get_user():
 | **10 calibrate** | `calibrate` (no LLM) | Preconditions enumerated first (unauthenticated, no WAF assumed) → CVSS computed by formula → `risk_score: 9`. ASVS/CodeGuard citations auto-attached. | `risk_score`, `asvs_ids` |
 | **11 patch** | `patch.md` (opus) | Proposes a parameterized-query diff into `patch_diff` — against a *copy*, never the real file. | `patch_diff` |
 | **12 verify** | `verify` (no LLM) | Applies the diff to a temp copy, re-runs semgrep → the rule no longer fires → **`fixed` / verified-static**. | status → `fixed` |
-| **13.5 redteam** | `redteam` → `redteam-adversary` | Marks it `static-settled` (source proves it) but still writes a `runtime_test` with a `$PAYLOAD` shell var so an operator can confirm live; opus adversary keeps it (payload ties to the real sink). | `redteam-plan.md` |
 | **14 report** | `report` (no LLM) | Renders the finding into `report.md` (9-section template) and `report.sarif`. | `report.md`, `report.sarif` |
+| **14.4 redteam** | `redteam` → `redteam-adversary` | Marks it `static-settled` (source proves it) but still writes a `runtime_test` with a `$PAYLOAD` shell var so an operator can confirm live; opus adversary keeps it (payload ties to the real sink). `artifact_gate` hard-requires this file, so redteam runs before it, not after. | `redteam-plan.md` |
 | **14.5 artifact_gate** | `artifact_gate` (no LLM) | Checks the finding has a detail file and a red-team directive, and that its triage-table `what` cell isn't stale or over-long. Passes. | `kb/gates/artifact-gate.json` |
 | **14.6 artifact-review** | `artifact-review.md` (**opus**) | Reads the finding's tool receipt against `report.md`'s claim — they match, impact text is honest, red-team coverage is present. No demotion, no re-render forced. | `kb/gates/artifact-review.json` |
-| **C2 postflight** | `postflight` | Records "confirmed SQLi in get_user, fixed at <sha>" into durable memory so the next scan doesn't re-litigate it. | `kb/prior_context.json` |
+| **15 postflight** | `postflight` | Records "confirmed SQLi in get_user, fixed at <sha>" into durable memory so the next scan doesn't re-litigate it. | `kb/prior_context.json` |
 
 The point of the table: **no single step is trusted.** A tool found it, a sonnet agent
 investigated it, an opus agent tried to kill it, a deterministic module scored it, and a
@@ -178,8 +183,9 @@ This runs semgrep → normalize → SARIF/Markdown only. It is the smoke path, *
 audit (no agents, no gate ladder).
 
 > **Semgrep ruleset is a prerequisite.** The bundled `rules/smoke.yaml` is a minimal
-> ruleset. The semgrep-rules submodule is not part of the plugin. For fuller coverage,
-> point `--config` (and the recon agent's `rulesets`) at your own semgrep ruleset.
+> ruleset. The vendored, gitignored semgrep-rules clone (`helpers/rules/semgrep/`) is not
+> part of the plugin. For fuller coverage, point `--config` (and the recon agent's
+> `rulesets`) at your own semgrep ruleset.
 
 ### Full agentic audit
 Driven by the main agent following [`SKILL.md`](SKILL.md). The short version:
@@ -200,13 +206,13 @@ uv run python -m sec_overlay.calibrate     --workspace <WS>    # 10
 # 11 spawn patch → validate-fix
 uv run python -m sec_overlay.verify        --workspace <WS> --target <T> --config <rules>   # 12
 uv run python -m sec_overlay.findings_gate --workspace <WS>    # 13
-# 13.5 spawn redteam → redteam-adversary
-uv run python -m sec_overlay.redteam       --workspace <WS>
 uv run python -m sec_overlay.report        --workspace <WS>    # 14
+uv run python -m sec_overlay.selfscore     --workspace <WS>
+# 14.4 spawn redteam → redteam-adversary (before artifact_gate: it hard-requires redteam-plan.md)
+uv run python -m sec_overlay.redteam       --workspace <WS>
 uv run python -m sec_overlay.artifact_gate --workspace <WS>    # 14.5
 # 14.6 spawn agents/artifact-review.md (opus)
-uv run python -m sec_overlay.postflight    --workspace <WS> --sha <sha>   # C2
-uv run python -m sec_overlay.selfscore     --workspace <WS>
+uv run python -m sec_overlay.postflight    --workspace <WS> --sha <sha>   # 15, final phase
 ```
 
 > **A scan is clean only if every planned backend actually ran.** If `preflight` shows a

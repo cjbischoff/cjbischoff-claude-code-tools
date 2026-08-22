@@ -15,10 +15,56 @@ from sec_overlay.evidence import (
 )
 from sec_overlay.models import Finding
 from sec_overlay.phase_gate import resolve_ref
+from sec_overlay.review_findings import (
+    GENERAL_DEFECT_CLASSES,
+    NEEDS_DEPLOYMENT_TESTING_DISPOSITION,
+    UNCONFIRMED_DISPOSITION,
+)
 from sec_overlay.schema import validate as _schema_validate
 from sec_overlay.workspace import Workspace, read_findings
 
 _FINDING_SCHEMA_PATH = Path(__file__).resolve().parents[2] / "references" / "finding.schema.json"
+
+# D-12 receipt-gate disposition ladder: a general-defect finding (REV-01) with no Tier-1
+# receipt ships as a review-mode disposition, never as `confirmed`/`fixed` — those remain
+# gated solely by `confirms_alone` below. Null dereference and error swallowing are visible
+# from the code alone (no receipt needed to see the missing check); resource leak is the
+# same for a missing close/release on every path. Injection is assigned here explicitly
+# (not left to fall through a default) because its sink is what a Tier-1 tool (semgrep/
+# codeql) already targets — the same reachability a receipt would confirm is what makes it
+# statically checkable, unlike a race that only manifests under real concurrent load.
+STATIC_CHECKABLE_CLASSES: frozenset[str] = frozenset(
+    {"null-dereference", "error-swallowing", "resource-leak", "injection"}
+)
+RUNTIME_DEPENDENT_CLASSES: frozenset[str] = frozenset({"thread-safety"})
+
+assert STATIC_CHECKABLE_CLASSES | RUNTIME_DEPENDENT_CLASSES == GENERAL_DEFECT_CLASSES
+assert not (STATIC_CHECKABLE_CLASSES & RUNTIME_DEPENDENT_CLASSES)
+
+
+def disposition_without_receipt(defect_class: str) -> str:
+    """Pick the review-mode disposition for a general-defect finding with no Tier-1 receipt.
+
+    This never grants `confirmed`/`fixed` — those remain the sole province of
+    `confirms_alone` on the finding's evidence sources. It only decides what a
+    general-defect finding ships as in the absence of that receipt (D-12, REV-03).
+
+    Args:
+        defect_class: A `review_findings.GENERAL_DEFECT_CLASSES` member.
+
+    Returns:
+        `NEEDS_DEPLOYMENT_TESTING_DISPOSITION` for a class in
+        `RUNTIME_DEPENDENT_CLASSES`, else `UNCONFIRMED_DISPOSITION`.
+
+    Raises:
+        ValueError: `defect_class` is not a `GENERAL_DEFECT_CLASSES` member — a
+            new class must be assigned here explicitly before it can ship.
+    """
+    if defect_class in RUNTIME_DEPENDENT_CLASSES:
+        return NEEDS_DEPLOYMENT_TESTING_DISPOSITION
+    if defect_class in STATIC_CHECKABLE_CLASSES:
+        return UNCONFIRMED_DISPOSITION
+    raise ValueError(f"disposition_without_receipt: unknown general-defect class {defect_class!r}")
 
 
 def _load_finding_schema() -> dict:

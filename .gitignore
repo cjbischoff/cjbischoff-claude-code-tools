@@ -24,6 +24,9 @@ id_ed25519
 .ghost/
 .firecrawl/
 
+# Vendored upstream ruleset (cloned by preflight, not committed)
+plugins/sec-overlay/skills/sec-overlay/helpers/rules/semgrep/
+
 # OpenWiki run inputs — regenerated per run, never committed
 .openwiki-history.md
 

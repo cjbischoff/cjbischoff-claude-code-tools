@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
+
 from sec_overlay.models import Finding, Severity
 
 _SCHEMA = (
     "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json"
 )
+
+FINGERPRINT_KEY = "secOverlay/v1"
 
 
 def _level(sev: Severity) -> str:
@@ -47,6 +51,27 @@ def _rules(findings: list[Finding]) -> list[dict]:
     return list(by_id.values())
 
 
+def _sarif_fingerprint(finding: Finding) -> str:
+    """Derive a message-independent SARIF result fingerprint.
+
+    Keyed on ``file|cls|evidence`` (evidence stripped), never ``message``, so
+    a wording tweak to a finding's message does not churn its identity across
+    runs. Does not reuse `fingerprint.fingerprint()` — that module keys on a
+    different identity contract (dedup, not SARIF result correlation) — and
+    does not Unicode-normalize `evidence`: it is harness-derived real file
+    text, not free-form model prose, so byte-identical evidence is the
+    correct equality bar.
+
+    Args:
+        finding: Finding to fingerprint.
+
+    Returns:
+        16 lowercase hex characters.
+    """
+    key = f"{finding.file}|{finding.cls}|{finding.evidence.strip()}"
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+
+
 def to_sarif(
     findings: list[Finding], tool_name: str = "sec-overlay", suppressed: list[Finding] | None = None
 ) -> dict:
@@ -80,6 +105,7 @@ def to_sarif(
         }
         if f.id in suppressed_ids:
             result["suppressions"] = [{"kind": "inSource", "justification": "needs runtime proof"}]
+        result["partialFingerprints"] = {FINGERPRINT_KEY: _sarif_fingerprint(f)}
         results.append(result)
     return {
         "version": "2.1.0",
