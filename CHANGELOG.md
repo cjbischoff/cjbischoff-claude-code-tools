@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Define milestone v5.1 requirements (`.planning/REQUIREMENTS.md`): 7 requirements across TEST, LINT, DOC, and ING categories; GROW-01/GROW-02 stay deferred in v2.
 - Start milestone v5.1 Tech-Debt Cleanup: `.planning/PROJECT.md` records the milestone goal (clear the six Phase 06 tech-debt items and resolve the open ingest question; GROW-01 and GROW-02 defer again), and `.planning/STATE.md` resets to planning status for v5.1.
 - Stage the `.planning/REQUIREMENTS.md` and root `.planning/v5.0-MILESTONE-AUDIT.md` deletions that the close-out commit missed.
 - Close out milestone v5.0: add `.planning/RETROSPECTIVE.md` with the milestone retrospective, remove `.planning/REQUIREMENTS.md` (a fresh one starts the next milestone; the archive keeps the full copy), and point `.planning/STATE.md` at next-milestone planning.
