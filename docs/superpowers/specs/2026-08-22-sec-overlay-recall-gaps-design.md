@@ -86,7 +86,7 @@ was missed.
 |------|--------|
 | `helpers/rules/absence/` | New tracked directory. One YAML file per language. Each rule pairs a `pattern` for the constructor with a `pattern-not` for the required option. |
 | `helpers/rules/absence/README.md` | New. States the directory contract and the rule-naming scheme. |
-| `helpers/sec_overlay/astgrep.py:43-64` | Add relational constraints so an agent can probe absence live. `run_astgrep` gains optional `inside`, `has`, and `not_` arguments, emitted as an `ast-grep scan` rule on standard input rather than a bare `--pattern`. |
+| `helpers/sec_overlay/astgrep.py:43-64` | Add relational constraints so an agent can probe absence live. `run_astgrep` gains optional `inside`, `has`, and `not_` arguments, emitted as an `ast-grep scan --inline-rules <yaml>` rule instead of a bare `--pattern`. |
 | `helpers/sec_overlay/astgrep.py:79-86` | Add `--not`, `--has`, and `--inside` flags to the CLI. |
 | `agents/investigate.md:49-50` | Document the new flags in the allowed-tool list. |
 | `SKILL.md:63-65` | State that `helpers/rules/absence` is a first-party ruleset, separate from the vendored clone. |
@@ -102,6 +102,35 @@ was missed.
 2. A negative twin in the same corpus — the identical call **with** `rego.Capabilities` —
    produces no candidate.
 3. `uv run python -m sec_overlay.astgrep run --pattern 'rego.New($$$)' --not 'rego.Capabilities($$$)' --lang go --root <fixture>` prints the unhardened call and not the hardened one.
+
+**Verified ast-grep mechanism** (ast-grep 0.45.0, checked 2026-08-22). Relational
+absence works through `ast-grep scan --inline-rules`, not through a rule on standard
+input. In Go, a bare selector-call pattern such as `rego.New($$$ARGS)` matches nothing,
+so both the base pattern and the inner constraint must be anchored by node kind and a
+callee regular expression. This rule returns exactly the unhardened call:
+
+```yaml
+id: go-absence
+language: go
+rule:
+  kind: call_expression
+  all:
+    - has:
+        field: function
+        regex: "^rego\\.New$"
+    - not:
+        has:
+          stopBy: end
+          kind: call_expression
+          has:
+            field: function
+            regex: "^rego\\.Capabilities$"
+severity: warning
+message: rego.New without rego.Capabilities
+```
+
+The wrapper in `astgrep.py` must generate this anchored form for Go. A plain
+`pattern`/`not: has: pattern` pair is enough for Python, which was also checked.
 4. `uv run pytest` passes, including new tests for the relational-constraint path.
 5. `uv run ruff check` and `uv run ty check` pass.
 
@@ -175,7 +204,7 @@ attack classes from first-party code shapes only, and
 
 | Path | Change |
 |------|--------|
-| `references/dependency-sinks.yaml` | New. One entry per dependency API that reaches a dangerous operation inside the library. Each entry names: the package, the API, the sink behaviour, the attack class, the required hardening option, and a citation to the library documentation. |
+| `references/dependency-sinks.json` | New. One entry per dependency API that reaches a dangerous operation inside the library. Each entry names: the package, the API, the sink behaviour, the attack class, the required hardening option, and a citation to the library documentation. |
 | `references/README.md` | Document the new file and its consumer. |
 | `helpers/sec_overlay/dependency_sinks.py` | New module. Loads the catalog, matches it against the target's manifests, and returns the matched entries. CLI-callable, matching the convention in the maintainer manual. |
 | `helpers/sec_overlay/partition.py` | `reconcile_plan` adds the attack class of every matched catalog entry to `agents_to_spawn`, the same way `merge_custom_check_classes` does today (`SKILL.md:195`). |
@@ -205,10 +234,11 @@ dependency sink is ever seen. A catalog entry also forces an investigate agent t
 which costs a full agent run even when the dependency is used safely.
 
 **Note on file format.** The two existing YAML references
-(`references/approved-crypto-algorithms.yaml`, `references/approved-key-sources.yaml`) set
-the precedent, but their loader is deliberately limited: `helpers/sec_overlay/crypto_policy.py:5`
-parses "YAML-ish" key, list, and scalar forms only, with no YAML dependency. Resolve the
-format before implementation — see Section 12.
+(`references/approved-crypto-algorithms.yaml`, `references/approved-key-sources.yaml`) set a
+precedent this catalog does not follow. Their loader is deliberately limited:
+`helpers/sec_overlay/crypto_policy.py:5` parses "YAML-ish" key, list, and scalar forms only,
+with no YAML dependency, and a six-field catalog entry is nested beyond it. The catalog is
+therefore JSON, read by the stdlib `json` module. See Section 12, decision 1.
 
 ---
 
@@ -238,7 +268,7 @@ dependency.
    `ast-grep:sanity` for the call site passes `python -m sec_overlay.findings_gate`.
 2. A finding whose only sink receipt is `dependency-catalog:<id>`, with no mechanical
    receipt for the call site, is rejected by the same gate.
-3. A finding citing a catalog id that does not exist in `references/dependency-sinks.yaml`
+3. A finding citing a catalog id that does not exist in `references/dependency-sinks.json`
    is rejected.
 4. `tests/test_contracts.py` still passes, proving the prompt text and the schema agree.
 
@@ -270,8 +300,9 @@ document has no indicator, so recon has no reason to route the class.
 |------|--------|
 | `references/attack-classes.md:26` | Extend the `expr-eval-rce` indicator list with server-side policy and rule-engine keys: Rego and OPA, CEL, HashiCorp Sentinel, Starlark, Lua via `gopher-lua` or `LuaJIT`, and Java SpEL. |
 | `references/attack-classes.md` | Add the endpoint-shape indicator: a route that accepts a policy or rule document as input, for example a validate-policy endpoint. |
-| `references/dependency-sinks.yaml` | Add the corresponding catalog entries, so an indicator match and a catalog match agree. |
-| `agents/classes/` | Add or extend the class file that owns `expr-eval-rce`, so the new engines have a class boundary and a proof tuple. |
+| `references/dependency-sinks.json` | Add the corresponding catalog entries, so an indicator match and a catalog match agree. |
+| `agents/classes/expr-eval-rce.md` | New class file, following the shape of `agents/classes/ssrf.md`. No existing class file covers `expr-eval-rce`; the class exists only as a table row at `references/attack-classes.md:26`. |
+| `agents/classes/README.md` | List the new class file. |
 | `references/README.md`, `agents/README.md` | Update. |
 
 ### Acceptance criteria
@@ -279,7 +310,7 @@ document has no indicator, so recon has no reason to route the class.
 1. A fixture repository containing a Rego evaluation call and a policy-accepting route
    causes recon to include `expr-eval-rce` in `attack_surface`.
 2. Every engine added to the indicator list has a matching entry in
-   `references/dependency-sinks.yaml`, checked by a test that compares the two files.
+   `references/dependency-sinks.json`, checked by a test that compares the two files.
 3. No indicator is added without a documentation citation recorded in the catalog entry.
 
 ### Trade-off accepted
@@ -312,7 +343,7 @@ unexamined sink site inside a "covered" class is invisible.
 | Path | Change |
 |------|--------|
 | `helpers/sec_overlay/route_census.py` | New module. Enumerates routes from framework registration shapes using ast-grep, writes `kb/route-census.json` with one entry per route and its `file:line`. CLI-callable. |
-| `references/route-frameworks.yaml` | New. One entry per framework: the language, the registration pattern, and how to read the path and method from a match. |
+| `references/route-frameworks.json` | New. One entry per framework: the language, the registration pattern, and how to read the path and method from a match. |
 | `helpers/sec_overlay/route_control.py:16-35` | `build_route_control_table` reads `kb/route-census.json` when it exists and falls back to the profile only when the census is empty. The fallback is recorded in the table so a reader can tell which source was used. |
 | `helpers/sec_overlay/route_control.py:47-56` | `check_recon_routes` now compares the census against the profile, which makes the check non-circular. |
 | `helpers/sec_overlay/coverage_ledger.py:50-73` | Add a per-site surface: for each candidate sink site discovered by the deterministic pass, record `reported`, `no_issue_found`, or `needs_follow_up` for that site, not only for its class. `completeness` stays `complete` only when no site needs follow-up. |
@@ -331,7 +362,7 @@ unexamined sink site inside a "covered" class is invisible.
    class reports `completeness: "partial"`, not `"complete"`.
 4. `validate_coverage_ledger` rejects a ledger claiming `complete` while any site is
    `needs_follow_up`, preserving the invariant stated at `coverage_ledger.py:1-8`.
-5. A repository whose framework is absent from `references/route-frameworks.yaml`
+5. A repository whose framework is absent from `references/route-frameworks.json`
    produces an empty census, the profile fallback, and a recorded note saying so — never a
    silent claim of full enumeration.
 
@@ -390,17 +421,20 @@ shape from being reported as complete coverage.
 
 ---
 
-## 12. Open items
+## 12. Resolved design decisions
 
-- The loader for `references/dependency-sinks.yaml` needs a decision.
-  `helpers/sec_overlay/crypto_policy.py:5` states its parser handles "YAML-ish" files with
-  simple key, list, and scalar forms only, and it takes no YAML dependency. A catalog entry
-  carrying six fields per API is a nested structure that parser will not read. Either keep
-  each catalog entry flat enough for the existing loader, or use JSON, which the stdlib
-  parses. Do not add PyYAML.
-- Which class file owns `expr-eval-rce` is not yet established. `agents/classes/` has no
-  file of that name today; Feature 5 must either create one or extend the class that
-  currently absorbs the shape.
-- The relational-constraint form for `ast-grep` in Feature 1 assumes `ast-grep scan` with
-  a rule on standard input. Verify the installed `ast-grep` version supports that
-  invocation before writing the wrapper. Untested as of this document.
+The three items left open during design are now closed. Each decision is recorded here so
+implementation does not reopen it.
+
+1. **Catalog format is JSON.** The catalog is `references/dependency-sinks.json`, not YAML.
+   `helpers/sec_overlay/crypto_policy.py:5` parses "YAML-ish" files with simple key, list,
+   and scalar forms only, and a catalog entry carrying six fields per API is nested beyond
+   that parser. The stdlib `json` module reads the nested form with no new dependency. Do
+   not add PyYAML.
+2. **A new class file owns `expr-eval-rce`.** `agents/classes/` holds eleven class files
+   today and none of them covers the class (checked 2026-08-22); the class exists only as a
+   table row in `references/attack-classes.md:26`. Feature 5 creates
+   `agents/classes/expr-eval-rce.md` with its own proof tuple, following the shape of
+   `agents/classes/ssrf.md`.
+3. **The ast-grep relational form is verified.** See the rule in Section 4. The mechanism
+   is `ast-grep scan --inline-rules`, and Go needs kind-and-regex anchoring.
