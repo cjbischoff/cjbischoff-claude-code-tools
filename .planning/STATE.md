@@ -5,16 +5,16 @@ milestone_name: Hybrid Diff-Review Architecture
 current_phase: 06
 current_phase_name: remediation-and-governed-release
 status: complete
-stopped_at: "Completed 06-05-PLAN.md (Phase 6 closed, PR #27 merged as 2a93058)"
-last_updated: "2026-08-22T13:08:04.644Z"
-last_activity: 2026-08-21
-last_activity_desc: Phase 06 closed via 06-05 (defect ledger, governance receipt, E-12 verdict)
+stopped_at: "Completed 06-06-PLAN.md (Phase 6 fully closed, PR #29 merged as 3333dca)"
+last_updated: "2026-08-22T15:09:01.447Z"
+last_activity: 2026-08-22
+last_activity_desc: Completed 06-06-PLAN.md — Phase 06 fully closed, PR #29 merged
 progress:
   total_phases: 7
   completed_phases: 7
   total_plans: 30
-  completed_plans: 29
-  percent: 86
+  completed_plans: 30
+  percent: 100
 ---
 
 # Project State
@@ -29,20 +29,19 @@ governed releases, receipt-backed findings.
 
 ## Current Position
 
-Phase: 06 (remediation-and-governed-release) — COMPLETE (pending PR merge)
-Plan: 5 of 5 — complete
-Status: Local work done; PR ship steps (push, gh pr create, CodeRabbit wait, merge, branch
-delete) checkpointed to the orchestrator. Milestone-to-main merge is a separate step at
-milestone close (D-14), out of scope for this phase.
-Last activity: 2026-08-21 — Phase 06 closed via 06-05 (`06-DEFECTS.md`, `06-RECEIPTS.md`)
+Phase: 06 (remediation-and-governed-release) — COMPLETE
+Plan: 6 of 6
+Status: Phase 06 fully closed; PR #29 merged into docs/milestone-v5-diff-review as 3333dca.
+Milestone-to-main merge is a separate step at milestone close (D-14), out of scope for this phase.
+Last activity: 2026-08-22 — Completed 06-06-PLAN.md
 
-Progress: [████████████████████] 29/29 plans ([██████████] 100% of milestone v5.0)
+Progress: [████████████████████] 30/30 plans ([██████████] 100% of milestone v5.0)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 24
+- Total plans completed: 30
 - Average duration: -
 - Total execution time: -
 
@@ -56,6 +55,7 @@ Progress: [████████████████████] 29/29 p
 | 02 | 5 | - | - |
 | 04 | 4 | - | - |
 | 05 | 4 | - | - |
+| 06 | 6 | - | - |
 
 **Recent Trend:**
 
@@ -96,6 +96,7 @@ Progress: [████████████████████] 29/29 p
 | Phase 06 P03 | 45min | 3 tasks | 15 files |
 | Phase 06 P04 | 150m | 2 tasks | 5 files |
 | Phase 06 P05 | unavailable (context-compaction boundary) | 3 tasks | 5 files |
+| Phase 06 P06 | unavailable | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -188,6 +189,8 @@ Recent decisions affecting current work:
 - [Phase ?]: D-05 mixing-criterion row dispositioned as unsatisfiable: functions/ has only 5 commits total, so no diff range can ever satisfy both sub-criteria
 - [Phase ?]: 06-02-SUMMARY.md's PR #24 fast-forward claim is factually wrong (git cat-file shows 2 parents); recorded as a carried, not-fixed defect rather than silently corrected out-of-scope or left unrecorded
 - [Phase ?]: Governance receipt and REL-03 re-assertion consolidated into 06-RECEIPTS.md as single source of truth; 06-DEFECTS.md references it instead of duplicating
+- [Phase ?]: 06-06: reconstructed RED output from git history (git show + committed regex) rather than fabricating it, since original console output predated context compaction
+- [Phase ?]: 06-06: gh pr merge and gh pr view were denied by the Claude Code auto-mode classifier; user merged PR #29 manually (3333dca) rather than the executor routing around the denial
 
 ### Pending Todos
 
@@ -209,6 +212,11 @@ None yet.
   blocked in this executor -- orchestrator must complete. Once merged, the milestone-to-main
   merge remains a separate step at milestone close (D-14).
 
+- RESOLVED (06-06): `gh pr merge` and `gh pr view` on PR #29 were both denied by the Claude
+  Code auto-mode classifier ("Blocked by classifier"), confirmed `gh`-specific since plain
+  `git log` worked immediately after. No workaround attempted. User merged PR #29 directly
+  under their own authority, producing merge commit `3333dca` on `docs/milestone-v5-diff-review`.
+
 ### Roadmap Evolution
 
 - Phase 04.1 inserted after Phase 4: Close gap: DIFF-04 — review sidecar workspace isolation (URGENT)
@@ -224,6 +232,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-21T23:29:46.097Z
-Stopped at: Completed 06-05-PLAN.md (Phase 6 closed, PR #27 merged as 2a93058)
+Last session: 2026-08-22T15:09:01.425Z
+Stopped at: Completed 06-06-PLAN.md (Phase 6 fully closed, PR #29 merged as 3333dca)
 Resume file: None
