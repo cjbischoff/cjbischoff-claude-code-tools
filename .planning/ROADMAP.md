@@ -225,7 +225,7 @@ Plans:
   3. Each fix lands on a branch with a Conventional Commit, semver bump, and CHANGELOG entry in the same commit, merged only after CodeRabbit's walkthrough comment posts
   4. `helpers/pyproject.toml` dependencies stay empty across every new module — zero new runtime dependencies
 
-**Plans**: 5/5 plans executed
+**Plans**: 6 plans (5/6 executed; 06-06 is gap closure from 06-VERIFICATION.md)
 
 Plans:
 **Wave 1**
@@ -247,6 +247,10 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 06-05-PLAN.md — Dispatched run, E-12 evidence, sanitized receipts, defect ledger, phase close
+
+**Wave 6** *(gap closure from 06-VERIFICATION.md; blocked on Wave 5 completion)*
+
+- [ ] 06-06-PLAN.md — Close both verification gaps: correct the three `review --workspace` doc denials behind a code-derived guard, ledger 06-REVIEW.md WR-01, close Phase 6 tracking state
 
 ## Progress
 
