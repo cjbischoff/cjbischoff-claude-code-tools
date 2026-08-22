@@ -25,9 +25,14 @@ _VENDORED_DIR_MARKERS = ("/rules/semgrep/",)
 # The actionable false instruction, not a bare mention of the word "submodule" (a doc may
 # correctly explain that something is *not* a submodule).
 _SUBMODULE_INSTRUCTION_PHRASES = ("recurse-submodules", "submodule update", "is a git submodule")
-# Matches "has no `--workspace` override" (and minor markdown variants) — the false claim
-# WR-01 found in three doc surfaces after `review` gained the flag in this same phase.
-_STALE_WORKSPACE_CLAIM_PATTERN = re.compile(r"has no\s*`?--workspace`?\s*override", re.IGNORECASE)
+# Matches "has no/does not support/lacks a `--workspace` override" (and minor markdown
+# variants) — the false claim WR-01 found in three doc surfaces after `review` gained the flag
+# in this same phase. The trailing "override" is optional so "does not support --workspace"
+# (no "override" noun) still matches.
+_STALE_WORKSPACE_CLAIM_PATTERN = re.compile(
+    r"(?:has no|does not support|lacks(?: an?)?)\s*`?--workspace`?\s*(?:override)?",
+    re.IGNORECASE,
+)
 
 
 def test_skill_documents_scope_tokens():
@@ -140,6 +145,28 @@ def test_no_live_doc_denies_the_review_workspace_override():
         if _STALE_WORKSPACE_CLAIM_PATTERN.search(txt):
             offenders.append(rel)
     assert not offenders, f"live docs still deny review's --workspace override: {offenders}"
+
+
+def test_stale_workspace_claim_pattern_matches_known_denial_phrasings():
+    """The pattern must catch every denial wording review's doc surfaces could regress to."""
+    denials = [
+        "review has no `--workspace` override",
+        "review does not support --workspace",
+        "review lacks a `--workspace` override",
+        "review lacks --workspace",
+    ]
+    for text in denials:
+        assert _STALE_WORKSPACE_CLAIM_PATTERN.search(text), f"pattern missed denial: {text!r}"
+
+
+def test_stale_workspace_claim_pattern_does_not_match_corrected_wording():
+    """The pattern must not flag the corrected text this task ships in SKILL.md/README.md."""
+    corrected = [
+        "review now takes a `--workspace` override, mirroring scan/audit",
+        "review takes an optional `--workspace` override",
+    ]
+    for text in corrected:
+        assert not _STALE_WORKSPACE_CLAIM_PATTERN.search(text), f"pattern false-positived: {text!r}"
 
 
 def test_evidence_vocabulary_block_lists_all_values():

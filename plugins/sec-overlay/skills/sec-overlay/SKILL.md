@@ -92,11 +92,12 @@ unsafe rule file, 3 when one or more files could not be reviewed.
 Like `scan` and `audit`, every review artifact — `coverage_manifest.json`, `runs/review_plan.json`,
 `runs/review_prompts/`, `report.md`, `review_ledger.json` — resolves under the same per-repo
 memory sidecar (`<root>/.sec-overlay/<repo-slug>/`), never at `--root` itself; see "Per-repo
-memory" below. `review` now takes a `--workspace` override, mirroring `scan`/`audit` (default:
-the per-repo sidecar beneath `--root`). Whichever you use — the default sidecar or an explicit
-`--workspace` — pass the **identical** value, preferably absolute, to every `prepare`, dispatch,
-and `consume` invocation of one review — the sidecar slug is derived from that value, so a
-different spelling resolves to a different sidecar and silently orphans the prepared run.
+memory" below. `review` takes an optional `--workspace` override, mirroring `scan`/`audit`:
+omit it and `review` resolves the same per-repo sidecar beneath `--root`; supply it and
+`load_paths` uses that value instead. Whichever branch applies, pass the **identical** value,
+preferably absolute, to every `prepare`, dispatch, and `consume` invocation of one review — the
+sidecar slug is derived from that value, so a different spelling resolves to a different sidecar
+and silently orphans the prepared run.
 `--model` records an opaque model-identity string on the coverage manifest; pass the
 **identical** `--model` string to every invocation of one review the same way — a resumed
 run with a different `--model` is rejected (exit 2) rather than silently mixing findings

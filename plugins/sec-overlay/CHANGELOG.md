@@ -2,6 +2,21 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.13 - 2026-08-22
+
+### Fixed
+
+- `helpers/tests/test_docs_invariants.py`: `_STALE_WORKSPACE_CLAIM_PATTERN`
+  only matched the "has no ... override" wording, missing "does not support"
+  and "lacks (a)" phrasings of the same false claim. Broadened the pattern to
+  catch all three, with two new pattern tests pinning both denial and
+  corrected wording (CodeRabbit review, PR #29).
+- `SKILL.md` and `skills/sec-overlay/README.md`: reworded the `--workspace`
+  override explanation to state both branches explicitly (omit it and
+  `review` falls back to the per-repo sidecar; supply it and `load_paths`
+  uses that value) instead of one blended sentence that read as always
+  requiring an explicit flag (CodeRabbit review, PR #29).
+
 ## 1.69.12 - 2026-08-22
 
 ### Fixed
