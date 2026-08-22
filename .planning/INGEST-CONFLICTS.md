@@ -11,7 +11,16 @@ None. No LOCKED-vs-LOCKED contradiction (no doc is locked). No UNKNOWN/low-confi
 classification. No multi-document cross-reference cycle (DFS over the cross_refs graph
 found none; one degenerate self-reference, see INFO).
 
-### WARNINGS (1)
+### WARNINGS (1) — CLOSED
+
+[RESOLVED 2026-08-22, ING-01] The 2026-08-11 kb-redesign design doc is affirmed as
+  the authority. Evidence: the "2026-08-09-…" reference appears only in the design
+  doc's own "Out of scope" section (line 161), where it is listed as an upstream
+  repository's internal spec and explicitly excluded from the port. No 2026-08-09
+  spec ever existed in this repository — a full-tree file search and a
+  deleted-file history search (`git log --all --diff-filter=D`) both return
+  nothing. The reference is not a missing dependency; no re-ingest is needed.
+  Decision recorded per Phase 8 (v5.1) requirement ING-01.
 
 [WARNING] Referenced spec missing from ingest set (kb-redesign design)
   Found: docs/superpowers/specs/2026-08-11-sec-overlay-kb-redesign-design.md

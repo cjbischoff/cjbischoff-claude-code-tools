@@ -11,31 +11,33 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Test Debt (TEST)
 
-- [ ] **TEST-01**: `test_rule_glob.py:231` asserts `--workspace` forwarding
-  (CodeRabbit nitpick, PR #23)
-- [ ] **TEST-02**: WR-01 tests prove the guard runs before git
-  (`test_review_live.py:403-432`, CodeRabbit nitpick, PR #23)
+- [x] **TEST-01**: `test_rule_glob.py:231` asserts `--workspace` forwarding
+  (CodeRabbit nitpick, PR #23) — closed 2026-08-22, PR #32
+- [x] **TEST-02**: WR-01 tests prove the guard runs before git
+  (`test_review_live.py:403-432`, CodeRabbit nitpick, PR #23) — closed 2026-08-22, PR #32
 
 ### Lint Debt (LINT)
 
-- [ ] **LINT-01**: The pre-existing ruff `I001` in
+- [x] **LINT-01**: The pre-existing ruff `I001` in
   `plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_cli.py:778` is fixed
-  and ruff runs clean
+  and ruff runs clean — closed 2026-08-22, PR #32
 
 ### Doc Debt (DOC)
 
-- [ ] **DOC-01**: `skills/sec-overlay/README.md` CLI-legend block is audited for
-  pre-existing misorderings and corrected
-- [ ] **DOC-02**: `skills/sec-overlay/helpers/README.md` pipeline diagram carries
-  the `selfscore`, `artifact-gate`, and `artifact-review` nodes
-- [ ] **DOC-03**: `skills/sec-overlay/CLAUDE.md` "Phase order (one pass)" list
-  carries a numbered `selfscore` entry
+- [x] **DOC-01**: `skills/sec-overlay/README.md` CLI-legend block is audited for
+  pre-existing misorderings and corrected — closed 2026-08-22
+- [x] **DOC-02**: `skills/sec-overlay/helpers/README.md` pipeline diagram carries
+  the `selfscore`, `artifact-gate`, and `artifact-review` nodes — closed 2026-08-22
+- [x] **DOC-03**: `skills/sec-overlay/CLAUDE.md` "Phase order (one pass)" list
+  carries a numbered `selfscore` entry — closed 2026-08-22
 
 ### Ingest (ING)
 
-- [ ] **ING-01**: The 2026-08-09 spec referenced by the 2026-08-11 kb-redesign
+- [x] **ING-01**: The 2026-08-09 spec referenced by the 2026-08-11 kb-redesign
   design is located, or the design doc is affirmed as authority; the
-  `.planning/INGEST-CONFLICTS.md` WARNING is closed with the decision recorded
+  `.planning/INGEST-CONFLICTS.md` WARNING is closed with the decision recorded —
+  closed 2026-08-22 (design doc affirmed as authority; the reference is the
+  upstream repo's internal spec, explicitly out of scope in the design doc itself)
 
 ## v2 Requirements
 
@@ -67,13 +69,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TEST-01 | Phase 7 | Pending |
-| TEST-02 | Phase 7 | Pending |
-| LINT-01 | Phase 7 | Pending |
-| DOC-01 | Phase 8 | Pending |
-| DOC-02 | Phase 8 | Pending |
-| DOC-03 | Phase 8 | Pending |
-| ING-01 | Phase 8 | Pending |
+| TEST-01 | Phase 7 | Complete |
+| TEST-02 | Phase 7 | Complete |
+| LINT-01 | Phase 7 | Complete |
+| DOC-01 | Phase 8 | Complete |
+| DOC-02 | Phase 8 | Complete |
+| DOC-03 | Phase 8 | Complete |
+| ING-01 | Phase 8 | Complete |
 
 **Coverage:**
 - v5.1 requirements: 7 total

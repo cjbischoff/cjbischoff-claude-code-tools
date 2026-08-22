@@ -34,8 +34,8 @@ Full phase details: `.planning/milestones/v5.0-ROADMAP.md`
 **Milestone Goal:** Clear all 6 acknowledged Phase 06 tech-debt items and resolve the
 open ingest question, so the project has zero deferred items and zero open blockers.
 
-- [ ] **Phase 7: Test & Lint Debt Cleanup** - Close both CodeRabbit test-assertion nitpicks from PR #23 and fix the pre-existing ruff `I001` import-order error
-- [ ] **Phase 8: Documentation Accuracy & Ingest Closure** - Close all three sec-overlay doc gaps and resolve the open ingest question, closing the `INGEST-CONFLICTS.md` WARNING
+- [x] **Phase 7: Test & Lint Debt Cleanup** - Close both CodeRabbit test-assertion nitpicks from PR #23 and fix the pre-existing ruff `I001` import-order error (completed 2026-08-22, PR #32)
+- [x] **Phase 8: Documentation Accuracy & Ingest Closure** - Close all three sec-overlay doc gaps and resolve the open ingest question, closing the `INGEST-CONFLICTS.md` WARNING (completed 2026-08-22)
 
 ## Phase Details
 
@@ -89,9 +89,9 @@ Phases execute in numeric order: 7 → 8 (both independent; may run in either or
 | 04.1. DIFF-04 sidecar isolation | v5.0 | 1/1 | Complete | 2026-08-19 |
 | 5. End-to-End Verification | v5.0 | 4/4 | Complete | 2026-08-21 |
 | 6. Remediation and Governed Release | v5.0 | 6/6 | Complete | 2026-08-22 |
-| 7. Test & Lint Debt Cleanup | v5.1 | 0/TBD | Not started | - |
-| 8. Documentation Accuracy & Ingest Closure | v5.1 | 0/TBD | Not started | - |
+| 7. Test & Lint Debt Cleanup | v5.1 | 1/1 | Complete | 2026-08-22 |
+| 8. Documentation Accuracy & Ingest Closure | v5.1 | 1/1 | Complete | 2026-08-22 |
 
 ---
 
-*Next: `/gsd-plan-phase 7`*
+*Next: `/gsd-complete-milestone` — both v5.1 phases complete*

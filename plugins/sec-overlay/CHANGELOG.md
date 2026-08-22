@@ -2,6 +2,21 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.15 - 2026-08-22
+
+### Fixed
+
+- `skills/sec-overlay/CLAUDE.md`: the "Phase order (one pass)" list carries a
+  numbered `14.2 Selfscore` entry between Report and Red Team, matching
+  `PHASE_TABLE`; `test_docs_invariants.py` now enforces the label (DOC-03).
+- `skills/sec-overlay/helpers/README.md`: the pipeline diagram carries the
+  `selfscore`, `artifact-gate`, and `artifact-review` nodes in `PHASE_TABLE`
+  order between report and postflight (DOC-02).
+- `skills/sec-overlay/README.md`: CLI-legend audit against `PHASE_TABLE` —
+  `findings_gate` gains its driver position right after investigate (the
+  13 entry is labeled an idempotent re-run), and the `selfscore` (14.2) and
+  `redteam` (14.4) lines gain their phase numbers (DOC-01).
+
 ## 1.69.14 - 2026-08-22
 
 ### Fixed

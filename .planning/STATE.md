@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v5.1
 milestone_name: Tech-Debt Cleanup
-current_phase: 7
-current_phase_name: Test & Lint Debt Cleanup
-status: ready_to_plan
-stopped_at: Phase 7 context gathered
+current_phase: 8
+current_phase_name: Documentation Accuracy & Ingest Closure
+status: phase_complete
+stopped_at: Phase 8 complete; milestone v5.1 ready to close
 last_updated: "2026-08-22T20:28:04.586Z"
 last_activity: 2026-08-22
 last_activity_desc: Roadmap created (Phases 7-8), 7/7 requirements mapped
 progress:
   total_phases: 2
-  completed_phases: 0
+  completed_phases: 2
   total_plans: 0
   completed_plans: 0
-  percent: 0
+  percent: 100
 ---
 
 # Project State
@@ -25,16 +25,16 @@ See: .planning/PROJECT.md (updated 2026-08-22)
 
 **Core value:** The marketplace never ships an unverified claim — validated plugins,
 governed releases, receipt-backed findings.
-**Current focus:** Phase 7 — Test & Lint Debt Cleanup
+**Current focus:** Phase 8 — Documentation Accuracy & Ingest Closure
 
 ## Current Position
 
-Phase: 7 of 8 (Test & Lint Debt Cleanup)
-Plan: Not yet planned
-Status: Ready to plan
+Phase: 8 of 8 (Documentation Accuracy & Ingest Closure)
+Plan: Direct execution (user-directed)
+Status: Complete
 Last activity: 2026-08-22 — Roadmap created (Phases 7-8), 7/7 requirements mapped
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -83,9 +83,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- Ingest WARNING (Phase 8, ING-01): the 2026-08-11 kb-redesign design references a
-  2026-08-09 spec absent from the ingest set. Locate the spec or affirm the design
-  doc as authority. See .planning/INGEST-CONFLICTS.md.
+None. The ingest WARNING (ING-01) is closed 2026-08-22: the 2026-08-11 kb-redesign
+design doc is affirmed as authority — the 2026-08-09 reference is the upstream
+repo's internal spec, explicitly out of scope in the design doc itself. See
+.planning/INGEST-CONFLICTS.md.
 
 ### Roadmap Evolution
 
@@ -107,12 +108,12 @@ work in this milestone (see Phase 7 / Phase 8 above):
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| deferred_item | Phase 06: pre-existing ruff `I001` in `plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_cli.py:778` | in progress (Phase 7, LINT-01) | 2026-08-22 |
-| deferred_item | Phase 06: CodeRabbit nitpick — `test_rule_glob.py:231` does not assert `--workspace` forwarding (PR #23) | in progress (Phase 7, TEST-01) | 2026-08-22 |
-| deferred_item | Phase 06: CodeRabbit nitpick — WR-01 tests do not prove the guard runs before git (`test_review_live.py:403-432`, PR #23) | in progress (Phase 7, TEST-02) | 2026-08-22 |
-| deferred_item | Phase 06: `skills/sec-overlay/README.md` CLI-legend block not audited for further pre-existing misorderings | in progress (Phase 8, DOC-01) | 2026-08-22 |
-| deferred_item | Phase 06: `skills/sec-overlay/helpers/README.md` pipeline diagram misses `selfscore`, `artifact-gate`, `artifact-review` nodes | in progress (Phase 8, DOC-02) | 2026-08-22 |
-| deferred_item | Phase 06: `skills/sec-overlay/CLAUDE.md` "Phase order (one pass)" list misses a numbered `selfscore` entry | in progress (Phase 8, DOC-03) | 2026-08-22 |
+| deferred_item | Phase 06: pre-existing ruff `I001` in `plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_cli.py:778` | done (Phase 7, LINT-01, PR #32) | 2026-08-22 |
+| deferred_item | Phase 06: CodeRabbit nitpick — `test_rule_glob.py:231` does not assert `--workspace` forwarding (PR #23) | done (Phase 7, TEST-01, PR #32) | 2026-08-22 |
+| deferred_item | Phase 06: CodeRabbit nitpick — WR-01 tests do not prove the guard runs before git (`test_review_live.py:403-432`, PR #23) | done (Phase 7, TEST-02, PR #32) | 2026-08-22 |
+| deferred_item | Phase 06: `skills/sec-overlay/README.md` CLI-legend block not audited for further pre-existing misorderings | done (Phase 8, DOC-01) | 2026-08-22 |
+| deferred_item | Phase 06: `skills/sec-overlay/helpers/README.md` pipeline diagram misses `selfscore`, `artifact-gate`, `artifact-review` nodes | done (Phase 8, DOC-02) | 2026-08-22 |
+| deferred_item | Phase 06: `skills/sec-overlay/CLAUDE.md` "Phase order (one pass)" list misses a numbered `selfscore` entry | done (Phase 8, DOC-03) | 2026-08-22 |
 
 ## Session Continuity
 
@@ -122,4 +123,4 @@ Resume file: .planning/phases/07-test-lint-debt-cleanup/07-CONTEXT.md
 
 ## Operator Next Steps
 
-- Approve the roadmap, then run `/gsd-plan-phase 7`
+- Run `/gsd-complete-milestone` to archive v5.1 — all 7 requirements closed

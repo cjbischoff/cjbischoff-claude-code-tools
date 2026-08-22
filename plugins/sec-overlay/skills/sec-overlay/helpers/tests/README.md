@@ -961,3 +961,8 @@ guard tests share a `_git_spy` helper that monkeypatches `subprocess.run` with a
 recording spy and assert an empty call list, proving the `--root` guard exits 2 before
 any git subprocess runs (TEST-02). `test_cli.py`'s pre-existing ruff `I001` import
 order is fixed, so a full-repo `ruff check` runs clean (LINT-01).
+
+Phase 8 (v5.1, DOC-03) promotes `selfscore` from a deliberately-omitted PHASE_TABLE row to
+an enforced label in `test_docs_invariants.py`'s `_PHASE_DOC_LABELS`: the CLAUDE.md
+phase-order block must now carry `Selfscore` between `Report` and `Red Team`, in
+PHASE_TABLE order. Only `factcheck` and `demote-noise` remain condensed-view omissions.
