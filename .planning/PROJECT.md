@@ -14,7 +14,13 @@ release follows governance, and every confirmed sec-overlay finding is receipt-b
 
 ## Current State
 
-**Shipped:** v5.0 Hybrid Diff-Review Architecture (2026-08-22).
+**Shipped:** v5.1 Tech-Debt Cleanup (2026-08-22). Previous: v5.0 Hybrid
+Diff-Review Architecture (2026-08-22).
+
+v5.1 cleared all six acknowledged Phase 06 tech-debt items (two test-assertion
+gaps, one lint error, three doc gaps) and closed the open ingest question — the
+project now has zero deferred items and zero open blockers. sec-overlay is at
+1.69.15.
 
 sec-overlay now has a `review` verb with `security` and `general` profiles. The diff
 pipeline covers diff acquisition, file selection, a sealed coverage manifest, hunk
@@ -23,25 +29,18 @@ concurrency, identity-checked resume, and diff-anchored SARIF output. Both the a
 and the review pipeline are verified end to end on real targets with receipts. The
 core stays stdlib-only and the frozen JSON contract is unchanged.
 
-**Milestone stats:** 7 phases, 30 plans, 116 tasks, 212 files changed,
+**v5.1 stats:** 2 phases (direct execution), 19 files changed, +495/−186 lines,
+2026-08-22, PRs #32 and #33.
+
+**v5.0 stats:** 7 phases, 30 plans, 116 tasks, 212 files changed,
 +38,296/−294 lines, 2026-08-17 through 2026-08-22.
 
-## Current Milestone: v5.1 Tech-Debt Cleanup
+## Next Milestone Goals
 
-**Goal:** Clear all 6 acknowledged Phase 06 tech-debt items and resolve the open
-ingest question, so the project has zero deferred items and zero open blockers.
-
-**Target features:**
-- Fix the pre-existing ruff `I001` in `helpers/tests/test_cli.py:778`
-- Close both CodeRabbit test nitpicks from PR #23 (`--workspace` forwarding
-  assertion; WR-01 guard-before-git proof)
-- Close the three sec-overlay doc gaps (CLI-legend audit, pipeline diagram
-  nodes, phase-order `selfscore` entry)
-- Resolve the ingest question: locate the missing 2026-08-09 spec or affirm
-  the 2026-08-11 kb-redesign design doc as authority
-
-GROW-01 (second plugin onboarding) and GROW-02 (automated plugin-validate gate)
-defer again: no second-plugin candidate is named.
+Not yet defined — run `/gsd-new-milestone`. Standing candidates (deferred to v2
+twice, 2026-08-16 and 2026-08-22, no second-plugin candidate named):
+- GROW-01: onboard a second plugin from `docs/templates/plugin/`
+- GROW-02: run `claude plugin validate .` as an automated gate (prek or CI)
 
 ## Requirements
 
@@ -79,20 +78,18 @@ All items below shipped before this project started.
 - ✓ Run defects fixed or dispositioned; frozen contract unchanged (REL-01) — Validated in Phase 6: Remediation and Governed Release, 2026-08-22; every Phase 5 defect row carries a terminal disposition
 - ✓ Fixes ship through full governance with CodeRabbit review (REL-02) — Validated in Phase 6, 2026-08-22; PRs merged after CodeRabbit review
 - ✓ Substantive profile-superset re-check (E-12): security-kept ⊆ general-kept proven non-vacuously on a real 14-file dispatch — Validated in Phase 6, 2026-08-22
+- ✓ `--workspace` forwarding asserted in the CLI test (TEST-01) — v5.1, PR #32
+- ✓ WR-01 tests prove the guard runs before any git call (TEST-02) — v5.1, PR #32
+- ✓ ruff `I001` fixed; full-repo ruff clean (LINT-01) — v5.1, PR #32
+- ✓ CLI-legend audited against `PHASE_TABLE` (DOC-01) — v5.1, PR #33
+- ✓ Pipeline diagram carries `selfscore`/`artifact-gate`/`artifact-review` (DOC-02) — v5.1, PR #33
+- ✓ Phase order carries a numbered `14.2 Selfscore` entry, test-enforced (DOC-03) — v5.1, PR #33
+- ✓ Ingest WARNING closed: kb-redesign design doc affirmed as authority (ING-01) — v5.1, PR #33
 
 ### Active
 
-Milestone v5.1 scope (REQ-IDs assigned in REQUIREMENTS.md):
-
-- Lint debt: ruff `I001` fix in `helpers/tests/test_cli.py:778`
-- Test debt: `test_rule_glob.py:231` asserts `--workspace` forwarding
-- Test debt: WR-01 tests prove the guard runs before git
-- Doc debt: `skills/sec-overlay/README.md` CLI-legend block audited
-- Doc debt: `helpers/README.md` pipeline diagram carries `selfscore`,
-  `artifact-gate`, `artifact-review` nodes
-- Doc debt: `skills/sec-overlay/CLAUDE.md` phase-order list carries `selfscore`
-- Ingest: 2026-08-09 spec located, or the 2026-08-11 kb-redesign design doc
-  affirmed as authority
+None — next milestone not yet defined. Candidates: GROW-01, GROW-02 (see Next
+Milestone Goals).
 
 ### Out of Scope
 
@@ -114,14 +111,14 @@ Milestone v5.1 scope (REQ-IDs assigned in REQUIREMENTS.md):
   prek hooks, changelog routing, automatic version bumps, CodeRabbit review wait.
 - Target runtime: Claude Code plugin runtime; skills, agents, and commands distributed
   via the marketplace manifest at `.claude-plugin/marketplace.json`.
-- Open ingest question: the 2026-08-11 kb-redesign design references a 2026-08-09 spec
-  absent from the ingest set (see `.planning/INGEST-CONFLICTS.md` WARNING). Resolve by
-  locating the spec or affirming the design doc as authority.
+- Ingest question resolved (2026-08-22, ING-01): the 2026-08-11 kb-redesign design doc
+  is affirmed as authority — the 2026-08-09 reference is the upstream repo's internal
+  spec, explicitly out of scope in the design doc itself. See
+  `.planning/INGEST-CONFLICTS.md` (WARNING closed).
 - End-to-end verification now exists: Phase 5 ran a full driven audit (515-file
   coverage denominator) and a both-profile review on real targets, receipt-backed
   (AUD-01 through AUD-06, 2026-08-21).
-- Known tech debt: six acknowledged Phase 06 items (one ruff `I001`, two CodeRabbit
-  test nitpicks, three sec-overlay doc gaps). See STATE.md Deferred Items.
+- Zero known tech debt: all six Phase 06 items cleared in v5.1 (PRs #32, #33).
 
 ## Constraints
 
@@ -152,6 +149,8 @@ Milestone v5.1 scope (REQ-IDs assigned in REQUIREMENTS.md):
 | Phase 5 UAT sign-off: WR-01/WR-02 ride Phase 6's REL-01 sweep; vacuous AUD-06 superset pass accepted with E-12 tracking the substantive re-check | scope-boundary calls recorded in 05-UAT.md and 05-DEFECTS.md, 2026-08-21 | ✓ Good — E-12 re-check passed non-vacuously in Phase 6 |
 | D-01 fix: `redteam` and `postflight` added to the 22-entry `PHASE_TABLE` so `run.drive()` reaches both phases | documented pipeline steps were silently skipped by the mechanical table | ✓ Good |
 | Review workspace resolves through `RepoMemory.for_target` sidecar (DIFF-04) | review artifacts leaked at bare `--root`; audit/scan already used the sidecar | ✓ Good |
+| ING-01: 2026-08-11 kb-redesign design doc affirmed as authority | the 2026-08-09 reference is the upstream repo's internal spec, listed in the design doc's own Out-of-scope; no such file ever existed in this repo | ✓ Good |
+| v5.1 phases ran as user-directed direct execution (no plans/SUMMARY.md) | tiny cleanup milestone; work verified by tests, lint, and merged PRs instead of GSD artifacts | ✓ Good — recorded as override_closeout |
 
 No decision is ADR-locked. ADR-2026-08-04 is the only ADR and remains proposed.
 
@@ -175,4 +174,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-22 at v5.1 milestone start*
+*Last updated: 2026-08-22 after v5.1 milestone*
