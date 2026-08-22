@@ -67,19 +67,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| LINT-01 | — | Pending |
-| DOC-01 | — | Pending |
-| DOC-02 | — | Pending |
-| DOC-03 | — | Pending |
-| ING-01 | — | Pending |
+| TEST-01 | Phase 7 | Pending |
+| TEST-02 | Phase 7 | Pending |
+| LINT-01 | Phase 7 | Pending |
+| DOC-01 | Phase 8 | Pending |
+| DOC-02 | Phase 8 | Pending |
+| DOC-03 | Phase 8 | Pending |
+| ING-01 | Phase 8 | Pending |
 
 **Coverage:**
 - v5.1 requirements: 7 total
-- Mapped to phases: 0
-- Unmapped: 7 ⚠️ (filled during roadmap creation)
+- Mapped to phases: 7
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-22*
-*Last updated: 2026-08-22 after initial definition*
+*Last updated: 2026-08-22 after roadmap creation (Phases 7-8)*

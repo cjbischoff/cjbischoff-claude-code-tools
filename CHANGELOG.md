@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Create the milestone v5.1 roadmap (`.planning/ROADMAP.md`): 2 phases continuing v5.0 numbering — Phase 7 Test & Lint Debt Cleanup (TEST-01/02, LINT-01) and Phase 8 Documentation Accuracy & Ingest Closure (DOC-01/02/03, ING-01) — with all 7 requirements mapped in `.planning/REQUIREMENTS.md` traceability and `.planning/STATE.md` pointing at Phase 7.
 - Define milestone v5.1 requirements (`.planning/REQUIREMENTS.md`): 7 requirements across TEST, LINT, DOC, and ING categories; GROW-01/GROW-02 stay deferred in v2.
 - Start milestone v5.1 Tech-Debt Cleanup: `.planning/PROJECT.md` records the milestone goal (clear the six Phase 06 tech-debt items and resolve the open ingest question; GROW-01 and GROW-02 defer again), and `.planning/STATE.md` resets to planning status for v5.1.
 - Stage the `.planning/REQUIREMENTS.md` and root `.planning/v5.0-MILESTONE-AUDIT.md` deletions that the close-out commit missed.
