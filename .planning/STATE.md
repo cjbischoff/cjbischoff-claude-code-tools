@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.0
-milestone_name: Hybrid Diff-Review Architecture
-status: Awaiting next milestone
-stopped_at: Phase 06 UAT complete (2/2 passed), verification passed — milestone v5.0 ready to close
-last_updated: "2026-08-22T17:47:19.977Z"
+milestone: v5.1
+milestone_name: Tech-Debt Cleanup
+status: planning
+last_updated: "2026-08-22T19:45:00.692Z"
 last_activity: 2026-08-22
-last_activity_desc: "Completed 06-06-PLAN.md — Phase 06 fully closed, PR #29 merged"
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 30
-  completed_plans: 30
-  percent: 100
-current_phase: 06
-current_phase_name: remediation-and-governed-release
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -29,10 +25,10 @@ governed releases, receipt-backed findings.
 
 ## Current Position
 
-Phase: Milestone v5.0 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-08-22 — Milestone v5.0 completed and archived
+Status: Defining requirements
+Last activity: 2026-08-22 — Milestone v5.1 started
 
 ## Performance Metrics
 
