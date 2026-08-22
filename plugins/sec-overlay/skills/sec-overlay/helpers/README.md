@@ -77,8 +77,11 @@ flowchart TD
     PATCHV --> VER["verify.py<br/>apply patch to COPY, re-scan"]
     VER --> GATE2["findings_gate.py"]
     GATE2 --> REP["report.py<br/>report.sarif + report.md"]
-    REP --> RT(("redteam agents")) --> RTR["redteam.py<br/>render redteam-plan.md"]
-    RTR --> POST["postflight.py<br/>prior_context.json (durable, final phase)"]
+    REP --> SCORE["selfscore.py<br/>post-gate counts back to state"]
+    SCORE --> RT(("redteam agents")) --> RTR["redteam.py<br/>render redteam-plan.md"]
+    RTR --> AGATE["artifact_gate.py<br/>deterministic report self-check<br/>(requires redteam-plan.md)"]
+    AGATE --> AREV(("artifact-review agent (opus)<br/>claim↔evidence over the report"))
+    AREV --> POST["postflight.py<br/>prior_context.json (durable, final phase)"]
 ```
 
 Every deterministic step records completion with `campaign.record_stage(ws, "<phase>")` so an

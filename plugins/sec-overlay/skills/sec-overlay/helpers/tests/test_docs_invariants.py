@@ -178,7 +178,7 @@ def test_evidence_vocabulary_block_lists_all_values():
 
 
 # The CLAUDE.md phase-order block is a condensed operator view: it deliberately omits
-# some PHASE_TABLE rows (factcheck, demote-noise, selfscore), so the enforced invariant
+# some PHASE_TABLE rows (factcheck, demote-noise), so the enforced invariant
 # is relative order — every doc-labelled phase must appear in PHASE_TABLE order (T-06-02-06).
 _CLAUDE_MD = Path(__file__).resolve().parents[2] / "CLAUDE.md"
 _PHASE_DOC_LABELS = {
@@ -198,6 +198,7 @@ _PHASE_DOC_LABELS = {
     "patch": "Patch",
     "verify": "Verify",
     "report": "Report",
+    "selfscore": "Selfscore",
     "redteam": "Red Team",
     "artifact-gate": "Artifact gate",
     "artifact-review": "Artifact review",

@@ -79,6 +79,9 @@ T1 Tier-1 substrate  python -m sec_overlay.graph build --target <T> --workspace 
 12 Verify           python -m sec_overlay.verify --workspace <WS> --target <T> --config <rules>
 13 Gate             python -m sec_overlay.findings_gate --workspace <WS>
 14 Report           python -m sec_overlay.report --workspace <WS>   → report.sarif + report.md
+14.2 Selfscore      python -m sec_overlay.selfscore --workspace <WS>
+                    # post-gate finding counts written back to state — a run-quality signal
+                    # (reported vs needs-runtime, clusters, rejects), not a re-score
 14.4 Red Team       agents/redteam.md (sonnet) → agents/redteam-adversary.md (opus)
                     # PHASE_TABLE-wired (D-01): the driver dispatches this automatically after
                     # selfscore, before artifact-gate — artifact_gate.run_artifact_gate hard-requires

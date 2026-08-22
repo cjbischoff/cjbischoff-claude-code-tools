@@ -199,17 +199,18 @@ uv run python -m sec_overlay.graph build --target <T> --workspace <WS> --sha <sh
 # 2-4 spawn recon → architecture → threat-model (+ phase-adversary each)
 # 5  from sec_overlay.prefilter import run_prefilter; run_prefilter(ws, target, profile)
 # 6  spawn agents/investigate.md in parallel per attack class
+uv run python -m sec_overlay.findings_gate --workspace <WS>    # 6-gate — the driver runs it here, right after investigate
 uv run python -m sec_overlay.dedupe        --workspace <WS>    # 7
 uv run python -m sec_overlay.cluster       --workspace <WS>    # 7.5
 # 8-9 spawn critic → judge → validate
 uv run python -m sec_overlay.calibrate     --workspace <WS>    # 10
 # 11 spawn patch → validate-fix
 uv run python -m sec_overlay.verify        --workspace <WS> --target <T> --config <rules>   # 12
-uv run python -m sec_overlay.findings_gate --workspace <WS>    # 13
+uv run python -m sec_overlay.findings_gate --workspace <WS>    # 13 — idempotent re-run before report
 uv run python -m sec_overlay.report        --workspace <WS>    # 14
-uv run python -m sec_overlay.selfscore     --workspace <WS>
+uv run python -m sec_overlay.selfscore     --workspace <WS>    # 14.2 — post-gate counts back to state
 # 14.4 spawn redteam → redteam-adversary (before artifact_gate: it hard-requires redteam-plan.md)
-uv run python -m sec_overlay.redteam       --workspace <WS>
+uv run python -m sec_overlay.redteam       --workspace <WS>    # 14.4 — manual re-run of the plan render
 uv run python -m sec_overlay.artifact_gate --workspace <WS>    # 14.5
 # 14.6 spawn agents/artifact-review.md (opus)
 uv run python -m sec_overlay.postflight    --workspace <WS> --sha <sha>   # 15, final phase
