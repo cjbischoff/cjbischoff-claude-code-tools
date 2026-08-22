@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Changed
 
+- Complete Phase 8 Documentation Accuracy & Ingest Closure: DOC-01/02/03 are closed in sec-overlay 1.69.15, and ING-01 closes the `.planning/INGEST-CONFLICTS.md` WARNING by affirming the 2026-08-11 kb-redesign design doc as authority (the 2026-08-09 reference is the upstream repo's internal spec, explicitly out of scope in the design doc itself; no such file ever existed in this repo). All 7 v5.1 requirements are complete.
 - Mark Phase 7 Test & Lint Debt Cleanup complete (PR #32, merged 2026-08-22): TEST-01, TEST-02, and LINT-01 are closed in `.planning/REQUIREMENTS.md` traceability, `.planning/ROADMAP.md` marks the phase done, and `.planning/STATE.md` moves focus to Phase 8.
 - Capture Phase 7 context (`.planning/phases/07-test-lint-debt-cleanup/07-CONTEXT.md`): TEST-01 extends the existing CLI-forwarding test to assert `--workspace`, TEST-02 proves the WR-01 guard runs before git with a zero-git-calls spy on all three guard tests, LINT-01 applies the ruff autofix with a full-repo clean run as the gate, and delivery is one branch, one PR, one `test(sec-overlay)` commit with a single patch bump.
 - Create the milestone v5.1 roadmap (`.planning/ROADMAP.md`): 2 phases continuing v5.0 numbering — Phase 7 Test & Lint Debt Cleanup (TEST-01/02, LINT-01) and Phase 8 Documentation Accuracy & Ingest Closure (DOC-01/02/03, ING-01) — with all 7 requirements mapped in `.planning/REQUIREMENTS.md` traceability and `.planning/STATE.md` pointing at Phase 7.
