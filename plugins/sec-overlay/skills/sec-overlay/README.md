@@ -32,8 +32,9 @@ These hold everywhere and are enforced in code where possible, prompt otherwise:
 2. **Writes only its own sidecar.** All output lives in an in-repo, self-ignoring
    `<target>/.sec-overlay/<slug>/` directory (override the base with `$SEC_OVERLAY_HOME`, or
    the whole workspace with `--workspace`). A seeded `.sec-overlay/.gitignore` keeps output
-   out of the reviewed repo's git tree. `review` shares this convention too — it has no
-   `--workspace` override, so pass the same `--root` string to every invocation of one run.
+   out of the reviewed repo's git tree. `review` shares this convention too and also takes its
+   own `--workspace` override — pass the same value (the default sidecar or your override) to
+   every invocation of one run.
    Pass the same `--model` string too (SCALE-03) — a resumed `review` with a different
    `--model` is rejected (exit 2) instead of mixing findings from two models on one manifest.
 3. **Tool-receipt gate.** A finding reaches `confirmed`/`fixed` only with ≥1 mechanical

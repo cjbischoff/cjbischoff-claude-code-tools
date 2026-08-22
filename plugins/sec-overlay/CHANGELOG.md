@@ -2,6 +2,23 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 1.69.12 - 2026-08-22
+
+### Fixed
+
+- `SKILL.md:95`, `skills/sec-overlay/README.md:35-36`, and `helpers/README.md:267`
+  (06-06, WR-01): corrected three doc passages that falsely claimed `review` has
+  no `--workspace` override. `review` gained the flag in 1.68.10/1.69.0
+  (`cli.py:671-676`); these passages were never updated to match.
+
+### Added
+
+- `test_no_live_doc_denies_the_review_workspace_override` in
+  `helpers/tests/test_docs_invariants.py` (WR-01): asserts no live doc claims
+  `review` lacks a `--workspace` override. Pins its premise against
+  `run_review`'s real signature so a future removal of the flag fails the
+  guard's premise loudly instead of leaving a now-true claim unchecked.
+
 ## 1.69.11 - 2026-08-21
 
 ### Added
