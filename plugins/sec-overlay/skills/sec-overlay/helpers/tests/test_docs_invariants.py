@@ -119,3 +119,50 @@ def test_evidence_vocabulary_block_lists_all_values():
     block = text.split("## EVIDENCE_VOCABULARY", 1)[1].split("\n## ", 1)[0]
     for value in TIER1_RECEIPTS | TIER2_RECEIPTS | SHIPPING_STATUSES | RUNTIME_DISPOSITIONS:
         assert value in block, f"{value} missing from EVIDENCE_VOCABULARY block"
+
+
+# The CLAUDE.md phase-order block is a condensed operator view: it deliberately omits
+# some PHASE_TABLE rows (factcheck, demote-noise, selfscore), so the enforced invariant
+# is relative order — every doc-labelled phase must appear in PHASE_TABLE order (T-06-02-06).
+_CLAUDE_MD = Path(__file__).resolve().parents[2] / "CLAUDE.md"
+_PHASE_DOC_LABELS = {
+    "recon": "Recon",
+    "architecture": "Architecture",
+    "arch-gate": "Arch gate",
+    "threat_model": "Threat model",
+    "tm-gate": "TM gate",
+    "prefilter": "Prefilter",
+    "investigate": "Investigate",
+    "dedupe": "Dedupe",
+    "critic": "Critic",
+    "judge": "Judge",
+    "validate": "Validate",
+    "trace": "Trace",
+    "calibrate": "Calibrate",
+    "patch": "Patch",
+    "verify": "Verify",
+    "report": "Report",
+    "redteam": "Red Team",
+    "artifact-gate": "Artifact gate",
+    "artifact-review": "Artifact review",
+    "postflight": "Postflight",
+}
+
+
+def test_claude_md_phase_order_tracks_phase_table():
+    from sec_overlay.phases import PHASE_TABLE
+
+    text = _CLAUDE_MD.read_text()
+    assert "### Phase order (one pass)" in text
+    block = text.split("### Phase order (one pass)", 1)[1].split("\n### ", 1)[0]
+    pos = -1
+    for spec in PHASE_TABLE:
+        label = _PHASE_DOC_LABELS.get(spec.name)
+        if label is None:
+            continue
+        found = block.find(label, pos + 1)
+        assert found > pos, (
+            f"phase '{spec.name}' (doc label '{label}') is missing from, or out of order in, "
+            "CLAUDE.md's phase-order block relative to PHASE_TABLE"
+        )
+        pos = found

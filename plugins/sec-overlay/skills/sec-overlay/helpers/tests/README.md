@@ -323,7 +323,7 @@ the regression guard for the CLI no longer calling `state.begin_pass` on every i
 | `test_contracts.py` | Prompt↔schema drift: a `Finding` JSON example in an agent prompt must parse against the real `models.py`. |
 | `test_finding_schema.py` | The `Finding` record stays consistent with `references/finding.schema.json`. |
 | `test_wiring.py` | Silent-backend / clsmap / dead-link regressions and attack-class routing. |
-| `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules, and (new) the `EVIDENCE_VOCABULARY` block listing every `sec_overlay.evidence` tier/status/disposition value verbatim. |
+| `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules, the `EVIDENCE_VOCABULARY` block listing every `sec_overlay.evidence` tier/status/disposition value verbatim, and the `CLAUDE.md` phase-order block tracking `PHASE_TABLE`'s relative order. |
 | `test_frozen_contract.py` | Byte-identity: `models.py`/`evidence.py` are frozen mirrors of a separate Go port (D-15) — a sha256 pin fails loudly on any edit. `fingerprint()` golden-value pins (fully-populated, minimally-populated, field-order-permuted) prove its behavior independent of that byte check. REL-03: `pyproject.toml`'s `[project] dependencies` stays `[]`. |
 
 ## The rest
@@ -931,6 +931,14 @@ that opts a finding out of the runtime plan. `wants_runtime()` is a plain two-tr
 condition alone forces inclusion; `open_questions` plays no role in that predicate at all — it
 is an independent mechanism `redteam.md` uses to flag human-answerable unknowns, never a bucket
 a finding can be routed into or out of.
+
+`test_docs_invariants.py` also gained `test_claude_md_phase_order_tracks_phase_table`
+(Phase 6 security audit, T-06-02-06): it walks the live `PHASE_TABLE` and asserts every phase
+the skill `CLAUDE.md` "Phase order" block names appears in the same relative order, using a
+name-to-doc-label map. The block is a condensed operator view, so table rows it deliberately
+omits (`factcheck`, `demote-noise`, `selfscore`) are exempt from presence but a reorder of any
+named row fails the suite. This replaces the one-time manual side-by-side read Plan 06-02
+recorded as its doc-drift check with a standing regression guard.
 
 `test_frozen_contract.py` (new, Phase 6 plan 04, D-15/REL-03) is the frozen-contract
 tripwire suite. Two sha256 byte-identity guards pin `models.py`/`evidence.py` against
