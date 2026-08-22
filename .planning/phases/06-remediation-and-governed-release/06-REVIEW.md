@@ -1,6 +1,7 @@
 ---
 phase: 06-remediation-and-governed-release
 reviewed: 2026-08-21T00:00:00Z
+updated: 2026-08-22T00:00:00Z
 depth: standard
 files_reviewed: 25
 files_reviewed_list:
@@ -33,17 +34,18 @@ files_reviewed_list:
 findings:
   critical: 0
   warning: 1
-  info: 0
-  total: 1
+  info: 1
+  total: 2
 status: issues_found
 ---
 
 # Phase 06: Code Review Report
 
-**Reviewed:** 2026-08-21
+**Reviewed:** 2026-08-21 (plan 06-01..06-05 pass); delta-reviewed 2026-08-22 (plan 06-06)
 **Depth:** standard
-**Files Reviewed:** 25 (diff base: `dbac91975162871ad6453289f31a878ac58a9618^`)
-**Status:** issues_found
+**Files Reviewed:** 25 (base pass); 1 (06-06 delta: `test_docs_invariants.py`)
+**Status:** issues_found (0 critical, 1 warning, 1 info — all new-and-open findings are in the
+06-06 delta section below; the base pass's sole finding, WR-01, is closed — see disposition note)
 
 ## Summary
 
@@ -90,6 +92,13 @@ Findings:
 ## Warnings
 
 ### WR-01: Three doc files still claim `review` has no `--workspace` override
+
+**Status: CLOSED.** Fixed in plan 06-06, commit `83da4e0` (`docs(06-06): correct review
+--workspace doc claims`); disposition recorded in `06-DEFECTS.md` row 13. Verified during this
+delta pass: `rg -n -i "workspace override" SKILL.md README.md helpers/README.md` now returns zero
+matches, and the code-derived regression guard this fix added
+(`test_no_live_doc_denies_the_review_workspace_override`) passes against the current tree. Kept
+below, unmodified, for the historical record of what the original finding was.
 
 **File:** `plugins/sec-overlay/skills/sec-overlay/SKILL.md:95`
 **File:** `plugins/sec-overlay/skills/sec-overlay/README.md:34-36`
@@ -151,6 +160,156 @@ addition cannot silently leave documentation behind again.
 
 ---
 
-_Reviewed: 2026-08-21_
+## Plan 06-06 delta review
+
+**Reviewed:** 2026-08-22
+**Depth:** standard
+**Scope:** the single source file changed across commits `83da4e0`, `bf6e65a`, `07ed797`,
+`b7c7a01` — `plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_docs_invariants.py`. All
+other changed files in this plan are Markdown docs, a `plugin.json` version bump, and planning
+artifacts; checked only for factual consistency against the code (see below), not deep-reviewed.
+
+### What 06-06 shipped in this file
+
+Two commits touched the test file. `83da4e0` added `_STALE_WORKSPACE_CLAIM_PATTERN` (a `"has
+no\s*` `--workspace` `\s*override"` regex), the `inspect`/`re` imports, the `run_review` import,
+and `test_no_live_doc_denies_the_review_workspace_override` (the WR-01 regression guard, pinning
+its premise against `run_review`'s real keyword-argument signature). `07ed797` (a CodeRabbit
+follow-up on PR #29) broadened the regex to also catch "does not support" and "lacks (a/an)"
+phrasings, and added two new pattern-only tests:
+`test_stale_workspace_claim_pattern_matches_known_denial_phrasings` and
+`test_stale_workspace_claim_pattern_does_not_match_corrected_wording`.
+
+### Verification performed
+
+- `uv run pytest tests/test_docs_invariants.py -q` → **13 passed** (0 failed).
+- `uv run pytest -q` (full suite, from `helpers/`) → **1 failed, 1287 passed**; the one failure is
+  the same pre-existing environmental gap noted in the base pass (`test_bench.py`, gitignored
+  corpus) — not a regression from this file.
+- `uv run ruff check tests/test_docs_invariants.py` → clean (`[]`, exit 0).
+- No line in the file exceeds the project's 100-character limit.
+- No debug artifacts (`print`, `TODO`, `FIXME`, `XXX`, `HACK`, `debugger`) in the file.
+- Confirmed `run_review` (`cli.py:233-249`) genuinely has a `workspace: str | None = None` keyword
+  parameter — `inspect.signature(run_review).parameters` includes `"workspace"` today, so the
+  premise assertion at line 133 does not vacuously pass; it would fail loudly (with the stated
+  message) if that parameter were ever renamed or removed, which is the guard's stated purpose.
+- Confirmed `_PLUGIN_ROOT` (`parents[4]` from the test file's path) resolves to
+  `plugins/sec-overlay` — the plugin root, not a wider or narrower scope — and `.rglob("*.md")`
+  from there stays inside the plugin directory tree; no path escapes upward or sideways.
+- Live-ran the regex against the current doc tree with the same filtering logic the test uses
+  (`CHANGELOG.md` name-skip, `_HISTORICAL_DIR_MARKERS`/`_VENDORED_DIR_MARKERS` skip) — zero
+  matches, confirming the WR-01 fix (`SKILL.md`, `README.md`, `helpers/README.md`) actually landed
+  and the guard's premise holds against the real doc tree.
+- Confirmed `plugins/sec-overlay/CHANGELOG.md:33` quotes the exact stale phrase (`` "review lacks
+  a `--workspace` override" ``) as historical prose describing the fix — this is exactly the case
+  the `if md_file.name == "CHANGELOG.md": continue` exclusion exists to protect against; without
+  it, the guard would false-positive on its own changelog.
+- Regex correctness spot-checks against the four denial phrasings the test pins and the two
+  corrected phrasings it pins as non-matches: all six behave as the test file asserts (traced by
+  hand; matches the passing test run above).
+
+No bugs found in the regex, the premise check, the `rglob` scope, or test isolation (each test
+only reads files; no test mutates shared state or leaves artifacts).
+
+### WR-02: `test_stale_workspace_claim_pattern_matches_known_denial_phrasings`'s docstring
+overclaims exhaustive regex coverage
+
+**Severity:** Warning
+**File:** `plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_docs_invariants.py:150-159`
+
+**Issue:** The docstring reads: "The pattern must catch every denial wording review's doc surfaces
+could regress to." The implementation is three hardcoded literal alternatives — `has no`, `does
+not support`, `lacks(?: an?)?` — immediately (whitespace-only gap) followed by `` `?--workspace`?
+``. This catches the four specific phrasings the test enumerates, and the three phrasings the
+original WR-01 finding actually used, but it is not exhaustive of "every" wording a future doc
+regression could use. Plausible denial phrasings that would **not** match and would silently pass
+the guard:
+
+- `"review has no support for --workspace"` (inserts "support for" between "has no" and the flag —
+  the regex requires only whitespace in that gap)
+- `"review doesn't support --workspace"` (the contraction, vs. the literal `"does not support"`)
+- `"review cannot use a --workspace override"` / `"you can't pass --workspace to review"`
+- `"there is no --workspace flag for review"`
+
+This is the same design already used by this file's older
+`_SUBMODULE_INSTRUCTION_PHRASES = ("recurse-submodules", "submodule update", "is a git submodule")`
+guard (a fixed phrase tuple, not a semantic check) — so the narrow-coverage *pattern* is an
+established, accepted tradeoff in this codebase, not a new design mistake. What is new and
+specific to this test is the docstring's absolute claim ("every denial wording... could regress
+to") layered on top of that narrow, literal-phrase implementation. A maintainer reading only the
+docstring — which is exactly what this guard exists to let a maintainer do instead of re-deriving
+the regex's actual coverage — would reasonably believe re-wording a future stale doc claim in any
+form is caught, when in fact only these three literal shapes are.
+
+Given this guard is the direct regression-prevention mechanism for a defect that a human reviewer
+had to catch by hand once already (WR-01 was not caught by any automated check when first
+introduced), an overclaiming docstring here creates a specific risk: a future contributor sees
+this test passing and the docstring's "every wording" claim, and concludes the doc-drift class of
+bug is now fully guarded against, when a differently-phrased regression would slip through
+silently exactly as WR-01 originally did.
+
+**Fix:** Narrow the docstring to what the pattern actually verifies. For example:
+
+```python
+def test_stale_workspace_claim_pattern_matches_known_denial_phrasings():
+    """The pattern catches the three literal denial phrasings WR-01 found in the wild.
+
+    Not exhaustive of every possible future wording — see
+    _STALE_WORKSPACE_CLAIM_PATTERN's docstring for the literal-phrase tradeoff this
+    guard accepts, same as _SUBMODULE_INSTRUCTION_PHRASES above.
+    """
+```
+
+Optionally, widen the regex to also catch the contraction and a couple of the other plausible
+phrasings above (e.g. add `doesn't support`, `cannot use`, `can't (?:use|pass)` to the
+alternation) if the added coverage is worth the added regex complexity — this is a judgment call,
+not a blocking requirement, since the pattern-tuple approach is already established in this file.
+
+### IN-01: Duplicate doc-walking loop between two guard tests
+
+**Severity:** Info
+**File:** `plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_docs_invariants.py:105-124,
+127-147`
+
+**Issue:** `test_no_live_doc_claims_a_git_submodule_that_does_not_exist` (pre-existing, unchanged
+by 06-06) and `test_no_live_doc_denies_the_review_workspace_override` (new in 06-06) both contain
+an identical loop shape:
+
+```python
+for md_file in _PLUGIN_ROOT.rglob("*.md"):
+    rel = "/" + md_file.relative_to(_PLUGIN_ROOT).as_posix()
+    if md_file.name == "CHANGELOG.md":
+        continue
+    if any(marker in rel for marker in _HISTORICAL_DIR_MARKERS + _VENDORED_DIR_MARKERS):
+        continue
+    txt = md_file.read_text()  # or .lower()
+    ...
+```
+
+06-06 introduced the second copy of this loop rather than factoring a shared iterator. This is a
+straightforward duplication (not a correctness bug — both copies are correct and independently
+verified above), and it means a future third guard of the same shape (a third phrasing regression
+class) would add a third copy rather than reuse one.
+
+**Fix:** Extract a shared helper, e.g.:
+
+```python
+def _iter_live_docs():
+    """Yield every live (non-historical, non-vendored, non-CHANGELOG) doc under the plugin root."""
+    for md_file in _PLUGIN_ROOT.rglob("*.md"):
+        rel = "/" + md_file.relative_to(_PLUGIN_ROOT).as_posix()
+        if md_file.name == "CHANGELOG.md":
+            continue
+        if any(marker in rel for marker in _HISTORICAL_DIR_MARKERS + _VENDORED_DIR_MARKERS):
+            continue
+        yield md_file, rel
+```
+
+Then both tests iterate `_iter_live_docs()` instead of repeating the filter. Not blocking —
+optional cleanup the next time either test is touched.
+
+---
+
+_Reviewed: 2026-08-21 (base pass); 2026-08-22 (06-06 delta)_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
