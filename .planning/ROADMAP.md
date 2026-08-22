@@ -3,16 +3,9 @@
 ## Milestones
 
 - ✅ **v5.0 Hybrid Diff-Review Architecture** — Phases 1-6 + 04.1 (shipped 2026-08-22)
-- 🚧 **v5.1 Tech-Debt Cleanup** — Phases 7-8 (in progress)
+- ✅ **v5.1 Tech-Debt Cleanup** — Phases 7-8 (shipped 2026-08-22)
 
 ## Phases
-
-**Phase Numbering:**
-
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
-
-Decimal phases appear between their surrounding integers in numeric order.
 
 <details>
 <summary>✅ v5.0 Hybrid Diff-Review Architecture (Phases 1-6 + 04.1) — SHIPPED 2026-08-22</summary>
@@ -29,69 +22,20 @@ Full phase details: `.planning/milestones/v5.0-ROADMAP.md`
 
 </details>
 
-### 🚧 v5.1 Tech-Debt Cleanup (In Progress)
+<details>
+<summary>✅ v5.1 Tech-Debt Cleanup (Phases 7-8) — SHIPPED 2026-08-22</summary>
 
-**Milestone Goal:** Clear all 6 acknowledged Phase 06 tech-debt items and resolve the
-open ingest question, so the project has zero deferred items and zero open blockers.
+- [x] Phase 7: Test & Lint Debt Cleanup (direct execution, PR #32) — completed 2026-08-22
+- [x] Phase 8: Documentation Accuracy & Ingest Closure (direct execution, PR #33) — completed 2026-08-22
 
-- [x] **Phase 7: Test & Lint Debt Cleanup** - Close both CodeRabbit test-assertion nitpicks from PR #23 and fix the pre-existing ruff `I001` import-order error (completed 2026-08-22, PR #32)
-- [x] **Phase 8: Documentation Accuracy & Ingest Closure** - Close all three sec-overlay doc gaps and resolve the open ingest question, closing the `INGEST-CONFLICTS.md` WARNING (completed 2026-08-22)
+Full phase details: `.planning/milestones/v5.1-ROADMAP.md`
 
-## Phase Details
-
-### Phase 7: Test & Lint Debt Cleanup
-
-**Goal**: Every acknowledged test-assertion gap from PR #23 and the pre-existing lint
-error are closed — pytest proves the behaviors CodeRabbit flagged as unasserted, and
-ruff runs clean with zero `I001` violations.
-**Depends on**: Nothing (first phase of v5.1, independent of Phase 8)
-**Requirements**: TEST-01, TEST-02, LINT-01
-**Success Criteria** (what must be TRUE):
-  1. `test_rule_glob.py:231` asserts that the CLI's `--workspace` flag is actually
-     forwarded to the underlying call, not merely that the call occurs (TEST-01)
-  2. `test_review_live.py:403-432` proves WR-01's guard runs before any git call is
-     made, not merely that both occur somewhere in the run (TEST-02)
-  3. `ruff check` reports zero `I001` findings in
-     `plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_cli.py`, and a
-     full-repo ruff run stays clean (LINT-01)
-**Plans**: TBD
-
-### Phase 8: Documentation Accuracy & Ingest Closure
-
-**Goal**: The three acknowledged sec-overlay documentation gaps are closed and the
-open ingest question is resolved, so the milestone ends with zero open doc debt and
-zero open blockers.
-**Depends on**: Nothing (independent of Phase 7)
-**Requirements**: DOC-01, DOC-02, DOC-03, ING-01
-**Success Criteria** (what must be TRUE):
-  1. `skills/sec-overlay/README.md`'s CLI-legend block is audited against actual CLI
-     behavior and any pre-existing misordering found is corrected (DOC-01)
-  2. `skills/sec-overlay/helpers/README.md`'s pipeline diagram carries `selfscore`,
-     `artifact-gate`, and `artifact-review` as nodes (DOC-02)
-  3. `skills/sec-overlay/CLAUDE.md`'s "Phase order (one pass)" list carries a
-     numbered `selfscore` entry (DOC-03)
-  4. `.planning/INGEST-CONFLICTS.md`'s WARNING is closed with a recorded decision —
-     either the 2026-08-09 spec is located and linked, or the 2026-08-11
-     kb-redesign design doc is affirmed as authority (ING-01)
-**Plans**: TBD
+</details>
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 7 → 8 (both independent; may run in either order)
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|-----------------|--------|-----------|
-| 1. Baseline Health Verification | v5.0 | 3/3 | Complete | 2026-08-17 |
-| 2. Diff Pipeline & Positioning | v5.0 | 5/5 | Complete | 2026-08-19 |
-| 3. Rule Matching & Review Modes | v5.0 | 7/7 | Complete | 2026-08-19 |
-| 4. Scale, Resume & Diff Output | v5.0 | 4/4 | Complete | 2026-08-20 |
-| 04.1. DIFF-04 sidecar isolation | v5.0 | 1/1 | Complete | 2026-08-19 |
-| 5. End-to-End Verification | v5.0 | 4/4 | Complete | 2026-08-21 |
-| 6. Remediation and Governed Release | v5.0 | 6/6 | Complete | 2026-08-22 |
-| 7. Test & Lint Debt Cleanup | v5.1 | 1/1 | Complete | 2026-08-22 |
-| 8. Documentation Accuracy & Ingest Closure | v5.1 | 1/1 | Complete | 2026-08-22 |
+All milestones shipped. Next milestone not yet defined — run `/gsd-new-milestone`.
 
 ---
 
-*Next: `/gsd-complete-milestone` — both v5.1 phases complete*
+*Next: `/gsd-new-milestone`*

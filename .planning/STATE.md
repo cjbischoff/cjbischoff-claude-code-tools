@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v5.1
 milestone_name: Tech-Debt Cleanup
-current_phase: 8
-current_phase_name: Documentation Accuracy & Ingest Closure
-status: phase_complete
-stopped_at: Phase 8 complete; milestone v5.1 ready to close
-last_updated: "2026-08-22T20:28:04.586Z"
+status: Awaiting next milestone
+stopped_at: Milestone v5.1 completed and archived
+last_updated: "2026-08-22T22:14:03.455Z"
 last_activity: 2026-08-22
-last_activity_desc: Roadmap created (Phases 7-8), 7/7 requirements mapped
+last_activity_desc: Milestone v5.1 completed and archived (override closeout)
 progress:
   total_phases: 2
   completed_phases: 2
   total_plans: 0
   completed_plans: 0
   percent: 100
+current_phase: 8
+current_phase_name: Documentation Accuracy & Ingest Closure
 ---
 
 # Project State
@@ -25,16 +25,14 @@ See: .planning/PROJECT.md (updated 2026-08-22)
 
 **Core value:** The marketplace never ships an unverified claim — validated plugins,
 governed releases, receipt-backed findings.
-**Current focus:** Phase 8 — Documentation Accuracy & Ingest Closure
+**Current focus:** Planning next milestone (`/gsd-new-milestone`)
 
 ## Current Position
 
-Phase: 8 of 8 (Documentation Accuracy & Ingest Closure)
-Plan: Direct execution (user-directed)
-Status: Complete
-Last activity: 2026-08-22 — Roadmap created (Phases 7-8), 7/7 requirements mapped
-
-Progress: [██████████] 100%
+Phase: Milestone v5.1 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-22 — Milestone v5.1 completed and archived
 
 ## Performance Metrics
 
@@ -118,9 +116,9 @@ work in this milestone (see Phase 7 / Phase 8 above):
 ## Session Continuity
 
 Last session: 2026-08-22T20:28:04.573Z
-Stopped at: Phase 7 context gathered
-Resume file: .planning/phases/07-test-lint-debt-cleanup/07-CONTEXT.md
+Stopped at: Milestone v5.1 completed and archived
+Resume file: .planning/MILESTONES.md
 
 ## Operator Next Steps
 
-- Run `/gsd-complete-milestone` to archive v5.1 — all 7 requirements closed
+- Start the next milestone with /gsd-new-milestone
