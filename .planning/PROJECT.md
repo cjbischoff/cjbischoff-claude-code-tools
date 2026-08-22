@@ -148,4 +148,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-21 after completing Phase 5 (End-to-End Verification, Audit & Review) of milestone v5.0*
+*Last updated: 2026-08-22 after completing Phase 6 (Remediation and Governed Release) of milestone v5.0 — UAT passed 2/2, verification passed*
