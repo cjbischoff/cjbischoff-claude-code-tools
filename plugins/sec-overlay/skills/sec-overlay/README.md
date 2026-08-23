@@ -85,7 +85,9 @@ flowchart TB
 - **`agents/`** are the LLM prompts. Producers (Sonnet) find things; adversaries (Opus, a
   different family) try to prove them wrong. → [details](agents/README.md)
 - **`helpers/`** is the deterministic Python that runs the tools and *enforces the gates no
-  LLM is trusted to enforce.* Stdlib-only. → [details](helpers/README.md)
+  LLM is trusted to enforce.* Stdlib-only. It ships `rules/absence`, a tracked, first-party
+  semgrep pack that recon always adds to `sast_plan.semgrep.rulesets` — the vendored clone
+  carries no missing-safe-option rule. → [details](helpers/README.md)
 
 The main agent (you, driving [`SKILL.md`](SKILL.md)) is the orchestrator: it calls a Python
 step, spawns an agent, records the phase, calls the next Python step.

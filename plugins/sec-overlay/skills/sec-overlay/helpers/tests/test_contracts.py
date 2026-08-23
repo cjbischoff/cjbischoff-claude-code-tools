@@ -74,6 +74,25 @@ def test_recon_prompt_requires_route_summary():
     assert "route" in (AGENTS / "recon.md").read_text().lower()
 
 
+def test_recon_prompt_requires_the_absence_pack():
+    """The vendored pack has no absence rule, so omitting rules/absence loses the class."""
+    from pathlib import Path
+
+    recon = (Path(__file__).resolve().parents[2] / "agents" / "recon.md").read_text()
+    assert "rules/absence" in recon
+    assert "always" in recon.lower().split("rules/absence")[0][-400:]
+
+
+def test_golden_scan_profile_carries_the_absence_pack():
+    import json
+    from pathlib import Path
+
+    profile = json.loads(
+        (Path(__file__).resolve().parents[1] / "fixtures" / "golden_scan_profile.json").read_text()
+    )
+    assert any("rules/absence" in r for r in profile["sast_plan"]["semgrep"]["rulesets"])
+
+
 def test_architecture_prompt_requires_all_controls():
     txt = (AGENTS / "architecture.md").read_text().lower()
     assert "all controls" in txt or "every control" in txt

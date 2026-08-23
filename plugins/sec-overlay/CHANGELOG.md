@@ -10,6 +10,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   rules that flag a dangerous construction only when its safe option is
   absent, for OPA `rego.New`, `cel.NewEnv`, `lua.NewState`, Jinja2
   `Environment`, and `requests` calls without a timeout.
+- Recon always adds `rules/absence` to `sast_plan.semgrep.rulesets`, for
+  every language, alongside the vendored per-language dirs. `SKILL.md` notes
+  the pack; `golden_scan_profile.json` and two `test_contracts.py` guards
+  pin the invariant.
 
 - Dependency-sink catalog (`references/dependency-sinks.json`) and its loader,
   naming dependencies whose own code holds the sink.

@@ -65,6 +65,12 @@ coverage, point `--config` (and the recon agent's `rulesets`) at your own
 semgrep ruleset; the vendored, gitignored semgrep-rules clone (`helpers/rules/semgrep/`) is
 not shipped with this plugin.
 
+`helpers/rules/absence/` is a tracked, first-party pack that ships with the plugin. Its rules
+pair a `pattern` for a dangerous construction with a `pattern-not` for its safe option, so a
+call site that already passes the option produces no finding. Never write a first-party rule
+under `helpers/rules/semgrep/`: `preflight.py` recreates that directory with
+`git clone --depth 1`, which deletes anything you put there.
+
 Outputs, under the workspace directory:
 - `findings/F-*.json` — one file per normalized finding (the contract for later phases).
 - `report.sarif` — SARIF 2.1.0.

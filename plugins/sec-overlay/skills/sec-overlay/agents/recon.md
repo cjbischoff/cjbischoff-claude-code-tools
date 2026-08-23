@@ -68,6 +68,10 @@ as you spot them.
    false authz-gap lead.
 6. **sast_plan:** choose backends:
    - `semgrep`: ALWAYS emit `"run": true` alongside `rulesets` (every backend block carries an explicit `run` — a rulesets-but-no-run block is a config bug). Set `rulesets` to the vendored per-language dirs that exist, e.g. `["rules/semgrep/<lang>"]` for each detected language. Paths are relative to `{{HELPERS_DIR}}` (where the prefilter runs) — do NOT prefix with `{{HELPERS_DIR}}/`. Fall back to `["rules/smoke.yaml"]` only if no vendored dir exists. Leave `security_only` unset (defaults true — the prefilter drops non-security lint and reports the count).
+     ALWAYS include "rules/absence" in rulesets, for every language, in addition to the
+     vendored per-language dirs. The vendored clone has no missing-safe-option rule, so an
+     omitted `rules/absence` silently loses every absence finding. `rules/absence` is tracked
+     and always present; it needs no existence check.
    - Read `references/dependency-sinks.json`. For every entry whose `package` appears in a
      manifest of the target, include the entry's `cls` in `attack_surface` and record
      `{"id": <entry id>, "package": <package>, "sink": <sink>, "safe_option": <safe_option>}`
