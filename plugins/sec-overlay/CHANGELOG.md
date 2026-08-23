@@ -12,6 +12,15 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Consolidated review result artifact (REQ-P7, Task 15 GREEN): new
+  `sec_overlay/review_result.py` with `write_review_result`, writing
+  `artifacts/review_result.json` via `workspace._atomic_write`. It records
+  `status` (the coverage-manifest seal), per-finding records, dropped/declined
+  findings, reflection retractions/skips, `budget_exceeded`, the coverage
+  manifest, per-phase `tokens`, base/head SHAs, and model/profile/tier.
+  `cli.run_review` calls it last on both consume exits (zero-reviewable and
+  post-seal). Additive — every prior artifact stays.
+
 - Consolidated review result artifact (REQ-P7, Task 15): failing tests first
   (RED) in `tests/test_review_result.py`. They pin `write_review_result` writing
   `review_result.json` to `ws.artifacts` with the full documented key set on both

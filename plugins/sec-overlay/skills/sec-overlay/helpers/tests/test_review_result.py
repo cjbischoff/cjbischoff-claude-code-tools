@@ -41,21 +41,21 @@ def _review_finding(file="app.py", line=18):
 
 def _write(tmp_path, **overrides):
     ws = Workspace(tmp_path)
-    kwargs = dict(
-        findings=[],
-        dropped=[],
-        declines=[],
-        retractions=[],
-        skips=[],
-        manifest=_manifest(tmp_path),
-        budget_exceeded=False,
-        tokens={},
-        base=_BASE,
-        head=_HEAD,
-        model="claude-sonnet",
-        profile="general",
-        tier="assured",
-    )
+    kwargs = {
+        "findings": [],
+        "dropped": [],
+        "declines": [],
+        "retractions": [],
+        "skips": [],
+        "manifest": _manifest(tmp_path),
+        "budget_exceeded": False,
+        "tokens": {},
+        "base": _BASE,
+        "head": _HEAD,
+        "model": "claude-sonnet",
+        "profile": "general",
+        "tier": "assured",
+    }
     kwargs.update(overrides)
     path = write_review_result(ws, **kwargs)
     return path, json.loads(path.read_text())

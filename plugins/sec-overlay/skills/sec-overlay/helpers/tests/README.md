@@ -37,6 +37,11 @@ sentences and an empty-list `review_ledger.json` (T-02-15), and a monkeypatched 
 returning canned drops asserts the markdown drop-row count equals the ledger's drop count
 (T-02-18).
 
+`test_review_result.py` (5 tests, REQ-P7) locks the consolidated `review_result.json`
+contract: `write_review_result` lands the file in `ws.artifacts` with the full documented
+`RESULT_KEYS` set on both a zero-finding run and a populated run, each finding record carries
+the seven documented fields, and dataclass declines/skips serialize to plain dicts.
+
 `test_report.py` covers `render_dropped_findings_section` (three drops, the empty-list
 none-dropped statement, input-order preservation), `to_markdown` wiring both the
 dropped-findings and position-review sections after the findings body even when both are empty,

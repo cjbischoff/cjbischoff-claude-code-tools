@@ -65,6 +65,7 @@ from sec_overlay.review_coverage import (
     check_resume_identity,
 )
 from sec_overlay.review_findings import GatedFinding, apply_profile, classify
+from sec_overlay.review_result import write_review_result
 from sec_overlay.rule_glob import RuleSafetyError, build_resolution, glob_match, resolve_rule_doc
 from sec_overlay.sarif import to_sarif
 from sec_overlay.sast import run_semgrep
@@ -828,14 +829,34 @@ def run_review(
         review_source_skips=review_source_skips,
     )
 
+    def _emit_review_result() -> None:
+        write_review_result(
+            ws,
+            findings=review_findings,
+            dropped=dropped,
+            declines=declines,
+            retractions=reflection_retractions,
+            skips=reflection_skips,
+            manifest=manifest,
+            budget_exceeded=manifest.budget_exceeded,
+            tokens={},
+            base=base_sha,
+            head=head_sha,
+            model=model,
+            profile=profile,
+            tier=None,
+        )
+
     comments = [comment_from_finding(rf.finding) for rf in review_findings]
 
     if not selection.reviewable:
         write_review_comments(ws, comments, manifest.to_dict())
+        _emit_review_result()
         return 0
 
     seal = manifest.seal()
     write_review_comments(ws, comments, manifest.to_dict())
+    _emit_review_result()
 
     if seal == "complete":
         return 0

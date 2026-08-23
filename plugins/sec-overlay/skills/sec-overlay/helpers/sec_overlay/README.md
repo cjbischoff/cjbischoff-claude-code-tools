@@ -37,6 +37,10 @@ module map entry in [`../README.md`](../README.md) for the full contract; `cli.p
 `run_review` and `report.py`'s `write_report`/`write_review_ledger` now thread its
 `ReviewFinding` output through, both documented at the same map entries.
 
+`review_result.py` (new, REQ-P7) adds `write_review_result`, the consolidated per-run
+`artifacts/review_result.json` writer — `cli.py`'s `run_review` calls it last on both consume
+exits. See the module map entry in [`../README.md`](../README.md) for the full key contract.
+
 `workspace.py`'s `Workspace` now coerces `str` path arguments via a hand-written `__init__`
 instead of a dataclass `__post_init__` — the stored fields stay `Path`-typed, but the
 constructor accepts `str | Path` so `Workspace('<path>')` (as agent-authored prompts write it)
