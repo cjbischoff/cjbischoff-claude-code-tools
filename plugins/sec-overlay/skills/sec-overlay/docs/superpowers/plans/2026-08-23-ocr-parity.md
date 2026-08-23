@@ -85,8 +85,8 @@
 
 ### Task 11: REQ-P2 — rule docs 9 → 36
 **Files:** Create 27 docs under `skills/sec-overlay/rules/rule_docs/` (analysis priority order); Modify `helpers/sec_overlay/rule_glob.py` (`BUILTIN_PATH_RULE_MAP` globs, OCR order); Test `helpers/tests/test_rule_glob.py` (count, attribution line `Adapted from open-code-review (Apache-2.0)`, map→doc resolution).
-- [ ] RED: count/attribution/resolution tests. Commit.
-- [ ] GREEN: port from `/Users/christopher/Tools/open-code-review/internal/config/rules/rule_docs/` with attribution header + exclusion blocks; globs from OCR `system_rules.json` same commit; update `rules/rule_docs/README.md`. Commit.
+- [x] RED: count/attribution/resolution tests. Commit. (`2b10606`)
+- [x] GREEN: ported 27 docs from OCR `rule_docs/` with attribution line + 5-family exclusion blocks; `BUILTIN_PATH_RULE_MAP` = OCR's 35 patterns + `**/*` catch-all, exact order; updated `rules/rule_docs/README.md`, `helpers/sec_overlay/README.md`. All 197 rule tests + full 1541 suite/ruff/ty green. Bench delta: no-op — `bench.run` grades the audit pipeline, not review mode (Task 9 convention).
 
 ### Task 12: REQ-P4 — hard token budget + token-aware guard
 **Files:** Create `helpers/sec_overlay/review_budget.py` (`estimate_tokens(diff_text) -> int` using OCR shape constants `PLAN_PROMPT=2000, PLAN_OUT=400, ROUNDS=7, ROUND_OUT=700`; `BudgetGate(budget)` with `.admit(estimate) -> bool` look-ahead); Modify `cli.py` (`--token-budget`, skip-marking `skipped(budget)`, `budget_exceeded` flag, prepare per-file estimates), `file_select.py` (token-variant too-large exclusion when budget set); Tests `test_review_budget.py` + append `test_cli_review.py`, `test_docs_invariants.py` (constants).

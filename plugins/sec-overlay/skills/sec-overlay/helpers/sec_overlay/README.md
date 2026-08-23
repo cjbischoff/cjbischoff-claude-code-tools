@@ -795,6 +795,17 @@ families every built-in doc must cover, in the fixed order `python.md` establish
 logic — `tests/test_rule_docs.py` drives every assertion from these two constants and the map
 itself, never a hardcoded filename list.
 
+The OCR-parity plan (Task 11, REQ-P2) grows `BUILTIN_PATH_RULE_MAP` from nine docs to 36,
+matching OCR's full 35-pattern `system_rules.json` set (plus the trailing `**/*` catch-all) in
+exact order: manifests (`pom.xml`, `package.json`, `Cargo.toml`, ...), config (`.properties`,
+`.json`, `.yaml`, `.github/**`), templates (FreeMarker, Astro, MyBatis mapper/DAO XML), and the
+remaining languages (C/C++, Protobuf, GraphQL, Prisma, Terraform, Bicep, Nix, Haskell, Julia,
+Nim, ArkTS, gettext `.po`/`.pot`). Each new doc under `rules/rule_docs/` was adapted from OCR's
+Apache-2.0 sources and carries an `Adapted from open-code-review (Apache-2.0)` attribution line;
+`tests/test_rule_glob.py` asserts the 27 ported docs are mapped, attributed, and resolve for a
+representative path each (first-match order matters: `.github/workflows/**` before `.github/**`,
+`pom.xml`/`package.json`/... before the generic `**/*.{json,json5}`).
+
 Phase 3 plan 06 (Task 1) adds the review-file agent seam, mirroring `reflection.py`'s
 render/parse-only discipline (no subprocess, no network client, no model SDK — `SKILL.md` owns
 dispatch, D-13). `review_agent.py`'s `render_review_prompt` renders `agents/review-file.md`

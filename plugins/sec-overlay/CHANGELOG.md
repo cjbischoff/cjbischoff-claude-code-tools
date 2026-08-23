@@ -12,12 +12,20 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
-- Rule-doc port tests (REQ-P2, RED): failing tests in `tests/test_rule_glob.py`
-  and `tests/test_rule_docs.py` pin the coming 9 → 36 rule-doc port — the map
-  holds 36 distinct docs, each of the 27 ported docs carries the
-  `Adapted from open-code-review (Apache-2.0)` attribution line and a
-  `BUILTIN_PATH_RULE_MAP` entry, and representative paths resolve to the right
-  doc including first-match order cases (`.github` patterns before plain YAML;
+- Rule-doc port (REQ-P2): `BUILTIN_PATH_RULE_MAP` now holds OCR's full
+  35-pattern `system_rules.json` set plus the trailing `**/*` catch-all (36
+  distinct docs, exact OCR order), and 27 new docs are ported under
+  `rules/rule_docs/` — manifests (`pom.xml`, `package.json`, `Cargo.toml`,
+  `composer.json`, `build.gradle`), config (`.properties`, `.json`, `.yaml`,
+  `.github/**`), templates (FreeMarker, Astro, MyBatis mapper/DAO XML), and the
+  remaining languages (C, C++, Protobuf, GraphQL, Prisma, Terraform, Bicep,
+  Nix, Haskell, Julia, Nim, ArkTS, gettext `.po`/`.pot`). Each ported doc is
+  adapted from OCR's Apache-2.0 sources, carries the
+  `Adapted from open-code-review (Apache-2.0)` attribution line, and covers the
+  same five defect families in the fixed section order. Tests in
+  `tests/test_rule_glob.py` and `tests/test_rule_docs.py` (RED in 1.94.1) now
+  pass: representative paths resolve to the right doc including first-match
+  order cases (`.github` patterns before plain YAML;
   `package.json`/`Cargo.toml`/`pom.xml` before generic `json`/`xml`).
 
 - Sibling-context review (REQ-P1): the review-file prompt now embeds a file's
