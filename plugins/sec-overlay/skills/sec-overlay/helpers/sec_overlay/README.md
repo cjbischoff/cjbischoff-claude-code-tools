@@ -1058,3 +1058,8 @@ per-site `needs_follow_up` branch's `reason`/`next_step` now name the specific s
 reused the class-level prose, reading as if the whole class were uncovered even when a sibling
 site was already `reported`. The class-level branch's wording — a class with zero findings —
 stays unchanged.
+
+`calibrate.py` (REQ-P9): a judge `severity-inflated`/`downgrade` verdict also
+writes the downgraded severity band back to `f.severity` (`_severity_for_score`,
+the inverse of `_SEVERITY_FLOOR`), with a `calibrate:severity-downgraded` history
+event recording `from`/`to`. Severity is never raised by this path.

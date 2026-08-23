@@ -127,6 +127,14 @@ def _severity_floor(severity: Severity) -> int:
     return _SEVERITY_FLOOR.get(severity.value, 1)
 
 
+def _severity_for_score(score: int) -> Severity:
+    """Inverse of `_SEVERITY_FLOOR`: the severity band a risk_score sits in (REQ-P9)."""
+    for name in ("critical", "high", "medium", "low"):
+        if score >= _SEVERITY_FLOOR[name]:
+            return Severity(name)
+    return Severity.INFO
+
+
 def _heuristic_score(finding: Finding) -> int:
     """Fallback score when no (valid) CVSS vector is present."""
     score = _BASE.get(finding.severity.value, 1)
@@ -225,6 +233,16 @@ def calibrate_findings(ws: Workspace) -> int:
                             }
                         )
                         f.risk_score = lowered
+                        banded = _severity_for_score(lowered)
+                        if _SEVERITY_FLOOR[banded.value] < _SEVERITY_FLOOR[f.severity.value]:
+                            f.history.append(
+                                {
+                                    "event": "calibrate:severity-downgraded",
+                                    "from": f.severity.value,
+                                    "to": banded.value,
+                                }
+                            )
+                            f.severity = banded
                 if _is_external_boundary(f):
                     f.risk_score = min(f.risk_score, _EXTERNAL_CAP)
                     f.completeness_tier = "external-unverifiable"

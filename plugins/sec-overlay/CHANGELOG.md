@@ -6,6 +6,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+### Fixed
+
+- Judge severity write-back (REQ-P9): `calibrate.py` now lowers `f.severity`
+  to the downgraded score band, so reports no longer show the inflated
+  severity a judge already rejected.
+
 - Failing REQ-P9 tests: judge severity write-back (`tests/test_calibrate.py`).
 
 - F1 in the bench scorecard (`bench/tally.py`): overall, per-source, and
