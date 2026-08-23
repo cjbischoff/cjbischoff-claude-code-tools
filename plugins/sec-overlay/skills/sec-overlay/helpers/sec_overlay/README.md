@@ -37,6 +37,33 @@ module map entry in [`../README.md`](../README.md) for the full contract; `cli.p
 `run_review` and `report.py`'s `write_report`/`write_review_ledger` now thread its
 `ReviewFinding` output through, both documented at the same map entries.
 
+`review_result.py` (new, REQ-P7) adds `write_review_result`, the consolidated per-run
+`artifacts/review_result.json` writer — `cli.py`'s `run_review` calls it last on both consume
+exits. See the module map entry in [`../README.md`](../README.md) for the full key contract.
+
+`run_review` takes a `tier` argument (`--tier fast|assured`, default `assured`, REQ-T3a). The
+`fast` tier skips the plan half — the `--prepare --plan` step returns without emitting
+`plan_manifest.json` — while `assured` runs the full chain. The tier is recorded in both
+`review_result.json` and its `CoverageManifest` (`review_coverage.py` now carries `tier` through
+`__init__`/`to_dict`/`from_dict`).
+
+`pr_poster.py` (new, REQ-S1) is the stdlib GitHub pull-request review poster — `route_findings`
+splits critical/high (inline) from the rest (summary), `build_review_payload` builds a `COMMENT`
+review, and `post_review` POSTs it with an injectable transport. The composite `action.yml` at
+the plugin root invokes it. See the module map entry in [`../README.md`](../README.md).
+
+`sessions.py` (new, REQ-S2) renders read-only over the per-repo sidecar — `session_rows` and
+`render_rows` list one row per slug (pass, sha, finding counts), `resolve_session` picks `latest`
+by mtime or a slug, and `session_detail`/`render_detail` show stages plus a ledger summary with a
+`--severity` finding filter. Wired as `cli.py`'s `sessions list|show` subcommand. See the module
+map entry in [`../README.md`](../README.md).
+
+`background.py` (new, REQ-P8) adds `load_background`, sanitizing developer-supplied background
+context before it enters a review prompt — a 1 MB `BACKGROUND_MAX_BYTES` cap, control-character
+strip, envelope-delimiter neutralization, a hard secret abort, then `redactor.safe_for_prompt`.
+`review_agent.render_review_prompt` gains a `background` kwarg; `cli.py`'s `review` gains
+`--background`/`--background-file`. See the module map entry in [`../README.md`](../README.md).
+
 `workspace.py`'s `Workspace` now coerces `str` path arguments via a hand-written `__init__`
 instead of a dataclass `__post_init__` — the stored fields stay `Path`-typed, but the
 constructor accepts `str | Path` so `Workspace('<path>')` (as agent-authored prompts write it)
@@ -679,8 +706,7 @@ gained `reflection_retractions`/`reflection_skips` keyword params on `write_revi
 `write_report`, added to the same ledger dict (`reflection_retractions`, `reflection_skipped`) —
 no second artifact file. `cli.py`'s `run_review` gained `--profile` (`security`/`general`,
 reserved for a later plan), resolves each reviewable file's rule doc, and runs its kept findings
-through `apply_verdict` (an always-empty verdict in this tracer slice — no finding source is wired
-into review mode yet) inside a `try`/`except` that records a `ReflectionSkip` and fails open on
+through `apply_verdict` inside a `try`/`except` that records a `ReflectionSkip` and fails open on
 error rather than aborting the run.
 
 Phase 3 plan 05 (Task 1) adds the prompt and verdict-validation half of that filter.
@@ -703,8 +729,20 @@ zero skips still shows the section rather than omitting it. `to_markdown` gains 
 `write_report` passes `reflection_skips` through to `to_markdown` (it already reached
 `write_review_ledger`). SKILL.md's "Diff-scoped review" section documents the dispatch: a
 `review-filter` subagent renders `render_reflection_prompt`, returns a verdict `validate_verdict`
-parses, and `apply_verdict` retracts — `cli.py review`'s tracer slice still calls it with an
-always-empty verdict, so live dispatch remains a later plan.
+parses, and `apply_verdict` retracts.
+
+REQ-P6 wires that filter live. `reflection.py` gains `reflection_label(path)` — a `review-filter-`
+prefixed label distinct from `review_agent.agent_label` so a file's review return and its reflection
+verdict never collide on disk — and `recorded_verdict_source(ws, *, base, head)`, a closure reading
+each file's verdict envelope (`{"base", "head", "verdict"}`) recorded under that label. It mirrors
+`review_agent.recorded_return_source`'s error contract: a missing verdict, invalid JSON, a base/head
+mismatch, or a non-dict `verdict` all raise `ValueError`, so a stale verdict can never retract this
+run's finding. `cli.py`'s `run_review` gained `reflection_source` (defaults to
+`recorded_verdict_source`) and a `--prepare-reflection` mode that, after the profile runs, renders
+one `review-filter` prompt per file with kept findings under `runs/reflection_prompts/<label>.md`
+and writes `runs/reflection_plan.json`. The consume run applies each file's recorded verdict; any
+`ValueError` lands in the existing per-file `ReflectionSkip` fail-open path (D-15) — never a silent
+keep-all.
 
 Phase 3 plan 05 (Task 3) attaches the D-12 receipt-gate disposition ladder to
 `findings_gate.py`, beside the existing `confirms_alone` check it leaves untouched.
@@ -772,6 +810,15 @@ gate's `repo_root` is exactly whatever base `load_project_rule` was already pass
 custom/global), not a separately threaded true project root, since a global config under
 `~/.sec-overlay/` is essentially never nested under an arbitrary project's `repo_root`.
 
+REQ-S4 adds `resolve_with_layer(path, resolution)`, a thin sibling of `resolve_rule_doc` that
+returns a `(layer, text)` pair — the winning layer label (`custom`/`project`/`global`, or
+`custom+builtin` etc. when the entry merges the system rule, else `builtin`) alongside the resolved
+doc text. `cli.py`'s `rules check <path> --root` prints that pair for one path, so a maintainer can
+see which layer a rule came from without running a review. The top-level parser is a
+`_SuggestingParser`: on an argparse "invalid choice" error it appends a `difflib.get_close_matches`
+"Did you mean '<x>'?" line before the standard exit-2, so a misspelled subcommand names the nearest
+valid one.
+
 Phase 3 plan 03 (Task 1) extends `BUILTIN_PATH_RULE_MAP` from its single `python.md` entry to
 nine, mirroring OCR's `system_rules.json` pattern strings and doc filenames exactly (D-02): one
 entry per built-in language plus a trailing `"**/*": "default.md"` catch-all, so `default.md` is
@@ -783,6 +830,17 @@ families every built-in doc must cover, in the fixed order `python.md` establish
 (a Rust doc says panic/unwrap where a Java doc says null pointer) as data, not scattered test
 logic — `tests/test_rule_docs.py` drives every assertion from these two constants and the map
 itself, never a hardcoded filename list.
+
+The OCR-parity plan (Task 11, REQ-P2) grows `BUILTIN_PATH_RULE_MAP` from nine docs to 36,
+matching OCR's full 35-pattern `system_rules.json` set (plus the trailing `**/*` catch-all) in
+exact order: manifests (`pom.xml`, `package.json`, `Cargo.toml`, ...), config (`.properties`,
+`.json`, `.yaml`, `.github/**`), templates (FreeMarker, Astro, MyBatis mapper/DAO XML), and the
+remaining languages (C/C++, Protobuf, GraphQL, Prisma, Terraform, Bicep, Nix, Haskell, Julia,
+Nim, ArkTS, gettext `.po`/`.pot`). Each new doc under `rules/rule_docs/` was adapted from OCR's
+Apache-2.0 sources and carries an `Adapted from open-code-review (Apache-2.0)` attribution line;
+`tests/test_rule_glob.py` asserts the 27 ported docs are mapped, attributed, and resolve for a
+representative path each (first-match order matters: `.github/workflows/**` before `.github/**`,
+`pom.xml`/`package.json`/... before the generic `**/*.{json,json5}`).
 
 Phase 3 plan 06 (Task 1) adds the review-file agent seam, mirroring `reflection.py`'s
 render/parse-only discipline (no subprocess, no network client, no model SDK — `SKILL.md` owns
@@ -906,6 +964,40 @@ per-file error still fails only that file. `run_review` opens one `ThreadPoolExe
 the accumulated `fetch_by_path` dict, performing every `manifest.add`/`start`/`finish`/`fail`
 transition exactly as before — parallel fetch, serial manifest mutation, and a `seal()` of
 `"partial"` (rc 3) when any unit times out, unchanged for every other path.
+
+Parity plan Task 10 (REQ-P1) adds sibling-diff context and two grouping rules. New module
+`review_budget.py` holds `estimate_tokens(text) = len(text) // 4` — the single size primitive
+`bundle.py` and `review_agent.py` share (and REQ-P4's budget projection builds on). `bundle.py`
+grows two pairing rules — C/C++ header-impl (`.h/.c`, `.hpp/.cpp`, same directory) and
+interface/impl stem pairs (`svc.ts`/`svc.impl.ts`) — and a token-cap split: `group_bundles` now
+takes keyword-only `diffs` and `max_unit_tokens` (`MAX_UNIT_TOKENS = 50_000`), and when `diffs`
+is supplied a grouped unit whose members' estimated diffs exceed the cap is split into
+first-fit runs (an oversized single member becomes its own run, never dropped); `diffs=None`
+leaves every existing caller byte-identical. `review_agent.render_review_prompt` gains keyword-only
+`sibling_diffs` and `cap_tokens` (`DEFAULT_SIBLING_CAP_TOKENS = 2_000`): siblings render into the
+new `{{SIBLING_DIFFS}}` token largest-first as fenced diffs, each over the cap replaced by an
+`omitted (token cap)` marker, and each sibling path is annotated `(diff included below)` in
+`{{CHANGE_FILES}}`. `cli.run_review`'s prepare path passes each file its unit-mates' diffs as
+`sibling_diffs`. Deferred (recorded in `docs/parity/EXTRACTION.md`): single-file units do not yet
+receive non-mate sibling diffs (gated on REQ-P4's budget, Task 12), and `import_adjacency
+(graph_json)` grouping is not built (SPEC-optional; review mode must not require `kb/graph.json`).
+
+Parity plan Task 12 (REQ-P4) adds a hard token budget over the same size primitive.
+`review_budget.py` keeps `estimate_tokens` as the raw `len(text) // 4` primitive and adds
+`estimate_review_cost(diff_text)`, which projects OCR's plan-loop cost for one file:
+`diff_tokens + (PLAN_PROMPT + PLAN_OUT) + ROUNDS * (diff_tokens + PLAN_PROMPT) + ROUNDS * ROUND_OUT`
+(constants `PLAN_PROMPT=2000`, `PLAN_OUT=400`, `ROUNDS=7`, `ROUND_OUT=700`; an empty diff costs
+21300). `BudgetGate(budget)` is a latching admission gate: a budget of 0 admits every file
+(unlimited); otherwise `admit(estimate)` commits the spend when `spent + estimate <= budget`, and
+the first projected breach latches the gate closed so it refuses every later file. `cli.run_review`
+gains a keyword-only `token_budget` parameter (CLI `--token-budget`, default 0). After fetch, a file
+whose `estimate_review_cost` exceeds `FILE_BUDGET_FRACTION` (0.8) of the budget is excluded as
+`too-large-tokens` before review; each remaining file passes through the gate, and a refused file is
+sealed `partial` with the `BUDGET_SKIP_NOTE = "skipped(budget)"` note at exit 0 (a budget stop is a
+planned outcome, not the fetch-failure `partial` at exit 3). `ReviewPlanEntry` carries a
+`token_estimate` field surfaced in `--prepare`, and `CoverageManifest` records a `budget_exceeded`
+flag round-tripped through `to_dict`/`load`. This closes the Task-10 deferral: single-file units are
+still not given non-mate sibling diffs, now bounded by this budget rather than pending it.
 
 Phase 4 plan 03 (Task 2, SCALE-03) adds a resume-identity gate. `review_coverage.py`'s
 `MANIFEST_VERSION` is now 2: `CoverageManifest` gains keyword-only `model`/`profile` fields,
@@ -1058,3 +1150,36 @@ per-site `needs_follow_up` branch's `reason`/`next_step` now name the specific s
 reused the class-level prose, reading as if the whole class were uncovered even when a sibling
 site was already `reported`. The class-level branch's wording — a class with zero findings —
 stays unchanged.
+
+`calibrate.py` (REQ-P9): a judge `severity-inflated`/`downgrade` verdict also
+writes the downgraded severity band back to `f.severity` (`_severity_for_score`,
+the inverse of `_SEVERITY_FLOOR`), with a `calibrate:severity-downgraded` history
+event recording `from`/`to`. Severity is never raised by this path.
+
+`diffscope.py`/`cli.py` (REQ-P5): `sec-overlay review` gained two scope flags beside
+`--base`. `--commit <sha>` reviews one commit alone (`sha^..sha`); `--workspace-dirty`
+reviews uncommitted changes (staged, unstaged, untracked) against `HEAD`. Exactly one
+of `--base`/`--commit`/`--workspace-dirty` is required (else exit 2); a resumed run
+reads its scope from the sealed manifest and ignores the flags. `dirty_file_records(*,
+runner)` parses `git status --porcelain` (untracked lines become status `"?"`);
+`file_diff_line_count`/`binary_paths`/`file_diff_text` accept `head=None` to diff the
+base against the working tree. Dirty mode fetches serially and synthesizes an all-add
+hunk for untracked files read from disk. `validate_ref`'s allowlist now permits `^`
+(safe: every git call is list-form, never a shell) so `sha^` resolves.
+
+`review_agent.py`/`cli.py` (REQ-P3): a two-phase per-file plan step ports OCR's plan pass.
+`review_agent.py` adds `PLAN_LINE_THRESHOLD = 100` (a unit's diff at/over this many changed lines
+gets a plan pass), `render_plan_prompt(path, rule_text, diff, *, repo_root, overlay_root)` (renders
+`agents/review-plan.md`), `plan_agent_label(path)` (a `plan-file-` sha256-prefixed dispatch label
+distinct from `agent_label`), and `plan_guidance_from_return(text)` (parses the plan agent's strict
+JSON `{"issues":[{"severity","guidance"}]}`, orders issues most-severe-first, and raises `ValueError`
+on invalid JSON, an unknown severity, a non-list `issues`, or a missing/empty `guidance`).
+`render_review_prompt` gains a keyword-only `plan_guidance=""` that fills the review prompt's new
+`{{PLAN_GUIDANCE}}` token. `cli.run_review` gains `plan: bool`; `--plan --prepare` writes plan
+prompts for over-threshold units to `runs/plan_prompts/<plan_agent_label>.md` plus a
+`runs/plan_manifest.json` and returns early (0), for `SKILL.md` to dispatch. A subsequent normal
+`--prepare` reads each over-threshold unit's recorded plan return under `plan_agent_label`, injects
+its `plan_guidance` into the review prompt, and fails open — a missing or invalid plan return yields
+empty guidance and a `runs/plan_skips.json` entry (D-15: a plan failure never becomes a coverage
+failure). Plan guidance is advisory: never a tool receipt, never a finding, and deliberately not
+subject to the base/head staleness envelope that review returns carry.

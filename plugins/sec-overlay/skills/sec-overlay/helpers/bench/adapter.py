@@ -14,6 +14,7 @@ from __future__ import annotations
 import subprocess
 from typing import Protocol
 
+from sec_overlay.evidence import confirms_alone
 from sec_overlay.models import Finding, FindingStatus
 from sec_overlay.workspace import Workspace, read_findings
 
@@ -31,19 +32,33 @@ def reportable(ws: Workspace) -> list[Finding]:
             if f.status in (FindingStatus.CONFIRMED, FindingStatus.FIXED)]
 
 
+def tier1_detected(ws: Workspace) -> list[Finding]:
+    """Read Tier-1-receipt findings from a workspace, at ANY status (detection grading).
+
+    A deterministic-only CI scan never confirms (confirmation needs an adversarial LLM
+    pass), so :func:`reportable` returns nothing and cannot grade detection. This grades
+    whether a confirming tool (codeql/semgrep/sca/secrets) located the finding at all —
+    the CI regression signal. It does NOT change ``reportable`` or any confirmation gate.
+    """
+    return [f for f in read_findings(ws) if confirms_alone(f.evidence_sources)]
+
+
 class WorkspaceAdapter:
     """Adapter for an ALREADY-scanned workspace — reads its findings, runs no scan.
 
     Use when a scan already ran (e.g. re-tally a prior run, or grade findings the
-    operator produced by driving the CC skill by hand into this workspace).
+    operator produced by driving the CC skill by hand into this workspace). ``reader``
+    selects what to grade: :func:`reportable` (confirmation, default) or
+    :func:`tier1_detected` (detection).
     """
 
-    def __init__(self, workspace_for):
+    def __init__(self, workspace_for, *, reader=reportable):
         # workspace_for: callable(repo_path) -> Workspace with existing findings
         self._workspace_for = workspace_for
+        self._reader = reader
 
     def scan(self, repo_path: str, workspace: Workspace) -> list[Finding]:
-        return reportable(self._workspace_for(repo_path))
+        return self._reader(self._workspace_for(repo_path))
 
 
 class BinaryAdapter:
@@ -65,16 +80,23 @@ class BinaryAdapter:
 
 
 class CCSkillAdapter:
-    """Placeholder for driving the current Claude-Code skill end to end.
+    """Drive the Claude-Code skill headlessly, then grade the workspace (REQ-M2).
 
-    The skill's agentic phases run inside a Claude-Code/agent session, not a plain
-    subprocess, so this adapter is a documented seam rather than a runnable driver in
-    this dev-only harness: the operator (or a future Agent-SDK driver) runs the skill
-    into ``workspace``; then grade with :class:`WorkspaceAdapter`. Kept so the corpus
-    schema and downstream code already speak "adapter".
+    Wraps a :class:`bench.driver.HeadlessDriver` (``claude -p`` shelled like a SAST
+    binary). A driver failure yields ``[]`` for that target — recorded on
+    ``driver.failures``, never fabricated. ``bench.run``'s findings cache makes runs
+    resumable per target.
     """
 
-    def scan(self, repo_path: str, workspace: Workspace) -> list[Finding]:  # pragma: no cover
-        raise NotImplementedError(
-            "Drive the CC skill into the workspace (operator or Agent-SDK), then grade "
-            "with WorkspaceAdapter. A native SDK driver is the next increment.")
+    def __init__(self, driver=None):
+        if driver is None:
+            from bench.driver import HeadlessDriver
+
+            driver = HeadlessDriver()
+        self.driver = driver
+
+    def scan(self, repo_path: str, workspace: Workspace) -> list[Finding]:
+        workspace.ensure()
+        if not self.driver.run(repo_path, workspace.root):
+            return []
+        return reportable(workspace)

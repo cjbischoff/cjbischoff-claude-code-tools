@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-110 pytest files, 1306 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+120 pytest files, 1619 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -12,6 +12,10 @@ test cannot see: an edit to `detection_coverage.py` with no matching regeneratio
 
 The fake-response `R` classes in `test_review_tracer.py` and `test_diffscope.py` declare
 `stdout = ""` as a class attribute so `ty check` resolves the attribute; behavior is unchanged.
+
+`test_rules_check.py` covers the `rules check` CLI and `resolve_with_layer`: the project layer
+resolves to the mapped rule doc, an unmapped path falls through to the built-in doc, and a
+misspelled top-level subcommand names the nearest valid one via `difflib` (REQ-S4).
 
 `test_stage_validate.py` covers the `_adapt_dict` / `_adapt_optional_dict` rejection paths:
 a non-dict output for a dict-adapted stage returns `["stage output must be an object"]`, a
@@ -36,6 +40,11 @@ zero-drop/zero-decline case still writes both `report.md`'s none-dropped/none-re
 sentences and an empty-list `review_ledger.json` (T-02-15), and a monkeypatched gate
 returning canned drops asserts the markdown drop-row count equals the ledger's drop count
 (T-02-18).
+
+`test_review_result.py` (5 tests, REQ-P7) locks the consolidated `review_result.json`
+contract: `write_review_result` lands the file in `ws.artifacts` with the full documented
+`RESULT_KEYS` set on both a zero-finding run and a populated run, each finding record carries
+the seven documented fields, and dataclass declines/skips serialize to plain dicts.
 
 `test_report.py` covers `render_dropped_findings_section` (three drops, the empty-list
 none-dropped statement, input-order preservation), `to_markdown` wiring both the
@@ -97,7 +106,53 @@ never mutates its input list. Six more tests (Task 2) cover the ledger's markdow
 path/reason/error row per `ReflectionSkip`; `to_markdown` renders `REFLECTION_SKIPPED_HEADING` even
 with zero findings; `write_review_ledger` writes a `reflection_skipped` key matching the dataclass
 fields, keeps applied and refused retractions in the same `reflection_retractions` list, and never
-writes a second `*reflection*.json` artifact file.
+writes a second `*reflection*.json` artifact file. Four more tests (Task 9, REQ-P6) pin the
+recorded-verdict source that drives production reflection: `recorded_verdict_source(ws, *, base,
+head)` returns the recorded `{id: analysis}` mapping for a path, and raises `ValueError` when no
+return is recorded, the return is not JSON, or the envelope's `base`/`head` is stale — mirroring
+`review_agent.recorded_return_source`. The envelope is written under `reflection_label(path)` via
+`record_agent_return`.
+
+`test_review_live.py` (Task 9, REQ-P6) adds four end-to-end tests through `run_review` with no
+`apply_verdict` monkeypatch: a recorded verdict retracts a non-protected finding
+(`RETRACTED_REASON`), a verdict naming a protected-class finding is refused and the finding stays
+kept (`REFUSED_REASON`), a reviewable file with findings but no recorded verdict fails open (finding
+survives AND a `reflection_skipped` entry is ledgered — never a silent keep-all), and
+`--prepare-reflection` renders one review-filter prompt per file with post-profile kept findings
+into `runs/reflection_prompts/`. `test_reflection_failure_for_one_file_leaves_other_files_unaffected`
+records an unreadable verdict for one file (skip) and a valid empty verdict for another (kept),
+proving a per-file verdict failure is isolated — it too drives the real `recorded_verdict_source`
+rather than monkeypatching `apply_verdict`.
+
+`test_review_budget.py` (new, REQ-P4, Task 12) covers the hard token budget: the OCR-shaped
+cost constants (`PLAN_PROMPT`, `PLAN_OUT`, `ROUNDS`, `ROUND_OUT`, `FILE_BUDGET_FRACTION`),
+`estimate_tokens` staying the raw `len//4` primitive, `estimate_review_cost` following OCR's
+plan-loop formula (empty diff == 21300, scaling with diff length), and `BudgetGate` admitting
+until a projected breach then latching closed (budget 0 unlimited; an estimate hitting the
+budget exactly still admits). `test_review_live.py` gains four end-to-end `run_review` tests
+(tiny budget seals `partial`, notes `skipped(budget)`, exits 0; zero budget reviews every file;
+`--prepare` records a per-file `token_estimate`; a file over the 0.8 cap is excluded before
+review). `test_docs_invariants.py` gains `test_review_budget_constants_match_ocr_shape`, pinning
+the constant tuple against `(2000, 400, 7, 700)` and `0.8`.
+
+`test_diffscope.py` (REQ-P5, Task 13) gains
+`test_dirty_file_records_lists_staged_unstaged_untracked`, a real-repo check that
+`dirty_file_records` returns one record per working-tree change git reports (a staged
+modification, an unstaged modification, an untracked file). `test_review_live.py` gains three
+CLI tests: `--commit <sha>` scoping the review to `sha^..sha` (the plan entry pins the parent
+and commit SHAs), `--commit` with `--base` exiting 2 (mutual exclusion), and
+`--workspace-dirty` listing staged, unstaged, and untracked changes.
+`test_validate_ref_accepts_allowlisted_refs` gains a `HEAD^` case, pinning the GREEN allowlist
+change that lets `--commit`'s `sha^` parent ref validate.
+
+`test_review_agent.py` and `test_review_live.py` (REQ-P3, Task 14) cover the per-file plan phase.
+The agent-seam tests check `render_review_prompt` injecting a `{{PLAN_GUIDANCE}}` body (empty by
+default), `render_plan_prompt` substituting the plan template's tokens, and
+`plan_guidance_from_return` ordering issues by severity and raising on invalid JSON, an unknown
+severity, a missing `issues` key, or an issue without guidance. The CLI tests check `--prepare
+--plan` writing a plan prompt only for a unit at or over `PLAN_LINE_THRESHOLD`, a recorded plan
+return injecting its guidance into the review prompt, and an invalid plan return failing open —
+the review prompt renders without guidance and a `plan_skips.json` entry records the skip.
 
 `test_review_agent.py` (12 tests, Phase 3 Plan 06 Task 1) covers `review_agent.py`'s prompt
 render and response parse, monkeypatching `_review_file_template_path` to a `tmp_path` fixture
@@ -701,7 +756,16 @@ a "Do not report" exclusion block, that the four TS/JS extensions all resolve to
 `ts_js_tsx_jsx.md`, that a representative path per language resolves to its own doc, that an
 extensionless or unmatched-extension path resolves to `default.md`, that a two-entry map
 collision resolves to the first entry (`monkeypatch` on `BUILTIN_PATH_RULE_MAP` and
-`builtin_rule_docs_dir`, not real files), and that `resolve_rule_doc` is idempotent.
+`builtin_rule_docs_dir`, not real files), and that `resolve_rule_doc` is idempotent. Its
+`test_builtin_path_rule_map_has_thirty_six_distinct_docs` pins the map at 36 docs after the
+REQ-P2 port (Task 11).
+
+`test_rule_glob.py`'s Task 11 (REQ-P2) block covers the 27 rule docs ported from open-code-review
+(`_PORTED_DOCS`): each is on disk, carries the `Adapted from open-code-review (Apache-2.0)`
+attribution line, and is referenced by a `BUILTIN_PATH_RULE_MAP` entry. `_NEW_PATH_RESOLUTIONS`
+checks representative paths resolve to the right doc, including first-match order cases — the two
+`.github` patterns before the plain `**/*.{yaml,yml}` pattern, and `package.json` / `Cargo.toml` /
+`pom.xml` before the generic `json`/`xml` patterns.
 
 `test_review_profiles.py` (phase 3 plan 04, REV-01) covers `sec_overlay.review_findings`:
 `classify` returns `None` for a non-allowlisted `Finding.cls` and the class itself for each of
@@ -1102,3 +1166,82 @@ leaving the suite green.
 `test_docs_invariants.py`'s `_PHASE_DOC_LABELS` gained a `"recall-gate": "Recall gate"`
 entry. The CLAUDE.md phase-order guard had silently skipped `recall-gate` on the earlier
 label miss. It now enforces the row's position right after `Recon`.
+
+- `test_bench.py` also locks the REQ-M1 F1 contract: `_metrics` carries `f1`
+  (`2PR/(P+R)`), `None` when undefined; the scorecard markdown renders it.
+
+- `test_bench.py` locks REQ-M5 variance: `aggregate_scorecards(cards)` reports
+  mean/min/max per metric (precision, recall, f1, fp_rate) across repeated runs,
+  and skips `None` metrics (a metric with no defined value yields
+  `{"mean": None, "min": None, "max": None}`); `test_run_repeated_writes_aggregate`
+  locks that `run_repeated(..., repeats=N)` writes each `run-<n>/scorecard.md` and
+  the parent `scorecard_agg.{json,md}`.
+
+- `test_bench.py` locks REQ-M6 cost columns: `tally(results, corpus, cost=...)`
+  attaches a `cost` block (`tokens`, `wall_time_s`, `usd_per_confirmed_tp`) to
+  `to_dict`/markdown; `usd_per_confirmed_tp` is `usd_estimate / real-confirmed TP`
+  (`None` when no TP), rendered as a labeled estimate; the section is omitted when
+  no cost is supplied. Per-class FP-rate rows render in the "By class" table.
+
+- `test_bench.py` locks REQ-T3c/T3h verified-fix rate: `tally(results, corpus,
+  findings_by_id=...)` reports a `verified_fix` block (`fixed`, `confirmed`,
+  `rate` = (`FIXED` ∪ `verified-static`) / confirmed true-positives) plus a
+  headline markdown row, and omits it when no fix data is supplied.
+
+- `test_bench.py` locks REQ-T3d coverage honesty: `tally(results, corpus,
+  coverage_ledgers=...)` reports a `coverage_honesty` block (`runs`,
+  `unsupported`, `rate`), flagging any run whose ledger claimed
+  `completeness == "complete"` while surfaces need follow-up or `deferred` /
+  `open_questions` were non-empty, plus a "Coverage honesty" markdown section;
+  omitted when no ledgers are supplied.
+
+- `test_bench.py::test_scorecard_markdown_states_scope_confound` and
+  `test_docs_invariants.py::test_bench_readme_documents_annotation_and_reproducibility`
+  lock REQ-R3 + REQ-R1/R4: the scorecard markdown states the scope confound
+  ("reviews less"), and `bench/README.md` carries the "## Annotation protocol",
+  "## Reproducing the benchmark", and "## Scope confound" sections with
+  single-maintainer adjudication stated plainly.
+
+- `test_calibrate.py` also locks REQ-P9: a judge `severity-inflated`/`downgrade`
+  verdict writes the downgraded severity band back to `f.severity` with a
+  `calibrate:severity-downgraded` history event; no verdict leaves severity alone.
+
+- `test_bench_driver.py` locks REQ-M2: `HeadlessDriver` token substitution,
+  failure recording (never raises, never fabricates), and `CCSkillAdapter`
+  grading the driven workspace via `reportable`.
+
+- `test_bench.py::test_seed_corpus_has_min_entries` locks REQ-M4: the seed
+  corpus holds at least 30 entries with at least 3 `dep-cve`, 5 `public-app`,
+  1 negative, and 1 locked entry, and validates clean.
+
+- `test_bench.py::test_tier1_detected_reads_receipt_candidates` locks the
+  detection-grading reader (REQ-M4): `tier1_detected` returns any-status findings
+  backed by a Tier-1 receipt, where `reportable` (confirmation) returns none.
+
+- `test_bench.py::test_run_benchmark_only_local_skips_http` locks the offline CI
+  gate (REQ-M4): `run_benchmark(only_local=True)` grades local fixtures and never
+  clones http targets.
+
+- `test_review_agent.py` + `test_bundle.py` lock REQ-P1 (sibling context): the
+  review prompt embeds sibling diffs as fenced blocks, renders them largest-first,
+  truncates any sibling over `cap_tokens` with an `omitted (token cap)` marker, and
+  annotates each embedded sibling in the changed-files block; `group_bundles` pairs
+  C/C++ header-impl files (`.h/.c`, `.hpp/.cpp`) and interface/impl stems
+  (`svc.ts`/`svc.impl.ts`) within a directory, and splits any unit over
+  `MAX_UNIT_TOKENS` when per-file `diffs` are supplied. The size estimate is
+  `review_budget.estimate_tokens` (`len // 4`), shared with REQ-P4.
+
+- `test_aacr_adapter.py` locks REQ-M3: `aacr_entries` maps AACR dataset rows to
+  `source="aacr"` corpus entries that validate and never move the real-confirmed
+  headline; `ocr_findings` parses `ocr review --format json` into benchmark-only
+  CONFIRMED findings tagged `llm-claimed:ocr`; and `Scorecard.to_markdown` carries
+  the same-judge caveat block for cross-tool comparisons. REQ-T3e: a
+  security-category row is tagged `source="aacr-security"` (a distinct slice that
+  `tally` emits in `by_source`), and that slice never moves the real-confirmed
+  headline.
+
+`test_rule_glob.py`'s `fake_run_review` spy gained `commit`, `workspace_dirty`,
+`plan`, `token_budget`, `background`, and `tier` keyword parameters to match the
+real `run_review` signature after the `--commit`/`--workspace-dirty` review scopes
+(4918b39) added those keyword arguments to `main()`'s `review` dispatch — the same
+stub-drift `TypeError` class the `model`/`workspace` fixes closed before.

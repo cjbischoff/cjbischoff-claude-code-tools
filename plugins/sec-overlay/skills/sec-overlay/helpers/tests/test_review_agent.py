@@ -19,6 +19,8 @@ from sec_overlay.review_agent import (
     TASK_DONE_TOOL,
     ReviewResponseError,
     parse_review_response,
+    plan_guidance_from_return,
+    render_plan_prompt,
     render_review_prompt,
 )
 
@@ -69,6 +71,81 @@ def test_render_review_prompt_raises_on_missing_substitution(tmp_path, monkeypat
     monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: broken)
     with pytest.raises(ValueError, match="unfilled prompt token"):
         render_review_prompt("app.py", _PY_RULE, _DIFF, [])
+
+
+_TEMPLATE_WITH_BACKGROUND = _TEMPLATE + "background:\n{{BACKGROUND}}\n"
+
+
+def test_render_review_prompt_wraps_background_in_envelope(tmp_path, monkeypatch):
+    tp = tmp_path / "rf.md"
+    tp.write_text(_TEMPLATE_WITH_BACKGROUND)
+    monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: tp)
+    rendered = render_review_prompt(
+        "app.py", _PY_RULE, _DIFF, [], background="service reads config from S3"
+    )
+    assert "service reads config from S3" in rendered
+    assert '<untrusted kind="background-context"' in rendered
+
+
+def test_render_review_prompt_empty_background_leaves_no_envelope(tmp_path, monkeypatch):
+    tp = tmp_path / "rf.md"
+    tp.write_text(_TEMPLATE_WITH_BACKGROUND)
+    monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: tp)
+    rendered = render_review_prompt("app.py", _PY_RULE, _DIFF, [])
+    assert "<untrusted" not in rendered
+
+
+# --- render_review_prompt sibling diffs (REQ-P1) ------------------------------
+
+_TEMPLATE_WITH_SIBLINGS = _TEMPLATE + "siblings:\n{{SIBLING_DIFFS}}\n"
+
+
+def test_render_review_prompt_includes_sibling_diff_fenced_blocks(tmp_path, monkeypatch):
+    tp = tmp_path / "rf.md"
+    tp.write_text(_TEMPLATE_WITH_SIBLINGS)
+    monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: tp)
+    sib = {"helper.py": "@@ -1 +1 @@\n-old\n+new_sibling_line\n"}
+    rendered = render_review_prompt("app.py", _PY_RULE, _DIFF, ["helper.py"], sibling_diffs=sib)
+    assert "helper.py" in rendered
+    assert "new_sibling_line" in rendered
+    assert "```" in rendered
+
+
+def test_render_review_prompt_truncates_oversized_sibling_with_marker(tmp_path, monkeypatch):
+    tp = tmp_path / "rf.md"
+    tp.write_text(_TEMPLATE_WITH_SIBLINGS)
+    monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: tp)
+    big = "+padding_line\n" * 5000
+    rendered = render_review_prompt(
+        "app.py", _PY_RULE, _DIFF, ["huge.py"], sibling_diffs={"huge.py": big}, cap_tokens=10
+    )
+    assert "omitted (token cap)" in rendered
+    assert big not in rendered
+
+
+def test_render_review_prompt_renders_siblings_largest_first(tmp_path, monkeypatch):
+    tp = tmp_path / "rf.md"
+    tp.write_text(_TEMPLATE_WITH_SIBLINGS)
+    monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: tp)
+    sib = {"small.py": "@@ +1 @@\n+a\n", "big.py": "@@ +1 @@\n+" + ("z" * 400) + "\n"}
+    rendered = render_review_prompt("app.py", _PY_RULE, _DIFF, list(sib), sibling_diffs=sib)
+    siblings_block = rendered.split("siblings:", 1)[1]
+    assert siblings_block.index("big.py") < siblings_block.index("small.py")
+
+
+def test_render_review_prompt_annotates_sibling_in_changed_files_block(tmp_path, monkeypatch):
+    tp = tmp_path / "rf.md"
+    tp.write_text(_TEMPLATE_WITH_SIBLINGS)
+    monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: tp)
+    rendered = render_review_prompt(
+        "app.py", _PY_RULE, _DIFF, ["helper.py", "stranger.py"],
+        sibling_diffs={"helper.py": "@@ +1 @@\n+x\n"},
+    )
+    changed_block = rendered.split("changed:", 1)[1]
+    helper_line = next(ln for ln in changed_block.splitlines() if "helper.py" in ln)
+    stranger_line = next(ln for ln in changed_block.splitlines() if "stranger.py" in ln)
+    assert "diff included below" in helper_line
+    assert "diff included below" not in stranger_line
 
 
 # --- parse_review_response -----------------------------------------------------
@@ -182,3 +259,77 @@ def test_parse_review_response_none_bundle_paths_keeps_single_path_behavior():
     )
     assert discarded == 0
     assert findings[0].file == "app.py"
+
+
+# --- REQ-P3: per-file plan phase --------------------------------------------
+
+_TEMPLATE_WITH_PLAN = _TEMPLATE + "plan:\n{{PLAN_GUIDANCE}}\n"
+
+_PLAN_TEMPLATE = (
+    "# Plan file\n"
+    "path: {{CURRENT_FILE_PATH}}\n"
+    "rule: {{SYSTEM_RULE}}\n"
+    "diff: {{DIFF}}\n"
+)
+
+
+def test_render_review_prompt_injects_plan_guidance(tmp_path, monkeypatch):
+    tp = tmp_path / "rf.md"
+    tp.write_text(_TEMPLATE_WITH_PLAN)
+    monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: tp)
+    out = render_review_prompt("app.py", _PY_RULE, _DIFF, [], plan_guidance="PLAN_BODY_HINT")
+    assert "PLAN_BODY_HINT" in out
+    assert "{{" not in out
+
+
+def test_render_review_prompt_plan_guidance_defaults_empty(tmp_path, monkeypatch):
+    tp = tmp_path / "rf.md"
+    tp.write_text(_TEMPLATE_WITH_PLAN)
+    monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: tp)
+    out = render_review_prompt("app.py", _PY_RULE, _DIFF, [])
+    assert "{{" not in out
+
+
+def test_render_plan_prompt_substitutes_tokens(tmp_path, monkeypatch):
+    tp = tmp_path / "review-plan.md"
+    tp.write_text(_PLAN_TEMPLATE)
+    monkeypatch.setattr(review_agent, "_review_plan_template_path", lambda: tp)
+    out = render_plan_prompt("app.py", _PY_RULE, _DIFF)
+    assert "app.py" in out
+    assert _PY_RULE in out
+    assert _DIFF in out
+    assert "{{" not in out
+
+
+def test_plan_guidance_from_return_orders_by_severity_descending():
+    text = json.dumps(
+        {
+            "issues": [
+                {"severity": "low", "guidance": "low hint"},
+                {"severity": "critical", "guidance": "crit hint"},
+                {"severity": "medium", "guidance": "med hint"},
+            ]
+        }
+    )
+    out = plan_guidance_from_return(text)
+    assert out.index("crit hint") < out.index("med hint") < out.index("low hint")
+
+
+def test_plan_guidance_from_return_rejects_invalid_json():
+    with pytest.raises(ValueError):
+        plan_guidance_from_return("{ not valid json")
+
+
+def test_plan_guidance_from_return_rejects_unknown_severity():
+    with pytest.raises(ValueError):
+        plan_guidance_from_return(json.dumps({"issues": [{"severity": "nope", "guidance": "x"}]}))
+
+
+def test_plan_guidance_from_return_rejects_missing_issues_key():
+    with pytest.raises(ValueError):
+        plan_guidance_from_return(json.dumps({"notissues": []}))
+
+
+def test_plan_guidance_from_return_rejects_issue_missing_guidance():
+    with pytest.raises(ValueError):
+        plan_guidance_from_return(json.dumps({"issues": [{"severity": "high"}]}))

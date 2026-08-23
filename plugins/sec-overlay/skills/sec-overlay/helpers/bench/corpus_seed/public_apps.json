@@ -1,0 +1,112 @@
+[
+  {
+    "finding_id": "juiceshop-login-sqli",
+    "kind": "positive",
+    "source": "public-app",
+    "cls": "sqli",
+    "repo_url": "https://github.com/juice-shop/juice-shop",
+    "commit": "39b46860612990ae18d499a20472172839fe8c77",
+    "file": "routes/login.ts",
+    "line": 36,
+    "description": "models.sequelize.query interpolates req.body.email directly into a SQL string."
+  },
+  {
+    "finding_id": "juiceshop-search-union-sqli",
+    "kind": "positive",
+    "source": "public-app",
+    "cls": "sqli",
+    "repo_url": "https://github.com/juice-shop/juice-shop",
+    "commit": "39b46860612990ae18d499a20472172839fe8c77",
+    "file": "routes/search.ts",
+    "line": 23,
+    "description": "Product search interpolates req.query.q into a LIKE clause; union-based injection."
+  },
+  {
+    "finding_id": "juiceshop-fileserver-path-traversal",
+    "kind": "positive",
+    "source": "public-app",
+    "cls": "path-traversal",
+    "repo_url": "https://github.com/juice-shop/juice-shop",
+    "commit": "39b46860612990ae18d499a20472172839fe8c77",
+    "file": "routes/fileServer.ts",
+    "line": 33,
+    "description": "res.sendFile(path.resolve('ftp/', file)) with caller-controlled file after a null-byte check."
+  },
+  {
+    "finding_id": "juiceshop-redirect-open-redirect",
+    "kind": "positive",
+    "source": "public-app",
+    "cls": "open-redirect",
+    "repo_url": "https://github.com/juice-shop/juice-shop",
+    "commit": "39b46860612990ae18d499a20472172839fe8c77",
+    "file": "routes/redirect.ts",
+    "line": 19,
+    "description": "res.redirect(toUrl) on a caller-supplied URL that passed only an allow-substring check."
+  },
+  {
+    "finding_id": "juiceshop-reviews-nosqli",
+    "kind": "positive",
+    "source": "public-app",
+    "cls": "nosqli",
+    "repo_url": "https://github.com/juice-shop/juice-shop",
+    "commit": "39b46860612990ae18d499a20472172839fe8c77",
+    "file": "routes/updateProductReviews.ts",
+    "line": 18,
+    "description": "db.reviewsCollection.update uses req.body.id as the _id filter with multi update."
+  },
+  {
+    "finding_id": "juiceshop-profileimage-ssrf",
+    "kind": "positive",
+    "source": "public-app",
+    "cls": "ssrf",
+    "repo_url": "https://github.com/juice-shop/juice-shop",
+    "commit": "39b46860612990ae18d499a20472172839fe8c77",
+    "file": "routes/profileImageUrlUpload.ts",
+    "line": 23,
+    "description": "request.get(url) fetches a caller-supplied profile-image URL server-side."
+  },
+  {
+    "finding_id": "juiceshop-insecurity-rsa-private-key",
+    "kind": "positive",
+    "source": "public-app",
+    "cls": "secrets",
+    "repo_url": "https://github.com/juice-shop/juice-shop",
+    "commit": "39b46860612990ae18d499a20472172839fe8c77",
+    "file": "lib/insecurity.ts",
+    "line": 23,
+    "description": "Hardcoded RSA private key literal used to sign JWTs."
+  },
+  {
+    "finding_id": "juiceshop-insecurity-md5-hash",
+    "kind": "positive",
+    "source": "public-app",
+    "cls": "weak-crypto",
+    "repo_url": "https://github.com/juice-shop/juice-shop",
+    "commit": "39b46860612990ae18d499a20472172839fe8c77",
+    "file": "lib/insecurity.ts",
+    "line": 43,
+    "description": "hash() uses MD5, a broken hash, for security-relevant digests."
+  },
+  {
+    "finding_id": "juiceshop-insecurity-hmac-hardcoded-secret",
+    "kind": "positive",
+    "source": "public-app",
+    "cls": "secrets",
+    "repo_url": "https://github.com/juice-shop/juice-shop",
+    "commit": "39b46860612990ae18d499a20472172839fe8c77",
+    "file": "lib/insecurity.ts",
+    "line": 44,
+    "description": "hmac() uses a hardcoded HMAC secret literal 'pa4qacea4VK9t9nGv7yZtwmj'."
+  },
+  {
+    "finding_id": "juiceshop-insecurity-math-random-secret",
+    "kind": "positive",
+    "source": "public-app",
+    "cls": "weak-crypto",
+    "repo_url": "https://github.com/juice-shop/juice-shop",
+    "commit": "39b46860612990ae18d499a20472172839fe8c77",
+    "file": "lib/insecurity.ts",
+    "line": 55,
+    "description": "denyAll signs with Math.random() as the JWT secret; not cryptographically secure."
+  }
+]

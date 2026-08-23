@@ -13,8 +13,8 @@ nothing here overrides it.
 From `skills/sec-overlay/helpers/`:
 
 ```bash
-uv run pytest -q                                   # full suite (2 env-only failures — see
-                                                     # skill CLAUDE.md §1)
+uv run pytest -q                                   # full suite (all green; seed corpus + rules
+                                                     # ship committed — see skill CLAUDE.md §1)
 uv run pytest tests/test_fingerprint.py -q         # single file
 uv run pytest tests/test_x.py::test_name           # single test
 uv run ruff check sec_overlay/ bench/ tests/       # lint (line-length 100)
@@ -41,7 +41,7 @@ uv run python -m sec_overlay.preflight             # tool availability
 - CLI-callable modules (`python -m sec_overlay.<module>`): `cli`, `preflight`, `postflight`,
   `calibrate`, `dedupe`, `verify`, `report`, `redteam`, `bugchain`, `astgrep`, `structural_index`,
   `citations`, `findings_gate`, `rule_gaps`, `redactor`, `graph`, `artifact_gate`, `diagram_gate`,
-  `ste_lint`, `route_census`, `dependency_sinks`.
+  `ste_lint`, `route_census`, `dependency_sinks`, `pr_poster`.
 
 ---
 ## Documentation — READMEs track code (enforced)

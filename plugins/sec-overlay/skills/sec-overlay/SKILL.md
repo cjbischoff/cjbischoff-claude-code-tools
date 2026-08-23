@@ -139,8 +139,12 @@ stays kept, but the refusal is still recorded, never silently dropped (D-14). A 
 reflection pass raises fails open — the run records a `ReflectionSkip` and continues rather than
 aborting (D-15). `review_ledger.json` carries both `reflection_retractions` and
 `reflection_skipped` unconditionally, even when empty, and `report.md` renders both sections the
-same way. `cli.py review`'s tracer slice calls `apply_verdict` with an always-empty verdict — no
-finding source is wired into review mode yet — so live reflection dispatch is a later plan.
+same way. `cli.py review` wires this live: `--prepare-reflection` renders one `review-filter`
+prompt per file with kept findings and writes `runs/reflection_plan.json`; the consume run reads
+each file's recorded verdict back via `reflection.recorded_verdict_source` (a verdict captured for
+a different base/head is refused, never consumed) and applies it through `apply_verdict`. A missing,
+stale, or malformed verdict raises and is caught per file as a `ReflectionSkip` (D-15) — never a
+silent keep-all.
 
 ### Review mode (diff-scoped) — prepare, dispatch, consume
 
@@ -159,11 +163,24 @@ agent runs directly, over one `review-file` subagent per reviewable file:
    provider load, and never exceed `--concurrency` (default 8, ceiling 128) live subagents at
    once — the Python core validates and records this bound but never dispatches an agent itself
    (T-04-09), so the dispatching agent (you) is the enforcement point.
-3. **Consume** — `uv run python -m sec_overlay.cli review --base <ref> [--profile general]
-   [--model <id>]` reads the recorded returns back from disk and runs them through the same gate
-   chain the tracer slice already builds: position gate → `apply_profile` → the reflection filter
-   → the receipt gate. Pass the identical `--model` string used to `prepare`/`dispatch` this
-   review; a resumed consume with a different `--model` is rejected (exit 2).
+3. **Prepare reflection** — `uv run python -m sec_overlay.cli review --base <ref> [--profile
+   general] --prepare-reflection` reads the recorded review returns, runs the position gate and
+   `apply_profile`, and for each file with kept findings renders a `review-filter` prompt under
+   `runs/reflection_prompts/<label>.md` and lists it in `runs/reflection_plan.json` (path, agent
+   label). No verdict is applied.
+4. **Dispatch reflection** — for each plan entry, spawn a `review-filter` subagent (sonnet) with
+   the rendered prompt, then persist its final return with
+   `workspace.record_agent_return(ws, <label>, <envelope>)` where `<label>` is the plan entry's
+   `agent_label` and `<envelope>` is `{"base": <base_sha>, "head": <head_sha>, "verdict": {...}}`
+   — the base/head guard rejects a verdict captured for a different pair. Same wave-of-three
+   fan-out and `--concurrency` bound as review dispatch.
+5. **Consume** — `uv run python -m sec_overlay.cli review --base <ref> [--profile general]
+   [--model <id>]` reads both the recorded review returns and reflection verdicts back from disk
+   and runs them through the full gate chain: position gate → `apply_profile` → the reflection
+   filter (`apply_verdict` on each file's recorded verdict) → the receipt gate. A file with no
+   recorded verdict fails open as a `ReflectionSkip`, keeping its findings. Pass the identical
+   `--model` string used to `prepare`/`dispatch` this review; a resumed consume with a different
+   `--model` is rejected (exit 2).
 
 The skill never parses a subagent's return itself and never decides what a finding is — it only
 records the raw text; `sec_overlay.review_agent.parse_review_response` is the sole parser. The

@@ -21,10 +21,16 @@ from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from sec_overlay.envelope import wrap_untrusted
 from sec_overlay.evidence import as_llm_claim
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.prompts import render_prompt
+from sec_overlay.review_budget import estimate_tokens
 from sec_overlay.workspace import Workspace, _atomic_write, read_agent_return
+
+# Per-sibling diff token cap for the review prompt's context block. A sibling
+# whose diff estimates above this is listed by path but its body omitted.
+DEFAULT_SIBLING_CAP_TOKENS = 2_000
 
 REVIEW_AGENT_CLAIM = as_llm_claim("review-agent")
 
@@ -37,6 +43,20 @@ _KNOWN_TOOLS = frozenset({CODE_COMMENT_TOOL, TASK_DONE_TOOL})
 # A missing return, a stale base/head pair, and an unparseable response are all
 # ledgered identically — a reviewer failure, never a coverage failure (D-15).
 SOURCE_SKIPPED_REASON = "review-source-skipped"
+
+# A unit whose diff spans at least this many lines gets an optional plan pass
+# before its review (OCR shape D3). Documented, not tunable — a change here is a
+# change to the shape parity claim.
+PLAN_LINE_THRESHOLD = 100
+
+# Severity rank for ordering plan guidance most-severe-first. Higher = worse.
+_SEVERITY_RANK = {
+    Severity.CRITICAL: 4,
+    Severity.HIGH: 3,
+    Severity.MEDIUM: 2,
+    Severity.LOW: 1,
+    Severity.INFO: 0,
+}
 
 
 class ReviewResponseError(Exception):
@@ -53,11 +73,49 @@ def _review_file_template_path() -> Path:
     return Path(__file__).resolve().parents[2] / "agents" / "review-file.md"
 
 
-def _render_change_files_block(changed_files: Sequence[str]) -> str:
-    """Render the diff's other changed paths into the `{{CHANGE_FILES}}` block."""
+def _review_plan_template_path() -> Path:
+    """Return the `review-plan.md` agent prompt path, resolved from this file.
+
+    Same cwd-independent resolution as `_review_file_template_path`.
+    """
+    return Path(__file__).resolve().parents[2] / "agents" / "review-plan.md"
+
+
+def _render_change_files_block(
+    changed_files: Sequence[str], sibling_paths: frozenset[str] = frozenset()
+) -> str:
+    """Render the diff's other changed paths into the `{{CHANGE_FILES}}` block.
+
+    A path whose diff is embedded in the sibling-context block is annotated so
+    the reviewer knows its change is shown below, not merely named.
+    """
     if not changed_files:
         return "(no other files changed in this diff)"
-    return "\n".join(f"- {p}" for p in changed_files)
+    lines = []
+    for p in changed_files:
+        suffix = " (diff included below)" if p in sibling_paths else ""
+        lines.append(f"- {p}{suffix}")
+    return "\n".join(lines)
+
+
+def _render_sibling_diffs_block(sibling_diffs: dict[str, str], cap_tokens: int) -> str:
+    """Render sibling diffs largest-first, omitting any over the per-sibling cap.
+
+    Largest-first (by diff length) so the most substantial context leads; a
+    sibling whose estimated tokens exceed `cap_tokens` is kept as a path entry
+    with its body replaced by an explicit `omitted (token cap)` marker rather
+    than dropped silently.
+    """
+    if not sibling_diffs:
+        return "(no sibling diffs)"
+    blocks = []
+    for sib_path, sib_diff in sorted(sibling_diffs.items(), key=lambda kv: len(kv[1]), reverse=True):
+        if estimate_tokens(sib_diff) > cap_tokens:
+            body = "omitted (token cap)"
+        else:
+            body = f"```diff\n{sib_diff}\n```"
+        blocks.append(f"### {sib_path}\n{body}")
+    return "\n\n".join(blocks)
 
 
 def render_review_prompt(
@@ -68,6 +126,10 @@ def render_review_prompt(
     *,
     repo_root: str = "",
     overlay_root: str = "",
+    sibling_diffs: dict[str, str] | None = None,
+    cap_tokens: int = DEFAULT_SIBLING_CAP_TOKENS,
+    plan_guidance: str = "",
+    background: str = "",
 ) -> str:
     """Render the `agents/review-file.md` prompt for one file's review pass.
 
@@ -87,6 +149,18 @@ def render_review_prompt(
         overlay_root: Substituted into `{{OVERLAY_ROOT}}` — where the
             harness's own `review_findings.py` lives, for the prompt's
             profile-decision note. Same empty default as `repo_root`.
+        sibling_diffs: Optional per-path diff text for files reviewed alongside
+            `path` (unit members, or nearby context), rendered largest-first
+            into `{{SIBLING_DIFFS}}` and annotated in `{{CHANGE_FILES}}`. A
+            sibling over `cap_tokens` is listed with its body omitted.
+        cap_tokens: Per-sibling token cap for the embedded diff body.
+        plan_guidance: Optional severity-ordered guidance text from a prior
+            plan pass, substituted into `{{PLAN_GUIDANCE}}`. Advisory only —
+            never a tool receipt, never a finding. Empty by default.
+        background: Optional developer-supplied background context (already
+            sanitized by `sec_overlay.background.load_background`), wrapped in
+            the untrusted-content envelope and substituted into `{{BACKGROUND}}`.
+            Advisory only — never a finding. Empty by default.
 
     Returns:
         The fully rendered prompt text.
@@ -96,15 +170,109 @@ def render_review_prompt(
             (`sec_overlay.prompts.render_prompt`).
     """
     template = _review_file_template_path().read_text()
+    siblings = sibling_diffs or {}
     subs = {
         "CURRENT_FILE_PATH": path,
         "SYSTEM_RULE": rule_text,
         "DIFF": diff,
-        "CHANGE_FILES": _render_change_files_block(changed_files),
+        "CHANGE_FILES": _render_change_files_block(changed_files, frozenset(siblings)),
+        "REPO_ROOT": repo_root,
+        "OVERLAY_ROOT": overlay_root,
+        "SIBLING_DIFFS": _render_sibling_diffs_block(siblings, cap_tokens),
+        "PLAN_GUIDANCE": plan_guidance,
+        "BACKGROUND": wrap_untrusted(background, kind="background-context") if background else "",
+    }
+    return render_prompt(template, subs)
+
+
+def render_plan_prompt(
+    path: str,
+    rule_text: str,
+    diff: str,
+    *,
+    repo_root: str = "",
+    overlay_root: str = "",
+) -> str:
+    """Render the `agents/review-plan.md` prompt for one over-threshold unit.
+
+    The plan pass reads the same rule doc and diff as the review pass and emits
+    strict-JSON guidance (`issues[]`) `plan_guidance_from_return` parses. It is
+    advisory: its output never becomes a finding or a tool receipt.
+
+    Args:
+        path: The file to plan, substituted into `{{CURRENT_FILE_PATH}}`.
+        rule_text: The resolved rule doc, substituted into `{{SYSTEM_RULE}}`.
+        diff: The file's diff hunk text, substituted into `{{DIFF}}`.
+        repo_root: Substituted into `{{REPO_ROOT}}` (`PATH_BASE`); empty default.
+        overlay_root: Substituted into `{{OVERLAY_ROOT}}`; empty default.
+
+    Returns:
+        The fully rendered plan prompt text.
+
+    Raises:
+        ValueError: A template token had no substitution.
+    """
+    template = _review_plan_template_path().read_text()
+    subs = {
+        "CURRENT_FILE_PATH": path,
+        "SYSTEM_RULE": rule_text,
+        "DIFF": diff,
         "REPO_ROOT": repo_root,
         "OVERLAY_ROOT": overlay_root,
     }
     return render_prompt(template, subs)
+
+
+def plan_agent_label(path: str) -> str:
+    """Derive a stable, filesystem-safe recorded-return label for a plan pass.
+
+    Same hash-of-path derivation as `agent_label`, distinct prefix so a plan
+    return and a review return for one path never collide.
+    """
+    digest = hashlib.sha256(path.encode("utf-8")).hexdigest()[:16]
+    return f"plan-file-{digest}"
+
+
+def plan_guidance_from_return(text: str) -> str:
+    """Parse a recorded plan return into severity-ordered guidance text.
+
+    Args:
+        text: The raw recorded plan response, a JSON object
+            `{"issues": [{"severity", "guidance"}, ...]}`.
+
+    Returns:
+        Guidance text, one issue per line, most-severe-first.
+
+    Raises:
+        ValueError: `text` is not a JSON object, lacks `issues`, or any issue
+            carries an unknown severity or an empty/missing guidance.
+    """
+    try:
+        parsed = json.loads(text)
+    except (json.JSONDecodeError, TypeError) as exc:
+        raise ValueError(f"plan return is not valid JSON: {exc}") from exc
+    if not isinstance(parsed, dict) or "issues" not in parsed:
+        raise ValueError("plan return must be an object with an 'issues' key")
+    issues = parsed["issues"]
+    if not isinstance(issues, list):
+        raise ValueError("plan return 'issues' must be a list")  # noqa: TRY004 - CLI fail-open catches ValueError
+
+    by_value = {s.value: s for s in Severity}
+    rows: list[tuple[int, str, str]] = []
+    for issue in issues:
+        if not isinstance(issue, dict):
+            raise ValueError(f"plan issue must be an object: {issue!r}")  # noqa: TRY004 - CLI fail-open catches ValueError
+        sev_raw = issue.get("severity")
+        if sev_raw not in by_value:
+            raise ValueError(f"plan issue has unknown severity: {sev_raw!r}")
+        guidance = issue.get("guidance")
+        if not guidance:
+            raise ValueError(f"plan issue missing guidance: {issue!r}")
+        sev = by_value[sev_raw]
+        rows.append((_SEVERITY_RANK[sev], sev.value, guidance))
+
+    rows.sort(key=lambda r: r[0], reverse=True)
+    return "\n".join(f"- [{sev}] {guidance}" for _rank, sev, guidance in rows)
 
 
 def _stable_finding_id(rule_id_prefix: str, path: str, line: int, cls: str) -> str:
@@ -219,6 +387,7 @@ class ReviewPlanEntry:
     agent_label: str
     base: str
     head: str
+    token_estimate: int = 0
 
 
 def write_review_plan(ws: Workspace, entries: Sequence[ReviewPlanEntry]) -> Path:

@@ -1,0 +1,50 @@
+[
+  {
+    "finding_id": "negative-absence-cel-declared",
+    "kind": "negative",
+    "source": "synthetic",
+    "cls": "rce",
+    "repo_url": "",
+    "commit": "",
+    "local_path": "fixtures/absence_repo",
+    "file": "engines_safe.go",
+    "line": 11,
+    "description": "cel.NewEnv() with declared variables and no arbitrary evaluation; must not be reported."
+  },
+  {
+    "finding_id": "negative-absence-lua-skipopenlibs",
+    "kind": "negative",
+    "source": "synthetic",
+    "cls": "rce",
+    "repo_url": "",
+    "commit": "",
+    "local_path": "fixtures/absence_repo",
+    "file": "engines_safe.go",
+    "line": 17,
+    "description": "lua.NewState with SkipOpenLibs; the standard library is not exposed. Must not be reported."
+  },
+  {
+    "finding_id": "negative-absence-jinja2-sandboxed",
+    "kind": "negative",
+    "source": "synthetic",
+    "cls": "ssti",
+    "repo_url": "",
+    "commit": "",
+    "local_path": "fixtures/absence_repo",
+    "file": "render.py",
+    "line": 14,
+    "description": "SandboxedEnvironment().from_string on caller text; the sandbox blocks escape. Must not be reported."
+  },
+  {
+    "finding_id": "negative-absence-requests-timeout",
+    "kind": "negative",
+    "source": "synthetic",
+    "cls": "ssrf",
+    "repo_url": "",
+    "commit": "",
+    "local_path": "fixtures/absence_repo",
+    "file": "fetch.py",
+    "line": 13,
+    "description": "requests.get with timeout=5; a slow endpoint cannot stall the worker. Must not be reported."
+  }
+]

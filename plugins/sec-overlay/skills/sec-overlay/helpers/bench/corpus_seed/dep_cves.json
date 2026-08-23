@@ -1,0 +1,72 @@
+[
+  {
+    "finding_id": "dep-cve-pyyaml-5301",
+    "kind": "positive",
+    "source": "dep-cve",
+    "cls": "deps",
+    "repo_url": "",
+    "commit": "",
+    "local_path": "fixtures/dep_cve_repo",
+    "file": "requirements.txt",
+    "line": 1,
+    "package": "PyYAML==5.3.1",
+    "cve": "CVE-2020-14343",
+    "description": "PyYAML 5.3.1 full_load/FullLoader arbitrary code execution via crafted YAML."
+  },
+  {
+    "finding_id": "dep-cve-jinja2-210",
+    "kind": "positive",
+    "source": "dep-cve",
+    "cls": "deps",
+    "repo_url": "",
+    "commit": "",
+    "local_path": "fixtures/dep_cve_repo",
+    "file": "requirements.txt",
+    "line": 2,
+    "package": "Jinja2==2.10",
+    "cve": "CVE-2019-10906",
+    "description": "Jinja2 2.10 sandbox escape via str.format_map on the sandboxed environment."
+  },
+  {
+    "finding_id": "dep-cve-urllib3-1241",
+    "kind": "positive",
+    "source": "dep-cve",
+    "cls": "deps",
+    "repo_url": "",
+    "commit": "",
+    "local_path": "fixtures/dep_cve_repo",
+    "file": "requirements.txt",
+    "line": 3,
+    "package": "urllib3==1.24.1",
+    "cve": "CVE-2019-11324",
+    "description": "urllib3 1.24.1 certificate verification weakness when ca_certs is unset."
+  },
+  {
+    "finding_id": "dep-cve-requests-2190",
+    "kind": "positive",
+    "source": "dep-cve",
+    "cls": "deps",
+    "repo_url": "",
+    "commit": "",
+    "local_path": "fixtures/dep_cve_repo",
+    "file": "requirements.txt",
+    "line": 4,
+    "package": "requests==2.19.0",
+    "cve": "CVE-2018-18074",
+    "description": "requests <2.20.0 leaks Authorization header across a http-to-https redirect."
+  },
+  {
+    "finding_id": "dep-cve-flask-0122",
+    "kind": "positive",
+    "source": "dep-cve",
+    "cls": "deps",
+    "repo_url": "",
+    "commit": "",
+    "local_path": "fixtures/dep_cve_repo",
+    "file": "requirements.txt",
+    "line": 5,
+    "package": "Flask==0.12.2",
+    "cve": "CVE-2018-1000656",
+    "description": "Flask <0.12.3 denial of service via large or malformed JSON in request parsing."
+  }
+]

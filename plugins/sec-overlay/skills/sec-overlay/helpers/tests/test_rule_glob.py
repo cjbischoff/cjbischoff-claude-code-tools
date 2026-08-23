@@ -226,9 +226,12 @@ def test_review_cli_parses_rule_and_exclude_and_reaches_run_review(tmp_path, mon
 
     captured = {}
 
-    def fake_run_review(base, head, root, *, profile="security", rule_path=None,
-                         excludes=None, runner=None, prepare=False, concurrency=8,
-                         timeout=600, max_git_procs=16, model=None, workspace=None):
+    def fake_run_review(base, head, root, *, commit=None, workspace_dirty=False,
+                         profile="security", rule_path=None,
+                         excludes=None, runner=None, reflection_source=None, prepare=False,
+                         prepare_reflection=False, plan=False, concurrency=8,
+                         timeout=600, max_git_procs=16, model=None, workspace=None,
+                         token_budget=0, background="", tier="assured"):
         captured["rule_path"] = rule_path
         captured["excludes"] = excludes
         captured["workspace"] = workspace
@@ -348,3 +351,101 @@ def test_run_review_exits_2_on_rule_safety_error_with_no_fallback(tmp_path, caps
     assert str(bad_rule.resolve()) in captured.err
     ws = RepoMemory.for_target(str(tmp_path), runner=runner).workspace
     assert not (ws.artifacts / "coverage_manifest.json").exists()
+
+
+# --- Task 11 (REQ-P2): rule docs ported from open-code-review ---------------------
+
+# The 27 docs ported from OCR, in the analysis priority order. Each carries the
+# attribution line and follows sec-overlay's five-family + exclusion-block format
+# (the shape conformance test in test_rule_docs.py drives every doc from the map).
+_PORTED_DOCS: tuple[str, ...] = (
+    "terraform.md",
+    "yaml.md",
+    "github_workflows.md",
+    "github_config.md",
+    "package_json.md",
+    "cargo_toml.md",
+    "pom_xml.md",
+    "composer_json.md",
+    "build_gradle.md",
+    "c.md",
+    "cpp.md",
+    "protobuf.md",
+    "graphql.md",
+    "prisma.md",
+    "json.md",
+    "properties.md",
+    "nix.md",
+    "bicep.md",
+    "arkts.md",
+    "astro.md",
+    "freemarker.md",
+    "haskell.md",
+    "julia.md",
+    "mapper_dao_xml.md",
+    "nim.md",
+    "po.md",
+    "pot.md",
+)
+
+_OCR_ATTRIBUTION = "Adapted from open-code-review (Apache-2.0)"
+
+# Representative path -> doc filename. Ordering-sensitive cases (the two .github
+# patterns before the plain yaml pattern; package.json/Cargo.toml/pom.xml before
+# the generic json/xml patterns) are included so first-match order is exercised.
+_NEW_PATH_RESOLUTIONS: tuple[tuple[str, str], ...] = (
+    ("infra/main.tf", "terraform.md"),
+    ("k8s/config.yaml", "yaml.md"),
+    (".github/workflows/ci.yml", "github_workflows.md"),
+    (".github/dependabot.yml", "github_config.md"),
+    ("frontend/package.json", "package_json.md"),
+    ("Cargo.toml", "cargo_toml.md"),
+    ("pom.xml", "pom_xml.md"),
+    ("composer.json", "composer_json.md"),
+    ("build.gradle", "build_gradle.md"),
+    ("src/main.c", "c.md"),
+    ("src/main.cpp", "cpp.md"),
+    ("api/schema.proto", "protobuf.md"),
+    ("api/schema.graphql", "graphql.md"),
+    ("db/schema.prisma", "prisma.md"),
+    ("config/data.json", "json.md"),
+    ("app.properties", "properties.md"),
+    ("shell.nix", "nix.md"),
+    ("infra/main.bicep", "bicep.md"),
+    ("app.ets", "arkts.md"),
+    ("src/page.astro", "astro.md"),
+    ("templates/mail.ftl", "freemarker.md"),
+    ("src/Main.hs", "haskell.md"),
+    ("calc.jl", "julia.md"),
+    ("mapper/UserMapper.xml", "mapper_dao_xml.md"),
+    ("src/proc.nim", "nim.md"),
+    ("locale/messages.po", "po.md"),
+    ("locale/template.pot", "pot.md"),
+)
+
+
+def test_ported_doc_set_has_twenty_seven_entries():
+    assert len(_PORTED_DOCS) == 27
+    assert len(set(_PORTED_DOCS)) == 27
+
+
+@pytest.mark.parametrize("doc_name", _PORTED_DOCS)
+def test_ported_doc_has_ocr_attribution(doc_name):
+    doc_path = rule_glob.builtin_rule_docs_dir() / doc_name
+    assert doc_path.is_file(), f"{doc_name} ported doc missing on disk"
+    assert _OCR_ATTRIBUTION in doc_path.read_text(), (
+        f"{doc_name} lacks the required attribution line {_OCR_ATTRIBUTION!r}"
+    )
+
+
+@pytest.mark.parametrize("doc_name", _PORTED_DOCS)
+def test_ported_doc_is_in_builtin_map(doc_name):
+    assert doc_name in set(rule_glob.BUILTIN_PATH_RULE_MAP.values()), (
+        f"{doc_name} on disk but referenced by no BUILTIN_PATH_RULE_MAP entry"
+    )
+
+
+@pytest.mark.parametrize("path,doc_name", _NEW_PATH_RESOLUTIONS)
+def test_new_language_path_resolves_to_mapped_doc(path, doc_name):
+    expected = (rule_glob.builtin_rule_docs_dir() / doc_name).read_text()
+    assert resolve_rule_doc(path) == expected

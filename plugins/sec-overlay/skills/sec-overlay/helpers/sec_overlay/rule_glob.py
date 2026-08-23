@@ -48,19 +48,46 @@ USER_RULE_HEADER = "## User-Specific Rules (Mandatory)"
 MAX_RULE_FILE_BYTES = 524288
 ALLOWED_RULE_EXTENSIONS = frozenset({".md", ".txt", ".markdown"})
 
-# Ordered: first matching glob wins. Language entries mirror OCR's
-# system_rules.json pattern strings and doc filenames exactly (D-02),
-# restricted to the languages this project actually ships a doc for. The
-# trailing `**/*` catch-all makes default.md a reachable, testable map value
-# like every other doc (RULE-05) instead of a fallback outside the map.
+# Ordered: first matching glob wins. Entries mirror OCR's system_rules.json
+# pattern strings, doc filenames, and order exactly (D-02, REQ-P2) — the full
+# 35-pattern set. The trailing `**/*` catch-all makes default.md a reachable,
+# testable map value like every other doc (RULE-05) instead of a fallback
+# outside the map.
 BUILTIN_PATH_RULE_MAP: dict[str, str] = {
+    "**/*.properties": "properties.md",
+    "**/*{mapper,dao}*.xml": "mapper_dao_xml.md",
+    "**/pom.xml": "pom_xml.md",
+    "**/build.gradle": "build_gradle.md",
+    "**/package.json": "package_json.md",
+    "**/Cargo.toml": "cargo_toml.md",
+    "**/composer.json": "composer_json.md",
+    "**/*.{json,json5}": "json.md",
+    ".github/workflows/**/*.{yaml,yml}": "github_workflows.md",
+    ".github/**/*.{yaml,yml}": "github_config.md",
+    "**/*.{yaml,yml}": "yaml.md",
     "**/*.java": "java.md",
     "**/*.go": "go.md",
+    "**/*.{ftl,ftlh,ftlx}": "freemarker.md",
+    "**/*.ets": "arkts.md",
+    "**/*.astro": "astro.md",
     "**/*.{ts,js,tsx,jsx}": "ts_js_tsx_jsx.md",
     "**/*.{kt}": "kotlin.md",
     "**/*.rs": "rust.md",
+    "**/*.{cpp,cc,hpp}": "cpp.md",
+    "**/*.c": "c.md",
     "**/*.py": "python.md",
     "**/*.{php,phtml}": "php.md",
+    "**/*.proto": "protobuf.md",
+    "**/*.po": "po.md",
+    "**/*.pot": "pot.md",
+    "**/*.{graphql,gql}": "graphql.md",
+    "**/*.prisma": "prisma.md",
+    "**/*.jl": "julia.md",
+    "**/*.{tf,hcl,tfvars}": "terraform.md",
+    "**/*.bicep": "bicep.md",
+    "**/*.nix": "nix.md",
+    "**/*.{hs,lhs}": "haskell.md",
+    "**/*.{nim,nims,nimble}": "nim.md",
     "**/*.swift": "swift.md",
     "**/*": "default.md",
 }
@@ -521,3 +548,31 @@ def resolve_rule_doc(path: str, resolution: RuleResolution | None = None) -> str
                     return merge_with_system_rule(_resolve_builtin_or_default(path), entry.rule)
                 return entry.rule
     return _resolve_builtin_or_default(path)
+
+
+def resolve_with_layer(path: str, resolution: RuleResolution | None = None) -> tuple[str, str]:
+    """Resolve a path to its rule-doc text and the layer that answered.
+
+    Same per-path fallthrough as :func:`resolve_rule_doc`, but also names the
+    winning layer so `rules check` can show a human which rule applies and why.
+
+    Args:
+        path: A forward-slash-separated relative path to the file.
+        resolution: The four-layer resolution to walk; `None` resolves against
+            the built-in map alone.
+
+    Returns:
+        A ``(layer, text)`` pair. ``layer`` is ``custom``, ``project``,
+        ``global``, or ``builtin`` (with a ``+builtin`` suffix when the entry
+        merged the built-in rule text).
+    """
+    labels = ("custom", "project", "global")
+    if resolution is not None:
+        for label, layer in zip(labels, resolution.layers, strict=False):
+            entry = match_project_rule_entry(layer, path)
+            if entry is not None:
+                if entry.merge_system_rule:
+                    merged = merge_with_system_rule(_resolve_builtin_or_default(path), entry.rule)
+                    return f"{label}+builtin", merged
+                return label, entry.rule
+    return "builtin", _resolve_builtin_or_default(path)

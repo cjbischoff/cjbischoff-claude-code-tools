@@ -4,7 +4,312 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Changed
+
+- Parity plan tracking: marked Task 22 (REQ-T3c/T3h), Task 23 (REQ-T3d), and
+  Task 24 (REQ-T3e) complete in `docs/superpowers/plans/2026-08-23-ocr-parity.md`
+  (maintainer doc, not shipped).
+- Parity plan tracking: marked all four Task 25 sub-steps complete in
+  `docs/superpowers/plans/2026-08-23-ocr-parity.md` (test suite + PARITY-AUDIT.md
+  + zero-loss re-read + completion report). Closes the OCR-parity milestone.
+
+### Fixed
+
+- `test_rule_glob.py`'s `fake_run_review` spy accepts the `commit`,
+  `workspace_dirty`, `plan`, `token_budget`, `background`, and `tier` keyword
+  arguments the real `run_review` now takes; the stale stub raised
+  `TypeError` in the full suite after the `--commit`/`--workspace-dirty` review
+  scopes landed. Test-only; no runtime change.
+
 ### Added
+
+- Parity audit (Task 25): `docs/parity/PARITY-AUDIT.md` walks `EXTRACTION.md`
+  row by row and gives every item (M/P/S/T3/R/W/G/D/X/V/HR — 87 rows) a final
+  disposition with `file:line` evidence, `rejected:<reason>`, or
+  `deferred:<reason + where>`. Zero-loss verified: the audit's id set covers
+  every EXTRACTION id. Honors SPEC dispositions G18/G19/G20 (rejected) and
+  G21/T3g (deferred). Maintainer doc.
+- Security slice (REQ-T3e, Task 24 GREEN): `bench/aacr_adapter.py` tags an AACR
+  row whose `category` signals security (`security` / `vulnerab`) as
+  `source="aacr-security"`, and `bench/corpus.py` registers that source. `tally`
+  emits the distinct `aacr-security` `by_source` slice automatically, kept out of
+  the real-confirmed headline. Non-security rows stay `source="aacr"`. The
+  predicate is dataset-agnostic, honoring M3d's unverified-distribution caveat.
+- Security slice (REQ-T3e, Task 24 RED): RED tests in `tests/test_aacr_adapter.py`
+  pin that `aacr_entries` tags a security-category row as `source="aacr-security"`
+  (a distinct slice `tally` emits in `by_source`, kept out of the real-confirmed
+  headline).
+- Coverage honesty (REQ-T3d, Task 23 GREEN): `bench/tally.py` gains a
+  `coverage_ledgers` argument and a `coverage_honesty` scorecard block —
+  `rate` = honest runs / total runs, where a run is unsupported when its ledger
+  claimed `completeness == "complete"` while a surface needed follow-up or
+  `deferred` / `open_questions` were non-empty — surfaced in `to_dict` and as a
+  "Coverage honesty" markdown section. `bench/run.py` reads each workspace's
+  `kb/coverage-ledger.json` and passes the map to `tally`. The block is absent
+  when no ledgers are supplied.
+- Coverage honesty (REQ-T3d, Task 23 RED): RED tests in `tests/test_bench.py`
+  pin that `tally(..., coverage_ledgers=...)` reports a `coverage_honesty` block
+  (`runs`, `unsupported`, `rate`) flagging any run whose ledger claimed
+  `completeness == "complete"` while surfaces need follow-up or `deferred` /
+  `open_questions` were non-empty, plus a "Coverage honesty" markdown section;
+  omitted when no ledgers are supplied.
+- Verified-fix rate (REQ-T3c/T3h, Task 22 GREEN): `bench/tally.py` gains a
+  `findings_by_id` argument and a `verified_fix` scorecard block —
+  `rate` = (`FindingStatus.FIXED` ∪ `verification == "verified-static"`) over the
+  confirmed real true-positives — surfaced in `to_dict` and as a headline
+  markdown row. `bench/run.py` builds the id→finding map from `findings_by_repo`
+  and passes it to `tally`. The block is absent when no fix data is supplied.
+- Verified-fix rate (REQ-T3c/T3h, Task 22 RED): RED tests in
+  `tests/test_bench.py` pin that `tally(..., findings_by_id=...)` reports a
+  `verified_fix_rate` = (`fixed` ∪ `verified-static`) / confirmed true-positives,
+  exposes a `verified_fix` block in the scorecard dict and a headline markdown
+  row, and leaves the rate `None` when no fix data is supplied.
+- Fast/assured tiers (REQ-T3a, Task 21 GREEN): `run_review` gains a `tier`
+  argument (`--tier fast|assured`, default `assured`). The `fast` tier skips the
+  plan half — a `--prepare --plan` run returns without writing
+  `plan_manifest.json` — while `assured` runs the full chain. The tier is
+  recorded in `review_result.json` and its `CoverageManifest`
+  (`review_coverage.py` threads `tier` through `__init__`/`to_dict`/`from_dict`).
+- Fast/assured tiers (REQ-T3a, Task 21 RED): RED tests in
+  `tests/test_review_live.py` pin that `run_review(..., tier="fast")` records the
+  tier in `review_result.json` and its coverage manifest, and that a fast-tier
+  `--prepare --plan` run skips the plan half (no `plan_manifest.json`) while the
+  assured default still emits it over the plan-line threshold.
+
+### Fixed
+
+- Judge severity write-back (REQ-P9): `calibrate.py` now lowers `f.severity`
+  to the downgraded score band (tests first in `tests/test_calibrate.py`), so
+  reports no longer show the inflated severity a judge already rejected.
+
+### Added
+
+- Rules check + did-you-mean (REQ-S4): `rule_glob.resolve_with_layer` returns
+  the matched layer label plus the rule-doc text (falling through to `builtin`),
+  a `rules check <path> --root` CLI subcommand prints both, and a
+  `_SuggestingParser` appends a `difflib` "Did you mean" line naming the nearest
+  valid subcommand for a misspelling. Tests in `tests/test_rules_check.py`.
+- Sessions list/show (REQ-S2, Task 19 GREEN): new read-only
+  `sec_overlay/sessions.py` renders the sidecar `state.json` plus review
+  ledgers — `session_rows`/`render_rows` produce one row per slug (pass, sha,
+  finding counts), `resolve_session` resolves `latest` by mtime or a slug, and
+  `session_detail`/`render_detail` show stages, a ledger summary, and a
+  `--severity`-filtered finding list (X3 scope). Wired as the `sessions
+  list|show` CLI subcommand over `repo_memory.memory_root`.
+- Sessions list/show (REQ-S2, Task 19 RED): RED tests in `tests/test_sessions.py`
+  pin the read-only renderer contract over sidecar `state.json` and review
+  ledgers — one row per sidecar slug (pass, sha, finding counts), `latest`
+  resolution by mtime, a detail view with stages plus a ledger summary, and a
+  `--severity` finding filter (X3 scope).
+- GitHub PR review poster (REQ-S1, Task 18 GREEN): new
+  `sec_overlay/pr_poster.py`, a stdlib-only (`urllib`) poster — `route_findings`
+  splits critical/high (inline comments) from the rest (summary body),
+  `build_review_payload` builds a `COMMENT` review, and `post_review` POSTs it to
+  the pulls reviews endpoint with bearer auth (injectable transport for tests).
+  A composite `action.yml` at the plugin root runs review mode, uploads the
+  SARIF to code scanning, and invokes the poster.
+- GitHub PR review poster (REQ-S1, Task 18 RED): RED tests in
+  `tests/test_pr_poster.py` pin the poster contract — severity routing
+  (critical/high inline, medium/low/info summary), a `COMMENT` review payload,
+  and a `post_review` call to the pulls reviews endpoint with bearer auth.
+- Assurance case (REQ-S3): `skills/sec-overlay/ASSURANCE_CASE.md` documents the
+  actors, trust boundaries, threats, and countermeasures behind the harness
+  invariants, with each countermeasure cited to a resolving `file:line`. RED
+  tests in `tests/test_docs_invariants.py` pin the contract — required sections,
+  every citation resolving to an existing line, and STE structural lint clean.
+- Background-context ingestion (REQ-P8, Task 16 GREEN): new
+  `sec_overlay/background.py` with `load_background`, sanitizing
+  developer-supplied context in order — a 1 MB `BACKGROUND_MAX_BYTES` cap
+  raising `ValueError`, control-character strip (newline and tab kept),
+  envelope-delimiter neutralization, a hard `verify_no_secrets` abort on any
+  detected secret (run before `safe_for_prompt` so a maskable token still
+  aborts), then `redactor.safe_for_prompt`. `review_agent.render_review_prompt`
+  gains a `background` kwarg wrapping the text in a `background-context`
+  untrusted envelope; `agents/review-file.md` renders `{{BACKGROUND}}`; the
+  `review` CLI gains mutually-exclusive `--background`/`--background-file`
+  flags that exit 2 on an oversized or secret-bearing payload.
+- Background-context ingestion (REQ-P8, Task 16 RED): RED tests in
+  `tests/test_background.py` pin the `load_background` contract — a 1 MB cap
+  raising `ValueError`, control-character strip, envelope-delimiter guard, a
+  hard `SecretsPresent` abort on any detected secret, and file/text sourcing.
+- Consolidated review result artifact (REQ-P7, Task 15 GREEN): new
+  `sec_overlay/review_result.py` with `write_review_result`, writing
+  `artifacts/review_result.json` via `workspace._atomic_write`. It records
+  `status` (the coverage-manifest seal), per-finding records, dropped/declined
+  findings, reflection retractions/skips, `budget_exceeded`, the coverage
+  manifest, per-phase `tokens`, base/head SHAs, and model/profile/tier.
+  `cli.run_review` calls it last on both consume exits (zero-reviewable and
+  post-seal). Additive — every prior artifact stays.
+
+- Consolidated review result artifact (REQ-P7, Task 15): failing tests first
+  (RED) in `tests/test_review_result.py`. They pin `write_review_result` writing
+  `review_result.json` to `ws.artifacts` with the full documented key set on both
+  a zero-finding run and a populated run: `status`, per-finding records (`id`,
+  `path`, `line`, `severity`, `rule_id`, `profile`, `disposition`), `dropped`,
+  `declined`, `retractions`, `skips`, `budget_exceeded`, `coverage_manifest`,
+  `tokens`, `base`, `head`, `model`, `profile`, `tier`.
+
+- Per-file plan phase implementation (REQ-P3, Task 14 GREEN): `review_agent.py`
+  gains `render_plan_prompt`, `plan_agent_label`, `plan_guidance_from_return`,
+  and `PLAN_LINE_THRESHOLD = 100`; `render_review_prompt` gains a keyword-only
+  `plan_guidance` filling the new `{{PLAN_GUIDANCE}}` token. New agent prompt
+  `agents/review-plan.md`. `cli.run_review` gains `--plan`: `--plan --prepare`
+  writes plan prompts for over-threshold units and returns early; a following
+  `--prepare` injects each recorded plan return's guidance and fails open
+  (missing or invalid return yields empty guidance and a `plan_skips.json`
+  entry). Plan guidance is advisory — never a receipt, never a finding.
+  Review-mode only, so `bench.run` is unchanged.
+
+- Per-file plan phase (REQ-P3, Task 14): failing tests first (RED) for the
+  review prepare plan step. `test_review_agent.py` pins `render_review_prompt`
+  injecting a `{{PLAN_GUIDANCE}}` body (empty by default), `render_plan_prompt`
+  substituting the plan template tokens, and `plan_guidance_from_return`
+  ordering issues by severity and raising on invalid JSON, an unknown severity,
+  a missing `issues` key, or an issue without guidance. `test_review_live.py`
+  pins `--prepare --plan` writing a plan prompt only for a unit at or over
+  `PLAN_LINE_THRESHOLD`, a recorded plan return injecting its guidance into the
+  review prompt, and an invalid plan return failing open (review prompt renders
+  without guidance, `plan_skips.json` records the skip). Review-mode only, so
+  `bench.run` is unchanged.
+
+- Commit and workspace-dirty review scopes (REQ-P5, Task 13): failing tests
+  first (RED in 1.96.1) for `diffscope.dirty_file_records` (a real-repo check
+  that it lists staged, unstaged, and untracked working-tree changes) and three
+  CLI tests — `--commit <sha>` scoping the review to `sha^..sha`, `--commit`
+  with `--base` exiting 2, and `--workspace-dirty` listing uncommitted changes.
+  `sec-overlay review` now takes `--commit` and `--workspace-dirty` beside
+  `--base` (exactly one required; a resumed run reads its scope from the sealed
+  manifest); `dirty_file_records` parses `git status --porcelain`,
+  `file_diff_line_count`/`binary_paths`/`file_diff_text` accept `head=None` to
+  diff against the working tree, and `validate_ref` permits `^` so `sha^`
+  resolves. Tests now pass. Review-mode only, so `bench.run` is unchanged.
+
+- Hard token budget (REQ-P4, Task 12): `review_budget.estimate_review_cost`
+  projects OCR's plan-loop cost per file (prompt 2000, plan-out 400, 7 rounds,
+  round-out 700; empty diff 21300) while `estimate_tokens` stays the raw
+  `len // 4` primitive, and a latching `BudgetGate` admits files until the first
+  projected breach then refuses the rest. `cli.run_review` gains a
+  `--token-budget` flag (default 0 = unlimited): a file over the
+  `FILE_BUDGET_FRACTION` (0.8) cap is excluded as `too-large-tokens` before
+  review, a file refused by the gate seals `partial` with a `skipped(budget)`
+  note at exit 0, `--prepare` surfaces a per-file `token_estimate`, and the
+  coverage manifest records `budget_exceeded`. Tests (RED in 1.95.1) now pass.
+  This closes the Task-10 deferral: single-file units stay without non-mate
+  sibling diffs, now bounded by this budget rather than pending it.
+
+- Rule-doc port (REQ-P2): `BUILTIN_PATH_RULE_MAP` now holds OCR's full
+  35-pattern `system_rules.json` set plus the trailing `**/*` catch-all (36
+  distinct docs, exact OCR order), and 27 new docs are ported under
+  `rules/rule_docs/` — manifests (`pom.xml`, `package.json`, `Cargo.toml`,
+  `composer.json`, `build.gradle`), config (`.properties`, `.json`, `.yaml`,
+  `.github/**`), templates (FreeMarker, Astro, MyBatis mapper/DAO XML), and the
+  remaining languages (C, C++, Protobuf, GraphQL, Prisma, Terraform, Bicep,
+  Nix, Haskell, Julia, Nim, ArkTS, gettext `.po`/`.pot`). Each ported doc is
+  adapted from OCR's Apache-2.0 sources, carries the
+  `Adapted from open-code-review (Apache-2.0)` attribution line, and covers the
+  same five defect families in the fixed section order. Tests in
+  `tests/test_rule_glob.py` and `tests/test_rule_docs.py` (RED in 1.94.1) now
+  pass: representative paths resolve to the right doc including first-match
+  order cases (`.github` patterns before plain YAML;
+  `package.json`/`Cargo.toml`/`pom.xml` before generic `json`/`xml`).
+
+- Sibling-context review (REQ-P1): the review-file prompt now embeds a file's
+  bundle-mate diffs. New module `review_budget.py` holds the shared size
+  primitive `estimate_tokens(text) = len(text) // 4`.
+  `render_review_prompt(sibling_diffs=..., cap_tokens=...)` renders the new
+  `{{SIBLING_DIFFS}}` token largest-first as fenced diffs, replaces any sibling
+  over `cap_tokens` (default 2000) with an `omitted (token cap)` marker, and
+  annotates each embedded sibling `(diff included below)` in `{{CHANGE_FILES}}`.
+  `bundle.group_bundles` gains C/C++ header-impl (`.h/.c`, `.hpp/.cpp`) and
+  interface/impl stem (`svc.ts`/`svc.impl.ts`) pairing plus a keyword-only
+  `diffs`/`max_unit_tokens` (`MAX_UNIT_TOKENS = 50000`) first-fit split;
+  `diffs=None` leaves existing callers unchanged. `cli.run_review`'s prepare
+  path passes each file its unit-mates' diffs. Deferred: single-file units
+  receive non-mate sibling diffs only under REQ-P4's budget (Task 12); and
+  `import_adjacency(graph_json)` grouping (SPEC-optional; review mode must not
+  require `kb/graph.json`).
+
+- Live-reflection wiring (REQ-P6): `run_review` now consumes recorded
+  review-filter verdicts through `reflection.recorded_verdict_source` instead
+  of an always-empty verdict. `reflection_label(path)` names each file's
+  recorded return; the source reads a `{"base", "head", "verdict"}` envelope
+  and raises `ValueError` on a missing, stale (base/head mismatch), malformed,
+  or non-mapping verdict, which the reflection loop catches per file as a
+  `ReflectionSkip` (fail-open, never a silent keep-all). A new
+  `--prepare-reflection` mode renders one `review-filter` prompt per file with
+  kept findings under `runs/reflection_prompts/` and lists them in
+  `runs/reflection_plan.json`. Files with zero kept findings skip the verdict
+  lookup entirely.
+
+- Live-reflection wiring tests (REQ-P6, RED): failing tests in
+  `tests/test_reflection.py` and `tests/test_review_live.py` pin the coming
+  recorded-verdict source — `reflection_label(path)`,
+  `recorded_verdict_source(ws, *, base, head)`, end-to-end retraction/refusal
+  through `run_review`, missing-verdict `ReflectionSkip` (never a silent
+  keep-all), and a `--prepare-reflection` prompt-render mode.
+
+- Protocol + reproducibility docs (REQ-R3 + REQ-R1/R4): the scorecard markdown now
+  emits a "Scope confound" statement, and `bench/README.md` documents the annotation
+  protocol (single-maintainer adjudication, judge-disagreement handling), a
+  one-command reproduce, and the scope confound. Tests first in `tests/test_bench.py`
+  and `tests/test_docs_invariants.py`.
+
+- Cost/latency columns (REQ-M6): `bench/tally.py` `tally(..., cost=...)` attaches a
+  `cost` block (`tokens`, `wall_time_s`, `usd_per_confirmed_tp` = USD estimate /
+  real-confirmed TP, `None` when no TP) and `to_markdown` renders a "Cost & latency
+  (estimates)" section; per-class FP-rate rows publish in the "By class" table.
+  `bench/run.py` captures wall-time and sums per-repo token totals from every
+  `workspaces/*/state.json` budget (via `sec_overlay.cost`). Tests first in
+  `tests/test_bench.py`.
+
+- Cross-run variance (REQ-M5): `bench/tally.py` `aggregate_scorecards(cards)`
+  reports mean/min/max per metric (precision, recall, f1, fp_rate) across repeated
+  runs (skipping `None` metrics), and `bench/run.py` gains `--repeats N` — it runs
+  the benchmark N times into `run-<n>/` and writes an aggregate
+  `scorecard_agg.{json,md}` via `run_repeated`. Tests first in `tests/test_bench.py`.
+
+- External-dataset adapters (REQ-M3): `bench/aacr_adapter.py` `aacr_entries` maps
+  AACR review-dataset rows to `source="aacr"` corpus entries (registered in
+  `bench/corpus.py` `SOURCES`; excluded from the real-confirmed headline), and
+  `bench/ocr_ingest.py` `ocr_findings` parses `ocr review --format json` into
+  benchmark-only CONFIRMED findings tagged `llm-claimed:ocr` — never harness
+  findings, never receipt-backed. `Scorecard.to_markdown` now appends a
+  same-judge caveat block so a cross-tool comparison discloses that both tools
+  share one judge. `bench/README.md` records the live AACR schema (2026-08-23)
+  with its unverified-distribution caveat. Tests first in
+  `tests/test_aacr_adapter.py`.
+
+- Committed seed corpus (REQ-M4): `bench/corpus_seed/` now ships 30 public
+  entries — 8 `dogfood.json` (2 `locked` at `fixtures/vulnerable_repo`), 3
+  `absence.json`, 4 `negatives.json`, 5 `dep_cves.json`, 10 Juice Shop
+  `public_apps.json` — plus the `fixtures/dep_cve_repo` lockfile. Replaces the
+  prior local-only, gitignored corpus.
+
+- Detection-grading path (REQ-M4): `bench/adapter.py` `tier1_detected` reads
+  any-status findings backed by a Tier-1 receipt, and `bench.run`
+  `--grade-mode detection` / `--only-local` grade whether a deterministic scan
+  located each locked ground-truth finding. The confirmation gate
+  (`reportable`) is untouched — a deterministic-only scan never CONFIRMS. Tests
+  first in `tests/test_bench.py`.
+
+- Tests first (REQ-M4): `tests/test_bench.py::test_seed_corpus_has_min_entries`
+  locks the seed corpus floor — at least 30 entries with at least 3 `dep-cve`,
+  5 `public-app`, 1 negative, and 1 locked entry, all valid.
+
+- Headless skill driver (REQ-M2): `bench/driver.py` + a runnable
+  `CCSkillAdapter` — unattended benchmark runs over the corpus.
+
+- Tests first (REQ-M2): `tests/test_bench_driver.py` locks the headless
+  driver contract for `CCSkillAdapter`.
+
+- F1 in the bench scorecard (`bench/tally.py`): overall, per-source, and
+  headline rows; `None` when undefined (REQ-M1; tests first in
+  `tests/test_bench.py`).
+
+- OCR-parity workstream docs: `docs/parity/EXTRACTION.md` (inventory of the
+  OCR-vs-sec-overlay analysis, 3 extraction passes), `docs/parity/SPEC.md`
+  (requirements + traceability matrix + dispositions), and
+  `docs/superpowers/plans/2026-08-23-ocr-parity.md` (implementation plan).
 
 - Recall adversary (`agents/recall-adversary.md`, opus): judges what the recon
   phase left out, using `sec_overlay.phase_gate.recall_claims`,

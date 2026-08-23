@@ -5,8 +5,14 @@ import subprocess
 
 from sec_overlay import cli
 from sec_overlay.cli import main, run_review
+from sec_overlay.reflection import REFUSED_REASON, RETRACTED_REASON, reflection_label
 from sec_overlay.repo_memory import RepoMemory
-from sec_overlay.review_agent import agent_label
+from sec_overlay.review_agent import (
+    PLAN_LINE_THRESHOLD,
+    _stable_finding_id,
+    agent_label,
+    plan_agent_label,
+)
 from sec_overlay.workspace import record_agent_return
 
 _BASE_SHA = "a" * 40
@@ -103,6 +109,14 @@ def _record_return(root, path, *, base=_BASE_SHA, head=_HEAD_SHA, calls):
 def _code_comment(path, line, message, defect_class="sqli"):
     return {"tool": "code_comment", "path": path, "line": line, "message": message,
             "defect_class": defect_class}
+
+
+def _record_verdict(root, path, verdict, *, base=_BASE_SHA, head=_HEAD_SHA):
+    """Record a review-filter verdict envelope for `path` (production disk format)."""
+    ws = _sidecar_ws(root)
+    ws.ensure()
+    envelope = json.dumps({"base": base, "head": head, "verdict": verdict})
+    record_agent_return(ws, reflection_label(path), envelope)
 
 
 def test_prepare_writes_plan_and_prompt_per_file(tmp_path, monkeypatch):
@@ -224,18 +238,39 @@ def test_finding_outside_every_hunk_dropped_as_outside_diff(tmp_path, monkeypatc
     assert any(d["reason"] == "outside-diff" for d in ledger["dropped"])
 
 
-def test_reflection_retraction_removes_a_live_finding(tmp_path, monkeypatch):
+def test_reflection_failure_for_one_file_leaves_other_files_unaffected(tmp_path, monkeypatch):
+    diffs = {"app.py": _diff_for("app.py"), "other.py": _diff_for("other.py")}
+    monkeypatch.setattr(subprocess, "run", _fake_run_for(diffs))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+    _record_return(str(tmp_path), "other.py",
+                    calls=[_code_comment("other.py", 2, "sql injection", "sqli")])
+    # app.py's verdict is unreadable (invalid JSON) → reflection skip; other.py
+    # records a valid empty verdict (retract nothing) → its finding survives.
+    ws = _sidecar_ws(tmp_path)
+    ws.ensure()
+    record_agent_return(ws, reflection_label("app.py"), "not-json")
+    _record_verdict(str(tmp_path), "other.py", {})
+
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc == 0
+
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
+    assert len(ledger["reflection_skipped"]) == 1
+    assert ledger["reflection_skipped"][0]["path"] == "app.py"
+    assert {rf["path"] for rf in ledger["review_findings"]} == {"app.py", "other.py"}
+
+
+def test_recorded_verdict_retracts_a_nonprotected_finding_end_to_end(tmp_path, monkeypatch):
+    """Task 9 (REQ-P6): a recorded review-filter verdict retracts a live finding
+    through `run_review` with no monkeypatch of `apply_verdict` — the real
+    recorded-verdict source drives the retraction."""
     monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
     _record_return(str(tmp_path), "app.py",
                     calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+    fid = _stable_finding_id("review", "app.py", 2, "sqli")
+    _record_verdict(str(tmp_path), "app.py", {fid: "sanitized upstream"})
 
-    from sec_overlay.reflection import RETRACTED_REASON, ReflectionRetraction
-
-    def fake_apply_verdict(findings, verdict, *, path):
-        retraction = ReflectionRetraction(path, 2, findings[0].rule_id, RETRACTED_REASON, "sanitized upstream")
-        return [], [retraction]
-
-    monkeypatch.setattr(cli, "apply_verdict", fake_apply_verdict)
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc == 0
 
@@ -246,28 +281,62 @@ def test_reflection_retraction_removes_a_live_finding(tmp_path, monkeypatch):
     assert ledger["reflection_retractions"][0]["reason"] == RETRACTED_REASON
 
 
-def test_reflection_failure_for_one_file_leaves_other_files_unaffected(tmp_path, monkeypatch):
-    diffs = {"app.py": _diff_for("app.py"), "other.py": _diff_for("other.py")}
-    monkeypatch.setattr(subprocess, "run", _fake_run_for(diffs))
+def test_recorded_verdict_refuses_a_protected_class_finding_end_to_end(tmp_path, monkeypatch):
+    """Task 9 (REQ-P6): a verdict naming a protected-class finding is refused —
+    the finding stays kept and the refusal is ledgered, never silently dropped."""
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
     _record_return(str(tmp_path), "app.py",
-                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
-    _record_return(str(tmp_path), "other.py",
-                    calls=[_code_comment("other.py", 2, "sql injection", "sqli")])
+                    calls=[_code_comment("app.py", 2, "unsynchronized shared state", "concurrency")])
+    fid = _stable_finding_id("review", "app.py", 2, "concurrency")
+    _record_verdict(str(tmp_path), "app.py", {fid: "looks harmless"})
 
-    def fake_apply_verdict(findings, verdict, *, path):
-        if path == "app.py":
-            raise RuntimeError("boom")
-        return findings, []
-
-    monkeypatch.setattr(cli, "apply_verdict", fake_apply_verdict)
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc == 0
 
     ws = _sidecar_ws(tmp_path)
     ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
+    assert len(ledger["review_findings"]) == 1
+    assert ledger["review_findings"][0]["id"] == fid
+    assert ledger["review_findings"][0]["rule_id"] == "review.concurrency"
+    assert len(ledger["reflection_retractions"]) == 1
+    assert ledger["reflection_retractions"][0]["reason"] == REFUSED_REASON
+
+
+def test_missing_verdict_records_a_reflection_skip_not_a_silent_keep(tmp_path, monkeypatch):
+    """Task 9 (REQ-P6): a reviewable file with findings but no recorded verdict
+    fails open — the finding survives AND a reflection_skipped entry is ledgered
+    (never a silent keep-all)."""
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc == 0
+
+    ws = _sidecar_ws(tmp_path)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
+    assert len(ledger["review_findings"]) == 1
     assert len(ledger["reflection_skipped"]) == 1
     assert ledger["reflection_skipped"][0]["path"] == "app.py"
-    assert {rf["path"] for rf in ledger["review_findings"]} == {"app.py", "other.py"}
+
+
+def test_prepare_reflection_writes_a_filter_prompt_per_file_with_findings(tmp_path, monkeypatch):
+    """Task 9 (REQ-P6): `--prepare-reflection` renders a review-filter prompt for
+    each file with post-profile kept findings into runs/reflection_prompts/."""
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+
+    rc = main(["review", "--base", _BASE_SHA, "--head", _HEAD_SHA, "--root", str(tmp_path),
+               "--prepare-reflection"])
+    assert rc == 0
+
+    ws = _sidecar_ws(tmp_path)
+    plan = json.loads((ws.runs / "reflection_plan.json").read_text())
+    assert {e["path"] for e in plan} == {"app.py"}
+    for entry in plan:
+        prompt_text = (ws.runs / "reflection_prompts" / f"{entry['agent_label']}.md").read_text()
+        assert "{{" not in prompt_text
 
 
 def test_finding_on_an_unreflected_path_survives(tmp_path, monkeypatch):
@@ -485,6 +554,97 @@ def test_run_review_falls_back_to_the_repo_sidecar_when_workspace_is_absent(tmp_
     assert (_sidecar_ws(str(target)).artifacts / "coverage_manifest.json").is_file()
 
 
+def test_tiny_token_budget_seals_partial_marks_skips_and_exits_zero(tmp_path, monkeypatch):
+    """Task 12 (REQ-P4/D4/D5): a budget that admits the first file but not the second
+    seals `partial`, fails the over-budget file with note `skipped(budget)`, sets the
+    manifest `budget_exceeded` flag, yet exits 0 (a budget stop with coverage is not a
+    run failure)."""
+    from sec_overlay.review_budget import BUDGET_SKIP_NOTE, estimate_review_cost
+
+    diffs = {"app.py": _diff_for("app.py"), "other.py": _diff_for("other.py")}
+    monkeypatch.setattr(subprocess, "run", _fake_run_for(diffs))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+    _record_return(str(tmp_path), "other.py",
+                    calls=[_code_comment("other.py", 2, "sql injection", "sqli")])
+
+    # Admit exactly one file: budget between one and two file-costs, and high
+    # enough that each single file clears the P4a fraction cap (0.8 * budget).
+    one_cost = estimate_review_cost(_diff_for("app.py"))
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security",
+                    token_budget=2 * one_cost - 1)
+    assert rc == 0
+
+    ws = _sidecar_ws(tmp_path)
+    manifest = json.loads((ws.artifacts / "coverage_manifest.json").read_text())
+    assert manifest["seal"] == "partial"
+    assert manifest["budget_exceeded"] is True
+    skipped = [f for f in manifest["files"] if f["note"] == BUDGET_SKIP_NOTE]
+    assert len(skipped) == 1
+    assert skipped[0]["state"] == "failed"
+
+
+def test_zero_token_budget_reviews_every_file(tmp_path, monkeypatch):
+    """Task 12: budget 0 means unlimited — every file completes, seal stays complete."""
+    diffs = {"app.py": _diff_for("app.py"), "other.py": _diff_for("other.py")}
+    monkeypatch.setattr(subprocess, "run", _fake_run_for(diffs))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+    _record_return(str(tmp_path), "other.py",
+                    calls=[_code_comment("other.py", 2, "sql injection", "sqli")])
+
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security", token_budget=0)
+    assert rc == 0
+
+    ws = _sidecar_ws(tmp_path)
+    manifest = json.loads((ws.artifacts / "coverage_manifest.json").read_text())
+    assert manifest["seal"] == "complete"
+    assert manifest["budget_exceeded"] is False
+
+
+def test_prepare_records_per_file_token_estimate(tmp_path, monkeypatch):
+    """Task 12 (D10): the prepare plan carries a per-file `token_estimate`."""
+    from sec_overlay.review_budget import estimate_review_cost
+
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    rc = main(["review", "--base", _BASE_SHA, "--head", _HEAD_SHA, "--root", str(tmp_path),
+               "--prepare"])
+    assert rc == 0
+
+    ws = _sidecar_ws(tmp_path)
+    plan = json.loads((ws.runs / "review_plan.json").read_text())
+    assert plan[0]["token_estimate"] == estimate_review_cost(_diff_for("app.py"))
+
+
+def test_file_over_token_fraction_cap_excluded_not_reviewed(tmp_path, monkeypatch):
+    """Task 12 (REQ-P4a): a file whose estimate alone exceeds 0.8 * budget is excluded
+    before review — it never enters the coverage manifest — while a normal file under the
+    cap is still reviewed and the seal stays complete."""
+    big_body = "x" * 40000
+    big_diff = (
+        "diff --git a/big.py b/big.py\n"
+        "index 1111111..2222222 100644\n"
+        "--- a/big.py\n+++ b/big.py\n"
+        "@@ -1,1 +1,2 @@\n import os\n+" + big_body + "\n"
+    )
+    diffs = {"app.py": _diff_for("app.py"), "big.py": big_diff}
+    monkeypatch.setattr(subprocess, "run", _fake_run_for(diffs))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+
+    # budget high enough that app.py clears 0.8*budget but big.py does not.
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security",
+                    token_budget=100000)
+    assert rc == 0
+
+    ws = _sidecar_ws(tmp_path)
+    manifest = json.loads((ws.artifacts / "coverage_manifest.json").read_text())
+    paths = [f["path"] for f in manifest["files"]]
+    assert "app.py" in paths
+    assert "big.py" not in paths
+    assert manifest["seal"] == "complete"
+
+
 def test_review_workspace_override_permits_a_second_profile_without_weakening_the_resume_guard(
     tmp_path,
 ):
@@ -515,3 +675,195 @@ def test_review_workspace_override_permits_a_second_profile_without_weakening_th
         profile="security",
     )
     assert rc2 == 2
+
+
+def _two_commit_repo(repo):
+    """Build a real repo with two commits changing app.py; return (base_sha, head_sha)."""
+    repo.mkdir()
+
+    def git(*args):
+        subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+
+    def git_out(*args):
+        return subprocess.run(
+            ["git", *args], cwd=repo, check=True, capture_output=True, text=True
+        ).stdout.strip()
+
+    git("init", "-q")
+    git("config", "user.email", "t@example.com")
+    git("config", "user.name", "t")
+    (repo / "app.py").write_text("print('hi')\n")
+    git("add", "app.py")
+    git("commit", "-q", "-m", "base")
+    base_sha = git_out("rev-parse", "HEAD")
+    (repo / "app.py").write_text("print('hi')\nprint('bye')\n")
+    git("add", "app.py")
+    git("commit", "-q", "-m", "head")
+    head_sha = git_out("rev-parse", "HEAD")
+    return base_sha, head_sha
+
+
+def test_commit_mode_diffs_parent_to_commit(tmp_path):
+    """`--commit <sha>` resolves base=sha^ and head=sha — the plan entry pins the
+    parent and the commit SHAs, so the review scopes to exactly that commit."""
+    repo = tmp_path / "repo"
+    base_sha, head_sha = _two_commit_repo(repo)
+
+    rc = main(["review", "--commit", head_sha, "--root", str(repo), "--prepare"])
+    assert rc == 0
+
+    ws = _sidecar_ws(str(repo))
+    plan = json.loads((ws.runs / "review_plan.json").read_text())
+    assert [e["path"] for e in plan] == ["app.py"]
+    assert plan[0]["base"] == base_sha
+    assert plan[0]["head"] == head_sha
+
+
+def test_commit_with_base_exits_2(tmp_path):
+    """`--commit` and `--base` are mutually exclusive: supplying both exits 2."""
+    repo = tmp_path / "repo"
+    _base_sha, head_sha = _two_commit_repo(repo)
+
+    rc = main(
+        ["review", "--commit", head_sha, "--base", head_sha, "--root", str(repo), "--prepare"]
+    )
+    assert rc == 2
+
+
+def test_workspace_dirty_lists_uncommitted_changes(tmp_path):
+    """`--workspace-dirty` scopes the review to the working tree: a staged
+    modification, an unstaged modification, and an untracked file all appear."""
+    repo = tmp_path / "repo"
+    _two_commit_repo(repo)
+
+    def git(*args):
+        subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+
+    (repo / "app.py").write_text("print('hi')\nprint('bye')\nprint('dirty')\n")
+    git("add", "app.py")  # staged modification
+    (repo / "new.py").write_text("x = 1\n")  # untracked
+
+    rc = main(["review", "--workspace-dirty", "--root", str(repo), "--prepare"])
+    assert rc == 0
+
+    ws = _sidecar_ws(str(repo))
+    plan = json.loads((ws.runs / "review_plan.json").read_text())
+    assert {e["path"] for e in plan} == {"app.py", "new.py"}
+
+
+# --- REQ-P3: per-file plan phase --------------------------------------------
+
+
+def _fake_run_planmode(diffs, sizes, head_texts=None):
+    """Fake runner exposing a controllable `--unified=0` line count per path.
+
+    `_fake_run_for` returns nothing for `--unified=0`, so every file reads as a
+    zero-line diff and never crosses PLAN_LINE_THRESHOLD. This variant returns
+    `sizes[path]` newline-terminated lines for the `--unified=0` count call.
+    """
+    name_status = "".join(f"M\t{p}\n" for p in diffs)
+    texts = head_texts or {}
+
+    def fake(cmd, capture_output, text, check, **kwargs):
+        class R:
+            returncode = 0
+            stdout = ""
+
+        r = R()
+        if "--verify" in cmd:
+            r.stdout = f"{cmd[-1]}\n"
+        elif "--name-status" in cmd:
+            r.stdout = name_status
+        elif "--unified=0" in cmd:
+            n = sizes.get(cmd[-1], 0)
+            r.stdout = ("x\n" * n)
+        elif "--unified=3" in cmd:
+            r.stdout = diffs.get(cmd[-1], "")
+        elif cmd[1] == "show":
+            path = cmd[-1].split(":", 1)[1]
+            r.stdout = texts.get(path, _new_file_text_from_diff(diffs.get(path, "")))
+        else:
+            r.stdout = ""
+        return r
+
+    return fake
+
+
+def test_plan_prepare_writes_plan_prompt_only_over_threshold(tmp_path, monkeypatch):
+    diffs = {"big.py": _diff_for("big.py"), "small.py": _diff_for("small.py")}
+    sizes = {"big.py": PLAN_LINE_THRESHOLD, "small.py": 3}
+    monkeypatch.setattr(subprocess, "run", _fake_run_planmode(diffs, sizes))
+    rc = main(["review", "--base", _BASE_SHA, "--head", _HEAD_SHA, "--root", str(tmp_path),
+               "--prepare", "--plan"])
+    assert rc == 0
+    ws = _sidecar_ws(tmp_path)
+    plan_dir = ws.runs / "plan_prompts"
+    assert (plan_dir / f"{plan_agent_label('big.py')}.md").is_file()
+    assert not (plan_dir / f"{plan_agent_label('small.py')}.md").is_file()
+
+
+def test_recorded_plan_guidance_injected_into_review_prompt(tmp_path, monkeypatch):
+    diffs = {"big.py": _diff_for("big.py")}
+    sizes = {"big.py": PLAN_LINE_THRESHOLD}
+    monkeypatch.setattr(subprocess, "run", _fake_run_planmode(diffs, sizes))
+    ws = _sidecar_ws(tmp_path)
+    ws.ensure()
+    plan_json = json.dumps({"issues": [{"severity": "high", "guidance": "UNIQUE_PLAN_HINT taint"}]})
+    record_agent_return(ws, plan_agent_label("big.py"), plan_json)
+    rc = main(["review", "--base", _BASE_SHA, "--head", _HEAD_SHA, "--root", str(tmp_path),
+               "--prepare"])
+    assert rc == 0
+    prompt = (ws.runs / "review_prompts" / f"{agent_label('big.py')}.md").read_text()
+    assert "UNIQUE_PLAN_HINT" in prompt
+    assert "{{" not in prompt
+
+
+def test_consume_records_fast_tier(tmp_path, monkeypatch):
+    """REQ-T3a: the consume path records the assurance tier in review_result.json."""
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security", tier="fast")
+    assert rc == 0
+    ws = _sidecar_ws(tmp_path)
+    result = json.loads((ws.artifacts / "review_result.json").read_text())
+    assert result["tier"] == "fast"
+    assert result["coverage_manifest"]["tier"] == "fast"
+
+
+def test_fast_tier_skips_plan_half_assured_keeps_it(tmp_path, monkeypatch):
+    """REQ-T3a: fast tier skips the plan half even with --plan; assured keeps it."""
+    diffs = {"big.py": _diff_for("big.py")}
+    sizes = {"big.py": PLAN_LINE_THRESHOLD}
+    monkeypatch.setattr(subprocess, "run", _fake_run_planmode(diffs, sizes))
+    assured = tmp_path / "assured"
+    fast = tmp_path / "fast"
+    assured.mkdir()
+    fast.mkdir()
+
+    rc_a = run_review(_BASE_SHA, _HEAD_SHA, str(assured), prepare=True, plan=True)
+    assert rc_a == 0
+    ws_a = _sidecar_ws(str(assured))
+    assert (ws_a.runs / "plan_manifest.json").exists()
+
+    rc_f = run_review(_BASE_SHA, _HEAD_SHA, str(fast), prepare=True, plan=True, tier="fast")
+    assert rc_f == 0
+    ws_f = _sidecar_ws(str(fast))
+    assert not (ws_f.runs / "plan_manifest.json").exists()
+    assert (ws_f.runs / "review_prompts").is_dir()
+
+
+def test_invalid_plan_return_fails_open_and_records_skip(tmp_path, monkeypatch):
+    diffs = {"big.py": _diff_for("big.py")}
+    sizes = {"big.py": PLAN_LINE_THRESHOLD}
+    monkeypatch.setattr(subprocess, "run", _fake_run_planmode(diffs, sizes))
+    ws = _sidecar_ws(tmp_path)
+    ws.ensure()
+    record_agent_return(ws, plan_agent_label("big.py"), "{ not valid json")
+    rc = main(["review", "--base", _BASE_SHA, "--head", _HEAD_SHA, "--root", str(tmp_path),
+               "--prepare"])
+    assert rc == 0
+    prompt = (ws.runs / "review_prompts" / f"{agent_label('big.py')}.md").read_text()
+    assert "{{" not in prompt
+    skips = json.loads((ws.runs / "plan_skips.json").read_text())
+    assert any(s["path"] == "big.py" for s in skips)

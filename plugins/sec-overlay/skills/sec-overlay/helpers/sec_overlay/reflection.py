@@ -35,6 +35,8 @@ from pathlib import Path
 from typing import Protocol
 
 from sec_overlay.prompts import render_prompt
+from sec_overlay.review_agent import agent_label
+from sec_overlay.workspace import Workspace, read_agent_return
 
 RETRACTED_REASON = "reflection-retracted"
 REFUSED_REASON = "reflection-retraction-refused"
@@ -269,3 +271,67 @@ def apply_verdict(
             )
     retractions.sort(key=lambda r: (r.path, r.line, r.rule_id))
     return kept, retractions
+
+
+def reflection_label(path: str) -> str:
+    """Derive the recorded-return label for one file's review-filter verdict.
+
+    Distinct from `review_agent.agent_label` (the review-file producer) so a
+    file's review return and its reflection verdict never collide on disk.
+
+    Args:
+        path: Repo-relative path the verdict applies to.
+
+    Returns:
+        A filesystem-safe `runs/<label>.txt` label of the form
+        `review-filter-review-file-<digest>`.
+    """
+    return f"review-filter-{agent_label(path)}"
+
+
+def recorded_verdict_source(ws: Workspace, *, base: str, head: str):
+    """Build a per-file source reading recorded review-filter verdicts from disk.
+
+    Mirrors `review_agent.recorded_return_source` (D-15 fail-open): each verdict
+    is a JSON envelope (`{"base", "head", "verdict"}`) recorded under
+    `reflection_label(path)`. A verdict captured for a different base/head is
+    refused rather than consumed, so a stale verdict can never retract this
+    run's finding.
+
+    Args:
+        ws: Workspace `runs/<label>.txt` verdicts are read from.
+        base: This run's resolved base SHA.
+        head: This run's resolved head SHA.
+
+    Returns:
+        A callable taking one file path and returning its `{finding_id:
+        analysis}` verdict mapping. Raises `ValueError` for a missing verdict,
+        invalid JSON, a base/head mismatch, or a `verdict` field that is not a
+        mapping — the caller treats every case identically as one
+        `ReflectionSkip` (never a silent keep-all).
+
+    Example:
+        >>> source = recorded_verdict_source(ws, base=base, head=head)
+        >>> source("app.py")
+        {'review-abc': 'sanitized upstream'}
+    """
+
+    def _source(path: str) -> dict[str, str]:
+        text = read_agent_return(ws, reflection_label(path))
+        if text is None:
+            raise ValueError(f"no recorded verdict for {path}")
+        try:
+            envelope = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"recorded verdict for {path} is not valid JSON: {exc}") from exc
+        if envelope.get("base") != base or envelope.get("head") != head:
+            raise ValueError(f"recorded verdict for {path} was captured for a different base/head")
+        verdict = envelope.get("verdict")
+        if not isinstance(verdict, dict):
+            # ValueError, not TypeError (TRY004): mirrors recorded_return_source's
+            # uniform-ValueError contract so every failure shape (missing, bad JSON,
+            # stale, non-dict) is one documented type the caller skips on (D-15).
+            raise ValueError(f"recorded verdict for {path} has no verdict mapping")  # noqa: TRY004
+        return verdict
+
+    return _source

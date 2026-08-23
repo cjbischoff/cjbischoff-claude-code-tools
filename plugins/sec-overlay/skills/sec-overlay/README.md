@@ -14,7 +14,7 @@ the three folder READMEs and the operational playbook for detail.
 
 | To understand… | Read |
 |----------------|------|
-| The full phase-by-phase operating playbook, and the diff-scoped `review` mode (`--profile security\|general`, REV-01), including its prepare/dispatch/consume subagent loop (`agents/review-file.md`, bounded to `--concurrency` live subagents at once, SCALE-02) and its retract-only reflection pass (D-16) | [`SKILL.md`](SKILL.md) |
+| The full phase-by-phase operating playbook, and the diff-scoped `review` mode (`--profile security\|general`, REV-01), including its prepare/dispatch/consume subagent loop (`agents/review-file.md`, bounded to `--concurrency` live subagents at once, SCALE-02) and its live retract-only reflection pass (D-16): `--prepare-reflection` renders `review-filter` prompts from post-profile kept findings, and the consume run applies each file's recorded verdict, failing open per file (`ReflectionSkip`) | [`SKILL.md`](SKILL.md) |
 | Environment setup, how to run an audit | [`CLAUDE.md`](CLAUDE.md) |
 | Git protocol, developing the skill | [`../../CLAUDE.md`](../../CLAUDE.md) |
 | The LLM prompts that investigate/validate/patch | [`agents/README.md`](agents/README.md) |
@@ -45,6 +45,9 @@ These hold everywhere and are enforced in code where possible, prompt otherwise:
 4. **Signal over noise.** Every load-bearing claim made by a Sonnet "producer" is attacked by
    an Opus "adversary" on a different model family; a false-positive ladder + a
    `needs-deployment-testing` verdict for bugs unprovable-from-source keep the report clean.
+
+[`ASSURANCE_CASE.md`](ASSURANCE_CASE.md) states the actors, trust boundaries, threats, and
+countermeasures behind these invariants, each countermeasure cited to a `file:line`.
 
 ---
 
@@ -276,7 +279,7 @@ to `kb/route-census.json`.
 From `helpers/` (stdlib-only core; dev deps pytest/ruff/ty):
 
 ```bash
-uv run pytest -q          # 575 tests (2 env-only failures — see CLAUDE.md §1)
+uv run pytest -q          # full suite green; seed corpus + rules ship committed (CLAUDE.md §1)
 uv run ruff check sec_overlay/ bench/ tests/
 uv run ty check
 ```

@@ -283,3 +283,78 @@ def test_every_catalogued_expr_eval_class_has_a_class_file():
 
     for entry in load_catalog():
         assert (_CLASSES_DIR / f"{entry.cls}.md").exists(), entry.cls
+
+
+_BENCH_README = Path(__file__).resolve().parents[1] / "bench" / "README.md"
+
+
+def test_bench_readme_documents_annotation_and_reproducibility():
+    txt = _BENCH_README.read_text()
+    for heading in (
+        "## Annotation protocol",
+        "## Reproducing the benchmark",
+        "## Scope confound",
+    ):
+        assert heading in txt, heading
+    assert "single-maintainer" in txt
+
+
+def test_review_budget_constants_match_ocr_shape():
+    """Task 12 (REQ-P4): the round-cost shape constants are pinned to OCR's values so a
+    silent drift in the projection is caught here, not only in the unit suite."""
+    from sec_overlay import review_budget as rb
+
+    assert (rb.PLAN_PROMPT, rb.PLAN_OUT, rb.ROUNDS, rb.ROUND_OUT) == (2000, 400, 7, 700)
+    assert rb.FILE_BUDGET_FRACTION == 0.8
+
+
+def test_plan_line_threshold_is_pinned():
+    """Task 14 (REQ-P3): the per-file plan phase fires at a documented diff-line
+    threshold (OCR shape D3). A drift here changes the shape parity claim, so it
+    is pinned, not tunable."""
+    from sec_overlay import review_agent as ra
+
+    assert ra.PLAN_LINE_THRESHOLD == 100
+
+
+_ASSURANCE = Path(__file__).resolve().parents[2] / "ASSURANCE_CASE.md"
+_CITATION = re.compile(r"`([A-Za-z0-9_./-]+\.py):(\d+)`")
+
+
+def test_assurance_case_has_required_sections():
+    """REQ-S3: the assurance case carries OCR's shape — actors, trust boundaries,
+    threats, a principle/CWE mapping, the automated-check list, and the honest
+    open-code-review contrast."""
+    txt = _ASSURANCE.read_text()
+    for heading in (
+        "## Actors",
+        "## Trust boundaries",
+        "## Threats",
+        "## Countermeasures",
+        "## Automated checks",
+        "## Contrast with open-code-review",
+    ):
+        assert heading in txt, heading
+    assert "Saltzer" in txt
+    assert "CWE" in txt
+
+
+def test_assurance_case_citations_resolve():
+    """Every file:line countermeasure citation resolves to an existing line."""
+    skill_root = _ASSURANCE.parent
+    txt = _ASSURANCE.read_text()
+    cites = _CITATION.findall(txt)
+    assert len(cites) >= 3, "assurance case must cite concrete file:line countermeasures"
+    for rel, line in cites:
+        target = skill_root / rel
+        assert target.exists(), f"cited file missing: {rel}"
+        n = len(target.read_text().splitlines())
+        assert 1 <= int(line) <= n, f"cited line out of range: {rel}:{line} (has {n})"
+
+
+def test_assurance_case_ste_lint_clean():
+    """REQ-S3 acceptance: the prose passes the STE structural lint (no errors)."""
+    from sec_overlay.ste_lint import lint_prose
+
+    errors, _ = lint_prose(_ASSURANCE.read_text())
+    assert errors == [], errors

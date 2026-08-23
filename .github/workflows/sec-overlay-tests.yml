@@ -1,0 +1,70 @@
+# Test + detection-regression gate for the sec-overlay plugin.
+#
+# Two gates, both offline (no repo cloning, no network SAST):
+#   1. `uv run pytest` — the full helper test suite.
+#   2. Detection regression — smoke-scan the local `vulnerable_repo` fixture, then
+#      grade the seed corpus in DETECTION mode (`--grade-mode detection`,
+#      `--only-local`). A `locked` positive that stops being detected fails the job.
+#
+# Detection mode grades whether a Tier-1 receipt (codeql/semgrep/sca/secrets) located
+# a ground-truth finding. A deterministic-only CI scan never CONFIRMS (confirmation
+# needs the adversarial LLM pass), so the confirmation gate (`reportable`) is untouched
+# and cannot run here. See skills/sec-overlay/helpers/bench/README.md.
+#
+# Third-party actions are avoided per repo policy: uv installs via the official script,
+# semgrep via pip. Only GitHub-owned `actions/checkout` (SHA-pinned) is used.
+name: sec-overlay tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "plugins/sec-overlay/skills/sec-overlay/helpers/**"
+      - ".github/workflows/sec-overlay-tests.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sec-overlay-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: plugins/sec-overlay/skills/sec-overlay/helpers
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install semgrep
+        run: uv tool install semgrep
+
+      - name: Run test suite
+        run: uv run pytest -q
+
+      - name: Smoke-scan the vulnerable_repo fixture
+        run: |
+          uv run python -m sec_overlay.cli scan \
+            --target fixtures/vulnerable_repo \
+            --workspace /tmp/bench-ws/vulnerable_repo \
+            --config rules/smoke.yaml \
+            --sha "0000000000000000000000000000000000000000"
+
+      - name: Detection regression gate
+        run: |
+          uv run python -m bench.run \
+            --corpus bench/corpus_seed \
+            --run-dir /tmp/bench-run \
+            --workspaces /tmp/bench-ws \
+            --grade-mode detection \
+            --only-local \
+            --no-resume

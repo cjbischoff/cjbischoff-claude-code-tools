@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from sec_overlay.diffscope import ChangedFile
 
 EXCLUSION_REASONS: frozenset[str] = frozenset(
-    {"deleted", "binary", "generated", "not-allowlisted", "too-large"}
+    {"deleted", "binary", "generated", "not-allowlisted", "too-large", "too-large-tokens"}
 )
 
 # D-11: files larger than this many changed diff lines are excluded as "too-large" rather than

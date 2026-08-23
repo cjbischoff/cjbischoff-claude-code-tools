@@ -31,11 +31,12 @@ Before a *full* audit, satisfy these environment prerequisites (a clean checkout
   `test_preflight.py::...vendored_rules` fails for lack of rules.
 - **External tool binaries** — `uv run python -m sec_overlay.preflight` must show `semgrep`,
   `codeql` (+ query packs), `ast-grep`, `osv-scanner`; a missing pack drops that dataflow (§2).
-- **Bench corpus is local-only** — `bench/corpus_seed/*.json` is gitignored (confirmed vulns in
-  private code); its absence fails `test_bench.py::test_seed_corpus_is_valid` and
-  `test_citations.py::test_all_mapped_ids_exist_in_seed` — both **dev/bench**, not part of a run.
-  Seed locally — see the plugin `CLAUDE.md`'s "Developing the skill" section. Both failures are
-  **environmental** — never "fix" by committing vendored-ruleset/seed data.
+- **Bench corpus ships committed** — `bench/corpus_seed/*.json` holds only public entries (public-app
+  advisories pinned to a commit, dep-CVE lockfiles, and synthetic fixtures under `helpers/fixtures/`),
+  so `test_bench.py::test_seed_corpus_is_valid`, `test_seed_corpus_has_min_entries`, and
+  `test_citations.py::test_all_mapped_ids_exist_in_seed` run in CI, not just locally. The corpus is
+  still **dev/bench** — a grading oracle, not part of an audit run. Never add a confirmed vuln from
+  private code to the seed.
 
 ---
 ## 2. How to run an audit

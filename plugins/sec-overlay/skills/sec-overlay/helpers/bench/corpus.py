@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 KINDS = ("positive", "negative")
-SOURCES = ("real-confirmed", "dep-cve", "synthetic", "public-app")
+SOURCES = ("real-confirmed", "dep-cve", "synthetic", "public-app", "aacr", "aacr-security")
 # open: not yet resolved; locked: a confirmed finding pinned as a regression assertion
 # (must keep being detected); accepted-risk: documented, intentionally not tested;
 # fixed: remediated (should no longer be present).
@@ -27,7 +27,7 @@ class CorpusEntry:
 
     finding_id: str
     kind: str            # positive | negative
-    source: str          # real-confirmed | dep-cve | synthetic | public-app
+    source: str          # real-confirmed | dep-cve | synthetic | public-app | aacr | aacr-security
     cls: str             # attack-class key
     repo_url: str        # https://github.com/{org}/{repo}
     commit: str          # exact SHA containing (or lacking, for negatives) the bug

@@ -475,3 +475,40 @@ def test_external_boundary_finding_is_capped_and_tagged(tmp_path):
     out = read_findings(ws)[0]
     assert out.risk_score is not None and out.risk_score <= 3  # below the medium floor of 4
     assert out.completeness_tier == "external-unverifiable"
+
+
+def test_judge_downgrade_writes_back_severity(tmp_path: Path):
+    """REQ-P9: a judge downgrade must lower the rendered severity, not just risk_score."""
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    write_findings(
+        ws,
+        [
+            _f_ndt(
+                id="J-2",
+                severity=Severity.HIGH,
+                judge_verdict="severity-inflated",
+                preconditions=[
+                    "requires admin",
+                    "non-default config",
+                    "chained from prior primitive",
+                ],
+                evidence_sources=["semgrep:rule"],
+            )
+        ],
+    )
+    calibrate_findings(ws)
+    f = read_findings(ws)[0]
+    assert f.severity != Severity.HIGH, "severity must follow the downgraded score band"
+    ev = [h for h in f.history if h.get("event") == "calibrate:severity-downgraded"]
+    assert ev and ev[0]["from"] == "high" and ev[0]["to"] == f.severity.value
+
+
+def test_no_verdict_leaves_severity_untouched(tmp_path: Path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    write_findings(ws, [_f_ndt(id="J-3", severity=Severity.HIGH)])
+    calibrate_findings(ws)
+    f = read_findings(ws)[0]
+    assert f.severity == Severity.HIGH
+    assert not any(h.get("event") == "calibrate:severity-downgraded" for h in f.history)

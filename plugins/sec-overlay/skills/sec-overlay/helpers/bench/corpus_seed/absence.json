@@ -10,7 +10,7 @@
     "file": "vulnerable.go",
     "line": 11,
     "description": "rego.New with no rego.Capabilities; a policy may call http.send.",
-    "lifecycle": "locked"
+    "lifecycle": "open"
   },
   {
     "finding_id": "absence-rego-capabilities-negative",
@@ -35,6 +35,6 @@
     "file": "render.py",
     "line": 9,
     "description": "jinja2.Environment().from_string on caller text with no sandbox.",
-    "lifecycle": "locked"
+    "lifecycle": "open"
   }
 ]
