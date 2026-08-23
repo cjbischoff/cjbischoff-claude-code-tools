@@ -1080,3 +1080,17 @@ phase-order guard also enforces this new row's position ahead of `Recon`.
 `test_preflight.py::test_rg_is_a_required_tool` checks `TOOLS` names `rg` and that
 `_OPTIONAL` excludes it. Both `route_census.py` and `structural_index.py` shell out
 to ripgrep, so a missing binary must fail preflight rather than the phase itself.
+
+`test_driver.py` gained
+`test_recall_gate_phase_records_an_unmentioned_census_route_as_a_ledger_gap`. It runs
+the new `DETERMINISTIC_ACTIONS["recall-gate"]` action against a workspace whose census
+names a route the scan profile never mentions, then asserts `kb/coverage-ledger.json`
+holds that gap. `recall_claims` still reshapes the same checks for the recall
+adversary. The ledger write itself now comes from this deterministic phase, not from an
+adversary call that no code path reaches.
+
+`test_phase_gate.py` gained
+`test_recall_claims_include_a_real_catalog_class_recon_omitted`. It uses
+`dependency_sinks.load_catalog()`'s real `ssrf` entry, not a synthetic `SinkEntry`. A
+deleted `check_catalog_classes` loop inside `recall_claims` fails this test, instead of
+leaving the suite green.

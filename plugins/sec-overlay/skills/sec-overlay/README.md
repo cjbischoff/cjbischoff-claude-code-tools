@@ -128,8 +128,9 @@ flowchart TD
 
 For the recon phase only, `RA`'s phase-adversary pass is followed by one more gate:
 `agents/recall-adversary.md` (opus) judges what recon **left out**, using
-`sec_overlay.phase_gate.recall_claims` and `kb/route-census.json`. Every `OMISSION`
-row it returns routes through `route_control.record_route_gaps` into
+`sec_overlay.phase_gate.recall_claims` and `kb/route-census.json`. A separate
+deterministic `recall-gate` phase runs right after recon. It recomputes the
+same checks and writes each gap through `route_control.record_route_gaps` into
 `kb/coverage-ledger.json`, demoting `completeness` to `partial`.
 
 The phase legend with exact commands is in [`SKILL.md`](SKILL.md); the hard operating rules

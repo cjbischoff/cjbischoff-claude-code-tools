@@ -373,9 +373,9 @@ read why the class applies.
 (`agents/recall-adversary.md`). It builds one `{"id", "refs"}` claim per deterministic omission. A census route gap keeps
 the route's own `file:line` as its ref. A catalog-class gap points at
 `references/dependency-sinks.json`. Every claim carries a ref by construction, since an
-unrefable omission gives the adversary nowhere to look. Its imports of `dependency_sinks`,
-`route_census`, and `route_control` are function-local — `route_control` already imports from
-`phase_gate`, so a module-level import here would be circular.
+unrefable omission gives the adversary nowhere to look. It imports `dependency_sinks`,
+`route_census`, and `route_control` at module level — none of the three imports back from
+`phase_gate`, so no import cycle exists.
 
 `check_architecture_controls`/`check_threat_entrypoints` match a control or entrypoint via
 `_mentions`, a word-bounded (alphanumeric-neighbor guard) check, not substring. A token that is part

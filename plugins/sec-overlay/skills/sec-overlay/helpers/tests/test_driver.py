@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -204,6 +205,7 @@ def test_run_audit_does_not_skip_agent_phase_with_findings_dir_io(tmp_path):
     begin_pass(ws, "sha1")
     for stage in (
         "recon",
+        "recall-gate",
         "architecture",
         "arch-gate",
         "threat_model",
@@ -466,3 +468,22 @@ def test_route_census_phase_writes_the_census_file(tmp_path):
     ctx = _ctx(tmp_path, target=str(_ROUTE_FIXTURE))
     DETERMINISTIC_ACTIONS["route-census"](ctx)
     assert (ctx.ws.kb / "route-census.json").exists()
+
+
+def test_recall_gate_phase_records_an_unmentioned_census_route_as_a_ledger_gap(tmp_path):
+    """An omission the census sees and the profile never names must land in the ledger.
+
+    Without this, an ``OMISSION`` is only English prose in SKILL.md — the ledger can
+    read ``complete`` while a real gap sits unrecorded.
+    """
+    from sec_overlay.driver import DETERMINISTIC_ACTIONS
+
+    ctx = _ctx(tmp_path, target=str(_ROUTE_FIXTURE))
+    DETERMINISTIC_ACTIONS["route-census"](ctx)
+    (ctx.ws.kb / "scan-profile.json").write_text(
+        json.dumps({"entrypoints": [], "attack_surface": []})
+    )
+    DETERMINISTIC_ACTIONS["recall-gate"](ctx)
+    ledger = json.loads((ctx.ws.kb / "coverage-ledger.json").read_text())
+    assert any(s["disposition"] == "needs_follow_up" for s in ledger["surfaces"])
+    assert ledger["completeness"] == "partial"

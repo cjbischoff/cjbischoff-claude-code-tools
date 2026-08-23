@@ -8,13 +8,18 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 - Recall adversary (`agents/recall-adversary.md`, opus): judges what the recon
   phase left out, using `sec_overlay.phase_gate.recall_claims`,
-  `kb/route-census.json`, and dependency-catalog matches. Each `OMISSION` row
-  routes through `route_control.record_route_gaps` into
-  `kb/coverage-ledger.json`, demoting `completeness` to `partial`.
+  `kb/route-census.json`, and dependency-catalog matches.
+
+- Deterministic `recall-gate` phase, wired right after recon: recomputes the
+  same census and catalog checks and writes each gap into
+  `kb/coverage-ledger.json` through `route_control.record_route_gaps`,
+  demoting `completeness` to `partial`.
+
 - Tracked absence rule pack (`helpers/rules/absence/`): first-party semgrep
   rules that flag a dangerous construction only when its safe option is
   absent, for OPA `rego.New`, `cel.NewEnv`, `lua.NewState`, Jinja2
   `Environment`, and `requests` calls without a timeout.
+
 - Recon always adds `rules/absence` to `sast_plan.semgrep.rulesets`, for
   every language, alongside the vendored per-language dirs. `SKILL.md` notes
   the pack; `golden_scan_profile.json` and two `test_contracts.py` guards
@@ -120,6 +125,16 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - A test now pins `check_catalog_classes`'s dedupe branch: two catalog entries
   sharing one class produce exactly one gap, not one per entry. A mutation
   test found the branch untested before this guard.
+- `SKILL.md` and `CHANGELOG.md` claimed an `OMISSION` row always routes
+  through `route_control.record_route_gaps`. No code path called it. A new
+  `recall-gate` deterministic phase now runs right after recon and writes
+  the ledger, and the docs describe that real path.
+- A new test uses `dependency_sinks.load_catalog()`'s real OPA entry to cover
+  `check_catalog_classes` inside `recall_claims`. Deleting that loop left the
+  suite green before this test existed.
+- `sec_overlay/README.md` no longer claims `route_control` imports from
+  `phase_gate`. `phase_gate.py`'s three `route_control`/`route_census`/
+  `dependency_sinks` imports moved to module level. No cycle exists.
 
 ## 1.69.15 - 2026-08-22
 

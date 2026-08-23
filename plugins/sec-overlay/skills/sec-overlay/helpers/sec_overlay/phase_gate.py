@@ -19,8 +19,11 @@ import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from sec_overlay.dependency_sinks import match_manifests
 from sec_overlay.diffhunks import hunk_for_line
 from sec_overlay.positioning import resolve_position
+from sec_overlay.route_census import load_census
+from sec_overlay.route_control import check_catalog_classes, check_census_routes
 
 _REF_ANCHOR = re.compile(r"^(?P<path>.+?):(?P<start>\d+)(?:-\d+)?(?:\s.*)?$")
 
@@ -352,10 +355,6 @@ def recall_claims(ws, profile: dict, *, target_root) -> list[dict]:
         One ``{"id", "refs"}`` claim per omission; empty when recon named everything
         the census and the catalog found.
     """
-    from sec_overlay.dependency_sinks import match_manifests
-    from sec_overlay.route_census import load_census
-    from sec_overlay.route_control import check_catalog_classes, check_census_routes
-
     sites = load_census(ws)
     by_path = {f"{s.method} {s.path}": f"{s.file}:{s.line}" for s in sites}
     claims = []

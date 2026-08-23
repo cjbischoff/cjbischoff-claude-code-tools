@@ -94,11 +94,19 @@ def _route_census(ws: Workspace) -> Path:
     return ws.kb / "route-census.json"
 
 
+def _recall_gate_json(ws: Workspace) -> Path:
+    return ws.kb / "gates" / "recall-gate.json"
+
+
 PHASE_TABLE: tuple[PhaseSpec, ...] = (
     # No inputs: the census reads the target's source, never recon's output —
     # that is what lets it catch a route recon never named.
     PhaseSpec("route-census", "deterministic", (), (_route_census,)),
     PhaseSpec("recon", "agent", (), (_profile,), prompt="recon.md"),
+    # Runs right after recon, the first point the profile exists: records every
+    # census route/catalog class recon never named into the coverage ledger, so
+    # completeness cannot read "complete" while a deterministic omission is open.
+    PhaseSpec("recall-gate", "deterministic", (_profile, _route_census), (_recall_gate_json,)),
     PhaseSpec("architecture", "agent", (_profile,), (_arc42, _container), prompt="architecture.md"),
     PhaseSpec("arch-gate", "deterministic", (_arc42, _container), (_arch_gate_json,)),
     PhaseSpec(

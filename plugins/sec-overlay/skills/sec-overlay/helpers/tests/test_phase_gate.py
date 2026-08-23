@@ -503,3 +503,21 @@ def test_recall_claims_are_empty_when_recon_named_everything(tmp_path):
     )
     assert recall_claims(ws, {"entrypoints": ["POST /policy/evaluate"],
                               "attack_surface": []}, target_root=str(tmp_path)) == []
+
+
+def test_recall_claims_include_a_real_catalog_class_recon_omitted(tmp_path):
+    """A go.mod declaring the real OPA catalog entry must surface an ``ssrf`` claim.
+
+    Uses the shipped catalog (``dependency_sinks.load_catalog()``), not a synthetic
+    ``SinkEntry`` — this is the only test exercising the ``check_catalog_classes``
+    half of ``recall_claims``; deleting that loop must fail this test.
+    """
+    from sec_overlay.dependency_sinks import load_catalog
+    from sec_overlay.phase_gate import recall_claims
+
+    entry = next(e for e in load_catalog() if e.cls == "ssrf")
+    (tmp_path / "go.mod").write_text(f"module example\nrequire {entry.package} v1.0.0\n")
+    ws = _workspace_with_census(tmp_path, [])
+    claims = recall_claims(ws, {"entrypoints": [], "attack_surface": []}, target_root=str(tmp_path))
+    assert any(entry.id in c["id"] for c in claims)
+    assert any(c["refs"] == ["references/dependency-sinks.json"] for c in claims)
