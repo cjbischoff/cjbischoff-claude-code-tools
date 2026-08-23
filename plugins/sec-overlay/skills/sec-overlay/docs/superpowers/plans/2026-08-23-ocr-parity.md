@@ -105,7 +105,7 @@
 
 ### Task 15: REQ-P7 — consolidated `review_result.json`
 **Files:** Create `helpers/sec_overlay/review_result.py` (`write_review_result(ws, *, findings, dropped, declines, retractions, skips, manifest, budget_exceeded, tokens, base, head, model, profile, tier) -> Path`); Modify `cli.py` (call last); Test `test_review_result.py`.
-- [ ] RED: zero-finding and populated runs produce the full documented key set. Commit.
+- [x] RED: zero-finding and populated runs produce the full documented key set. Commit.
 - [ ] GREEN: implement via `workspace._atomic_write`. Commit.
 
 ### Task 16: REQ-P8 — background context

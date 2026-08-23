@@ -12,6 +12,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Consolidated review result artifact (REQ-P7, Task 15): failing tests first
+  (RED) in `tests/test_review_result.py`. They pin `write_review_result` writing
+  `review_result.json` to `ws.artifacts` with the full documented key set on both
+  a zero-finding run and a populated run: `status`, per-finding records (`id`,
+  `path`, `line`, `severity`, `rule_id`, `profile`, `disposition`), `dropped`,
+  `declined`, `retractions`, `skips`, `budget_exceeded`, `coverage_manifest`,
+  `tokens`, `base`, `head`, `model`, `profile`, `tier`.
+
 - Per-file plan phase implementation (REQ-P3, Task 14 GREEN): `review_agent.py`
   gains `render_plan_prompt`, `plan_agent_label`, `plan_guidance_from_return`,
   and `PLAN_LINE_THRESHOLD = 100`; `render_review_prompt` gains a keyword-only
