@@ -102,13 +102,13 @@ you change a word here, every agent's behaviour changes.
 | `SEVERITY_PRECONDITION` | You must enumerate the preconditions an attack needs *before* you pick a severity band. This kills "it's SQLi therefore it's critical" anchoring. |
 | `SHAPE_HUNTING` | Hunt by structural *shape* (source→sink), not by ticking off a named-API checklist. |
 | `EXHAUSTIVENESS` | Don't stop at the first instance / first caller; expand every concrete instance. |
-| `TOOL_TRUST` | Mechanical receipts (Read / ast-grep / structural-index / semgrep …) outrank `llm-claimed` reasoning. Bytes read through a piped shell are **not** trustworthy for exact-content claims. |
+| `TOOL_TRUST` | Mechanical receipts (Read / ast-grep / structural-index / semgrep …) outrank `llm-claimed` reasoning. Bytes read through a piped shell are **not** trustworthy for exact-content claims. Also warns that an absence check cuts the other way: an over-rigid rule reports every call site as unsafe, including fixed ones. Run the rule against a known-safe site and confirm it produces no match before citing an absence. |
 | `PATH_BASE` | Every file citation is repo-root-relative (relative to `{{REPO_ROOT}}`), never a bare basename. |
 | `OUTPUT_WRITE_FALLBACK` | If a host blocks the agent's Write tool on a findings/report path, write via a `python3 shutil.copy` from a temp file instead — so a blocked write never silently drops a finding. |
 | `DIAGRAM_STYLE` | When emitting a mermaid diagram, enforce the 10-entity hard cap per diagram, one diagram per job. Short node IDs with detail in legend/edges. Diagrams are navigational; `file:line` claims live in prose, not diagram nodes. |
 | `FIELD_OWNERSHIP` | Each `Finding` field is owned by exactly one phase. Only populate your phase's Output fields; never overwrite downstream phase fields (e.g. `risk_score`, `patch_diff`). |
 | `QUALIFIER_PROOF` | A blanket security claim ("mitigated", "sanitized", "handled elsewhere") is a claim about *every* code path. Enumerate all reachable paths and confirm the qualifier on each, or state which specific paths you verified. |
-| `EVIDENCE_VOCABULARY` | The receipt tiers, shipping statuses, and `runtime_disposition` enum are closed sets — Tier-1 (`codeql`/`semgrep`/`sca`/`secrets`) confirms alone, Tier-2 (`ripgrep`/`structural-index`/`ast-grep`/`tree-sitter`) only corroborates. Bound to `sec_overlay.evidence`'s constants by a drift test. |
+| `EVIDENCE_VOCABULARY` | The receipt tiers, shipping statuses, and `runtime_disposition` enum are closed sets — Tier-1 (`codeql`/`semgrep`/`sca`/`secrets`) confirms alone, Tier-2 (`ripgrep`/`structural-index`/`ast-grep`/`tree-sitter`/`dependency-catalog`) only corroborates. `dependency-catalog:<entry-id>` locates a sink inside a declared dependency; it never confirms alone. Bound to `sec_overlay.evidence`'s constants by a drift test. |
 | `STE_PROSE` | Human-facing prose (arc42.md, threat-model.md, findings-table free text) follows ASD-STE100's checkable core: active voice, one claim per sentence, ≤25-word sentences, no semicolons, ≤3-word noun clusters, ≤6-sentence paragraphs, lists for 3+ steps. Hedges and scope qualifiers are never dropped. Checked by `sec_overlay.ste_lint`. |
 
 > **Note:** the table above is authoritative. If you add or remove a block, update the count
@@ -127,6 +127,12 @@ discriminate confusable shapes. Split into **universal** classes (always conside
 (maps classes to entrypoints), `investigate` (per-class guidance), and `helpers/…/clsmap.py`
 as the source of truth for CWE→class mapping. Evidence-based only: an empty class list beats
 a guessed one.
+
+The `expr-eval-rce` row covers server-side policy and rule engines (CEL, Starlark, goja,
+gopher-lua, Spring SpEL). OPA/Rego's tokens live in the `ssrf` row instead, because its
+builtin performs an outbound request. Every row's tokens stay pinned to the matching `sink`
+and `indicators` value in `dependency-sinks.json`, checked by
+`test_docs_invariants.py::test_attack_class_table_names_the_policy_engine_class_for_every_catalog_entry`.
 
 #### `architecture-standards.md` — the C4 + arc42 contract for the architecture phase
 Fixes which C4 diagrams `architecture.md` produces (context, container, component-when-complex,
@@ -174,7 +180,10 @@ names all 11 CVSS v4.0 base metrics (AV, AC, AT, PR, UI, VC, VI, VA, SC, SI, SA)
 #### `DETECTION_COVERAGE.md` — an honest "what we can and can't see" statement
 A falsifiable statement of what each backend covers per class/language, and known blind
 spots (e.g. Liquid/Handlebars templates, single-function OSS-semgrep taint, no CodeQL for
-PHP). Its purpose is to **direct agent effort to the gaps SAST can't reach.**
+PHP). A dedicated row names the dependency-internal sink limit: no backend reads a
+dependency's own source. `dependency-sinks.json` routes the attack class from a manifest
+match; it never proves the sink. Its purpose is to **direct agent effort to the gaps SAST
+can't reach.**
 
 **Consumed by:** generated from the live `clsmap` inventory by
 `helpers/…/detection_coverage.py` (so it can't drift from reality) and embedded in the final
@@ -221,10 +230,12 @@ they never confirm a finding.
 | `finding.schema.json` | `findings_gate.py` | Every `findings/*.json` must validate: required fields, `status`/`severity` enums, the hard rule that `confirmed`/`fixed` findings carry ≥1 tool receipt, the inner shape of `runtime_test` (its `expected_signal` may be object, string, or null — the renderers tolerate all three), `open_questions` (array of `{question, why_it_matters, who_to_ask_or_check}` objects — human-answerable unknowns a live-exploit test can't settle, populated by `trace`/`redteam`), `cluster_id`/`affected_sites` (systemic-cluster id and, on a cluster primary, the member sites `{id, file, line}` — set by the cluster pass), and `receipt_tier` (optional integer or null — the derived tool-receipt strength, absent until a gate stamps it), and `impact` (string, default empty — required non-empty for a `SHIPPING_STATUSES` finding, enforced by `findings_gate`). |
 | `scan-profile.schema.json` | `profile.py` | `kb/scan-profile.json` shape (languages, frameworks, attack_surface, sast_plan, agents_to_spawn, budget_hint, attack_surface_evidence — required, matches `profile._REQUIRED`; optional subsystems, scan_options). |
 | `fix-disposition.schema.json` | `fix_disposition.py` | Fix-completeness records (FULL/MITIGATION/WORKAROUND + gates/evidence/rationale). |
-| `coverage-ledger.schema.json` | `coverage_ledger.py` | The surface-completeness ledger (`completeness`, `surfaces`, `deferred`, `open_questions`). |
+| `coverage-ledger.schema.json` | `coverage_ledger.py` | The surface-completeness ledger (`completeness`, `surfaces`, `deferred`, `open_questions`). Each surface item gained two optional properties for a site-keyed surface, `cls` (attack class) and `site` (`file:line`). `id`/`disposition` stay required. |
 | `approved-crypto-algorithms.yaml` | `crypto_policy.py` | Approved algos (aes-256-gcm, chacha20-poly1305, sha256+, argon2/bcrypt/scrypt/pbkdf2); denied (md5, sha1, des, 3des, rc4, ecb …); floors (rsa≥3072, pbkdf2≥600000, ecc≥256, aes≥128). |
 | `approved-key-sources.yaml` | `crypto_policy.py` | Approved key sources (kms, vault, chamber, gcp-secret-manager, azure-keyvault, env); denied (literal, hardcoded, filesystem, source). |
 | `asvs/asvs_5.0.0.json` | `asvs.py` | A curated 12-item OWASP ASVS 5.0 seed, indexed by id/chapter/CWE; `citations.py` attaches ASVS IDs (advisory). |
+| `dependency-sinks.json` | `dependency_sinks.py` | Dependencies whose own code holds the sink; consumed by `sec_overlay.dependency_sinks` and by recon routing. |
+| `route-frameworks.json` | `route_census.py` | Route-registration regex per web framework (name, language, globs, pattern, method/path capture groups); `route_census.py` is its only consumer. |
 
 `crypto_policy.check(algo, params, key_source)` turns "is this weak crypto?" from an LLM
 opinion into a deterministic lookup — that is the whole point of the two YAML files.

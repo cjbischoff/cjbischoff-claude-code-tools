@@ -81,10 +81,11 @@ suppresses one — it only produces leads to verify against code.
 ### Phase 2 — Recon → Architecture → Threat model
 | Prompt | Model | Reads | Writes |
 |--------|-------|-------|--------|
-| `recon.md` | sonnet | target, `attack-classes.md`, context | `kb/scan-profile.json` (languages, frameworks, attack_surface, sast_plan, agents_to_spawn). Selects which `hunting/` docs apply. |
+| `recon.md` | sonnet | target, `attack-classes.md`, `dependency-sinks.json`, context | `kb/scan-profile.json` (languages, frameworks, attack_surface, sast_plan, agents_to_spawn, `dependency_sinks`). Selects which `hunting/` docs apply. `dependency_sinks` names each catalog entry whose `package` matched a manifest: its `id`, `package`, `sink`, `safe_option`. The manifest declaration is the only evidence a dependency-internal sink leaves. Recon always adds `rules/absence` to `sast_plan.semgrep.rulesets`, for every language, alongside the vendored per-language dirs. |
 | `architecture.md` | sonnet | scan-profile | `architecture/context-diagram.mmd`, `architecture/container-diagram.mmd`, `architecture/component-diagram-<name>.mmd` (only where warranted), `architecture/runtime-view/sequence-<scenario>.mmd` (only where warranted), and `architecture/arc42.md` (C4 + arc42 sections 1–8, 10–12) — the **canonical** structural source every other doc references instead of restating. |
 | `threat-model.md` | sonnet | the architecture artifacts only (not raw repo) | `threat-model/dfd.mmd` (derived from `container-diagram.mmd`, SHA-headered), `threat-model/attack-sequences/sequence-<scenario>.mmd`, and `threat-model/threat-model.md` — methodology record, attacker profiles, a CVSS v4.0 findings table (each score from `sec_overlay.cvss.cvss40_base`, never hand-computed), and a **prioritized hunt list**; trust boundaries are attacker-relevant pointers back to `dfd.mmd`, never a restatement of `arc42.md`. |
 | `phase-adversary.md` | opus | one phase's output + a deterministic ref-check | re-derives each claim from code; includes a diagram-consistency check against `architecture/container-diagram.mmd`'s/`threat-model/dfd.mmd`'s diagrams; also flags an architecture-vs-threat-model ownership-boundary violation (architecture naming threats/mitigations, or threat-model restating structure/stack) with a `file:line` cite; verdicts → `kb/gates/<phase>.json`. Runs after **each** of the three above. |
+| `recall-adversary.md` | opus | `kb/route-census.json` + dependency-catalog matches + `sec_overlay.phase_gate.recall_claims`'s omission claims | judges what recon **left out**, never what it claimed. That split keeps `phase-adversary.md`'s count-invariant verdict tables intact, since a recall row has no matching claim by construction. Confirms each claim at its ref. Then it looks for a framework the census table misses, or an attack class the code implies with no matching indicator. It also checks for a route registered a second way. Rows: `OMISSION \| <what> \| <file:line or manifest path> \| <why recon could miss it>`, or the single line `NO OMISSION FOUND`. Runs only after recon's `phase-adversary.md` pass. The deterministic `recall-gate` phase records the gaps its own `check_*` functions compute, through `route_control.record_route_gaps` into `kb/coverage-ledger.json`. That call demotes `completeness` to `partial`. An adversary-only `OMISSION` row has no automatic route into the ledger. A reviewer must carry that omission by hand as follow-up work. |
 
 Before the opus adversary even runs, a deterministic pre-check (`helpers/…/phase_gate.py`)
 rejects any claim whose cited `file:line` doesn't resolve — a cheap, LLM-free first filter.
@@ -109,6 +110,17 @@ flowchart TD
 
 On pass N>1, prior `rejected` findings are injected as `{{FP_FEEDBACK}}` negative examples so
 the agent doesn't re-raise known false positives.
+
+`investigate.md`'s allowed-tools list also documents an ast-grep absence check: `astgrep run
+--not <safe-pattern>` for a construction that omits its safe option, and `astgrep rule --file
+<path>` for a hand-written rule when Go's `kind`/`has` anchoring is needed (a bare selector-call
+pattern such as `rego.New($ARGS)` matches nothing). The agent must confirm the rule fires on a
+known-bad line before trusting its silence.
+
+Its tool-grounding rule also names `dependency-catalog:<entry-id>` as a mechanical receipt. It
+is a Tier-2 receipt: it locates a sink inside a dependency but never confirms a finding alone.
+A gate needs a paired Tier-1 receipt too — a `semgrep:sec-overlay.absence.*` hit on the missing
+safe option, or a codeql dataflow path.
 
 ### Phase 4 — False-positive ladder
 | Prompt | Model | Job |
@@ -177,8 +189,9 @@ to either, since both are dispatched per file rather than by the orchestrator's 
 
 ## `classes/` — CWE-class extension prompts
 
-Eleven small prompts (`injection`, `ssrf`, `authz`, `authn`, `crypto`, `config`,
-`business-logic`, `prompt-injection`, `context-bleed`, `excessive-agency`, `resource`).
+Thirteen small prompts (`injection`, `ssrf`, `ssti`, `authz`, `authn`, `crypto`, `config`,
+`business-logic`, `prompt-injection`, `context-bleed`, `excessive-agency`, `resource`,
+`expr-eval-rce`).
 Each is **appended** to `investigate.md` / `patch.md` for that class and supplies four things:
 
 1. **Canonical fix shape** (e.g. injection → parameterized query; crypto → AEAD or slow KDF).

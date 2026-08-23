@@ -464,3 +464,79 @@ def test_repeated_calls_on_identical_inputs_return_equal_results():
     assert [(f.file, f.line) for f in kept1] == [(f.file, f.line) for f in kept2]
     assert dropped1 == dropped2
     assert declines1 == declines2
+
+
+# --- recall_claims (F2/F6) ------------------------------------------------------------------
+
+
+def _workspace_with_census(tmp_path, records):
+    from sec_overlay.route_census import RouteSite, write_census
+    from sec_overlay.workspace import Workspace
+
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    write_census(ws, [RouteSite(**r) for r in records])
+    return ws
+
+
+def test_recall_claims_include_a_census_route_recon_omitted(tmp_path):
+    from sec_overlay.phase_gate import recall_claims
+
+    ws = _workspace_with_census(
+        tmp_path,
+        [{"id": "route:app.py:9:/policy/evaluate", "file": "app.py", "line": 9,
+          "method": "POST", "path": "/policy/evaluate", "framework": "flask"}],
+    )
+    claims = recall_claims(ws, {"entrypoints": ["/health"], "attack_surface": []},
+                           target_root=str(tmp_path))
+    assert any("/policy/evaluate" in c["id"] for c in claims)
+    assert all(c["refs"] for c in claims), "a recall claim with no ref is unactionable"
+
+
+def test_recall_claims_are_empty_when_recon_named_everything(tmp_path):
+    from sec_overlay.phase_gate import recall_claims
+
+    ws = _workspace_with_census(
+        tmp_path,
+        [{"id": "route:app.py:9:/policy/evaluate", "file": "app.py", "line": 9,
+          "method": "POST", "path": "/policy/evaluate", "framework": "flask"}],
+    )
+    assert recall_claims(ws, {"entrypoints": ["POST /policy/evaluate"],
+                              "attack_surface": []}, target_root=str(tmp_path)) == []
+
+
+def test_recall_claims_include_a_real_catalog_class_recon_omitted(tmp_path):
+    """A go.mod declaring the real OPA catalog entry must surface an ``ssrf`` claim.
+
+    Uses the shipped catalog (``dependency_sinks.load_catalog()``), not a synthetic
+    ``SinkEntry`` — this is the only test exercising the ``check_catalog_classes``
+    half of ``recall_claims``; deleting that loop must fail this test.
+    """
+    from sec_overlay.dependency_sinks import load_catalog
+    from sec_overlay.phase_gate import recall_claims
+
+    entry = next(e for e in load_catalog() if e.cls == "ssrf")
+    (tmp_path / "go.mod").write_text(f"module example\nrequire {entry.package} v1.0.0\n")
+    ws = _workspace_with_census(tmp_path, [])
+    claims = recall_claims(ws, {"entrypoints": [], "attack_surface": []}, target_root=str(tmp_path))
+    assert any(entry.id in c["id"] for c in claims)
+    assert any(c["refs"] == ["go.mod"] for c in claims)
+
+
+def test_a_catalog_claim_cites_a_ref_that_resolves_from_the_target_root(tmp_path):
+    """The adversary drops a claim it cannot confirm at its ref, reading from the target.
+
+    An overlay-relative ref such as ``references/dependency-sinks.json`` never
+    resolves there, so every catalog claim was built and then discarded.
+    """
+    from sec_overlay.dependency_sinks import load_catalog
+    from sec_overlay.phase_gate import recall_claims
+
+    entry = next(e for e in load_catalog() if e.cls == "ssrf")
+    (tmp_path / "deps").mkdir()
+    (tmp_path / "deps" / "go.mod").write_text(f"module example\nrequire {entry.package} v1.0.0\n")
+    ws = _workspace_with_census(tmp_path, [])
+    claims = recall_claims(ws, {"entrypoints": [], "attack_surface": []}, target_root=str(tmp_path))
+    refs = [r for c in claims for r in c["refs"]]
+    assert "deps/go.mod" in refs
+    assert all((tmp_path / r).exists() for r in refs)

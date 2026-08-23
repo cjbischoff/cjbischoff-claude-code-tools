@@ -6,6 +6,8 @@
     "completeness": {"enum": ["complete", "partial", "unknown"]},
     "surfaces": {"type": "array", "items": {"type": "object", "properties": {
       "id": {"type": "string"},
+      "cls": {"type": "string", "description": "Attack class this surface belongs to."},
+      "site": {"type": "string", "description": "file:line of the sink, when the surface is site-keyed."},
       "disposition": {"enum": ["reported", "no_issue_found", "rejected", "not_applicable", "needs_follow_up"]}
     }, "required": ["id", "disposition"]}},
     "deferred": {"type": "array", "items": {"type": "string"}},

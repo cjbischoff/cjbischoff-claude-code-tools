@@ -46,6 +46,22 @@ survivors; apply its INVALIDATED/WEAKENED verdicts back to the phase artifact an
 with `build_gate_record` / `write_gate_record`. Same independence guard as `validate.md`: opus,
 different family than the sonnet producer.
 
+For the recon phase only, one extra adversary runs after the phase adversary:
+`agents/recall-adversary.md` (opus, fresh context). Its input is
+`sec_overlay.phase_gate.recall_claims(ws, profile, target_root=<T>)` plus
+`kb/route-census.json`. A separate deterministic phase, `recall-gate`, runs right after recon.
+It recomputes the same census and catalog checks and writes each gap into
+`kb/coverage-ledger.json` through `route_control.record_route_gaps`. That call demotes
+`completeness` to `partial`. A deterministic omission therefore cannot be lost by the audit
+reporting `complete`.
+
+An adversary-only omission has no automatic route into the ledger. A reviewer must record
+that omission by hand as follow-up work.
+
+The recall adversary has its own output contract. `agents/phase-adversary.md`'s verdict
+tables are count-invariant: a verdict count must match a claim count. A recall row has no
+matching claim by construction.
+
 ## Deterministic scan (current capability)
 
 From the harness helpers directory (inside the installed plugin, this is
@@ -64,6 +80,12 @@ The bundled `rules/smoke.yaml` is a minimal ruleset. For fuller semgrep
 coverage, point `--config` (and the recon agent's `rulesets`) at your own
 semgrep ruleset; the vendored, gitignored semgrep-rules clone (`helpers/rules/semgrep/`) is
 not shipped with this plugin.
+
+`helpers/rules/absence/` is a tracked, first-party pack that ships with the plugin. Its rules
+pair a `pattern` for a dangerous construction with a `pattern-not` for its safe option, so a
+call site that already passes the option produces no finding. Never write a first-party rule
+under `helpers/rules/semgrep/`: `preflight.py` recreates that directory with
+`git clone --depth 1`, which deletes anything you put there.
 
 Outputs, under the workspace directory:
 - `findings/F-*.json` — one file per normalized finding (the contract for later phases).
@@ -183,7 +205,7 @@ finding. When dispatching, keep that fallback in the agent's instructions.
 1. **Begin pass** — `from sec_overlay.state import begin_pass; begin_pass(ws: Workspace, sha: str | None) -> CampaignState` (pins the SHA; increments the pass counter only after a prior pass recorded a stage). Note the import path: `begin_pass` lives in `sec_overlay.state`; `record_stage`/`pass_report` live in `sec_overlay.campaign`.
 C1. **Context-ingest** (sonnet) — `agents/context-ingest.md` → `kb/context.json`; `agents/context-adversary.md` (opus) pressure-checks it. Runs here, BEFORE recon, so its leads can feed recon's `attack_surface`. See **Context ingestion (C1/C2)** below.
 T1. **Tier-1 substrate** (no LLM) — `python -m sec_overlay.graph build --target <T> --workspace <WS> --sha <sha>`; structural_index + a regex call-edge heuristic + osv/secrets/crypto facts → `kb/graph.json` v1, consumed by recon, architecture, and threat-model.
-2. **Recon** (sonnet) — `agents/recon.md` → `kb/scan-profile.json`. Validate with `load_profile`. **→ phase gate** (`agents/phase-adversary.md`, opus).
+2. **Recon** (sonnet) — `agents/recon.md` → `kb/scan-profile.json`. Validate with `load_profile`. **→ phase gate** (`agents/phase-adversary.md`, opus). The `route-census` phase runs before recon and writes `kb/route-census.json` from `sec_overlay.route_census.census`. The inventory comes from source, not from recon's output, so an unnamed route still appears as a gap. `route_control` prefers the census over the scan profile and falls back only when the census is empty.
 3. **Architecture** (sonnet) — `agents/architecture.md` → `architecture/` tree (C4 diagrams,
    runtime-view sequences, `arc42.md`). **→ arch-gate** (`sec_overlay.diagram_gate` + `ste_lint`;
    deterministic, halts on cap/prose violation).
@@ -192,7 +214,7 @@ T1. **Tier-1 substrate** (no LLM) — `python -m sec_overlay.graph build --targe
    list). **→ tm-gate** (same checks plus a duplication check against `arc42.md`). Both gates halt
    the pipeline on cap/prose/derivation violations; the producer re-scopes (group → split →
    promote) and regenerates once.
-5. **Prefilter** (no LLM) — `from sec_overlay.prefilter import run_prefilter; run_prefilter(ws, target, profile)` (args: `Workspace`, target path, the `ScanProfile` from recon — NOT the raw `sast_plan` dict). Backends run concurrently (one unit per semgrep ruleset / codeql language); results are merged deterministically (sorted, `C-####` ids) so serial and concurrent runs are byte-identical. Returns `{candidates, backends_run, skipped, failed, excluded, dropped_nonsecurity, skipped_reasons}`: `skipped_reasons` maps each backend that did NOT run to a reason (`disabled`/`absent`/`untrusted`/`pack-missing`); `dropped_nonsecurity` counts non-security semgrep lint dropped by the security-only filter; `failed` lists backends that errored. **A scan is only clean if every PLANNED backend ran. STOP and surface a setup error if `backends_run` is empty OR any planned backend appears in `failed` / `skipped_reasons` (e.g. `codeql: pack-missing` = a missing query pack → zero dataflow for that language). A partial scan (semgrep ran, codeql failed) is a coverage hole, not "no findings" — do NOT report it as clean.** Then `demote_noise(ws)` and `agents = reconcile_plan(ws, profile.agents_to_spawn)` (both from `sec_overlay.partition`) — `demote_noise` moves log-injection/clear-text-logging/unknown candidates to `informational`, `reconcile_plan` routes real-security classes recon omitted; and `agents = merge_custom_check_classes(agents, discover_custom_checks(target))` (from `sec_overlay.custom_checks`; adds any in-repo `.sec-overlay/checks/` bundles the target declares). Spawn investigate agents over the reconciled `agents`; for any class that is a custom-check id, append `custom_check_instructions(check)` to the standard `agents/investigate.md` prompt after the shared `prompt-constants.md` blocks, per its check's own bundle. The general-triage `security-other` agent handles any residual unrouted classes.
+5. **Prefilter** (no LLM) — `from sec_overlay.prefilter import run_prefilter; run_prefilter(ws, target, profile)` (args: `Workspace`, target path, the `ScanProfile` from recon — NOT the raw `sast_plan` dict). Backends run concurrently (one unit per semgrep ruleset / codeql language); results are merged deterministically (sorted, `C-####` ids) so serial and concurrent runs are byte-identical. Returns `{candidates, backends_run, skipped, failed, excluded, dropped_nonsecurity, skipped_reasons}`: `skipped_reasons` maps each backend that did NOT run to a reason (`disabled`/`absent`/`untrusted`/`pack-missing`); `dropped_nonsecurity` counts non-security semgrep lint dropped by the security-only filter; `failed` lists backends that errored. **A scan is only clean if every PLANNED backend ran. STOP and surface a setup error if `backends_run` is empty OR any planned backend appears in `failed` / `skipped_reasons` (e.g. `codeql: pack-missing` = a missing query pack → zero dataflow for that language). A partial scan (semgrep ran, codeql failed) is a coverage hole, not "no findings" — do NOT report it as clean.** Then `demote_noise(ws)` and `agents = reconcile_plan(ws, profile.agents_to_spawn, target_root=target)` (both from `sec_overlay.partition`) — `demote_noise` moves log-injection/clear-text-logging/unknown candidates to `informational`, `reconcile_plan` routes real-security classes recon omitted. `reconcile_plan(ws, agents_to_spawn, target_root=<T>)` also merges the attack class of every `references/dependency-sinks.json` entry the target declares in a manifest. A dependency whose own code holds the sink (OPA's `http.send`) leaves no first-party pattern, so recon can omit the class; the catalog match restores it. The call never removes a planned class. Then `agents = merge_custom_check_classes(agents, discover_custom_checks(target))` (from `sec_overlay.custom_checks`; adds any in-repo `.sec-overlay/checks/` bundles the target declares). Spawn investigate agents over the reconciled `agents`; for any class that is a custom-check id, append `custom_check_instructions(check)` to the standard `agents/investigate.md` prompt after the shared `prompt-constants.md` blocks, per its check's own bundle. The general-triage `security-other` agent handles any residual unrouted classes.
 6. **Investigate** (sonnet, parallel over `scan-profile.agents_to_spawn`) — `agents/investigate.md` per class → `raw`/`rejected`/new `A-####`.
 7. **Dedupe** (no LLM) — `python -m sec_overlay.dedupe --workspace <WS>`.
 7.5 **Cluster** (no LLM) — `python -m sec_overlay.cluster --workspace <WS>` groups ≥3

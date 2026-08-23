@@ -2,6 +2,7 @@
 
 
 from sec_overlay.preflight import (
+    TOOLS,
     check_tools,
     default_rules_dir,
     preflight_report,
@@ -69,3 +70,13 @@ def test_missing_codeql_packs():
     rest = missing_codeql_packs(["python", "go"])
     assert "python" not in rest and "go" not in rest
     assert rest == [lang for lang in CODEQL_QUERY_LANGS if lang not in ("python", "go")]
+
+
+def test_rg_is_a_required_tool():
+    # route_census (the first phase of every audit) and structural_index both
+    # shell out to `rg`; a missing binary must fail preflight, not the phase.
+    from sec_overlay.preflight import _OPTIONAL
+
+    names = [name for name, _purpose, _cmd in TOOLS]
+    assert "rg" in names
+    assert "rg" not in _OPTIONAL

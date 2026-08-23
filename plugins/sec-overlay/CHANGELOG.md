@@ -2,6 +2,181 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## Unreleased
+
+### Added
+
+- Recall adversary (`agents/recall-adversary.md`, opus): judges what the recon
+  phase left out, using `sec_overlay.phase_gate.recall_claims`,
+  `kb/route-census.json`, and dependency-catalog matches.
+
+- Deterministic `recall-gate` phase, wired right after recon: recomputes the
+  same census and catalog checks and writes each gap into
+  `kb/coverage-ledger.json` through `route_control.record_route_gaps`,
+  demoting `completeness` to `partial`.
+
+- Tracked absence rule pack (`helpers/rules/absence/`): first-party semgrep
+  rules that flag a dangerous construction only when its safe option is
+  absent, for OPA `rego.New`, `cel.NewEnv`, `lua.NewState`, Jinja2
+  `Environment`, and `requests` calls without a timeout.
+
+- Recon always adds `rules/absence` to `sast_plan.semgrep.rulesets`, for
+  every language, alongside the vendored per-language dirs. `SKILL.md` notes
+  the pack; `golden_scan_profile.json` and two `test_contracts.py` guards
+  pin the invariant.
+
+- Dependency-sink catalog (`references/dependency-sinks.json`) and its loader,
+  naming dependencies whose own code holds the sink.
+- `match_manifests()`/`matched_classes()` and a `match --root <dir>` CLI
+  subcommand, to check a target repo's manifests against the catalog.
+- `reconcile_plan()` takes an optional `target_root` and merges every attack
+  class of a matched dependency-sink catalog entry into the agent plan.
+- `attack-classes.md`'s `expr-eval-rce` and `ssrf` rows name every server-side
+  policy and script engine sink from `dependency-sinks.json`. Recon can select
+  the right class for a catalogued dependency with no first-party indicator.
+- `agents/classes/expr-eval-rce.md` and `agents/classes/ssti.md`, the two
+  class-extension prompts every `dependency-sinks.json` catalog entry now
+  routes to. Two `test_docs_invariants.py` guards check that every catalogued
+  `cls` has a matching class file and that `expr-eval-rce.md` carries all
+  five required sections.
+- A `DETECTION_COVERAGE.md` row naming the dependency-internal sink limit: no
+  backend reads a dependency's own source, so the catalog routes the class
+  but never proves the sink. `recon.md` now reads `dependency-sinks.json` and
+  emits `dependency_sinks`; `SKILL.md` documents `reconcile_plan`'s catalog
+  merge.
+- A test pins `references/DETECTION_COVERAGE.md` to `detection_coverage.py`'s
+  renderer, byte for byte. An edit to the renderer with no matching
+  regeneration of the tracked file now fails the suite.
+- `astgrep.py` gains `build_rule()`/`run_astgrep_rule()`, plus a `run --not
+  <pattern>` flag and a `rule --file <path>` subcommand, so the investigate
+  agent can run a structural absence check ad hoc. Go needs a hand-written
+  rule (`fixtures/absence_repo/rego-absence.yaml`): a bare selector-call
+  pattern such as `rego.New($ARGS)` matches nothing there.
+- `dependency-catalog` receipt: a Tier-2 evidence source for a finding whose
+  sink lives inside a declared dependency's own code. It locates the sink
+  named by a `dependency-sinks.json` catalog entry; it never confirms a
+  finding alone. `EVIDENCE_VOCABULARY` documents the new receipt form.
+- The SSRF class prompt's proof tuple now admits a `dependency-catalog:<id>`
+  receipt for element 1 and a `semgrep:sec-overlay.absence.*` receipt for
+  element 2. `investigate.md`'s tool-grounding rule names
+  `dependency-catalog` as a Tier-2 receipt that never confirms a gate alone.
+- `emit_semgrep_rule()` takes a `safe_option` keyword. With it, the codified
+  rule is an absence rule: it fires only on a construction missing the named
+  safe option. Its id then sits under `sec-overlay.absence.`.
+  `corpus_seed/absence.json` pins the rego.Capabilities and jinja2-sandbox
+  pair as locked bench positives, plus a negative that must stay silent.
+- `route_census.py` and `references/route-frameworks.json`: a route
+  inventory derived from source via ripgrep, for Flask, FastAPI, Django
+  urls, Go net/http, Go chi/gin/echo, Express, and Spring. Reads code
+  instead of recon's own output, so an omitted route can appear as a gap.
+- `write_census`/`load_census` persist the census to `kb/route-census.json`.
+  `build_route_control_table` now prefers the census over
+  `kb/scan-profile.json`, stamping `source`, and `check_census_routes`
+  flags a code-registered route the recon profile never names. This closes
+  the circularity where the route-to-control check compared recon against
+  its own output.
+- `build_coverage_ledger` now keys a covered class's surfaces by sink site,
+  not by class, so a second sink in the same class no longer inherits
+  "covered" from an unrelated confirmed finding.
+- A `route-census` deterministic phase, wired into `PHASE_TABLE` ahead of
+  `recon`. `_act_route_census` writes `kb/route-census.json` from the
+  target's source, so the file exists for the recon gate, `check_census_routes`,
+  and the recall adversary before recon ever runs.
+- `route_control.check_catalog_classes` flags a dependency-catalog class the
+  recon profile's `attack_surface` never named. A dependency such as OPA
+  hides its sink inside its own Rego policy, so recon can miss the class
+  with no first-party signal.
+
+### Fixed
+
+- `fixtures/dep_sink_repo/go.mod` declares OPA `v1.19.1` instead of `v0.68.0`.
+
+  The old version carries GHSA-6m8w-jc87-6cr7, so the repository dependency
+  review gate failed on inert fixture data. The catalog matches on the module
+  path alone, so the version choice does not affect any test.
+
+- `go-lua-state-missing-skipopenlibs` no longer fires on a hardened call site.
+
+  gopher-lua takes `Options` by value. The pointer-literal `pattern-not` never
+  matched `lua.NewState(lua.Options{SkipOpenLibs: true})`. The negation now
+  uses the value form, quoted so the YAML stays valid.
+
+- The three untested absence rules gained a fixture pair and a test each.
+
+  The three are `go-cel-env-missing-declarations`,
+  `go-lua-state-missing-skipopenlibs`, and `python-requests-missing-timeout`.
+  Each test asserts the vulnerable site by `(file, rule, line)`. Each also
+  asserts the hardened site's silence.
+
+- `recall_claims` cites the manifest that declares the package.
+
+  The ref comes from the new `dependency_sinks.manifest_paths()`. The old ref
+  `references/dependency-sinks.json` resolves only inside the overlay. The
+  recall adversary's drop rule therefore discarded every catalog claim.
+
+- `plugins/sec-overlay/CLAUDE.md`'s CLI-callable module list names
+  `dependency_sinks`.
+
+- `agents/README.md`'s recall-adversary row no longer claims that an
+  `OMISSION` row reaches the coverage ledger.
+
+  The deterministic `recall-gate` phase records the gaps its own checks
+  compute. An adversary-only omission stays manual follow-up work. `SKILL.md`
+  already stated that.
+
+- `test_absence_rules.py`'s metadata guard now checks that each rule's own
+  block carries a `cls:` line after its `metadata:` line, instead of a raw
+  file-wide `cls:` count that a rule with no `metadata.cls` could still pass.
+- `run_astgrep_rule()`'s docstring now names only the non-JSON/empty-output
+  case its code actually catches, instead of overclaiming coverage of a
+  missing `ast-grep` binary, which still raises `FileNotFoundError`.
+- `findings_gate.validate_findings` now rejects a `dependency-catalog:<id>`
+  receipt whose `<id>` is not a real `dependency-sinks.json` catalog entry.
+  Free text after the colon read as a receipt before this check.
+- `corpus_seed/absence.json` now sets `repo_url` and `commit` to the empty
+  string on each entry. `CorpusEntry` declares both as required fields, so
+  `load_corpus` raised `TypeError` and every bench run failed to start.
+- `bench/README.md` now states that the documented `bench.run` command exits 1
+  when no scanned workspace is supplied. A locked positive counts as regressed,
+  so an operator must not gate CI on that exit status.
+- The two module-map entries for `route_census.census()` no longer claim an
+  empty return on any ripgrep failure. A missing ripgrep binary raises
+  `FileNotFoundError`, because preflight owns binary availability.
+- `check_recon_routes` now returns no gaps for a census-sourced table. A
+  census route carries a method prefix `route_summary` can never contain,
+  so it turned every census route into a permanent `needs_follow_up` gap.
+  `check_census_routes` already owns that comparison for a census table.
+- `sec_overlay/README.md` no longer implies `check_census_routes` still
+  flags a route that appears only as a prefix inside a longer profile path.
+  A profile field carrying the route path as a prefix suppresses the gap.
+- `rethreshold._ledger_disposition` now matches a coverage surface by its
+  `cls` field, falling back to bare `id`. Site-keyed surfaces no longer
+  break the cross-repo demote and promote paths. The per-site
+  `needs_follow_up` surface's `reason`/`next_step` now name the specific
+  sink site instead of reusing class-level wording. A new test also pins
+  `cls`/`site` on a per-site surface.
+- The CLAUDE.md phase-order row for `route-census` now names the deterministic phase the driver dispatches, instead of a CLI invocation that never called `write_census`.
+- `preflight.py`'s `TOOLS` list now includes `rg` as a required entry, so a missing ripgrep binary fails preflight instead of the `route-census` phase.
+- A test now pins `check_catalog_classes`'s dedupe branch: two catalog entries
+  sharing one class produce exactly one gap, not one per entry. A mutation
+  test found the branch untested before this guard.
+- `SKILL.md` and `CHANGELOG.md` claimed an `OMISSION` row always routes
+  through `route_control.record_route_gaps`. No code path called it. A new
+  `recall-gate` deterministic phase now runs right after recon and writes
+  the ledger, and the docs describe that real path.
+- A new test uses `dependency_sinks.load_catalog()`'s real OPA entry to cover
+  `check_catalog_classes` inside `recall_claims`. Deleting that loop left the
+  suite green before this test existed.
+- `sec_overlay/README.md` no longer claims `route_control` imports from
+  `phase_gate`. `phase_gate.py`'s three `route_control`/`route_census`/
+  `dependency_sinks` imports moved to module level. No cycle exists.
+- `CLAUDE.md`'s phase-order block now lists `recall-gate` right after `recon`.
+  `_PHASE_DOC_LABELS` gained a matching entry, so the phase-order test now
+  enforces the row's position.
+- `SKILL.md`'s recall-gate paragraph no longer claims every omission reaches
+  the ledger. A deterministic omission still cannot be lost. An
+  adversary-only omission needs a reviewer to record it by hand.
+
 ## 1.69.15 - 2026-08-22
 
 ### Fixed

@@ -38,3 +38,16 @@ python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --binary "se
 `corpus_seed/` is seeded from this project's real session findings (confirmed = locked
 positives; correctly-rejected leads = negatives; one dep-CVE). Grow it every time the
 harness confirms/rejects a real finding — that is Layer B.
+
+`corpus_seed/absence.json` locks the absence-rule pair. Both positives must stay
+detected. The negative must stay silent. Never edit a corpus entry to force a
+pass. A `locked` positive that goes undetected is a rule defect, not a corpus one.
+
+Grading the absence pair needs a scanned workspace or `--binary`. `WorkspaceAdapter`
+only reads findings. It runs no scan. An empty `--workspaces` directory therefore
+reports `recall=0.0` for these entries. That is an empty input, not a rule
+regression.
+
+The run also exits 1, because a locked positive counts as regressed. Do not gate
+CI on that exit status without a pre-scanned workspace. To check the rules alone,
+run `semgrep scan --config rules/absence fixtures/absence_repo` from `helpers/`.

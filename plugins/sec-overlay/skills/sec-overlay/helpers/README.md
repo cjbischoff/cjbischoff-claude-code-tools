@@ -124,6 +124,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `asvs.py` / `codeguard.py` | Load the ASVS JSON / CodeGuard checklists from [`../references/`](../references/). |
 | `citations.py` | Auto-attach ASVS + CodeGuard citations to findings (deterministic). CLI-callable. |
 | `custom_checks.py` | Discover in-repo `.sec-overlay/checks/` custom-check bundles a target ships. |
+| `dependency_sinks.py` | Loads and validates `references/dependency-sinks.json` — dependencies whose own code holds a sink (an OPA policy calling `http.send`, a CEL program calling a host function). `catalog_ids()` names every entry for later receipt-id validation. `match_manifests()` walks a target repo's manifest files (skipping vendored/build/cache trees) and returns the catalog entries it declares; `matched_classes()` reduces that to the sorted, deduplicated attack-class keys. CLI-callable: `list` prints the catalog, `match --root <dir>` prints what a target repo declares. |
 
 ### Graph & structural substrate (the "where does this reach?" engine)
 | Module | Purpose |
@@ -131,7 +132,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `graph.py` | The two-tier code graph. **Tier-1** (LLM-free): definitions + one-hop call edges + osv/secrets/crypto facts. **Tier-2**: post-prefilter CodeQL/semgrep taint merged in. Answers reachability / attacker-control / `no_path`. Persisted to `kb/graph.json`. CLI-callable. |
 | `structural_index.py` | Ripgrep-backed symbol index (definitions, callers, function boundaries). CLI-callable. |
 | `entrypoints.py` | Regex classification of routes / user-input / CLI args / env vars to seed Tier-1. |
-| `astgrep.py` | ast-grep availability check + structural-search wrapper. CLI-callable. |
+| `astgrep.py` | ast-grep availability check + structural-search wrapper. `build_rule()` builds inline-rule YAML for a relational absence query (`pattern` present, `not_pattern` absent); `run_astgrep_rule()` runs it. Go needs hand-written `kind`/`has` anchoring — a bare selector pattern like `rego.New($ARGS)` matches nothing there. CLI-callable: `run --not <pattern>` for a pattern-level absence check, `rule --file <path>` for a hand-written rule. |
 | `reachability.py` | Reachability verdict + blocker taxonomy (sanitizer/auth/validation/dead-code/flag) — the static-vs-runtime discriminator. |
 
 ### False-positive reduction & finding identity
@@ -142,7 +143,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `fingerprint.py` | The fingerprint itself: `sha256(rule_id\|cls\|enclosing-symbol)`, degrading to file:line if no symbol. |
 | `cluster.py` | Groups ≥3 same-class, same-sink `raw` findings into one systemic cluster: elects a primary (highest severity, tiebreak smallest id), stamps `cluster_id` on every member, and records all member sites on the primary's `affected_sites`. Runs after dedupe, before the critic/gate ladder. CLI-callable. |
 | `findings_gate.py` | Schema-validates every finding; forbids `raw`+`duplicate_of` collisions; **enforces the tool-receipt bar** for `confirmed`/`fixed`. CLI-callable. |
-| `partition.py` | Group candidates by attack class for parallel agent fan-out. |
+| `partition.py` | Group candidates by attack class for parallel agent fan-out. `reconcile_plan` takes an optional `target_root` and merges every attack class from a matched dependency-sink catalog entry. |
 | `fp_feedback.py` | Recycle prior-pass rejections into the next pass's investigate/critic prompts as negative examples. |
 | `factcheck.py` | Post-investigation re-verification of citations/scope/severity against source. |
 | `phase_gate.py` | Deterministic pre-check for analysis phases (schema + `file:line` resolution) before the opus adversary runs; writes `kb/gates/<phase>.json`. Detects comment-only citations via `is_comment_line()` and appends a gate note flagging them for extra scrutiny (prose files — `.md`/`.rst`/`.txt` — are skipped, since every Markdown heading would otherwise read as a comment); the comment check and the basename-fallback note are independent, so a sloppy citation can raise both. Also `review_position_gate(findings, hunks_by_path, file_text_by_path=None)` — the diff-pipeline gate: keeps a finding only when `positioning.resolve_position` calls it `exact`, else drops it with an `OUTSIDE_DIFF_REASON`-shaped `DroppedFinding`. `file_text_by_path` defaults to an empty mapping, which disables the ladder's whole-file and cross-file rungs. Audit-mode symbols above are unchanged by this addition. |
@@ -197,7 +198,8 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `coverage_ledger.py` | The machine-checked completeness ledger — refuses `completeness=="complete"` while any surface `needs_follow_up`/`deferred` or open questions remain. |
 | `coverage_guide.py` | Auto-stop condition for multi-pass campaigns (coverage-complete AND yield-below-threshold). |
 | `discovery_ledger.py` | Loop-until-dry saturation state: stop after K consecutive waves add no new fingerprints. |
-| `route_control.py` | One route-to-control table from `kb/scan-profile.json`; checks recon/architecture/threat-model output against it, logging a `needs_follow_up` gap (never dropping) via `record_route_gaps` into `coverage-ledger.json`. |
+| `route_control.py` | One route-to-control table, preferring the code-derived census (`build_route_control_table(ws, census=...)`, `source: "route-census"`) and falling back to `kb/scan-profile.json` (`source: "scan-profile"`) only when no census exists. Checks recon/architecture/threat-model output against the table, logging a `needs_follow_up` gap (never dropping) via `record_route_gaps` into `coverage-ledger.json`. `check_recon_routes` skips a census-sourced table, leaving that comparison to `check_census_routes`, which flags any code-registered route the recon profile never names. |
+| `route_census.py` | Derives a route inventory from source code via `references/route-frameworks.json` + ripgrep, never from recon's own output. `census()` returns empty when ripgrep exits nonzero or matches nothing. A missing ripgrep binary raises `FileNotFoundError`, because preflight owns binary availability. `write_census`/`load_census` persist the result to `kb/route-census.json` and read it back, closing the circularity where `route_control.py` used to read recon's own output. CLI-callable. |
 
 ### Diff-scoped review (`sec-overlay review` — tracer path)
 | Module | Purpose |
@@ -271,7 +273,7 @@ steps the orchestrator calls between agent phases:
 | `preflight` | Report which SAST tools + CodeQL packs are installed; print setup commands. |
 | `graph` | Build/query the Tier-1/Tier-2 code graph → `kb/graph.json`. |
 | `structural_index` | Build the ripgrep symbol index. |
-| `astgrep` | ast-grep availability + structural search. |
+| `astgrep` | ast-grep availability + structural search; `run --not <pattern>` for a relational absence check, `rule --file <path>` for a hand-written rule (Go needs one). |
 | `dedupe` | Mark duplicates + stamp fingerprints. |
 | `cluster` | Group ≥3 same-class, same-sink `raw` findings into one systemic cluster. |
 | `findings_gate` | Schema + tool-receipt gate over `findings/*.json`. |
@@ -286,6 +288,8 @@ steps the orchestrator calls between agent phases:
 | `report` | Assemble final SARIF + Markdown. |
 | `redactor` | Mask/verify secrets in a text blob. |
 | `postflight` | Write durable `kb/prior_context.json`. |
+| `dependency_sinks` | `list` prints the catalog, one `id`/`cls`/`package` line per entry; `match --root <dir>` prints the entries a target repo declares. |
+| `route_census` | `--root <dir>` prints one `file:line`/method/path/framework row per route site found in source. |
 
 ---
 

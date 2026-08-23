@@ -12,10 +12,13 @@ from __future__ import annotations
 from enum import Enum
 
 _MECHANICAL = {"semgrep", "codeql", "ast-grep", "tree-sitter", "ripgrep",
-               "structural-index", "secrets", "sca"}
+               "structural-index", "secrets", "sca", "dependency-catalog"}
 
 TIER1_RECEIPTS = frozenset({"codeql", "semgrep", "sca", "secrets"})
-TIER2_RECEIPTS = frozenset({"ripgrep", "structural-index", "ast-grep", "tree-sitter"})
+# Tier 2 locates a sink; it never confirms alone. `dependency-catalog` proves a
+# dependency is declared and names the sink inside it, which is location, not reach.
+TIER2_RECEIPTS = frozenset({"ripgrep", "structural-index", "ast-grep", "tree-sitter",
+                             "dependency-catalog"})
 SHIPPING_STATUSES = frozenset({"confirmed", "fixed", "needs-deployment-testing"})
 RUNTIME_DISPOSITIONS = frozenset({"needs-runtime", "static-settled", "unassessed"})
 

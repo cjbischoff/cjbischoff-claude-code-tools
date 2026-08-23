@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "opa-rego-http-send",
+      "package": "github.com/open-policy-agent/opa",
+      "ecosystem": "go",
+      "manifests": ["go.mod", "go.sum"],
+      "cls": "ssrf",
+      "sink": "http.send",
+      "why": "A Rego policy can call the builtin http.send, so policy text reaching an OPA evaluator is an outbound-request sink inside the dependency.",
+      "safe_option": "rego.Capabilities with http.send removed from the builtin set",
+      "indicators": ["rego.New", "rego.Module", "http.send", "rego.Capabilities"]
+    },
+    {
+      "id": "cel-go-expression-eval",
+      "package": "github.com/google/cel-go",
+      "ecosystem": "go",
+      "manifests": ["go.mod", "go.sum"],
+      "cls": "expr-eval-rce",
+      "sink": "Program.Eval",
+      "why": "CEL evaluates caller-supplied expression text against a host environment, so the environment's exposed functions become reachable sinks.",
+      "safe_option": "cel.NewEnv restricted to a reviewed declaration list, with no host function that performs IO",
+      "indicators": ["cel.NewEnv", "cel.Compile", "Program.Eval"]
+    },
+    {
+      "id": "starlark-go-exec",
+      "package": "go.starlark.net",
+      "ecosystem": "go",
+      "manifests": ["go.mod", "go.sum"],
+      "cls": "expr-eval-rce",
+      "sink": "starlark.ExecFile",
+      "why": "Starlark executes caller-supplied script text; every predeclared builtin the host installs is reachable from that script.",
+      "safe_option": "A predeclared StringDict that exposes no IO builtin, with load() disabled",
+      "indicators": ["starlark.ExecFile", "starlark.Thread", "starlark.StringDict"]
+    },
+    {
+      "id": "goja-javascript-vm",
+      "package": "github.com/dop251/goja",
+      "ecosystem": "go",
+      "manifests": ["go.mod", "go.sum"],
+      "cls": "expr-eval-rce",
+      "sink": "Runtime.RunString",
+      "why": "goja runs caller-supplied JavaScript in-process; any Go value set on the runtime is callable from that script.",
+      "safe_option": "A runtime with no Set() of a host object, plus an interrupt deadline",
+      "indicators": ["goja.New", "Runtime.RunString", "vm.Set"]
+    },
+    {
+      "id": "gopher-lua-script",
+      "package": "github.com/yuin/gopher-lua",
+      "ecosystem": "go",
+      "manifests": ["go.mod", "go.sum"],
+      "cls": "expr-eval-rce",
+      "sink": "LState.DoString",
+      "why": "gopher-lua executes caller-supplied Lua; the default standard library exposes os and io functions.",
+      "safe_option": "lua.NewState with SkipOpenLibs and an explicit allowlist of opened libraries",
+      "indicators": ["lua.NewState", "DoString", "SkipOpenLibs"]
+    },
+    {
+      "id": "jinja2-sandbox-escape",
+      "package": "jinja2",
+      "ecosystem": "python",
+      "manifests": ["requirements.txt", "pyproject.toml", "poetry.lock", "Pipfile"],
+      "cls": "ssti",
+      "sink": "Environment.from_string",
+      "why": "Jinja2 compiles caller-supplied template text; attribute traversal from a template reaches Python objects unless the sandboxed environment is used.",
+      "safe_option": "jinja2.sandbox.SandboxedEnvironment instead of jinja2.Environment",
+      "indicators": ["from_string", "Template(", "SandboxedEnvironment"]
+    }
+  ]
+}

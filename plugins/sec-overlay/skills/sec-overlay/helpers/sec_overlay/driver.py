@@ -29,6 +29,7 @@ from sec_overlay.prefilter import run_prefilter
 from sec_overlay.profile import ScanProfile, load_profile
 from sec_overlay.redactor import safe_for_prompt
 from sec_overlay.report import write_report
+from sec_overlay.route_census import census, write_census
 from sec_overlay.selfscore import write_self_score
 from sec_overlay.state import load_state, save_state
 from sec_overlay.verify import verify_findings
@@ -283,6 +284,40 @@ def _act_tm_gate(ctx: AuditContext) -> None:
         raise PhaseHalt(f"tm-gate rejected {len(errors)} issue(s): " + "; ".join(errors))
 
 
+def _act_route_census(ctx: AuditContext) -> None:
+    """Write the code-derived route inventory.
+
+    Runs before recon so the inventory cannot be derived from recon's own output.
+    """
+    write_census(ctx.ws, census(ctx.target))
+
+
+def _act_recall_gate(ctx: AuditContext) -> None:
+    """Record deterministic recon omissions into the coverage ledger.
+
+    Runs right after recon, the first point ``kb/scan-profile.json`` exists.
+    Recomputes the same deterministic checks ``phase_gate.recall_claims`` builds
+    the adversary's claims from, but keeps the ``check_*`` gap shape
+    (``disposition``/``reason``/``next_step``) ``record_route_gaps`` needs to
+    demote ``completeness`` — a route-census phase action cannot do this because
+    it runs before recon, when no profile exists yet to compare against.
+    """
+    from sec_overlay.dependency_sinks import match_manifests
+    from sec_overlay.route_census import load_census
+    from sec_overlay.route_control import (
+        check_catalog_classes,
+        check_census_routes,
+        record_route_gaps,
+    )
+
+    profile_dict = json.loads((ctx.ws.kb / "scan-profile.json").read_text())
+    sites = load_census(ctx.ws)
+    gaps = check_census_routes(sites, profile_dict)
+    gaps += check_catalog_classes(match_manifests(ctx.target), profile_dict)
+    record_route_gaps(ctx.ws, gaps)
+    _write_gate(ctx.ws, "recall-gate", [], [])
+
+
 def _act_postflight(ctx: AuditContext) -> None:
     from sec_overlay.postflight import run_postflight  # local: avoid import cycle
 
@@ -304,6 +339,8 @@ DETERMINISTIC_ACTIONS.update(
         "arch-gate": _act_arch_gate,
         "tm-gate": _act_tm_gate,
         "postflight": _act_postflight,
+        "route-census": _act_route_census,
+        "recall-gate": _act_recall_gate,
     }
 )
 
@@ -364,7 +401,9 @@ def run_audit(
                     "scan-profile.json"
                 ) from None
             planned = list(profile.get("agents_to_spawn", []))
-            reconciled = reconcile_plan(ctx.ws, planned)  # ISSUE-006: recon-omitted classes
+            reconciled = reconcile_plan(
+                ctx.ws, planned, target_root=ctx.target
+            )  # ISSUE-006: recon-omitted classes
             block = render_dispatch(phase, ctx, classes=reconciled)
             if phase.name != "investigate":
                 return block

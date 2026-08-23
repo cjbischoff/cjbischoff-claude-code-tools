@@ -19,8 +19,11 @@ import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from sec_overlay.dependency_sinks import manifest_paths, match_manifests
 from sec_overlay.diffhunks import hunk_for_line
 from sec_overlay.positioning import resolve_position
+from sec_overlay.route_census import load_census
+from sec_overlay.route_control import check_catalog_classes, check_census_routes
 
 _REF_ANCHOR = re.compile(r"^(?P<path>.+?):(?P<start>\d+)(?:-\d+)?(?:\s.*)?$")
 
@@ -333,6 +336,42 @@ def claims_from_markdown(text: str) -> list[dict]:
             start = lineno.split("-", 1)[0]
             claims.append({"id": f"md-{len(claims)}", "text": line.strip(),
                            "refs": [f"{path}:{start}"]})
+    return claims
+
+
+def recall_claims(ws, profile: dict, *, target_root) -> list[dict]:
+    """Build one claim per deterministic omission, for the recall adversary.
+
+    A claim here is the inverse of a normal phase claim: it names something recon
+    did NOT say, so the adversary judges whether the omission matters rather than
+    whether a statement holds.
+
+    Args:
+        ws: Workspace holding kb/route-census.json.
+        profile: The recon scan profile.
+        target_root: Target directory, for the dependency-catalog match.
+
+    Returns:
+        One ``{"id", "refs"}`` claim per omission; empty when recon named everything
+        the census and the catalog found.
+    """
+    sites = load_census(ws)
+    by_path = {f"{s.method} {s.path}": f"{s.file}:{s.line}" for s in sites}
+    claims = []
+    for gap in check_census_routes(sites, profile):
+        ref = next((v for k, v in by_path.items() if k in gap["id"]), None)
+        claims.append({"id": gap["id"], "refs": [ref] if ref else [str(target_root)]})
+    entries = match_manifests(target_root)
+    manifests = manifest_paths(target_root)
+    for gap in check_catalog_classes(entries, profile):
+        # The adversary drops a claim it cannot confirm at its ref, and it reads
+        # refs from the target root. Cite the declaring manifest, not the catalog.
+        ref = next(
+            (manifests[e.id] for e in entries
+             if f"dependency-catalog:{e.id}," in gap["id"] and e.id in manifests),
+            None,
+        )
+        claims.append({"id": gap["id"], "refs": [ref or str(target_root)]})
     return claims
 
 

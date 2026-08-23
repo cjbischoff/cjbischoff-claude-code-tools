@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from pathlib import Path
 
 from sec_overlay.clsmap import is_noise_class
+from sec_overlay.dependency_sinks import matched_classes
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.workspace import Workspace, read_findings, write_findings
 
@@ -90,12 +92,21 @@ def demote_noise(ws: Workspace) -> int:
     return n
 
 
-def reconcile_plan(ws: Workspace, agents_to_spawn: list[str]) -> list[str]:
+def reconcile_plan(
+    ws: Workspace, agents_to_spawn: list[str], *, target_root: str | Path | None = None
+) -> list[str]:
     """Augment ``agents_to_spawn`` with real-security candidate classes recon omitted (O-025).
+
+    A dependency can hold the sink inside its own code (an OPA policy calling
+    http.send), which leaves no first-party pattern for recon to see. When
+    ``target_root`` is given, every attack class of a matched dependency-sink
+    catalog entry is added too.
 
     Args:
         ws: Workspace to read candidates from.
         agents_to_spawn: The profile's planned ``agents_to_spawn`` list.
+        target_root: Target repository root to check against the dependency-sink
+            catalog, or ``None`` to skip that check.
 
     Returns:
         ``agents_to_spawn`` followed by any additional real-security classes present
@@ -115,6 +126,9 @@ def reconcile_plan(ws: Workspace, agents_to_spawn: list[str]) -> list[str]:
         if cls not in seen and cls != "deps" and not is_noise_class(cls)
         and any(f.status is FindingStatus.CANDIDATE for f in fs)
     )
+    if target_root is not None:
+        planned = set(base) | set(extra)
+        extra = sorted(extra + [c for c in matched_classes(target_root) if c not in planned])
     return base + extra
 
 

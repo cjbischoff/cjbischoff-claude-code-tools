@@ -7,7 +7,7 @@ scoring, reporting, campaign state, and per-repo memory. Stdlib-only (no runtime
 table lists every module by job and is kept current with the code. This file is the in-package
 entry point; read the parent map for the full inventory.
 
-- Package layout: ~72 modules at the top level, plus the `correlate/` subpackage (cross-repo
+- Package layout: ~73 modules at the top level, plus the `correlate/` subpackage (cross-repo
   correlation — see the parent map's `sec_overlay/correlate/` section).
 - Two in-code invariants enforced here: the tool-receipt gate (`evidence.py` + `findings_gate.py`)
   and never-silent backends (`prefilter.py`). See [`../README.md`](../README.md#the-two-invariants-in-code).
@@ -15,6 +15,22 @@ entry point; read the parent map for the full inventory.
 
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
+
+`detection_coverage.py`'s `generate()` now emits a dependency-internal sink row in the
+rule-sources table — see the module map entry in [`../README.md`](../README.md) for the
+full contract.
+
+`rule_gaps.py`'s `emit_semgrep_rule` takes a new `safe_option` keyword. With it, the emitted
+rule is an absence rule: it fires only on a construction missing the named safe option. Its
+id then sits under `sec-overlay.absence.` instead of `sec-overlay.`. Without it, behavior is
+unchanged.
+
+`dependency_sinks.py` (new) loads and validates `../references/dependency-sinks.json` — the
+catalog of dependencies whose own code holds a sink — and exposes `catalog_ids()` for later
+receipt-id validation, plus `match_manifests()`/`matched_classes()` to check a target repo's
+manifests against the catalog. `manifest_paths()` returns the declaring manifest per matched
+entry, relative to the target root, so a recall claim can cite a ref the reader can open. See the module map entry in [`../README.md`](../README.md) for
+the full contract and the CLI-callable list for its `list`/`match` subcommands.
 
 `review_findings.py` (new, REV-01) adds the review-profile gate `apply_profile` — see the
 module map entry in [`../README.md`](../README.md) for the full contract; `cli.py`'s
@@ -114,6 +130,15 @@ findings (ISSUE-043) — measurement only, nothing gates on the rate.
 `confirms_alone()` predicates — a single source of truth for later modules that need to know
 whether a source can confirm a finding alone.
 
+`evidence.py`'s `TIER2_RECEIPTS` also holds `dependency-catalog`, the receipt for a finding
+whose sink lives inside a dependency's own code. A catalog match proves the dependency is
+declared. It does not prove the sink is reached, so the receipt stays Tier 2 like `ripgrep`
+and `ast-grep` — it locates a finding and never confirms one alone.
+
+`findings_gate.validate_findings` now rejects a `dependency-catalog:<id>` receipt whose
+`<id>` is absent from `dependency_sinks.catalog_ids()`. Without this check, free text after
+the colon would read as a receipt with no real entry behind it.
+
 `models.py`'s `Finding` gained `receipt_tier: int | None` — an additive, nullable field that
 round-trips through `to_dict`/`from_dict`. It holds the value `evidence.receipt_tier()` derives
 once a gate stamps it; `None` before that.
@@ -198,7 +223,9 @@ review-improvements branch; keep them that way (run `ruff format` before committ
 
 `phases.py` (new) is the ordered phase table (`PhaseSpec`, `PHASE_TABLE`) plus pure sequencer
 helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit driver walks —
-see the module map entry. `PHASE_TABLE` now ends with `redteam` (agent, `agents/redteam.md`,
+`PHASE_TABLE` now opens with `route-census` (deterministic, no inputs, output `_route_census` —
+`kb/route-census.json`). It runs before `recon` so the census reads only the target's source,
+never recon's own output — see the module map entry. `PHASE_TABLE` now ends with `redteam` (agent, `agents/redteam.md`,
 input `_findings_dir`, output `_redteam_plan` — `reports/redteam-plan.md`) after `selfscore` and
 before `artifact-gate` (deterministic, input `_report`/`_sarif`, output `_artifact_gate_json`) —
 `artifact_gate.run_artifact_gate` hard-requires `redteam-plan.md` to exist, so redteam must run
@@ -225,9 +252,12 @@ target, config, pinned SHA, and lazily-loaded `ScanProfile` an action needs. `re
 returns the printable block for an agent phase — prompt file plus `{{TARGET}}`/`{{WORKSPACE}}`/
 `{{SHA}}` substitutions, plus an optional `{{ATTACK_CLASS}}` line when called with `classes=` —
 with no side effects; the orchestrator runs the model. It raises if called on a deterministic
-phase (`prompt is None`). At the `investigate` phase, `run_audit` reads `agents_to_spawn` from
-`kb/scan-profile.json`, widens it with `partition.reconcile_plan` (recon-omitted classes), passes
-the reconciled list to `render_dispatch(classes=...)`, and appends `unrouted_triage_dispatch`'s
+phase (`prompt is None`). `_act_route_census` calls `route_census.census(ctx.target)` and
+`write_census` to persist `kb/route-census.json`. This action registers under `"route-census"`
+in `DETERMINISTIC_ACTIONS` and runs before the `recon` dispatch. At the `investigate` phase, `run_audit` reads `agents_to_spawn` from
+`kb/scan-profile.json`, widens it with `partition.reconcile_plan` (recon-omitted classes, plus —
+via `target_root=ctx.target` — every attack class of a matched dependency-sink catalog entry),
+passes the reconciled list to `render_dispatch(classes=...)`, and appends `unrouted_triage_dispatch`'s
 block — naming any candidate class still unrouted after reconciliation, with its count — so a
 `security-other`/`unknown` leftover never silently drops out of triage. `patch` gets the same
 reconciled class list passed to `render_dispatch(classes=...)` (no triage block, unlike
@@ -319,16 +349,53 @@ fails before the model runs instead of silently reaching it.
 a `reason`/`next_step` too (previously bare), matching the shape `route_control.py`'s gap dicts
 already used; `validate_coverage_ledger` rejects a `needs_follow_up` surface missing either field.
 
-`route_control.py` (new, ISSUE-027/029/036) derives one route-to-control table from
-`kb/scan-profile.json` (`build_route_control_table`) and checks recon, architecture, and threat-
-model output against it (`check_recon_routes`, `check_architecture_controls`,
-`check_threat_entrypoints`). A missing route, control, or entrypoint is never dropped: each check
-returns a `needs_follow_up` gap dict with `reason`/`next_step`, and `record_route_gaps` appends
-those gaps into `kb/coverage-ledger.json`'s `surfaces`, demoting `completeness` to `partial` so the
-ledger's own "complete forbids needs_follow_up" invariant still holds after the append.
+`route_control.py` (new, ISSUE-027/029/036) derives one route-to-control table
+(`build_route_control_table`) and checks recon, architecture, and threat-model output against it
+(`check_recon_routes`, `check_census_routes`, `check_architecture_controls`,
+`check_threat_entrypoints`, `check_catalog_classes`). The table prefers the code-derived census:
+it calls
+`route_census.load_census(ws)` by default, or takes a `census=` list of `RouteSite` directly, and
+stamps `"source": "route-census"` on the table. Without a census, it falls back to
+`kb/scan-profile.json`'s `entrypoints`, stamping `"source": "scan-profile"`. The fallback path is
+unchanged. Recon-derived routes still work when a target has no ripgrep-visible framework.
+A missing route, control, or entrypoint is never dropped: each check returns a `needs_follow_up`
+gap dict with `reason`/`next_step`, and `record_route_gaps` appends those gaps into
+`kb/coverage-ledger.json`'s `surfaces`, demoting `completeness` to `partial` so the ledger's own
+"complete forbids needs_follow_up" invariant still holds after the append.
+
+`check_catalog_classes(entries, profile)` reports every `dependency_sinks.SinkEntry` class the
+recon profile's `attack_surface` never named. A matched dependency, such as OPA, hides its sink
+inside its own Rego policy calling `http.send`. A first-party scan misses it, so recon can omit
+the whole class with no signal. Each gap row names the catalog entry and sink so a reviewer can
+read why the class applies.
+
+`phase_gate.py`'s `recall_claims(ws, profile, *, target_root)` (new) is the first caller of
+`check_census_routes` and `check_catalog_classes` for the recall adversary
+(`agents/recall-adversary.md`). It builds one `{"id", "refs"}` claim per deterministic omission. A census route gap keeps
+the route's own `file:line` as its ref. A catalog-class gap points at the manifest that declares
+the package, from `dependency_sinks.manifest_paths()`, since the adversary resolves a ref from
+the target root. Every claim carries a ref by construction, since an
+unrefable omission gives the adversary nowhere to look. It imports `dependency_sinks`,
+`route_census`, and `route_control` at module level — none of the three imports back from
+`phase_gate`, so no import cycle exists.
+
 `check_architecture_controls`/`check_threat_entrypoints` match a control or entrypoint via
-`_mentions`, a word-bounded (alphanumeric-neighbor guard) check, not substring — so a token that is
-part of a longer word (`auth` inside `authorization`) is still flagged as a gap.
+`_mentions`, a word-bounded (alphanumeric-neighbor guard) check, not substring. A token that is part
+of a longer word (`auth` inside `authorization`) is still flagged as a gap for those two checks.
+`check_census_routes` also calls `_mentions`, but against the recon profile's whole JSON blob rather
+than one field. A profile field carrying the route path as a prefix, such as a filename in free
+text, suppresses the gap. This is the check that closes the circularity. A route the code registers
+but recon never named now surfaces as a gap.
+
+`route_census.py` (new) derives a route inventory straight from source, via ripgrep over
+`references/route-frameworks.json`'s framework patterns, so `route_control.py`'s table can read
+something recon did not produce. `census()` returns `[]` when ripgrep exits nonzero or matches
+nothing. A missing ripgrep binary raises `FileNotFoundError`, because preflight owns binary
+availability — `preflight.py`'s `TOOLS` list now includes `rg` as a required entry.
+`write_census(ws, sites)` persists the result to `kb/route-census.json`, and
+`load_census(ws)` reads it back as `RouteSite` records, returning `[]` when the file is absent or
+holds invalid JSON. The module map entry in [`../README.md`](../README.md) has the full contract.
+CLI-callable.
 
 `class_ext.py` (new) provides `class_extension_status(classes, classes_dir)` to check which
 investigate/patch extension files exist; absent classes are logged as gaps so coverage is never
@@ -962,3 +1029,32 @@ string — the Fix line rendered `` Bump `` `` with nothing between the backtick
 on the last `@` instead (`pkg.rsplit('@', 1)[0] or pkg`), and falls back to the untouched string
 when that split empties out (a versionless scoped package like `@scope/name` has only one `@`,
 which is the scope delimiter, not a version separator).
+
+`astgrep.py` gained `build_rule()` and `run_astgrep_rule()`, plus a `run --not <pattern>` flag
+and a `rule --file <path>` subcommand — a relational-query wrapper for the absence idiom (a
+construction present, its safe option absent). Go needs hand-written `kind`/`has` anchoring;
+`build_rule()` does not generate it, because a bare selector-call pattern such as
+`rego.New($ARGS)` matches nothing in Go. See the module map entry in [`../README.md`](../README.md)
+for the full contract.
+
+`run_astgrep_rule()`'s docstring now names only the non-JSON/empty-output case its `except`
+catches. A missing `ast-grep`/`sg` binary still raises `FileNotFoundError` from `runner(...)` —
+correct, since the harness treats a backend that never ran as a coverage hole, not a clean
+empty result.
+
+`coverage_ledger.py`'s `build_coverage_ledger` now keys a covered class's surfaces by sink
+site, not by class. It emits one surface per distinct `(file, line)` finding site. Each
+surface's `id` is shaped `f"{cls}@{file}:{line}"` and carries `cls` and `site` fields. A class
+with no finding still emits one class-level surface, with `id` equal to the class name and no
+`site`. This closes the gap where a second `ssrf` sink in a different file inherited "covered"
+from an unrelated confirmed finding in the same class. The completeness invariant now runs per
+site instead of per class, so it rejects `complete` more often.
+
+Fix round 1 closed three gaps this site-keying opened. `rethreshold.py`'s `_ledger_disposition`
+now matches a surface by its `cls` field first, then falls back to bare `id`. A covered class's
+cross-repo compensating-control lookup now resolves against a site-keyed surface again. The
+per-site `needs_follow_up` branch's `reason`/`next_step` now name the specific sink site (e.g.
+"no terminal finding at sink site b.py:20 this pass" / "adjudicate b.py:20"). The old wording
+reused the class-level prose, reading as if the whole class were uncovered even when a sibling
+site was already `reported`. The class-level branch's wording — a class with zero findings —
+stays unchanged.

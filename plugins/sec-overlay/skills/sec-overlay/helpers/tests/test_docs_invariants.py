@@ -182,7 +182,9 @@ def test_evidence_vocabulary_block_lists_all_values():
 # is relative order — every doc-labelled phase must appear in PHASE_TABLE order (T-06-02-06).
 _CLAUDE_MD = Path(__file__).resolve().parents[2] / "CLAUDE.md"
 _PHASE_DOC_LABELS = {
+    "route-census": "Route census",
     "recon": "Recon",
+    "recall-gate": "Recall gate",
     "architecture": "Architecture",
     "arch-gate": "Arch gate",
     "threat_model": "Threat model",
@@ -223,3 +225,61 @@ def test_claude_md_phase_order_tracks_phase_table():
             "CLAUDE.md's phase-order block relative to PHASE_TABLE"
         )
         pos = found
+
+
+_ATTACK_CLASSES = Path(__file__).resolve().parents[2] / "references" / "attack-classes.md"
+
+
+def test_every_catalog_indicator_appears_in_the_attack_class_table():
+    """Recon selects a class from attack-classes.md, so a catalogued dependency
+    whose tokens are absent there is a routing gap the catalog cannot close alone."""
+    from sec_overlay.dependency_sinks import load_catalog
+
+    text = _ATTACK_CLASSES.read_text()
+    missing = []
+    for entry in load_catalog():
+        for token in (entry.sink, *entry.indicators):
+            if token not in text:
+                missing.append(f"{entry.id}: {token}")
+    assert not missing, f"catalog tokens absent from attack-classes.md: {missing}"
+
+
+def _table_row_for_cls(text: str, cls: str) -> str:
+    for line in text.splitlines():
+        if line.startswith(f"| `{cls}` |"):
+            return line
+    raise AssertionError(f"no table row found for cls `{cls}`")
+
+
+def test_attack_class_table_names_the_policy_engine_class_for_every_catalog_entry():
+    """A presence-anywhere check would pass even if a token sat under the wrong
+    cls, so this pins every token inside the row `reconcile_plan` actually routes by."""
+    from sec_overlay.dependency_sinks import load_catalog
+
+    text = _ATTACK_CLASSES.read_text()
+    for entry in load_catalog():
+        row = _table_row_for_cls(text, entry.cls)
+        for token in (entry.sink, *entry.indicators):
+            assert token in row, f"{entry.id}: {token} not in the `{entry.cls}` row"
+
+
+_CLASSES_DIR = Path(__file__).resolve().parents[2] / "agents" / "classes"
+
+
+def test_expr_eval_rce_class_file_carries_the_required_sections():
+    txt = (_CLASSES_DIR / "expr-eval-rce.md").read_text()
+    for heading in (
+        "Canonical fix shape",
+        "Discrimination requirement",
+        "Class boundary",
+        "Proof tuple (required evidence)",
+        "Instance preservation",
+    ):
+        assert heading in txt, heading
+
+
+def test_every_catalogued_expr_eval_class_has_a_class_file():
+    from sec_overlay.dependency_sinks import load_catalog
+
+    for entry in load_catalog():
+        assert (_CLASSES_DIR / f"{entry.cls}.md").exists(), entry.cls

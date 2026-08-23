@@ -8,7 +8,7 @@ Use these exact keys (lowercase) in `scan-profile.json`.
 |-----|------|-------------------------------------|-------------------------------|
 | `sqli` | SQL injection | `execute(`, `cursor`, `SELECT`, `%`/f-string into query, ORM raw | static only |
 | `cmdi` | OS command injection | `subprocess`, `os.system`, `exec(`, `child_process`, backticks (note: `exec(` substring-matches PHP `curl_exec(`/`mysqli_*_exec` — anchor with word boundary `\bexec\(` or `\bshell_exec\(` to avoid HTTP/DB false hits) | static only |
-| `ssrf` | Server-side request forgery | `requests.get(`, `urlopen`, `fetch(`, `axios`, user-controlled URL | static only |
+| `ssrf` | Server-side request forgery | `requests.get(`, `urlopen`, `fetch(`, `axios`, user-controlled URL; OPA/Rego specifically: `rego.New`, `rego.Module`, `rego.Capabilities`, `http.send` | static only |
 | `path-traversal` | Path traversal / file read-write | `open(`, `join(`, `../`, `send_file`, `readFile` | static only |
 | `fileupload` | Insecure file upload | `multer`, `request.FILES`, `req.files`, `MultipartFile`, `move_uploaded_file`, `FormFile`, extension/content-type checks on upload path | static only |
 | `authz` | Broken access control (BOLA/BFLA) | route handlers, `current_user`, missing role checks, IDs in path | static only |
@@ -17,16 +17,25 @@ Use these exact keys (lowercase) in `scan-profile.json`.
 | `xss` | Cross-site scripting | template render, `innerHTML`, `dangerouslySetInnerHTML`, unescaped output | static only |
 | `secrets` | Hardcoded secrets/keys | `api_key`, `secret`, `AKIA`, `sk_live_`, `token =`, private keys | static only |
 | `crypto` | Weak/misused cryptography | `md5`, `sha1`, `DES`, `ECB`, static IV, `random` for tokens | static only |
-| `ssti` | Server-side template injection | template engine with user input, `render_template_string` | static only |
+| `ssti` | Server-side template injection | template engine with user input, `render_template_string`; Jinja2 specifically: `Environment.from_string`, `Template(`, missing `SandboxedEnvironment` | static only |
 | `xxe` | XML external entity | XML parser without entity disabling, `etree`, `DocumentBuilder` | static only |
 | `open-redirect` | Open redirect | `redirect(`, user-controlled `Location`, `next=` params | static only |
 | `deps` | Vulnerable dependencies | lockfiles / manifests (handled by SCA, not an investigation agent) | static only |
 | `prompt-injection` | LLM prompt injection / unsafe tool use / guardrail bypass | `langchain`, `langgraph`, `openai`, `anthropic`, `bedrock`, `.invoke(`, `bind_tools`, `mcp`, tool registration, user text → model prompt, model output → sink (exec/DB/fetch) | static only |
 | `webhook-verification` | Missing/incorrect signature verification | `X-Shopify-Hmac-Sha256`, `Stripe-Signature`, `verifyWebhook`, `crypto.timingSafeEqual`, `hmac`, raw-body handling on a webhook/callback route | static only |
-| `expr-eval-rce` | Sandboxed expression/rule-engine escape | `jsep`, `expr-eval`, `mathjs`, `vm.runInContext`, `callee.apply`, `constructor.constructor`, custom formula/rules engines | static only |
+| `expr-eval-rce` | Sandboxed expression, policy, or rule-engine escape | `jsep`, `expr-eval`, `mathjs`, `vm.runInContext`, `callee.apply`, `constructor.constructor`, custom formula/rules engines; server-side policy and script engines: `cel.NewEnv`, `cel.Compile`, `Program.Eval`, `starlark.ExecFile`, `starlark.Thread`, `starlark.StringDict`, `goja.New`, `Runtime.RunString`, `vm.Set`, `lua.NewState`, `LState.DoString`, `SkipOpenLibs`, `SpelExpressionParser` | static only |
 
 `expr-eval-rce` is distinct from `deserialization` and `ssti`: the sink is a custom
 evaluator's own call/apply mechanism, not `eval()` or a template engine.
+
+A **server-side policy or rule engine** is in this class even when the engine ships as a
+dependency. The sink is a builtin the engine exposes to policy text: OPA's `http.send`, a
+CEL host function, or a Starlark predeclared builtin. No first-party source line holds it.
+`references/dependency-sinks.json` catalogues these dependencies; a `go.mod` or
+`requirements.txt` match routes the class through `partition.reconcile_plan`.
+
+An engine whose builtin performs an outbound request is `ssrf`, not `expr-eval-rce` — OPA's
+`http.send` is the reference case. Route by the sink the builtin reaches, not by the engine.
 
 ## Selection guidance for recon
 
@@ -45,6 +54,12 @@ evaluator's own call/apply mechanism, not `eval()` or a template engine.
   blind to these — the investigate agent must read templates manually and ground the
   sink with a `ripgrep:` receipt (grep proving the unescaped interpolation at
   `file:line`), which counts as a mechanical receipt.
+- **Server-side policy and script engines** (OPA/Rego, CEL, Starlark, goja, gopher-lua,
+  Spring SpEL): select the class named by the matching `references/dependency-sinks.json`
+  entry whenever the manifest declares the package, even when no first-party line matches an
+  indicator. The evaluator's own builtins are the sink. Record which safe option the call
+  site passes: `rego.Capabilities`, a restricted `cel.NewEnv`, or `SkipOpenLibs`. Its
+  absence is the finding. The absence rule pack keys on it.
 - `agents_to_spawn` mirrors `attack_surface` MINUS `deps` (SCA covers deps).
 - Everything is static-only: this harness never executes the target.
 - **File upload** (`fileupload`): select when any upload-handling call is present

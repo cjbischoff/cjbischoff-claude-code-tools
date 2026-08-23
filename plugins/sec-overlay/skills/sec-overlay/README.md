@@ -79,11 +79,15 @@ flowchart TB
 ```
 
 - **`references/`** is stated once, obeyed everywhere — severity bands, scope rules, JSON
-  schemas, the crypto allow/deny lists, and the deep hunting guides. → [details](references/README.md)
+  schemas, the crypto allow/deny lists, and the deep hunting guides.
+  `dependency-sinks.json` routes an attack class from a manifest match when the sink lives
+  inside a dependency's own source. → [details](references/README.md)
 - **`agents/`** are the LLM prompts. Producers (Sonnet) find things; adversaries (Opus, a
   different family) try to prove them wrong. → [details](agents/README.md)
 - **`helpers/`** is the deterministic Python that runs the tools and *enforces the gates no
-  LLM is trusted to enforce.* Stdlib-only. → [details](helpers/README.md)
+  LLM is trusted to enforce.* Stdlib-only. It ships `rules/absence`, a tracked, first-party
+  semgrep pack that recon always adds to `sast_plan.semgrep.rulesets` — the vendored clone
+  carries no missing-safe-option rule. → [details](helpers/README.md)
 
 The main agent (you, driving [`SKILL.md`](SKILL.md)) is the orchestrator: it calls a Python
 step, spawns an agent, records the phase, calls the next Python step.
@@ -100,11 +104,12 @@ flowchart TD
     P0["0 · preflight<br/>tools + CodeQL packs present?"] --> P1["1 · begin_pass<br/>pin SHA"]
     P1 --> C1(("C1 · context-ingest → context-adversary<br/>repo docs as UNTRUSTED leads"))
     C1 --> T1["T1 · graph build<br/>Tier-1 substrate (LLM-free)"]
-    T1 --> RA(("2 · recon → architecture<br/>gated by phase-adversary (opus)"))
+    T1 --> RC["R0 · route-census<br/>code-derived route inventory (LLM-free)"]
+    RC --> RA(("2 · recon → architecture<br/>gated by phase-adversary (opus)"))
     RA --> AG2["3.5 · arch-gate<br/>diagram_gate + ste_lint, halts on violation"]
     AG2 --> TM(("4 · threat-model<br/>gated by phase-adversary (opus)"))
     TM --> TG["4.5 · tm-gate<br/>diagram_gate + ste_lint + duplication check"]
-    TG --> PRE["5 · prefilter<br/>semgrep+codeql+sca+secrets, never-silent"]
+    TG --> PRE["5 · prefilter<br/>semgrep+codeql+sca+secrets+dependency-sinks, never-silent"]
     PRE --> INV(("6 · investigate<br/>parallel per class, loop-until-dry"))
     INV --> DED["7 · dedupe<br/>refactor-resistant fingerprint"]
     DED --> CLUS["7.5 · cluster<br/>≥3 same-class/sink -> systemic cluster"]
@@ -120,6 +125,15 @@ flowchart TD
     AG --> AR(("14.6 · artifact-review (opus)<br/>claim↔evidence over the rendered report"))
     AR --> C2["15 · postflight<br/>durable prior_context.json"]
 ```
+
+For the recon phase only, `RA`'s phase-adversary pass is followed by one more gate:
+`agents/recall-adversary.md` (opus) judges what recon **left out**, using
+`sec_overlay.phase_gate.recall_claims` and `kb/route-census.json`. A separate
+deterministic `recall-gate` phase runs right after recon. It recomputes the
+same checks and writes each gap through `route_control.record_route_gaps` into
+`kb/coverage-ledger.json`, demoting `completeness` to `partial`. `CLAUDE.md`'s
+phase-order table lists this `recall-gate` row right after `recon`, matching
+`PHASE_TABLE`.
 
 The phase legend with exact commands is in [`SKILL.md`](SKILL.md); the hard operating rules
 (a partial scan is a coverage hole, not "clean") are in [`CLAUDE.md`](CLAUDE.md) §2.
@@ -227,6 +241,7 @@ uv run python -m sec_overlay.postflight    --workspace <WS> --sha <sha>   # 15, 
 Everything lands in `<target>/.sec-overlay/<slug>/` (self-ignoring):
 
 ```
+kb/route-census.json     code-derived route inventory, written before recon (never from recon)
 kb/scan-profile.json      recon output: languages, frameworks, attack_surface, sast_plan
 architecture/             C4 diagrams + runtime views + arc42.md (building blocks in §5)
 threat-model/             dfd.mmd (derived) + attack-sequences/ + threat-model.md (hunt list)
@@ -249,6 +264,10 @@ MEMORY.md, learnings/     durable per-repo memory across runs
 
 **Resume** an interrupted run: `python -m sec_overlay.cli memory --target <T>` reports
 `{finished, resumable, next_phase, stages_done}`.
+
+`CLAUDE.md`'s phase-order row for `route-census` names the driver phase, not a bare CLI
+command. Its `main()` only prints to stdout, so the driver phase is the supported path
+to `kb/route-census.json`.
 
 ---
 

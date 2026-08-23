@@ -76,6 +76,79 @@ def run_astgrep(pattern: str, lang: str, root: str, *, runner=subprocess.run) ->
     return matches
 
 
+def build_rule(
+    pattern: str,
+    lang: str,
+    *,
+    not_pattern: str | None = None,
+    inside: str | None = None,
+    rule_id: str = "sec-overlay-adhoc",
+) -> str:
+    """Build inline-rule YAML for a relational ast-grep query.
+
+    A plain pattern cannot express an absence. This wraps a pattern in the
+    relational form so a caller can ask for "this construction, but NOT
+    containing that option" — the structural half of the absence idiom.
+
+    Args:
+        pattern: The construction to match.
+        lang: ast-grep language name (``go``, ``python``, ``typescript``, ...).
+        not_pattern: When given, a match is kept only if this pattern is absent
+            from anywhere inside it.
+        inside: When given, a match is kept only if it sits inside this pattern.
+        rule_id: Rule id, echoed in ast-grep's output.
+
+    Returns:
+        YAML text suitable for ``run_astgrep_rule``.
+
+    Note:
+        Go needs ``kind``/``has`` anchoring that this helper does not generate:
+        a selector-call pattern such as ``rego.New($ARGS)`` matches nothing.
+        For Go, write the rule by hand and pass it to ``run_astgrep_rule``
+        directly, or through the ``rule --file`` CLI subcommand.
+    """
+    lines = [f"id: {rule_id}", f"language: {lang}", "rule:"]
+    if not_pattern is None and inside is None:
+        lines.append(f"  pattern: {pattern}")
+    else:
+        lines.append("  all:")
+        lines.append(f"    - pattern: {pattern}")
+        if not_pattern is not None:
+            lines.append("    - not:")
+            lines.append("        has:")
+            lines.append("          stopBy: end")
+            lines.append(f"          pattern: {not_pattern}")
+        if inside is not None:
+            lines.append("    - inside:")
+            lines.append("        stopBy: end")
+            lines.append(f"        pattern: {inside}")
+    lines.append("severity: warning")
+    lines.append(f"message: {rule_id}")
+    return "\n".join(lines) + "\n"
+
+
+def run_astgrep_rule(yaml_text: str, root: str, *, runner=subprocess.run) -> list[dict]:
+    """Run a relational ast-grep rule and return its matches.
+
+    Args:
+        yaml_text: Inline-rule YAML, from ``build_rule`` or written by hand.
+        root: File or directory to scan.
+        runner: Injection point for tests.
+
+    Returns:
+        Parsed matches ``[{file, line, text}]``; empty on non-JSON/empty output.
+    """
+    cmd = [_binary(), "scan", "--inline-rules", yaml_text, "--json", root]
+    completed = runner(cmd, capture_output=True, text=True, check=False)
+    text = (completed.stdout or "").strip()
+    if not text:
+        return []
+    try:
+        return parse_astgrep_json(json.loads(text))
+    except json.JSONDecodeError:
+        return []
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI: run an ast-grep pattern and print ``file:line\\ttext`` per match."""
     parser = argparse.ArgumentParser(prog="sec-overlay-astgrep")
@@ -84,9 +157,24 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--pattern", required=True)
     r.add_argument("--lang", required=True)
     r.add_argument("--root", required=True)
+    r.add_argument("--not", dest="not_pattern", default=None,
+                    help="Keep a match only when this pattern is absent from it.")
+    q = sub.add_parser("rule", help="Run a hand-written inline rule file.")
+    q.add_argument("--file", required=True)
+    q.add_argument("--root", required=True)
     args = parser.parse_args(argv)
     if args.cmd == "run":
-        for m in run_astgrep(args.pattern, args.lang, args.root):
+        if args.not_pattern:
+            matches = run_astgrep_rule(
+                build_rule(args.pattern, args.lang, not_pattern=args.not_pattern), args.root
+            )
+        else:
+            matches = run_astgrep(args.pattern, args.lang, args.root)
+        for m in matches:
+            print(f"{m['file']}:{m['line']}\t{m['text']}")
+        return 0
+    if args.cmd == "rule":
+        for m in run_astgrep_rule(Path(args.file).read_text(), args.root):
             print(f"{m['file']}:{m['line']}\t{m['text']}")
         return 0
     return 1

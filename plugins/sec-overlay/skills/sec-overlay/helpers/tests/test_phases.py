@@ -144,3 +144,20 @@ def test_outputs_present_tracks_the_postflight_artifact(tmp_path):
 
     (ws.kb / "prior_context.json").write_text("{}")
     assert outputs_present(postflight, ws) is True
+
+
+def test_route_census_runs_before_recon():
+    """The census must not be able to read recon's output, so it runs first."""
+    from sec_overlay.phases import PHASE_TABLE
+
+    names = [p.name for p in PHASE_TABLE]
+    assert names.index("route-census") < names.index("recon")
+
+
+def test_route_census_declares_no_inputs():
+    from sec_overlay.phases import PHASE_TABLE
+
+    spec = next(p for p in PHASE_TABLE if p.name == "route-census")
+    assert spec.kind == "deterministic"
+    assert spec.inputs == ()
+    assert len(spec.outputs) == 1

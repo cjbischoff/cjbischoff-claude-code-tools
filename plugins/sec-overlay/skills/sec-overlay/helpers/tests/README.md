@@ -1,8 +1,14 @@
 # `tests/` — the deterministic test suite
 
-108 pytest files, 1285 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+110 pytest files, 1306 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+`test_detection_coverage.py` guards the coverage document: `generate()`'s output must name the
+dependency-internal sink limit and cite `dependency-sinks.json`, so the doc cannot silently
+drop the routing-versus-proof distinction. A second test asserts `generate()`'s output equals
+the tracked `references/DETECTION_COVERAGE.md`, byte for byte. This closes the drift the first
+test cannot see: an edit to `detection_coverage.py` with no matching regeneration of the file.
 
 The fake-response `R` classes in `test_review_tracer.py` and `test_diffscope.py` declare
 `stdout = ""` as a class attribute so `ty check` resolves the attribute; behavior is unchanged.
@@ -235,6 +241,13 @@ evidence.SHIPPING_STATUSES`.
 and `test_threat_model_retains_every_entrypoint` check that `recon.md`, `architecture.md`, and
 `threat-model.md` each emit what `sec_overlay.route_control`'s checks look for.
 
+`test_contracts.py` also gained two guards for the catalog and absence receipts.
+`test_ssrf_proof_tuple_admits_the_dependency_internal_sink` slices `ssrf.md` down to its
+"## Proof tuple" section. It checks that `dependency-catalog` and `sec-overlay.absence` both
+appear inside that slice, not just somewhere in the file.
+`test_investigate_tool_grounding_names_the_two_new_receipts` checks `investigate.md` names
+`dependency-catalog` and states it never confirms a gate alone.
+
 `test_context.py` gained three tests for `doc_coverage()`: `test_doc_coverage_warns_when_few_docs_read`, `test_doc_coverage_warns_below_ratio`, and `test_doc_coverage_no_docs_no_warning` (ISSUE-016) — validate doc coverage ratio computation and warning thresholds.
 
 `test_stage_validate.py` gained `test_context_validator_flags_cited_doc_missing_from_docs_read` and `test_context_validator_ok_when_cited_doc_present` (ISSUE-021) — the `context` stage-validator rejects a `source_doc` citation absent from `provenance.docs_read`.
@@ -320,11 +333,13 @@ the regression guard for the CLI no longer calling `state.begin_pass` on every i
 
 | Test | Guards |
 |------|--------|
-| `test_contracts.py` | Prompt↔schema drift: a `Finding` JSON example in an agent prompt must parse against the real `models.py`. |
+| `test_contracts.py` | Prompt↔schema drift: a `Finding` JSON example in an agent prompt must parse against the real `models.py`. Two guards pin the always-run absence pack: `recon.md` must mention `rules/absence` right after the word "always", and `golden_scan_profile.json` must carry `rules/absence` in `sast_plan.semgrep.rulesets`. |
 | `test_finding_schema.py` | The `Finding` record stays consistent with `references/finding.schema.json`. |
 | `test_wiring.py` | Silent-backend / clsmap / dead-link regressions and attack-class routing. |
-| `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules, the `EVIDENCE_VOCABULARY` block listing every `sec_overlay.evidence` tier/status/disposition value verbatim, the `CLAUDE.md` phase-order block tracking `PHASE_TABLE`'s relative order, and (06-06, WR-01) that no live doc wrongly denies review's --workspace support — premise pinned against `run_review`'s real signature; the matcher covers three denial wordings, with pattern tests pinning both denial and corrected phrasing. |
+| `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules, the `EVIDENCE_VOCABULARY` block listing every `sec_overlay.evidence` tier/status/disposition value verbatim, the `CLAUDE.md` phase-order block tracking `PHASE_TABLE`'s relative order, (06-06, WR-01) that no live doc wrongly denies review's --workspace support — premise pinned against `run_review`'s real signature; the matcher covers three denial wordings, with pattern tests pinning both denial and corrected phrasing — and that every `dependency-sinks.json` catalog entry's `sink`/`indicators` tokens appear inside the specific table row named by its `cls` value in `attack-classes.md` — not merely anywhere in the file — so recon's class table never drifts from the catalog, in the row `reconcile_plan` actually routes by. Two more guards pin the class-file side of that routing: every catalogued `cls` value (`ssrf`, `expr-eval-rce`, `ssti`) has a matching `agents/classes/<cls>.md` file, and `expr-eval-rce.md` carries all five required section headings — so `reconcile_plan` can never select a class with no class prompt behind it. |
 | `test_frozen_contract.py` | Byte-identity: `models.py`/`evidence.py` are frozen mirrors of a separate Go port (D-15) — a sha256 pin fails loudly on any edit. `fingerprint()` golden-value pins (fully-populated, minimally-populated, field-order-permuted) prove its behavior independent of that byte check. REL-03: `pyproject.toml`'s `[project] dependencies` stays `[]`. |
+| `test_absence_rules.py` | The `rules/absence` semgrep pack against `fixtures/absence_repo`: it flags the missing-safe-option site, stays silent on the fixed site, and every rule's own block carries a `cls:` line after its `metadata:` line — not just a raw count of `cls:` occurrences in the file. One test per rule now covers all five. Each asserts the vulnerable site by `(file, rule, line)` and the hardened site's silence. The three added pairs are `engines_unsafe.go`/`engines_safe.go` for `cel.NewEnv` and `lua.NewState`, plus `fetch.py`'s two `requests.get` lines. Skips when `semgrep` is absent from `PATH`. |
+| `test_astgrep.py` (4 new) | `build_rule()` emits a `not:`-wrapped relational rule; `run_astgrep_rule()` passes the rule inline via `--inline-rules` and returns parsed matches; the live case runs `fixtures/absence_repo/rego-absence.yaml` and asserts the Go absence rule flags `vulnerable.go` and stays silent on `safe.go`. Skips when `ast-grep` is absent from `PATH`. |
 
 ## The rest
 
@@ -339,7 +354,10 @@ ISSUE-053: a `static-only` re-verify routes the finding to `needs-deployment-tes
 `test_evidence.py` gained coverage for the shared tier/status vocab: `TIER1_RECEIPTS |
 TIER2_RECEIPTS` partitions `_MECHANICAL` exactly, `receipt_tier()` grades colon-form sources,
 `confirms_alone()` requires a Tier-1 receipt, and `SHIPPING_STATUSES`/`RUNTIME_DISPOSITIONS` match
-their fixed literal sets.
+their fixed literal sets. Two more guards cover the `dependency-catalog` receipt:
+`test_dependency_catalog_is_a_tier_two_receipt` checks it sits in `TIER2_RECEIPTS`, not
+`TIER1_RECEIPTS`, and grades to tier 2; `test_dependency_catalog_alone_cannot_confirm` checks
+`confirms_alone()` returns `False` for it alone and `True` once a Tier-1 receipt joins it.
 
 `test_models.py` gained coverage for `Finding.receipt_tier` — defaults to `None`, round-trips a
 set value through `to_dict`/`from_dict`, and an absent key loads as `None`.
@@ -419,6 +437,24 @@ raising `ValueError` that names it, and extra unused `subs` keys being ignored.
 surfaces now carrying `reason`/`next_step`: `validate_coverage_ledger` rejects one missing
 either field, accepts one carrying both, and `render_markdown` renders both columns.
 
+Four more guards pin the site-keyed surface. Two sinks in the same class at different files
+produce two surfaces, `ssrf@a.py:10` and `ssrf@b.py:20`, instead of one shared class surface.
+A candidate sink at one site keeps its own surface `needs_follow_up`. The ledger stays
+`partial` even though a sibling site in the same class is confirmed. A class with no finding
+still emits one class-level surface keyed by the bare class name. Two findings landing on the
+same site collapse into one surface, so `surfaces` ids stay unique.
+
+Two more guards pin Fix round 1's C1/I1/I2 fixes. `test_per_site_surface_carries_cls_and_site`
+asserts a per-site surface keeps its `cls` and `site` fields.
+`test_per_site_pending_surface_validates_and_has_reason_and_next_step` asserts a per-site
+`needs_follow_up` surface carries a non-empty `reason` and `next_step` and that
+`validate_coverage_ledger` accepts the builder's own output.
+
+`test_correlate_rethreshold.py` gained
+`test_demote_when_enforcer_ledger_is_site_keyed`. It builds a real, site-keyed coverage ledger
+via `build_coverage_ledger`, not a hand-written dict. It asserts `rethreshold`'s demote path
+still resolves the enforcer's disposition through `_ledger_disposition`'s `cls`-field match.
+
 `test_route_control.py` (new, ISSUE-027/029/036) covers `route_control.py`: a table control the
 architecture markdown omits is a `needs_follow_up` gap, a table entrypoint the threat model drops
 is a gap, no gap when everything is present, and `record_route_gaps` round-trips a gap's
@@ -426,7 +462,42 @@ is a gap, no gap when everything is present, and `record_route_gaps` round-trips
 returns no errors. Word-boundary gap tests pin the fix for substring false-negatives: a control
 that is a substring of a longer word (`auth` inside `authorization`) is still a gap, the same
 control as a standalone token is covered, and an entrypoint carrying path punctuation (`/login`)
-still matches as a standalone mention.
+still matches as a standalone mention. Four more guards pin the census-first table. It stamps
+`source: "route-census"` and includes the census route when a `census=` list is passed. It falls
+back to `source: "scan-profile"` when no census exists. `check_census_routes` reports a
+code-registered route the profile never mentions, staying silent when the profile names the route
+anywhere in its JSON.
+
+Two more guards cover `check_catalog_classes`. The OPA catalog entry (`opa-rego-http-send`,
+class `ssrf`) becomes a `needs_follow_up` gap when `attack_surface` omits `ssrf`. The same entry
+stays silent when `attack_surface` already names `ssrf`.
+
+A third guard passes two catalog entries that share a class. Both `cel-go-expression-eval` and
+`starlark-go-exec` route `expr-eval-rce`, so the guard asserts exactly one gap. This pins the
+dedupe branch a mutation test once found untested.
+
+`test_route_census.py` (new) covers `route_census.py` with eight guards: every framework entry
+carries a pattern and globs, framework names are unique, `FRAMEWORKS_PATH` resolves to the
+tracked reference file, `census()` finds every route in the `fixtures/route_repo` fixture
+(Flask and Go net/http), site ids are stable and unique across two runs, a failing ripgrep
+runner returns an empty list rather than raising, `write_census`/`load_census` round-trip a
+list of `RouteSite` records through `kb/route-census.json`, and `load_census` returns an empty
+list when the file is absent. The two fixture-reading tests skip when `rg` is not installed.
+
+`test_phase_gate.py` gained two guards for `recall_claims` (new, F2/F6). One builds a workspace
+with `_workspace_with_census`. That helper round-trips through `route_census.write_census`, not
+a hand-written JSON file. The guard asserts a census route recon never mentioned produces a
+claim carrying a `file:line` ref. The other asserts an empty claim list when recon's
+`entrypoints` already name the route.
+
+A third guard covers the catalog half of `recall_claims`. It writes the declaring manifest into
+a subdirectory and asserts every claim ref resolves under the target root. That fails on the old
+overlay-relative ref, which the adversary's drop rule discarded.
+
+`test_contracts.py` gained two guards. One confirms `agents/recall-adversary.md` exists and
+states both its `OMISSION` row format and the `NO OMISSION FOUND` line, and mentions opus. The
+other pins `agents/phase-adversary.md` unchanged, asserting `OMISSION` never appears in it —
+the count-invariant verdict tables stay load-bearing.
 
 `test_class_ext.py` (new) covers `class_ext.py`: an alias map (sqli/cmdi/xss → injection.md)
 counts coarse extension files, direct files count by name, and uncovered classes log gaps so
@@ -966,3 +1037,68 @@ Phase 8 (v5.1, DOC-03) promotes `selfscore` from a deliberately-omitted PHASE_TA
 an enforced label in `test_docs_invariants.py`'s `_PHASE_DOC_LABELS`: the CLAUDE.md
 phase-order block must now carry `Selfscore` between `Report` and `Red Team`, in
 PHASE_TABLE order. Only `factcheck` and `demote-noise` remain condensed-view omissions.
+
+`test_dependency_sinks.py` (new) covers `sec_overlay.dependency_sinks`: the shipped
+catalog loads and passes `validate_catalog` with zero errors; the `opa-rego-http-send`
+entry exists with `cls == "ssrf"`, `package == "github.com/open-policy-agent/opa"`,
+`"go.mod"` in its manifests, and a non-empty `safe_option`; `catalog_ids()` returns the
+same id set as loading the catalog directly, with no duplicate ids; and
+`validate_catalog` reports a defect fragment (`entries`, `package`, or `duplicate`) for
+each of three malformed documents — an empty entries key, an entry missing a required
+field, and an entry list with a duplicate id. Four more guards cover manifest matching
+against the `fixtures/dep_sink_repo` fixture (a `go.mod` declaring the OPA dependency
+plus a `policy.go` using it): `match_manifests` finds only `opa-rego-http-send` in that
+fixture; `matched_classes` reduces it to `["ssrf"]`; a repo with an unrelated `go.mod`
+matches nothing; and a `go.mod` planted under `node_modules/` is ignored, proving the
+vendored-directory skip.
+
+Three guards in `test_partition.py` cover `reconcile_plan`'s new `target_root` keyword:
+passing the `dep_sink_repo` fixture as `target_root` adds `ssrf` to a plan that only
+named `authz`, with `authz` still first (a planned class is never removed or reordered);
+omitting `target_root` leaves a plan unchanged; and passing `target_root` when `ssrf` is
+already planned does not duplicate it.
+
+Two more guards in `test_findings_gate.py` cover the catalog-id check:
+`test_findings_gate_rejects_an_unknown_catalog_id` writes a `dependency-catalog:not-a-real-entry`
+source and checks the gate names that id in an error; `test_findings_gate_accepts_a_known_catalog_id`
+writes `dependency-catalog:opa-rego-http-send`, a real catalog id, and checks the gate
+raises no `dependency-catalog` error for it.
+
+Two more guards in `test_bucket_b.py` cover `emit_semgrep_rule`'s `safe_option` keyword.
+`test_emit_semgrep_rule_emits_the_absence_shape_when_a_safe_option_is_named` checks three
+things: the rule id sits under `sec-overlay.absence.`, a `pattern-not` half names the safe
+option, and `metadata.safe_option` records it.
+`test_emit_semgrep_rule_without_a_safe_option_is_unchanged` checks the plain rule id and
+patterns stay unaffected.
+
+Two new guards in `test_phases.py` cover the `route-census` row wired into `PHASE_TABLE`.
+`test_route_census_runs_before_recon` asserts its index precedes `recon`'s index.
+`test_route_census_declares_no_inputs` asserts the spec is deterministic, takes no inputs,
+and declares exactly one output — the census never reads recon's own artifact. A new guard
+in `test_driver.py`, `test_route_census_phase_writes_the_census_file`, runs
+`DETERMINISTIC_ACTIONS["route-census"]` against the `fixtures/route_repo` fixture and
+checks `kb/route-census.json` exists afterward. `test_docs_invariants.py`'s
+`_PHASE_DOC_LABELS` gained a `"route-census": "Route census"` entry, so the CLAUDE.md
+phase-order guard also enforces this new row's position ahead of `Recon`.
+
+`test_preflight.py::test_rg_is_a_required_tool` checks `TOOLS` names `rg` and that
+`_OPTIONAL` excludes it. Both `route_census.py` and `structural_index.py` shell out
+to ripgrep, so a missing binary must fail preflight rather than the phase itself.
+
+`test_driver.py` gained
+`test_recall_gate_phase_records_an_unmentioned_census_route_as_a_ledger_gap`. It runs
+the new `DETERMINISTIC_ACTIONS["recall-gate"]` action against a workspace whose census
+names a route the scan profile never mentions, then asserts `kb/coverage-ledger.json`
+holds that gap. `recall_claims` still reshapes the same checks for the recall
+adversary. The ledger write itself now comes from this deterministic phase, not from an
+adversary call that no code path reaches.
+
+`test_phase_gate.py` gained
+`test_recall_claims_include_a_real_catalog_class_recon_omitted`. It uses
+`dependency_sinks.load_catalog()`'s real `ssrf` entry, not a synthetic `SinkEntry`. A
+deleted `check_catalog_classes` loop inside `recall_claims` fails this test, instead of
+leaving the suite green.
+
+`test_docs_invariants.py`'s `_PHASE_DOC_LABELS` gained a `"recall-gate": "Recall gate"`
+entry. The CLAUDE.md phase-order guard had silently skipped `recall-gate` on the earlier
+label miss. It now enforces the row's position right after `Recon`.

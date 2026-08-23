@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from sec_overlay.correlate.edges import control_enforces_edges
-from sec_overlay.correlate.ingest import ingest, member_coverage
+from sec_overlay.correlate.ingest import ingest, member_coverage, member_workspace
 from sec_overlay.correlate.manifest import Manifest, Member
 from sec_overlay.correlate.rethreshold import rethreshold
+from sec_overlay.coverage_ledger import build_coverage_ledger
 from tests.correlate_fixtures import build_member
 
 
@@ -51,6 +53,29 @@ def test_demote_when_enforcer_ledger_no_issue(tmp_path: Path):
     # control-enforces edge forms; the ledger's no_issue_found disposition drives the demote.
     man = _members(tmp_path, [_enf("E-1", "handler for 'p write' has no MR check", status="fixed")],
                    ledger)  # enforcer investigated authz, no issue
+    ings = ingest(man); edges = control_enforces_edges(ings); cov = member_coverage(man)
+    v = next(v for v in rethreshold(ings, edges, cov) if v.finding_ref.startswith("rbac-1#."))
+    assert v.direction == "demote"
+    assert v.correlated_status == "rejected"
+    assert v.base_status == "needs-deployment-testing"
+
+
+def test_demote_when_enforcer_ledger_is_site_keyed(tmp_path: Path):
+    """The enforcer's ledger comes from the real, site-keyed build_coverage_ledger.
+
+    Regression guard for Finding C1: a covered class's surface id is now
+    ``{cls}@{file}:{line}``, not the bare class name. The lookup must still resolve.
+    """
+    man = _members(tmp_path, [_enf("E-1", "handler for 'p write' has no MR check",
+                                    status="rejected")], None)
+    enforcer = man.members[1]
+    ws = member_workspace(enforcer)
+    (ws.kb / "scan-profile.json").write_text(json.dumps({
+        "languages": ["go"], "frameworks": [], "entrypoints": [], "runnable": False,
+        "attack_surface": ["authz"], "sast_plan": {}, "agents_to_spawn": ["authz"],
+        "budget_hint": {},
+    }))
+    build_coverage_ledger(ws)  # writes the real, site-keyed kb/coverage-ledger.json
     ings = ingest(man); edges = control_enforces_edges(ings); cov = member_coverage(man)
     v = next(v for v in rethreshold(ings, edges, cov) if v.finding_ref.startswith("rbac-1#."))
     assert v.direction == "demote"

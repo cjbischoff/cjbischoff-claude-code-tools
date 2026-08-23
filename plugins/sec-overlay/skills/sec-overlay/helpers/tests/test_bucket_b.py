@@ -91,3 +91,26 @@ def test_emit_semgrep_rule():
 def test_emit_semgrep_rule_none_without_evidence_or_lang():
     assert emit_semgrep_rule(_f("X", file="app/db.py", evidence="")) is None       # no evidence
     assert emit_semgrep_rule(_f("Y", file="Makefile", evidence="x")) is None        # no lang
+
+
+def test_emit_semgrep_rule_emits_the_absence_shape_when_a_safe_option_is_named():
+    """Codifying a finding as a presence-only rule reports every call site, so the
+    next run drowns in noise on already-fixed code."""
+    f = _f("SSRF-1", cls="ssrf", file="policy.go", line=12, evidence="rego.New(")
+    result = emit_semgrep_rule(f, safe_option="rego.Capabilities")
+    assert result is not None
+    rule = result["rules"][0]
+    assert rule["id"].startswith("sec-overlay.absence.")
+    patterns = rule["patterns"]
+    assert any("pattern-not" in p for p in patterns)
+    assert any("rego.Capabilities" in str(p) for p in patterns)
+    assert rule["metadata"]["safe_option"] == "rego.Capabilities"
+
+
+def test_emit_semgrep_rule_without_a_safe_option_is_unchanged():
+    f = _f("SQLI-2", cls="sqli", file="db.py", line=4, evidence="cur.execute(")
+    result = emit_semgrep_rule(f)
+    assert result is not None
+    rule = result["rules"][0]
+    assert rule["id"].startswith("sec-overlay.sqli.")
+    assert not any("pattern-not" in p for p in rule["patterns"])

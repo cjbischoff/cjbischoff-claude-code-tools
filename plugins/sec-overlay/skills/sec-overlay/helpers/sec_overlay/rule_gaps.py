@@ -79,13 +79,20 @@ _EXT_LANG = {".py": "python", ".js": "javascript", ".ts": "typescript", ".go": "
              ".java": "java", ".rb": "ruby", ".php": "php", ".c": "c", ".cpp": "cpp"}
 
 
-def emit_semgrep_rule(f: Finding) -> dict | None:
+def emit_semgrep_rule(f: Finding, *, safe_option: str | None = None) -> dict | None:
     """Draft a minimal semgrep rule from a confirmed finding (Bucket B5), or ``None``.
 
     dcrh's lesson: codify each recognizable finding as a rule — a cheap deterministic FLOOR that
     both sweeps siblings and becomes a mechanical receipt on the next run. This drafts a
     single-pattern rule from the finding's evidence line; it is a starting point for a human to
     tighten, not a finished detector. Returns ``None`` when there is no usable evidence/language.
+
+    Args:
+        f: The finding to codify.
+        safe_option: When given, the emitted rule is an absence rule: it fires only
+            on a construction that omits this option. Codifying a missing-safe-option
+            finding as a presence-only rule would report every call site, including
+            the ones already fixed.
     """
     ext = f.file[f.file.rfind("."):] if "." in f.file else ""
     lang = _EXT_LANG.get(ext)
@@ -93,13 +100,27 @@ def emit_semgrep_rule(f: Finding) -> dict | None:
     if not lang or not pattern:
         return None
     fp = (f.fingerprint or f"{f.file}:{f.line}:{f.cls}").replace(":", "_").replace("/", "_")
+    metadata = {"cls": f.cls, "source": "sec-overlay:codified", "origin_finding": f.id}
+    if safe_option:
+        rule_id = f"sec-overlay.absence.{f.cls}.{fp}"
+        if pattern.endswith(")"):
+            pattern_not = f"{pattern[:-1]}, {safe_option}(...))"
+        elif pattern.endswith("("):
+            pattern_not = f"{pattern}..., {safe_option}(...))"
+        else:
+            pattern_not = f"{pattern}(..., {safe_option}(...))"
+        patterns = [{"pattern": pattern}, {"pattern-not": pattern_not}]
+        metadata["safe_option"] = safe_option
+    else:
+        rule_id = f"sec-overlay.{f.cls}.{fp}"
+        patterns = [{"pattern": pattern}]
     return {"rules": [{
-        "id": f"sec-overlay.{f.cls}.{fp}",
+        "id": rule_id,
         "message": f.message or f"{f.cls} (codified from confirmed finding {f.id})",
         "severity": "ERROR" if f.severity.value in ("critical", "high") else "WARNING",
         "languages": [lang],
-        "metadata": {"cls": f.cls, "source": "sec-overlay:codified", "origin_finding": f.id},
-        "patterns": [{"pattern": pattern}],
+        "metadata": metadata,
+        "patterns": patterns,
     }]}
 
 

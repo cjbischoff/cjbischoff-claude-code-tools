@@ -48,6 +48,12 @@ The architecture and threat-model phases produce standards-based artifact trees 
 STRIDE + a derived data-flow diagram), each checked by a deterministic gate before the pipeline
 continues.
 
+A code-derived route census (`route_census.py`) now reads route registrations straight from
+source, instead of only from recon's own output.
+
+A dependency-sink catalog (`dependency_sinks.py`) names dependencies whose own code holds the
+sink. Run it directly with `python -m sec_overlay.dependency_sinks match --root <dir>`.
+
 ## More
 
 | To understand… | Read |

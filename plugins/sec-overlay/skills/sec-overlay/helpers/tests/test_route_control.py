@@ -10,6 +10,13 @@ from sec_overlay.route_control import (
 from sec_overlay.workspace import Workspace
 
 
+def _workspace_with_profile(tmp_path, profile: dict) -> Workspace:
+    ws = Workspace(tmp_path)
+    ws.kb.mkdir(parents=True, exist_ok=True)
+    (ws.kb / "scan-profile.json").write_text(json.dumps(profile))
+    return ws
+
+
 def test_architecture_gap_when_control_unreported():
     table = {"routes": [], "controls": ["auth", "rate-limit", "csrf"], "entrypoints": []}
     arch = "# Architecture\nThe app enforces auth on all routes.\n"  # mentions only auth
@@ -76,3 +83,103 @@ def test_record_route_gaps_round_trips_through_ledger(tmp_path):
     from sec_overlay.coverage_ledger import validate_coverage_ledger
 
     assert validate_coverage_ledger(ledger) == []
+
+
+def test_route_control_table_prefers_the_census_over_the_scan_profile(tmp_path):
+    """Deriving routes from the scan profile made the check compare recon to itself."""
+    from sec_overlay.route_census import RouteSite
+    from sec_overlay.route_control import build_route_control_table
+
+    ws = _workspace_with_profile(tmp_path, {"entrypoints": ["/health"]})
+    sites = [RouteSite("route:app.py:9:/policy/evaluate", "app.py", 9, "POST",
+                       "/policy/evaluate", "flask")]
+    table = build_route_control_table(ws, census=sites)
+    assert table["source"] == "route-census"
+    assert any("/policy/evaluate" in str(r) for r in table["routes"])
+    assert table["routes"][0]["evidence"] == "app.py:9"
+
+
+def test_route_control_table_falls_back_to_the_profile_without_a_census(tmp_path):
+    from sec_overlay.route_control import build_route_control_table
+
+    ws = _workspace_with_profile(tmp_path, {"entrypoints": ["/health"]})
+    assert build_route_control_table(ws)["source"] == "scan-profile"
+
+
+def test_check_census_routes_reports_a_route_the_profile_never_mentions(tmp_path):
+    """This is the whole point of F6: an unmentioned route becomes a gap row."""
+    from sec_overlay.route_census import RouteSite
+    from sec_overlay.route_control import check_census_routes
+
+    sites = [RouteSite("route:app.py:9:/policy/evaluate", "app.py", 9, "POST",
+                       "/policy/evaluate", "flask")]
+    gaps = check_census_routes(sites, {"entrypoints": ["/health"]})
+    assert len(gaps) == 1
+    assert gaps[0]["disposition"] == "needs_follow_up"
+    assert "/policy/evaluate" in gaps[0]["id"]
+
+
+def test_check_census_routes_is_silent_when_the_profile_mentions_the_route(tmp_path):
+    from sec_overlay.route_census import RouteSite
+    from sec_overlay.route_control import check_census_routes
+
+    sites = [RouteSite("route:app.py:9:/policy/evaluate", "app.py", 9, "POST",
+                       "/policy/evaluate", "flask")]
+    assert check_census_routes(sites, {"entrypoints": ["POST /policy/evaluate"]}) == []
+
+
+def test_check_recon_routes_is_silent_for_a_census_sourced_table():
+    """check_census_routes owns recon comparison for a census table; this must not double-gap."""
+    from sec_overlay.route_control import check_recon_routes
+
+    table = {
+        "routes": [{"route": "POST /policy/evaluate", "entrypoint": "/policy/evaluate",
+                     "evidence": "app.py:9"}],
+        "source": "route-census",
+    }
+    profile = {"route_summary": ["/policy/evaluate"]}
+    assert check_recon_routes(table, profile) == []
+
+
+def test_check_recon_routes_still_gaps_for_a_scan_profile_table():
+    from sec_overlay.route_control import check_recon_routes
+
+    table = {
+        "routes": [{"route": "/admin", "entrypoint": "/admin", "evidence": ""}],
+        "source": "scan-profile",
+    }
+    profile = {"route_summary": ["/health"]}
+    gaps = check_recon_routes(table, profile)
+    assert [g["id"] for g in gaps] == ["/admin"]
+
+
+def test_check_catalog_classes_reports_a_matched_class_recon_omitted():
+    """The OPA case: go.mod declares OPA, so ssrf must be in attack_surface."""
+    from sec_overlay.dependency_sinks import load_catalog
+    from sec_overlay.route_control import check_catalog_classes
+
+    entry = next(e for e in load_catalog() if e.id == "opa-rego-http-send")
+    gaps = check_catalog_classes([entry], {"attack_surface": ["authz"]})
+    assert len(gaps) == 1
+    assert "ssrf" in gaps[0]["id"]
+    assert gaps[0]["disposition"] == "needs_follow_up"
+
+
+def test_check_catalog_classes_is_silent_when_recon_named_the_class():
+    from sec_overlay.dependency_sinks import load_catalog
+    from sec_overlay.route_control import check_catalog_classes
+
+    entry = next(e for e in load_catalog() if e.id == "opa-rego-http-send")
+    assert check_catalog_classes([entry], {"attack_surface": ["ssrf"]}) == []
+
+
+def test_check_catalog_classes_dedupes_two_entries_sharing_a_class():
+    """cel-go and starlark-go both route expr-eval-rce; the gap must not double."""
+    from sec_overlay.dependency_sinks import load_catalog
+    from sec_overlay.route_control import check_catalog_classes
+
+    catalog = {e.id: e for e in load_catalog()}
+    entries = [catalog["cel-go-expression-eval"], catalog["starlark-go-exec"]]
+    assert entries[0].cls == entries[1].cls == "expr-eval-rce"
+    gaps = check_catalog_classes(entries, {"attack_surface": []})
+    assert len(gaps) == 1

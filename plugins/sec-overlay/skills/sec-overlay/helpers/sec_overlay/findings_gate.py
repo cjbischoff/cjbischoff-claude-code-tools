@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from sec_overlay.campaign import record_stage
+from sec_overlay.dependency_sinks import catalog_ids
 from sec_overlay.evidence import (
     RUNTIME_DISPOSITIONS,
     SHIPPING_STATUSES,
@@ -37,6 +38,9 @@ STATIC_CHECKABLE_CLASSES: frozenset[str] = frozenset(
     {"null-dereference", "error-swallowing", "resource-leak", "injection"}
 )
 RUNTIME_DEPENDENT_CLASSES: frozenset[str] = frozenset({"thread-safety"})
+
+# Resolved once at import time so a large findings file does not re-read the catalog per finding.
+_CATALOG_IDS = catalog_ids()
 
 assert STATIC_CHECKABLE_CLASSES | RUNTIME_DEPENDENT_CLASSES == GENERAL_DEFECT_CLASSES
 assert not (STATIC_CHECKABLE_CLASSES & RUNTIME_DEPENDENT_CLASSES)
@@ -118,6 +122,19 @@ def validate_findings(ws: Workspace) -> list[str]:
         if data.get("receipt_tier") != stamped_tier:
             data["receipt_tier"] = stamped_tier
             p.write_text(json.dumps(data))
+
+        # A dependency-catalog receipt names a real catalog entry, or it is free text
+        # dressed as a receipt (Task 4 added the receipt kind; this makes it falsifiable).
+        for source in f.evidence_sources:
+            if not source.startswith("dependency-catalog:"):
+                continue
+            entry_id = source.split(":", 1)[1]
+            if entry_id not in _CATALOG_IDS:
+                errors.append(
+                    f"{f.id}: dependency-catalog receipt names unknown catalog entry "
+                    f"{entry_id!r}; add the entry to references/dependency-sinks.json or "
+                    f"cite a first-party sink line"
+                )
 
         if f.status.value in ("confirmed", "fixed") and not confirms_alone(f.evidence_sources):
             errors.append(

@@ -144,3 +144,37 @@ def test_must_investigate_true_when_classes_exist_even_at_zero_candidates():
 
     assert must_investigate(P()) is True     # 0 candidates but a hunt-list class exists -> must run
     assert must_investigate(Q()) is False
+
+
+_DEP_FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "dep_sink_repo"
+
+
+def test_reconcile_plan_adds_a_catalog_matched_class(tmp_path):
+    """A declared OPA dependency routes `ssrf` even when recon omitted it."""
+    from sec_overlay.partition import reconcile_plan
+    from sec_overlay.workspace import Workspace
+
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    plan = reconcile_plan(ws, ["authz"], target_root=_DEP_FIXTURE)
+    assert plan[0] == "authz", "a planned class is never removed or reordered"
+    assert "ssrf" in plan
+
+
+def test_reconcile_plan_without_target_root_is_unchanged(tmp_path):
+    from sec_overlay.partition import reconcile_plan
+    from sec_overlay.workspace import Workspace
+
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    assert reconcile_plan(ws, ["authz"]) == ["authz"]
+
+
+def test_reconcile_plan_does_not_duplicate_an_already_planned_class(tmp_path):
+    from sec_overlay.partition import reconcile_plan
+    from sec_overlay.workspace import Workspace
+
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    plan = reconcile_plan(ws, ["ssrf"], target_root=_DEP_FIXTURE)
+    assert plan.count("ssrf") == 1
