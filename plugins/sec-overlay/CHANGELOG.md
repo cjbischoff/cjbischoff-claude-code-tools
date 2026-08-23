@@ -6,6 +6,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- F1 in the bench scorecard (`bench/tally.py`): overall, per-source, and
+  headline rows; `None` when undefined (REQ-M1).
+
 - Failing REQ-M1 tests: F1 in the bench scorecard (`tests/test_bench.py`).
 
 - OCR-parity workstream docs: `docs/parity/EXTRACTION.md` (inventory of the

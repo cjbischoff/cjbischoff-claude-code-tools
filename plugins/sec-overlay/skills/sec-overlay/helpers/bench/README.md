@@ -51,3 +51,6 @@ regression.
 The run also exits 1, because a locked positive counts as regressed. Do not gate
 CI on that exit status without a pre-scanned workspace. To check the rules alone,
 run `semgrep scan --config rules/absence fixtures/absence_repo` from `helpers/`.
+
+Scorecard metrics include F1 (`2PR/(P+R)`, `None` when precision or recall is
+undefined or both are zero) in `overall`, per-source, and headline rows (REQ-M1).

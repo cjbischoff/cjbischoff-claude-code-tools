@@ -19,8 +19,11 @@ def _metrics(results) -> dict:
     recall = tp / (tp + fn) if (tp + fn) else None
     precision = tp / (tp + fp) if (tp + fp) else None
     fp_rate = fp / (fp + tn) if (fp + tn) else None
+    f1 = None
+    if precision is not None and recall is not None and (precision + recall):
+        f1 = 2 * precision * recall / (precision + recall)
     return {"tp": tp, "fn": fn, "fp": fp, "tn": tn,
-            "recall": recall, "precision": precision, "fp_rate": fp_rate}
+            "recall": recall, "precision": precision, "fp_rate": fp_rate, "f1": f1}
 
 
 @dataclass
@@ -55,16 +58,19 @@ class Scorecard:
                  (f"- Recall: **{pct(self._real.get('recall'))}** "
                   f"({self._real.get('tp',0)}/{self._real.get('tp',0)+self._real.get('fn',0)})"),
                  (f"- Precision: **{pct(self._real.get('precision'))}**  |  "
+                  f"F1: **{pct(self._real.get('f1'))}**  |  "
                   f"FP-rate: {pct(self._real.get('fp_rate'))}"),
                  "",
                  "## Overall (all sources)", "",
                  (f"- Recall {pct(o['recall'])} | Precision {pct(o['precision'])} | "
+                  f"F1 {pct(o['f1'])} | "
                   f"FP-rate {pct(o['fp_rate'])} | tp={o['tp']} fn={o['fn']} fp={o['fp']} tn={o['tn']}"),
                  "", "## By source", "",
-                 "| source | recall | precision | fp-rate | tp | fn | fp | tn |",
-                 "|--------|--------|-----------|---------|----|----|----|----|"]
+                 "| source | recall | precision | f1 | fp-rate | tp | fn | fp | tn |",
+                 "|--------|--------|-----------|----|---------|----|----|----|----|"]
         for src, m in sorted(self.by_source.items()):
             lines.append(f"| {src} | {pct(m['recall'])} | {pct(m['precision'])} | "
+                         f"{pct(m['f1'])} | "
                          f"{pct(m['fp_rate'])} | {m['tp']} | {m['fn']} | {m['fp']} | {m['tn']} |")
         lines += ["", "## By class", "",
                   "| class | recall | fp-rate | tp | fn | fp |",
