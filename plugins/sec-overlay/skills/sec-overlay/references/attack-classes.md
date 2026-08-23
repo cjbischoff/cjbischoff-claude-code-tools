@@ -8,7 +8,7 @@ Use these exact keys (lowercase) in `scan-profile.json`.
 |-----|------|-------------------------------------|-------------------------------|
 | `sqli` | SQL injection | `execute(`, `cursor`, `SELECT`, `%`/f-string into query, ORM raw | static only |
 | `cmdi` | OS command injection | `subprocess`, `os.system`, `exec(`, `child_process`, backticks (note: `exec(` substring-matches PHP `curl_exec(`/`mysqli_*_exec` — anchor with word boundary `\bexec\(` or `\bshell_exec\(` to avoid HTTP/DB false hits) | static only |
-| `ssrf` | Server-side request forgery | `requests.get(`, `urlopen`, `fetch(`, `axios`, user-controlled URL | static only |
+| `ssrf` | Server-side request forgery | `requests.get(`, `urlopen`, `fetch(`, `axios`, user-controlled URL; OPA/Rego specifically: `rego.New`, `rego.Module`, `rego.Capabilities`, `http.send` | static only |
 | `path-traversal` | Path traversal / file read-write | `open(`, `join(`, `../`, `send_file`, `readFile` | static only |
 | `fileupload` | Insecure file upload | `multer`, `request.FILES`, `req.files`, `MultipartFile`, `move_uploaded_file`, `FormFile`, extension/content-type checks on upload path | static only |
 | `authz` | Broken access control (BOLA/BFLA) | route handlers, `current_user`, missing role checks, IDs in path | static only |
@@ -23,14 +23,14 @@ Use these exact keys (lowercase) in `scan-profile.json`.
 | `deps` | Vulnerable dependencies | lockfiles / manifests (handled by SCA, not an investigation agent) | static only |
 | `prompt-injection` | LLM prompt injection / unsafe tool use / guardrail bypass | `langchain`, `langgraph`, `openai`, `anthropic`, `bedrock`, `.invoke(`, `bind_tools`, `mcp`, tool registration, user text → model prompt, model output → sink (exec/DB/fetch) | static only |
 | `webhook-verification` | Missing/incorrect signature verification | `X-Shopify-Hmac-Sha256`, `Stripe-Signature`, `verifyWebhook`, `crypto.timingSafeEqual`, `hmac`, raw-body handling on a webhook/callback route | static only |
-| `expr-eval-rce` | Sandboxed expression, policy, or rule-engine escape | `jsep`, `expr-eval`, `mathjs`, `vm.runInContext`, `callee.apply`, `constructor.constructor`, custom formula/rules engines; server-side policy and script engines: `rego.New`, `rego.Module`, `rego.Capabilities`, `http.send`, `cel.NewEnv`, `cel.Compile`, `Program.Eval`, `starlark.ExecFile`, `starlark.Thread`, `starlark.StringDict`, `goja.New`, `Runtime.RunString`, `vm.Set`, `lua.NewState`, `LState.DoString`, `SkipOpenLibs`, `SpelExpressionParser` | static only |
+| `expr-eval-rce` | Sandboxed expression, policy, or rule-engine escape | `jsep`, `expr-eval`, `mathjs`, `vm.runInContext`, `callee.apply`, `constructor.constructor`, custom formula/rules engines; server-side policy and script engines: `cel.NewEnv`, `cel.Compile`, `Program.Eval`, `starlark.ExecFile`, `starlark.Thread`, `starlark.StringDict`, `goja.New`, `Runtime.RunString`, `vm.Set`, `lua.NewState`, `LState.DoString`, `SkipOpenLibs`, `SpelExpressionParser` | static only |
 
 `expr-eval-rce` is distinct from `deserialization` and `ssti`: the sink is a custom
 evaluator's own call/apply mechanism, not `eval()` or a template engine.
 
 A **server-side policy or rule engine** is in this class even when the engine ships as a
-dependency. The sink is a builtin the engine exposes to policy text (OPA's `http.send`, a
-CEL host function, a Starlark predeclared builtin), so no first-party source line holds it.
+dependency. The sink is a builtin the engine exposes to policy text: OPA's `http.send`, a
+CEL host function, or a Starlark predeclared builtin. No first-party source line holds it.
 `references/dependency-sinks.json` catalogues these dependencies; a `go.mod` or
 `requirements.txt` match routes the class through `partition.reconcile_plan`.
 
@@ -57,9 +57,9 @@ An engine whose builtin performs an outbound request is `ssrf`, not `expr-eval-r
 - **Server-side policy and script engines** (OPA/Rego, CEL, Starlark, goja, gopher-lua,
   Spring SpEL): select the class named by the matching `references/dependency-sinks.json`
   entry whenever the manifest declares the package, even when no first-party line matches an
-  indicator. The evaluator's own builtins are the sink. Also record which safe option the
-  call site passes (`rego.Capabilities`, a restricted `cel.NewEnv`, `SkipOpenLibs`); its
-  absence is the finding, and the absence rule pack keys on it.
+  indicator. The evaluator's own builtins are the sink. Record which safe option the call
+  site passes: `rego.Capabilities`, a restricted `cel.NewEnv`, or `SkipOpenLibs`. Its
+  absence is the finding. The absence rule pack keys on it.
 - `agents_to_spawn` mirrors `attack_surface` MINUS `deps` (SCA covers deps).
 - Everything is static-only: this harness never executes the target.
 - **File upload** (`fileupload`): select when any upload-handling call is present

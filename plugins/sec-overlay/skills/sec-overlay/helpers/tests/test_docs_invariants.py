@@ -242,9 +242,20 @@ def test_every_catalog_indicator_appears_in_the_attack_class_table():
     assert not missing, f"catalog tokens absent from attack-classes.md: {missing}"
 
 
+def _table_row_for_cls(text: str, cls: str) -> str:
+    for line in text.splitlines():
+        if line.startswith(f"| `{cls}` |"):
+            return line
+    raise AssertionError(f"no table row found for cls `{cls}`")
+
+
 def test_attack_class_table_names_the_policy_engine_class_for_every_catalog_entry():
+    """A presence-anywhere check would pass even if a token sat under the wrong
+    cls, so this pins every token inside the row `reconcile_plan` actually routes by."""
     from sec_overlay.dependency_sinks import load_catalog
 
     text = _ATTACK_CLASSES.read_text()
     for entry in load_catalog():
-        assert f"`{entry.cls}`" in text or f"| {entry.cls} |" in text, entry.cls
+        row = _table_row_for_cls(text, entry.cls)
+        for token in (entry.sink, *entry.indicators):
+            assert token in row, f"{entry.id}: {token} not in the `{entry.cls}` row"

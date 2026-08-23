@@ -128,10 +128,11 @@ discriminate confusable shapes. Split into **universal** classes (always conside
 as the source of truth for CWE→class mapping. Evidence-based only: an empty class list beats
 a guessed one.
 
-The `expr-eval-rce` row also covers server-side policy and rule engines (OPA/Rego, CEL,
-Starlark, goja, gopher-lua, Spring SpEL). Its indicators stay pinned to every `sink` and
-`indicators` value in `dependency-sinks.json`, checked by
-`test_docs_invariants.py::test_every_catalog_indicator_appears_in_the_attack_class_table`.
+The `expr-eval-rce` row covers server-side policy and rule engines (CEL, Starlark, goja,
+gopher-lua, Spring SpEL). OPA/Rego's tokens live in the `ssrf` row instead, because its
+builtin performs an outbound request. Every row's tokens stay pinned to the matching `sink`
+and `indicators` value in `dependency-sinks.json`, checked by
+`test_docs_invariants.py::test_attack_class_table_names_the_policy_engine_class_for_every_catalog_entry`.
 
 #### `architecture-standards.md` — the C4 + arc42 contract for the architecture phase
 Fixes which C4 diagrams `architecture.md` produces (context, container, component-when-complex,
