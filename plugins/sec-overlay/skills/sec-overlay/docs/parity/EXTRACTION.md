@@ -219,3 +219,19 @@ All other analysis file:line cites for sec-overlay re-resolved at current source
      Task-10 deferral is re-dispositioned to DONE — bounded by the Task-12
      budget rather than pending it.
    - Bench: no-op — `bench.run` grades the audit pipeline, not review mode.
+
+4. REQ-P5 (`--commit` + `--workspace-dirty`), three deviations from the plan text:
+   - `dirty_file_records` signature is `(*, runner=subprocess.run)`, not the
+     planned `(root, runner)`. It parses `git status --porcelain`, which the
+     caller's runner already binds to `cwd`; no `root` argument is needed.
+   - CLI tests were appended to `tests/test_review_live.py`, not the planned
+     `tests/test_cli_review.py` (that file does not exist; the live review tests
+     already live in `test_review_live.py`).
+   - `validate_ref`'s allowlist gained `^` so `--commit`'s `sha^` parent ref
+     resolves. `^` is a shell metacharacter but is safe here: every git call is
+     list-form and never touches a shell. The `-`-prefix option-injection guard
+     is unchanged.
+   - Dirty mode reads the working tree, which has no head ref: `base_sha ==
+     head_sha == HEAD`, diffs run `git diff HEAD` (head omitted), and untracked
+     files get a synthetic all-add hunk read from disk. Bench: no-op — review
+     mode only.

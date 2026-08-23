@@ -17,6 +17,7 @@ from sec_overlay.diffhunks import parse_hunks
 from sec_overlay.diffscope import (
     binary_paths,
     changed_file_records,
+    dirty_file_records,
     file_diff_line_count,
     file_diff_text,
     file_text_at_ref,
@@ -186,6 +187,48 @@ def _fetch_review_unit_files(paths, base, head, runner, timeout):
     return result
 
 
+def _fetch_dirty_file_inputs(record, base: str, root: str, runner):
+    """Fetch one working-tree file's review inputs for ``--workspace-dirty``.
+
+    A tracked record (staged or unstaged) diffs ``base`` against the working tree
+    (``file_diff_text(head=None)``). An untracked record (status ``"?"``) has no
+    ``base`` side, so its whole current content becomes an all-added synthetic
+    hunk. ``file_text`` is always the on-disk working-tree content — the review
+    target is the uncommitted tree, not any committed ref.
+
+    Args:
+        record: A :class:`ChangedFile` from :func:`dirty_file_records`.
+        base: HEAD SHA, the working tree's diff base.
+        root: Target repo root; the working-tree file is read from here.
+        runner: Injectable subprocess runner (for testing).
+
+    Returns:
+        A ``(diff_text, hunks, file_text)`` tuple on success, or the caught
+        exception on failure — never re-raised here.
+    """
+    try:
+        file_text = (Path(root) / record.path).read_text(encoding="utf-8", errors="replace")
+        if record.status == "?":
+            lines = file_text.splitlines()
+            diff_text = f"@@ -0,0 +1,{len(lines)} @@\n" + "".join(f"+{ln}\n" for ln in lines)
+        else:
+            diff_text = file_diff_text(record.path, base, None, runner=runner)
+        return diff_text, parse_hunks(diff_text), file_text
+    except Exception as exc:  # noqa: BLE001 - reported to the caller, not raised here
+        return exc
+
+
+def _dirty_line_count(record, base: str, root: str, runner) -> int:
+    """Return the diff-size proxy for one working-tree record (untracked = file lines)."""
+    if record.status == "?":
+        try:
+            text = (Path(root) / record.path).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return 0
+        return len(text.splitlines())
+    return file_diff_line_count(record.path, base, None, runner=runner)
+
+
 def write_scan_scope(ws, target, *, sha: str = "", runner=None):
     """Resolve + persist the canonical ScanScope for a scan (called at pass start).
 
@@ -245,10 +288,12 @@ def run_scan(target: str, ws: Workspace, config: str, *, sha: str | None = None)
 
 
 def run_review(
-    base: str,
+    base: str | None,
     head: str,
     root: str,
     *,
+    commit: str | None = None,
+    workspace_dirty: bool = False,
     profile: str = "security",
     rule_path: str | None = None,
     excludes: list[str] | None = None,
@@ -301,6 +346,12 @@ def run_review(
             ``base_sha`` (SCALE-03).
         head: Head ref, same treatment -- ignored on resume in favor of the
             prior manifest's sealed ``head_sha``.
+        commit: A single commit ref (``--commit``); reviews that commit alone by
+            diffing its parent (``<sha>^``) against it. Mutually exclusive with
+            ``base`` and ``workspace_dirty`` (exit 2 if more than one is given).
+        workspace_dirty: When true (``--workspace-dirty``), review the uncommitted
+            working tree — staged, unstaged, and untracked files — against HEAD,
+            instead of a ref pair. Mutually exclusive with ``base`` and ``commit``.
         root: Target repo under review; the workspace and its ``artifacts/`` dir live in
             the per-repo sidecar resolved beneath it (``<root>/.sec-overlay/<slug>/``),
             not at ``root`` itself. Must already exist as a directory -- a missing,
@@ -398,6 +449,19 @@ def run_review(
             print(f"error: {exc}", file=sys.stderr)
             return 2
 
+    # Exactly one review scope: a base ref (the default), a single commit, or the
+    # dirty working tree. A resumed run reads its scope from the sealed manifest,
+    # so the flags are ignored there.
+    if prior_manifest is None:
+        scopes_given = sum([base is not None, commit is not None, workspace_dirty])
+        if scopes_given != 1:
+            print(
+                "error: pass exactly one of --base, --commit, --workspace-dirty",
+                file=sys.stderr,
+            )
+            return 2
+
+    dirty = workspace_dirty and prior_manifest is None
     try:
         if prior_manifest is not None:
             # Resumed run: read at the SHAs the prior run sealed, not fresh
@@ -407,7 +471,15 @@ def run_review(
             # different tree as an empty diff.
             base_sha = resolve_ref_sha(prior_manifest.base_sha, runner=r)
             head_sha = resolve_ref_sha(prior_manifest.head_sha, runner=r)
+        elif dirty:
+            # The dirty tree has no head ref; HEAD is both the diff base and the
+            # recorded head identity (the review target is HEAD + uncommitted).
+            base_sha = head_sha = resolve_ref_sha("HEAD", runner=r)
+        elif commit is not None:
+            base_sha = resolve_ref_sha(f"{commit}^", runner=r)
+            head_sha = resolve_ref_sha(commit, runner=r)
         else:
+            assert base is not None  # mutual-exclusion check above guarantees the base scope
             base_sha = resolve_ref_sha(base, runner=r)
             head_sha = resolve_ref_sha(head, runner=r)
     except ValueError as exc:
@@ -420,14 +492,25 @@ def run_review(
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    records = changed_file_records(base_sha, head_sha, runner=r)
-    line_counts = _bounded_map(
-        records,
-        max_git_procs,
-        lambda record: file_diff_line_count(record.path, base_sha, head_sha, runner=r),
-    )
+    # In dirty mode git diffs `base` against the working tree (head omitted); a
+    # committed ref pair otherwise.
+    head_ref = None if dirty else head_sha
+    if dirty:
+        records = dirty_file_records(runner=r)
+        line_counts = _bounded_map(
+            records,
+            max_git_procs,
+            lambda record: _dirty_line_count(record, base_sha, root, r),
+        )
+    else:
+        records = changed_file_records(base_sha, head_sha, runner=r)
+        line_counts = _bounded_map(
+            records,
+            max_git_procs,
+            lambda record: file_diff_line_count(record.path, base_sha, head_ref, runner=r),
+        )
     diff_line_counts = dict(zip((record.path for record in records), line_counts))
-    excluded_binary = binary_paths(base_sha, head_sha, runner=r)
+    excluded_binary = binary_paths(base_sha, head_ref, runner=r)
     selection = partition(records, diff_line_counts=diff_line_counts, binary_paths=excluded_binary)
 
     file_filter = resolution.file_filter
@@ -467,7 +550,18 @@ def run_review(
     file_text_by_path: dict[str, str] = {}
     rule_docs: list[dict] = []
     fetch_by_path = {}
-    if units:
+    if dirty:
+        # The working tree has no head ref to bundle diffs against, so fetch each
+        # reviewable file serially: git diff HEAD for tracked edits, a synthetic
+        # all-add diff read from disk for untracked files (_fetch_dirty_file_inputs).
+        # ponytail: serial fetch, no timeout bundling -- fine for working-tree file counts.
+        record_by_path = {record.path: record for record in selection.reviewable}
+        for unit in units:
+            for member_path in unit.files:
+                fetch_by_path[member_path] = _fetch_dirty_file_inputs(
+                    record_by_path[member_path], base_sha, root, r
+                )
+    elif units:
         # Context-managed `with ThreadPoolExecutor(...) as ex:` blocks on exit
         # until every submitted worker finishes, even one already reported as
         # timed out via `future.result(timeout=...)` above -- holding
@@ -732,7 +826,15 @@ def main(argv: list[str] | None = None) -> int:
     audit.add_argument("--sha")
 
     review = sub.add_parser("review", help="Run a diff-scoped review pass (tracer path).")
-    review.add_argument("--base", required=True)
+    review.add_argument("--base", default=None, help="Base ref; diff base..head. One scope only.")
+    review.add_argument(
+        "--commit", default=None, help="Review one commit alone (its parent..commit diff)."
+    )
+    review.add_argument(
+        "--workspace-dirty",
+        action="store_true",
+        help="Review uncommitted changes (staged, unstaged, untracked) against HEAD.",
+    )
     review.add_argument("--head", default="HEAD")
     review.add_argument("--root", default=".")
     review.add_argument("--profile", choices=["security", "general"], default="security")
@@ -855,6 +957,8 @@ def main(argv: list[str] | None = None) -> int:
             args.base,
             args.head,
             args.root,
+            commit=args.commit,
+            workspace_dirty=args.workspace_dirty,
             profile=args.profile,
             rule_path=args.rule,
             excludes=args.exclude,

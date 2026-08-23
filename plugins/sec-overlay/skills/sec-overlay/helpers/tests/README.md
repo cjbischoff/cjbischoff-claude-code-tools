@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-115 pytest files, 1557 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+115 pytest files, 1558 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -133,6 +133,8 @@ modification, an unstaged modification, an untracked file). `test_review_live.py
 CLI tests: `--commit <sha>` scoping the review to `sha^..sha` (the plan entry pins the parent
 and commit SHAs), `--commit` with `--base` exiting 2 (mutual exclusion), and
 `--workspace-dirty` listing staged, unstaged, and untracked changes.
+`test_validate_ref_accepts_allowlisted_refs` gains a `HEAD^` case, pinning the GREEN allowlist
+change that lets `--commit`'s `sha^` parent ref validate.
 
 `test_review_agent.py` (12 tests, Phase 3 Plan 06 Task 1) covers `review_agent.py`'s prompt
 render and response parse, monkeypatching `_review_file_template_path` to a `tmp_path` fixture

@@ -17,6 +17,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   that it lists staged, unstaged, and untracked working-tree changes) and three
   CLI tests — `--commit <sha>` scoping the review to `sha^..sha`, `--commit`
   with `--base` exiting 2, and `--workspace-dirty` listing uncommitted changes.
+  `sec-overlay review` now takes `--commit` and `--workspace-dirty` beside
+  `--base` (exactly one required; a resumed run reads its scope from the sealed
+  manifest); `dirty_file_records` parses `git status --porcelain`,
+  `file_diff_line_count`/`binary_paths`/`file_diff_text` accept `head=None` to
+  diff against the working tree, and `validate_ref` permits `^` so `sha^`
+  resolves. Tests now pass. Review-mode only, so `bench.run` is unchanged.
 
 - Hard token budget (REQ-P4, Task 12): `review_budget.estimate_review_cost`
   projects OCR's plan-loop cost per file (prompt 2000, plan-out 400, 7 rounds,

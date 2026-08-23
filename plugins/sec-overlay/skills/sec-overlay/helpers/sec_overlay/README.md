@@ -1119,3 +1119,14 @@ stays unchanged.
 writes the downgraded severity band back to `f.severity` (`_severity_for_score`,
 the inverse of `_SEVERITY_FLOOR`), with a `calibrate:severity-downgraded` history
 event recording `from`/`to`. Severity is never raised by this path.
+
+`diffscope.py`/`cli.py` (REQ-P5): `sec-overlay review` gained two scope flags beside
+`--base`. `--commit <sha>` reviews one commit alone (`sha^..sha`); `--workspace-dirty`
+reviews uncommitted changes (staged, unstaged, untracked) against `HEAD`. Exactly one
+of `--base`/`--commit`/`--workspace-dirty` is required (else exit 2); a resumed run
+reads its scope from the sealed manifest and ignores the flags. `dirty_file_records(*,
+runner)` parses `git status --porcelain` (untracked lines become status `"?"`);
+`file_diff_line_count`/`binary_paths`/`file_diff_text` accept `head=None` to diff the
+base against the working tree. Dirty mode fetches serially and synthesizes an all-add
+hunk for untracked files read from disk. `validate_ref`'s allowlist now permits `^`
+(safe: every git call is list-form, never a shell) so `sha^` resolves.

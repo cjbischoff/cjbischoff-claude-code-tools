@@ -90,13 +90,13 @@
 
 ### Task 12: REQ-P4 — hard token budget + token-aware guard
 **Files:** Create `helpers/sec_overlay/review_budget.py` (`estimate_tokens(diff_text) -> int` using OCR shape constants `PLAN_PROMPT=2000, PLAN_OUT=400, ROUNDS=7, ROUND_OUT=700`; `BudgetGate(budget)` with `.admit(estimate) -> bool` look-ahead); Modify `cli.py` (`--token-budget`, skip-marking `skipped(budget)`, `budget_exceeded` flag, prepare per-file estimates), `file_select.py` (token-variant too-large exclusion when budget set); Tests `test_review_budget.py` + append `test_cli_review.py`, `test_docs_invariants.py` (constants).
-- [ ] RED: estimator formula test; gate admits until projected breach then refuses all; run_review with tiny budget seals partial, exit 0, manifest notes `skipped(budget)`, result flag true. Commit.
-- [ ] GREEN: implement. Commit.
+- [x] RED: estimator formula test; gate admits until projected breach then refuses all; run_review with tiny budget seals partial, exit 0, manifest notes `skipped(budget)`, result flag true. Commit.
+- [x] GREEN: implement. Commit.
 
 ### Task 13: REQ-P5 — `--commit` + `--workspace-dirty`
 **Files:** Modify `helpers/sec_overlay/diffscope.py` (`dirty_file_records(root, runner)` staged+unstaged+untracked; commit mode reuses `resolve_ref_sha(f"{sha}^")`), `cli.py` (flags, mutual exclusion, resume identity records mode); Tests append `test_diffscope.py`, `test_cli_review.py`.
-- [ ] RED: fixture repo — commit mode diffs `sha^..sha`; dirty mode lists staged+unstaged+untracked records; `--commit` with `--base` exits 2. Commit.
-- [ ] GREEN: implement. Commit.
+- [x] RED: fixture repo — commit mode diffs `sha^..sha`; dirty mode lists staged+unstaged+untracked records; `--commit` with `--base` exits 2. Commit.
+- [x] GREEN: implement. Commit.
 
 ### Task 14: REQ-P3 — per-file plan phase
 **Files:** Create `skills/sec-overlay/agents/review-plan.md` (strict-JSON plan prompt, severity-ordered `issues[]`); Modify `review_agent.py` (`render_plan_prompt`, `{{PLAN_GUIDANCE}}` token in `render_review_prompt`), `cli.py` (`--plan`, threshold `PLAN_LINE_THRESHOLD = 100` documented, prepare writes plan prompts; consume injects recorded plan JSON, fail-open skip); Tests append.

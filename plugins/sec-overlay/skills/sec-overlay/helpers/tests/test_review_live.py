@@ -2,7 +2,6 @@
 
 import json
 import subprocess
-from functools import partial
 
 from sec_overlay import cli
 from sec_overlay.cli import main, run_review

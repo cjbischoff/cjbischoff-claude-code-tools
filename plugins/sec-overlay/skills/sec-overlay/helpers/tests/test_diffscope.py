@@ -47,6 +47,7 @@ def test_head_sha_strips(monkeypatch):
         "feature/x-y",
         "a",
         "HEAD~1",
+        "HEAD^",
     ],
 )
 def test_validate_ref_accepts_allowlisted_refs(ref):
