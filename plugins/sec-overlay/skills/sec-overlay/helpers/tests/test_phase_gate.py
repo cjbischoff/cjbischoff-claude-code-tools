@@ -464,3 +464,42 @@ def test_repeated_calls_on_identical_inputs_return_equal_results():
     assert [(f.file, f.line) for f in kept1] == [(f.file, f.line) for f in kept2]
     assert dropped1 == dropped2
     assert declines1 == declines2
+
+
+# --- recall_claims (F2/F6) ------------------------------------------------------------------
+
+
+def _workspace_with_census(tmp_path, records):
+    from sec_overlay.route_census import RouteSite, write_census
+    from sec_overlay.workspace import Workspace
+
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    write_census(ws, [RouteSite(**r) for r in records])
+    return ws
+
+
+def test_recall_claims_include_a_census_route_recon_omitted(tmp_path):
+    from sec_overlay.phase_gate import recall_claims
+
+    ws = _workspace_with_census(
+        tmp_path,
+        [{"id": "route:app.py:9:/policy/evaluate", "file": "app.py", "line": 9,
+          "method": "POST", "path": "/policy/evaluate", "framework": "flask"}],
+    )
+    claims = recall_claims(ws, {"entrypoints": ["/health"], "attack_surface": []},
+                           target_root=str(tmp_path))
+    assert any("/policy/evaluate" in c["id"] for c in claims)
+    assert all(c["refs"] for c in claims), "a recall claim with no ref is unactionable"
+
+
+def test_recall_claims_are_empty_when_recon_named_everything(tmp_path):
+    from sec_overlay.phase_gate import recall_claims
+
+    ws = _workspace_with_census(
+        tmp_path,
+        [{"id": "route:app.py:9:/policy/evaluate", "file": "app.py", "line": 9,
+          "method": "POST", "path": "/policy/evaluate", "framework": "flask"}],
+    )
+    assert recall_claims(ws, {"entrypoints": ["POST /policy/evaluate"],
+                              "attack_surface": []}, target_root=str(tmp_path)) == []

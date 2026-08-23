@@ -484,6 +484,17 @@ runner returns an empty list rather than raising, `write_census`/`load_census` r
 list of `RouteSite` records through `kb/route-census.json`, and `load_census` returns an empty
 list when the file is absent. The two fixture-reading tests skip when `rg` is not installed.
 
+`test_phase_gate.py` gained two guards for `recall_claims` (new, F2/F6). One builds a workspace
+with `_workspace_with_census`. That helper round-trips through `route_census.write_census`, not
+a hand-written JSON file. The guard asserts a census route recon never mentioned produces a
+claim carrying a `file:line` ref. The other asserts an empty claim list when recon's
+`entrypoints` already name the route.
+
+`test_contracts.py` gained two guards. One confirms `agents/recall-adversary.md` exists and
+states both its `OMISSION` row format and the `NO OMISSION FOUND` line, and mentions opus. The
+other pins `agents/phase-adversary.md` unchanged, asserting `OMISSION` never appears in it —
+the count-invariant verdict tables stay load-bearing.
+
 `test_class_ext.py` (new) covers `class_ext.py`: an alias map (sqli/cmdi/xss → injection.md)
 counts coarse extension files, direct files count by name, and uncovered classes log gaps so
 coverage is never silent.

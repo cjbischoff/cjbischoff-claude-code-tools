@@ -366,8 +366,16 @@ gap dict with `reason`/`next_step`, and `record_route_gaps` appends those gaps i
 recon profile's `attack_surface` never named. A matched dependency, such as OPA, hides its sink
 inside its own Rego policy calling `http.send`. A first-party scan misses it, so recon can omit
 the whole class with no signal. Each gap row names the catalog entry and sink so a reviewer can
-read why the class applies. Not wired into `record_route_gaps` or any driver phase yet — a later
-task dispatches it.
+read why the class applies.
+
+`phase_gate.py`'s `recall_claims(ws, profile, *, target_root)` (new) is the first caller of
+`check_census_routes` and `check_catalog_classes` for the recall adversary
+(`agents/recall-adversary.md`). It builds one `{"id", "refs"}` claim per deterministic omission. A census route gap keeps
+the route's own `file:line` as its ref. A catalog-class gap points at
+`references/dependency-sinks.json`. Every claim carries a ref by construction, since an
+unrefable omission gives the adversary nowhere to look. Its imports of `dependency_sinks`,
+`route_census`, and `route_control` are function-local — `route_control` already imports from
+`phase_gate`, so a module-level import here would be circular.
 
 `check_architecture_controls`/`check_threat_entrypoints` match a control or entrypoint via
 `_mentions`, a word-bounded (alphanumeric-neighbor guard) check, not substring. A token that is part

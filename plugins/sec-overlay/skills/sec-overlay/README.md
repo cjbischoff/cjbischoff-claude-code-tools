@@ -126,6 +126,12 @@ flowchart TD
     AR --> C2["15 · postflight<br/>durable prior_context.json"]
 ```
 
+For the recon phase only, `RA`'s phase-adversary pass is followed by one more gate:
+`agents/recall-adversary.md` (opus) judges what recon **left out**, using
+`sec_overlay.phase_gate.recall_claims` and `kb/route-census.json`. Every `OMISSION`
+row it returns routes through `route_control.record_route_gaps` into
+`kb/coverage-ledger.json`, demoting `completeness` to `partial`.
+
 The phase legend with exact commands is in [`SKILL.md`](SKILL.md); the hard operating rules
 (a partial scan is a coverage hole, not "clean") are in [`CLAUDE.md`](CLAUDE.md) §2.
 

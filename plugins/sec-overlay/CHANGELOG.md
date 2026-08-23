@@ -6,6 +6,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Recall adversary (`agents/recall-adversary.md`, opus): judges what the recon
+  phase left out, using `sec_overlay.phase_gate.recall_claims`,
+  `kb/route-census.json`, and dependency-catalog matches. Each `OMISSION` row
+  routes through `route_control.record_route_gaps` into
+  `kb/coverage-ledger.json`, demoting `completeness` to `partial`.
 - Tracked absence rule pack (`helpers/rules/absence/`): first-party semgrep
   rules that flag a dangerous construction only when its safe option is
   absent, for OPA `rego.New`, `cel.NewEnv`, `lua.NewState`, Jinja2

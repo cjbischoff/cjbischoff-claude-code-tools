@@ -336,6 +336,37 @@ def claims_from_markdown(text: str) -> list[dict]:
     return claims
 
 
+def recall_claims(ws, profile: dict, *, target_root) -> list[dict]:
+    """Build one claim per deterministic omission, for the recall adversary.
+
+    A claim here is the inverse of a normal phase claim: it names something recon
+    did NOT say, so the adversary judges whether the omission matters rather than
+    whether a statement holds.
+
+    Args:
+        ws: Workspace holding kb/route-census.json.
+        profile: The recon scan profile.
+        target_root: Target directory, for the dependency-catalog match.
+
+    Returns:
+        One ``{"id", "refs"}`` claim per omission; empty when recon named everything
+        the census and the catalog found.
+    """
+    from sec_overlay.dependency_sinks import match_manifests
+    from sec_overlay.route_census import load_census
+    from sec_overlay.route_control import check_catalog_classes, check_census_routes
+
+    sites = load_census(ws)
+    by_path = {f"{s.method} {s.path}": f"{s.file}:{s.line}" for s in sites}
+    claims = []
+    for gap in check_census_routes(sites, profile):
+        ref = next((v for k, v in by_path.items() if k in gap["id"]), None)
+        claims.append({"id": gap["id"], "refs": [ref] if ref else [str(target_root)]})
+    for gap in check_catalog_classes(match_manifests(target_root), profile):
+        claims.append({"id": gap["id"], "refs": ["references/dependency-sinks.json"]})
+    return claims
+
+
 def attack_surface_gate(profile, target_root: str | Path) -> list[str]:
     """Reject an attack-surface key not backed by a non-comment code reference.
 

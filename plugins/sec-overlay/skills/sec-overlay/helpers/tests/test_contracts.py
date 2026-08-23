@@ -129,3 +129,20 @@ def test_investigate_tool_grounding_names_the_two_new_receipts():
     txt = (Path(__file__).resolve().parents[2] / "agents" / "investigate.md").read_text()
     assert "dependency-catalog" in txt
     assert "never confirms alone" in txt or "cannot confirm alone" in txt
+
+
+def test_recall_adversary_prompt_exists_and_states_its_contract():
+    from pathlib import Path
+
+    txt = (Path(__file__).resolve().parents[2] / "agents" / "recall-adversary.md").read_text()
+    assert "OMISSION" in txt
+    assert "NO OMISSION FOUND" in txt
+    assert "opus" in txt.lower()
+
+
+def test_phase_adversary_verdict_tables_are_untouched_by_recall():
+    """The count-invariant tables are load-bearing; recall gets its own agent."""
+    from pathlib import Path
+
+    txt = (Path(__file__).resolve().parents[2] / "agents" / "phase-adversary.md").read_text()
+    assert "OMISSION" not in txt

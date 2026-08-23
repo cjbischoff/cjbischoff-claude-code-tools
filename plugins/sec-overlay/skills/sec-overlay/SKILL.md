@@ -46,6 +46,18 @@ survivors; apply its INVALIDATED/WEAKENED verdicts back to the phase artifact an
 with `build_gate_record` / `write_gate_record`. Same independence guard as `validate.md`: opus,
 different family than the sonnet producer.
 
+For the recon phase only, one extra adversary runs after the phase adversary:
+`agents/recall-adversary.md` (opus, fresh context). Its input is
+`sec_overlay.phase_gate.recall_claims(ws, profile, target_root=<T>)` plus
+`kb/route-census.json`. Every `OMISSION` row it returns is written through
+`route_control.record_route_gaps`, which appends the row to `kb/coverage-ledger.json` and
+demotes `completeness` to `partial`. An omission therefore cannot be lost by the audit
+reporting `complete`.
+
+The recall adversary has its own output contract because `agents/phase-adversary.md`'s
+verdict tables are count-invariant: a verdict count must match a claim count, and a recall
+row has no matching claim by construction.
+
 ## Deterministic scan (current capability)
 
 From the harness helpers directory (inside the installed plugin, this is
