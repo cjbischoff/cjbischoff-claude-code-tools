@@ -153,4 +153,4 @@
 - [x] Run full test suite, ruff, ty; run `python -m bench.run` over internal corpus (deterministic adapter) for the final scorecard.
 - [x] Write `docs/parity/PARITY-AUDIT.md` walking EXTRACTION.md row by row.
 - [x] Re-read THE ANALYSIS against the audit; fix gaps.
-- [ ] Completion report with pass counts, stale rows, scorecard vs OCR's published row.
+- [x] Completion report with pass counts, stale rows, scorecard vs OCR's published row.

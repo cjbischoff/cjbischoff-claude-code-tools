@@ -9,6 +9,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - Parity plan tracking: marked Task 22 (REQ-T3c/T3h), Task 23 (REQ-T3d), and
   Task 24 (REQ-T3e) complete in `docs/superpowers/plans/2026-08-23-ocr-parity.md`
   (maintainer doc, not shipped).
+- Parity plan tracking: marked all four Task 25 sub-steps complete in
+  `docs/superpowers/plans/2026-08-23-ocr-parity.md` (test suite + PARITY-AUDIT.md
+  + zero-loss re-read + completion report). Closes the OCR-parity milestone.
 
 ### Fixed
 
