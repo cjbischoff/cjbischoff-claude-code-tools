@@ -89,6 +89,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- `fixtures/dep_sink_repo/go.mod` declares OPA `v1.19.1` instead of `v0.68.0`.
+
+  The old version carries GHSA-6m8w-jc87-6cr7, so the repository dependency
+  review gate failed on inert fixture data. The catalog matches on the module
+  path alone, so the version choice does not affect any test.
+
 - `go-lua-state-missing-skipopenlibs` no longer fires on a hardened call site.
 
   gopher-lua takes `Options` by value. The pointer-literal `pattern-not` never
