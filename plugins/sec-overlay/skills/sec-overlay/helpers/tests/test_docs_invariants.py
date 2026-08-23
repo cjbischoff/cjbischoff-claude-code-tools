@@ -259,3 +259,25 @@ def test_attack_class_table_names_the_policy_engine_class_for_every_catalog_entr
         row = _table_row_for_cls(text, entry.cls)
         for token in (entry.sink, *entry.indicators):
             assert token in row, f"{entry.id}: {token} not in the `{entry.cls}` row"
+
+
+_CLASSES_DIR = Path(__file__).resolve().parents[2] / "agents" / "classes"
+
+
+def test_expr_eval_rce_class_file_carries_the_required_sections():
+    txt = (_CLASSES_DIR / "expr-eval-rce.md").read_text()
+    for heading in (
+        "Canonical fix shape",
+        "Discrimination requirement",
+        "Class boundary",
+        "Proof tuple (required evidence)",
+        "Instance preservation",
+    ):
+        assert heading in txt, heading
+
+
+def test_every_catalogued_expr_eval_class_has_a_class_file():
+    from sec_overlay.dependency_sinks import load_catalog
+
+    for entry in load_catalog():
+        assert (_CLASSES_DIR / f"{entry.cls}.md").exists(), entry.cls

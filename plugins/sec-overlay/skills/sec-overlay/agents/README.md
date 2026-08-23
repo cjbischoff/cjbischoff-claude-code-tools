@@ -177,8 +177,9 @@ to either, since both are dispatched per file rather than by the orchestrator's 
 
 ## `classes/` — CWE-class extension prompts
 
-Eleven small prompts (`injection`, `ssrf`, `authz`, `authn`, `crypto`, `config`,
-`business-logic`, `prompt-injection`, `context-bleed`, `excessive-agency`, `resource`).
+Thirteen small prompts (`injection`, `ssrf`, `ssti`, `authz`, `authn`, `crypto`, `config`,
+`business-logic`, `prompt-injection`, `context-bleed`, `excessive-agency`, `resource`,
+`expr-eval-rce`).
 Each is **appended** to `investigate.md` / `patch.md` for that class and supplies four things:
 
 1. **Canonical fix shape** (e.g. injection → parameterized query; crypto → AEAD or slow KDF).

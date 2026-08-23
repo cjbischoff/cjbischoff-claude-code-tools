@@ -12,9 +12,11 @@ each candidate's class. `test_wiring.py` guards the wiring.
 | `context-bleed.md` | Context bleed — canonical fix shape for cross-tenant/cross-session data leakage. |
 | `crypto.md` | Cryptography — canonical fix shape for weak/misused crypto primitives. |
 | `excessive-agency.md` | Excessive agency — canonical fix shape for overly permissive agent/tool capability. |
+| `expr-eval-rce.md` | Expression/policy/script-engine escape — discriminates caller-supplied evaluated text from a fixed constant; routes an engine builtin that makes an outbound request to `ssrf` instead. Every `dependency-sinks.json` entry with `cls: expr-eval-rce` (cel-go, starlark-go, goja, gopher-lua) cites this file. |
 | `injection.md` | Injection — canonical fix shape for SQL/command/template/etc. injection. |
 | `prompt-injection.md` | Prompt injection — canonical fix shape for untrusted-text-into-model attacks. |
 | `resource.md` | Resource exhaustion — canonical fix shape for DoS/unbounded-resource issues. |
 | `ssrf.md` | SSRF — canonical fix shape for server-side request forgery. |
+| `ssti.md` | Server-side template injection — discriminates caller text compiled as template source from caller text passed as template context; routes a sandbox escape in a non-template expression engine to `expr-eval-rce` instead. The `jinja2-sandbox-escape` catalog entry cites this file. |
 
 When a file here changes, update this README in the same commit (enforced by the pre-commit hook).

@@ -15,6 +15,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - `attack-classes.md`'s `expr-eval-rce` and `ssrf` rows name every server-side
   policy and script engine sink from `dependency-sinks.json`. Recon can select
   the right class for a catalogued dependency with no first-party indicator.
+- `agents/classes/expr-eval-rce.md` and `agents/classes/ssti.md`, the two
+  class-extension prompts every `dependency-sinks.json` catalog entry now
+  routes to. Two `test_docs_invariants.py` guards check that every catalogued
+  `cls` has a matching class file and that `expr-eval-rce.md` carries all
+  five required sections.
 
 ## 1.69.15 - 2026-08-22
 
