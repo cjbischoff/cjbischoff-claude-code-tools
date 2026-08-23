@@ -64,7 +64,7 @@
 ### Task 7: REQ-M6 — tokens/latency/$ columns + per-class FP publishing
 **Files:** Modify `helpers/bench/run.py` (per-repo wall-time capture; optional token totals read from each workspace's `state.json` budget via `cost.py` aggregation), `helpers/bench/tally.py` (columns `tokens`, `wall_time_s`, `usd_per_confirmed_tp` labeled estimate); Test append.
 - [x] RED: synthetic run record with tokens/time → columns in `to_dict`/markdown; per-class fp-rate rows already exist — assert they render in the published table section. Commit.
-- [ ] GREEN: implement. Commit.
+- [x] GREEN: implement. Commit.
 
 ### Task 8: REQ-R3 + REQ-R1/R4 — protocol + reproducibility docs
 **Files:** Modify `helpers/bench/README.md` (annotation protocol, adjudication, one-command reproduce, scope-confound statement); Modify `helpers/tests/test_docs_invariants.py` (assert sections exist).

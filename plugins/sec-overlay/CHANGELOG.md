@@ -12,10 +12,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
-- Cost/latency columns (REQ-M6): failing tests in `tests/test_bench.py` specify
-  `bench/tally.py` `tally(..., cost=...)` attaching a `cost` block (`tokens`,
-  `wall_time_s`, `usd_per_confirmed_tp`) to the scorecard, and the per-class FP-rate
-  table rendering.
+- Cost/latency columns (REQ-M6): `bench/tally.py` `tally(..., cost=...)` attaches a
+  `cost` block (`tokens`, `wall_time_s`, `usd_per_confirmed_tp` = USD estimate /
+  real-confirmed TP, `None` when no TP) and `to_markdown` renders a "Cost & latency
+  (estimates)" section; per-class FP-rate rows publish in the "By class" table.
+  `bench/run.py` captures wall-time and sums per-repo token totals from every
+  `workspaces/*/state.json` budget (via `sec_overlay.cost`). Tests first in
+  `tests/test_bench.py`.
 
 - Cross-run variance (REQ-M5): `bench/tally.py` `aggregate_scorecards(cards)`
   reports mean/min/max per metric (precision, recall, f1, fp_rate) across repeated

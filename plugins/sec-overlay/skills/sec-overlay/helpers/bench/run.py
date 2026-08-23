@@ -10,13 +10,15 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import time
 from pathlib import Path
 
 from bench.adapter import BinaryAdapter, WorkspaceAdapter, reportable, tier1_detected
 from bench.corpus import load_corpus
 from bench.judge import judge_all
 from bench.tally import Scorecard, aggregate_scorecards, tally
-from sec_overlay.models import Finding
+from sec_overlay import cost as costmod
+from sec_overlay.models import CampaignState, Finding
 from sec_overlay.repo_memory import repo_slug
 from sec_overlay.workspace import Workspace
 
@@ -84,6 +86,7 @@ def run_benchmark(corpus_dir, run_dir, adapter, *, clone_fn=git_clone_at_commit,
         raise ValueError("invalid corpus:\n" + "\n".join(errs))
 
     findings_by_repo: dict[tuple[str, str], list[Finding]] = {}
+    t0 = time.monotonic()
     for key in corpus.by_repo():
         target, commit = key
         is_local = not target.startswith("http")
@@ -108,8 +111,20 @@ def run_benchmark(corpus_dir, run_dir, adapter, *, clone_fn=git_clone_at_commit,
         cache.write_text(json.dumps([f.to_dict() for f in findings], indent=2))
         findings_by_repo[key] = findings
 
+    wall = time.monotonic() - t0
+
+    tokens = 0
+    usd = 0.0
+    ws_root = run_dir / "workspaces"
+    for sp in sorted(ws_root.glob("*/state.json")) if ws_root.exists() else []:
+        state = CampaignState.from_dict(json.loads(sp.read_text()))
+        tokens += sum(costmod.aggregate_by_model(state).values())
+        usd += costmod.estimate_cost_usd(state)
+    cost = {"tokens": tokens, "wall_time_s": wall,
+            "usd_estimate": usd if tokens else None}
+
     results = judge_all(corpus.entries, findings_by_repo, llm_judge=llm_judge)
-    scorecard = tally(results, corpus)
+    scorecard = tally(results, corpus, cost=cost)
     (run_dir / "scorecard.json").write_text(json.dumps(scorecard.to_dict(), indent=2))
     (run_dir / "scorecard.md").write_text(scorecard.to_markdown())
     return scorecard.to_dict()

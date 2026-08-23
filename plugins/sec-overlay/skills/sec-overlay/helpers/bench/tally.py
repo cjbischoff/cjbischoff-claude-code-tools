@@ -37,9 +37,10 @@ class Scorecard:
     regressions: list = field(default_factory=list)   # locked positives now missed
     missed: list = field(default_factory=list)         # all missed positives (for analyze-misses)
     false_positives: list = field(default_factory=list)
+    cost: dict = field(default_factory=dict)  # {tokens, wall_time_s, usd_per_confirmed_tp} (REQ-M6)
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "overall": self.overall,
             "by_source": self.by_source,
             "by_class": self.by_class,
@@ -48,6 +49,9 @@ class Scorecard:
             "false_positives": self.false_positives,
             "regressed": bool(self.regressions),
         }
+        if self.cost:
+            d["cost"] = self.cost
+        return d
 
     def to_markdown(self) -> str:
         def pct(x):
@@ -85,6 +89,14 @@ class Scorecard:
         if self.false_positives:
             lines += ["", "## False positives (flagged a known-negative)", ""]
             lines += [f"- {fid}" for fid in self.false_positives]
+        if self.cost:
+            c = self.cost
+            per_tp = c.get("usd_per_confirmed_tp")
+            usd = "n/a" if per_tp is None else f"${per_tp:.4f}"
+            lines += ["", "## Cost & latency (estimates)", "",
+                      f"- Tokens: {c.get('tokens', 0)}",
+                      f"- Wall-time: {c.get('wall_time_s', 0.0):.1f}s",
+                      f"- $ / confirmed-TP: {usd} (estimate — token-rate table, not billed)"]
         lines += ["", "## Judging statement", "",
                   ("Every finding above — sec-overlay and any cross-tool (OCR) findings — "
                    "is scored by the same judge (`bench.judge`: deterministic match, then an "
@@ -98,12 +110,15 @@ class Scorecard:
     _real: dict = field(default_factory=dict)
 
 
-def tally(results, corpus) -> Scorecard:
+def tally(results, corpus, *, cost: dict | None = None) -> Scorecard:
     """Aggregate judge results into a :class:`Scorecard`.
 
     Args:
         results: List of :class:`bench.judge.JudgeResult`.
         corpus: The :class:`bench.corpus.Corpus` (for lifecycle/regression checks).
+        cost: Optional run cost record ``{tokens, wall_time_s, usd_estimate}`` (REQ-M6).
+            ``usd_per_confirmed_tp`` is derived as ``usd_estimate / real-confirmed TP``
+            (``None`` when no TP), and reported as an estimate.
 
     Returns:
         A :class:`Scorecard`. ``.regressions`` lists locked positives now missed —
@@ -126,6 +141,13 @@ def tally(results, corpus) -> Scorecard:
     sc = Scorecard(overall=overall, by_source=by_source, by_class=by_class,
                    regressions=regressions, missed=missed, false_positives=fps)
     sc._real = _metrics([r for r in results if r.source == "real-confirmed"]) or {}
+    if cost:
+        real_tp = sc._real.get("tp", 0)
+        usd = cost.get("usd_estimate")
+        per_tp = usd / real_tp if (usd is not None and real_tp) else None
+        sc.cost = {"tokens": int(cost.get("tokens", 0)),
+                   "wall_time_s": float(cost.get("wall_time_s", 0.0)),
+                   "usd_per_confirmed_tp": per_tp}
     return sc
 
 
