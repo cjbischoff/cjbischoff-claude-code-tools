@@ -143,7 +143,7 @@
 
 ### Task 23: REQ-T3d — coverage-honesty rate
 **Files:** Modify `helpers/bench/run.py` (read each workspace's `kb/coverage-ledger.json`; a run claiming complete with open surfaces = unsupported claim), `tally.py` column; Test append.
-- [ ] RED/GREEN. Commits.
+- [x] RED/GREEN. Commits.
 
 ### Task 24: REQ-T3e — security slice
 **Files:** Modify `helpers/bench/aacr_adapter.py` (security-category tag → `cls` mapping; slice label `aacr-security` in tally by_source seg); Test append.
