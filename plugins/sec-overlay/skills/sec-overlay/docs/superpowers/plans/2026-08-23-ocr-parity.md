@@ -75,8 +75,8 @@
 ### Task 9: REQ-P6 — wire live reflection
 **Files:** Modify `helpers/sec_overlay/reflection.py` (add `recorded_verdict_source(ws, *, base, head)`), `helpers/sec_overlay/cli.py` (`reflection_source` param + `--prepare-reflection` mode rendering `agents/review-filter.md` prompts from post-profile kept findings into `runs/reflection_prompts/`), `SKILL.md` (dispatch step); Test `helpers/tests/test_reflection.py`, `helpers/tests/test_cli_review.py` (append).
 **Produces:** verdict envelope `{"base","head","verdict": {id: analysis}}` recorded under agent label `review-filter-<agent_label(path)>`; missing/mismatched → raise → existing `ReflectionSkip` fail-open path.
-- [ ] RED: recorded verdict retracts non-protected finding end to end through `run_review`; protected class refused; missing verdict → `ReflectionSkip` in ledger (not silent keep-all). Commit.
-- [ ] GREEN: implement; replace `{}` at the `apply_verdict` call with `reflection_source(record.path)`. Docs: cli docstring, module READMEs, SKILL.md step. Commit.
+- [x] RED: recorded verdict retracts non-protected finding end to end through `run_review`; protected class refused; missing verdict → `ReflectionSkip` in ledger (not silent keep-all). Commit. (`6550299`)
+- [x] GREEN: implement; replace `{}` at the `apply_verdict` call with `reflection_source(record.path)`. Docs: cli docstring, module READMEs, SKILL.md step. Commit. Bench delta: no-op — REQ-P6 changes review mode only; `bench.run` grades the audit pipeline (`--binary`/`--workspaces`), which this change does not touch. Regression proof is the full suite (1395 passed), including `test_bench.py`.
 
 ### Task 10: REQ-P1 — sibling diffs + richer bundling
 **Files:** Modify `helpers/sec_overlay/review_agent.py` (`render_review_prompt(..., sibling_diffs: dict[str,str] | None, cap_tokens: int)`), `helpers/sec_overlay/bundle.py` (header/impl + stem-pair rules; optional `import_adjacency(graph_json)` grouping; `MAX_UNIT_TOKENS` split), `helpers/sec_overlay/cli.py` prepare path; Tests append to `test_review_agent.py`, `test_bundle.py`.

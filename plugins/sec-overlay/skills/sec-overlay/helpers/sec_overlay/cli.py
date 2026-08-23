@@ -26,7 +26,15 @@ from sec_overlay.file_select import partition
 from sec_overlay.models import Finding
 from sec_overlay.normalize import normalize
 from sec_overlay.phase_gate import review_position_gate
-from sec_overlay.reflection import SKIPPED_REASON, ReflectionSkip, apply_verdict
+from sec_overlay.reflection import (
+    SKIPPED_REASON,
+    ReflectionSkip,
+    apply_verdict,
+    build_payload,
+    recorded_verdict_source,
+    reflection_label,
+    render_reflection_prompt,
+)
 from sec_overlay.repo_memory import RepoMemory, repo_slug
 from sec_overlay.report import to_markdown, write_report
 from sec_overlay.review_agent import (
@@ -240,7 +248,9 @@ def run_review(
     excludes: list[str] | None = None,
     runner=None,
     review_source=None,
+    reflection_source=None,
     prepare: bool = False,
+    prepare_reflection: bool = False,
     concurrency: int = DEFAULT_CONCURRENCY,
     timeout: int = DEFAULT_TIMEOUT_SECONDS,
     max_git_procs: int = DEFAULT_MAX_GIT_PROCS,
@@ -271,6 +281,12 @@ def run_review(
     per-file reflection failure is recorded as a :class:`reflection.ReflectionSkip`
     and the run fails open rather than aborting (D-15).
 
+    With ``prepare_reflection=True``, the pass runs the position gate and profile as
+    usual, then for each file with kept findings renders a `review-filter` prompt
+    under ``runs/reflection_prompts/`` and lists it in ``runs/reflection_plan.json``
+    (path, agent label). No verdict is applied; SKILL.md owns dispatching the filter
+    agent, whose recorded verdicts a later run consumes via ``reflection_source``.
+
     Args:
         base: Base ref. Validated and resolved to a SHA before any other git call.
             Ignored on a resumed run (a prior manifest already exists at
@@ -296,8 +312,16 @@ def run_review(
             recorded returns from ``ws``. Injecting a source keeps the gate chain
             testable without a model call, and keeps this module free of dispatch
             (D-13).
+        reflection_source: Callable taking one file path and returning that file's
+            recorded retract-verdict mapping; defaults to
+            :func:`reflection.recorded_verdict_source` reading verdicts from ``ws``.
+            A raise (missing, stale, or malformed verdict) is caught per file as a
+            :class:`reflection.ReflectionSkip` — never a silent keep-all (D-15).
         prepare: When true, write the prompt/plan files described above and return
             before any gate runs.
+        prepare_reflection: When true, run the gate and profile, then write the
+            per-file `review-filter` prompts and ``reflection_plan.json`` described
+            above and return before any verdict is applied.
         concurrency: Review-unit dispatch fan-out bound (``--concurrency``); recorded
             for the dispatching document (SKILL.md) to honor — the Python core never
             dispatches an agent, so this value is validated here but read nowhere else
@@ -427,6 +451,8 @@ def run_review(
         review_source = recorded_return_source(
             ws, base=base_sha, head=head_sha, bundle_paths_by_path=bundle_paths_by_path
         )
+    if reflection_source is None:
+        reflection_source = recorded_verdict_source(ws, base=base_sha, head=head_sha)
 
     manifest = CoverageManifest(base_sha, head_sha, manifest_path, model=model, profile=profile)
     hunks_by_path: dict[str, list] = {}
@@ -544,13 +570,38 @@ def run_review(
         return 2
     dropped = [*dropped, *profile_dropped]
 
+    if prepare_reflection:
+        prompts_dir = ws.runs / "reflection_prompts"
+        prompts_dir.mkdir(parents=True, exist_ok=True)
+        plan: list[dict[str, str]] = []
+        for record in selection.reviewable:
+            kept_for_file = [
+                rf.finding for rf in review_findings if rf.finding.file == record.path
+            ]
+            if not kept_for_file:
+                continue
+            label = reflection_label(record.path)
+            prompt = render_reflection_prompt(
+                record.path,
+                diff_text_by_path.get(record.path, ""),
+                build_payload(record.path, kept_for_file, file_text_by_path),
+            )
+            _atomic_write(prompts_dir / f"{label}.md", prompt)
+            plan.append({"path": record.path, "agent_label": label})
+        _atomic_write(ws.runs / "reflection_plan.json", json.dumps(plan, indent=2))
+        return 0
+
     reflection_retractions: list = []
     reflection_skips: list[ReflectionSkip] = []
     retracted_ids: set[str] = set()
     for record in selection.reviewable:
         kept_for_file = [rf.finding for rf in review_findings if rf.finding.file == record.path]
+        if not kept_for_file:
+            continue
         try:
-            surviving, retractions = apply_verdict(kept_for_file, {}, path=record.path)
+            surviving, retractions = apply_verdict(
+                kept_for_file, reflection_source(record.path), path=record.path
+            )
             reflection_retractions.extend(retractions)
             surviving_ids = {f.id for f in surviving}
             retracted_ids.update(f.id for f in kept_for_file if f.id not in surviving_ids)
@@ -642,6 +693,12 @@ def main(argv: list[str] | None = None) -> int:
         "--prepare",
         action="store_true",
         help="Write review prompts and review_plan.json; skip the gate chain.",
+    )
+    review.add_argument(
+        "--prepare-reflection",
+        action="store_true",
+        help="Write review-filter prompts and reflection_plan.json from post-profile "
+        "kept findings; skip the reflection verdict apply.",
     )
     review.add_argument(
         "--concurrency",
@@ -741,6 +798,7 @@ def main(argv: list[str] | None = None) -> int:
             rule_path=args.rule,
             excludes=args.exclude,
             prepare=args.prepare,
+            prepare_reflection=args.prepare_reflection,
             concurrency=args.concurrency,
             timeout=args.timeout,
             max_git_procs=args.max_git_procs,

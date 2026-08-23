@@ -5,8 +5,8 @@ import subprocess
 
 from sec_overlay import cli
 from sec_overlay.cli import main, run_review
-from sec_overlay.repo_memory import RepoMemory
 from sec_overlay.reflection import REFUSED_REASON, RETRACTED_REASON, reflection_label
+from sec_overlay.repo_memory import RepoMemory
 from sec_overlay.review_agent import _stable_finding_id, agent_label
 from sec_overlay.workspace import record_agent_return
 
@@ -233,28 +233,6 @@ def test_finding_outside_every_hunk_dropped_as_outside_diff(tmp_path, monkeypatc
     assert any(d["reason"] == "outside-diff" for d in ledger["dropped"])
 
 
-def test_reflection_retraction_removes_a_live_finding(tmp_path, monkeypatch):
-    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
-    _record_return(str(tmp_path), "app.py",
-                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
-
-    from sec_overlay.reflection import RETRACTED_REASON, ReflectionRetraction
-
-    def fake_apply_verdict(findings, verdict, *, path):
-        retraction = ReflectionRetraction(path, 2, findings[0].rule_id, RETRACTED_REASON, "sanitized upstream")
-        return [], [retraction]
-
-    monkeypatch.setattr(cli, "apply_verdict", fake_apply_verdict)
-    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
-    assert rc == 0
-
-    ws = _sidecar_ws(tmp_path)
-    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
-    assert ledger["review_findings"] == []
-    assert len(ledger["reflection_retractions"]) == 1
-    assert ledger["reflection_retractions"][0]["reason"] == RETRACTED_REASON
-
-
 def test_reflection_failure_for_one_file_leaves_other_files_unaffected(tmp_path, monkeypatch):
     diffs = {"app.py": _diff_for("app.py"), "other.py": _diff_for("other.py")}
     monkeypatch.setattr(subprocess, "run", _fake_run_for(diffs))
@@ -262,17 +240,16 @@ def test_reflection_failure_for_one_file_leaves_other_files_unaffected(tmp_path,
                     calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
     _record_return(str(tmp_path), "other.py",
                     calls=[_code_comment("other.py", 2, "sql injection", "sqli")])
+    # app.py's verdict is unreadable (invalid JSON) → reflection skip; other.py
+    # records a valid empty verdict (retract nothing) → its finding survives.
+    ws = _sidecar_ws(tmp_path)
+    ws.ensure()
+    record_agent_return(ws, reflection_label("app.py"), "not-json")
+    _record_verdict(str(tmp_path), "other.py", {})
 
-    def fake_apply_verdict(findings, verdict, *, path):
-        if path == "app.py":
-            raise RuntimeError("boom")
-        return findings, []
-
-    monkeypatch.setattr(cli, "apply_verdict", fake_apply_verdict)
     rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
     assert rc == 0
 
-    ws = _sidecar_ws(tmp_path)
     ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert len(ledger["reflection_skipped"]) == 1
     assert ledger["reflection_skipped"][0]["path"] == "app.py"
@@ -314,7 +291,8 @@ def test_recorded_verdict_refuses_a_protected_class_finding_end_to_end(tmp_path,
     ws = _sidecar_ws(tmp_path)
     ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
     assert len(ledger["review_findings"]) == 1
-    assert ledger["review_findings"][0]["defect_class"] == "concurrency"
+    assert ledger["review_findings"][0]["id"] == fid
+    assert ledger["review_findings"][0]["rule_id"] == "review.concurrency"
     assert len(ledger["reflection_retractions"]) == 1
     assert ledger["reflection_retractions"][0]["reason"] == REFUSED_REASON
 

@@ -12,6 +12,18 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Live-reflection wiring (REQ-P6): `run_review` now consumes recorded
+  review-filter verdicts through `reflection.recorded_verdict_source` instead
+  of an always-empty verdict. `reflection_label(path)` names each file's
+  recorded return; the source reads a `{"base", "head", "verdict"}` envelope
+  and raises `ValueError` on a missing, stale (base/head mismatch), malformed,
+  or non-mapping verdict, which the reflection loop catches per file as a
+  `ReflectionSkip` (fail-open, never a silent keep-all). A new
+  `--prepare-reflection` mode renders one `review-filter` prompt per file with
+  kept findings under `runs/reflection_prompts/` and lists them in
+  `runs/reflection_plan.json`. Files with zero kept findings skip the verdict
+  lookup entirely.
+
 - Live-reflection wiring tests (REQ-P6, RED): failing tests in
   `tests/test_reflection.py` and `tests/test_review_live.py` pin the coming
   recorded-verdict source — `reflection_label(path)`,

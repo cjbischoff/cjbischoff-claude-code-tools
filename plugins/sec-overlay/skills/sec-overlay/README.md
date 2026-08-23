@@ -14,7 +14,7 @@ the three folder READMEs and the operational playbook for detail.
 
 | To understand… | Read |
 |----------------|------|
-| The full phase-by-phase operating playbook, and the diff-scoped `review` mode (`--profile security\|general`, REV-01), including its prepare/dispatch/consume subagent loop (`agents/review-file.md`, bounded to `--concurrency` live subagents at once, SCALE-02) and its retract-only reflection pass (D-16) | [`SKILL.md`](SKILL.md) |
+| The full phase-by-phase operating playbook, and the diff-scoped `review` mode (`--profile security\|general`, REV-01), including its prepare/dispatch/consume subagent loop (`agents/review-file.md`, bounded to `--concurrency` live subagents at once, SCALE-02) and its live retract-only reflection pass (D-16): `--prepare-reflection` renders `review-filter` prompts from post-profile kept findings, and the consume run applies each file's recorded verdict, failing open per file (`ReflectionSkip`) | [`SKILL.md`](SKILL.md) |
 | Environment setup, how to run an audit | [`CLAUDE.md`](CLAUDE.md) |
 | Git protocol, developing the skill | [`../../CLAUDE.md`](../../CLAUDE.md) |
 | The LLM prompts that investigate/validate/patch | [`agents/README.md`](agents/README.md) |

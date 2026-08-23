@@ -679,8 +679,7 @@ gained `reflection_retractions`/`reflection_skips` keyword params on `write_revi
 `write_report`, added to the same ledger dict (`reflection_retractions`, `reflection_skipped`) —
 no second artifact file. `cli.py`'s `run_review` gained `--profile` (`security`/`general`,
 reserved for a later plan), resolves each reviewable file's rule doc, and runs its kept findings
-through `apply_verdict` (an always-empty verdict in this tracer slice — no finding source is wired
-into review mode yet) inside a `try`/`except` that records a `ReflectionSkip` and fails open on
+through `apply_verdict` inside a `try`/`except` that records a `ReflectionSkip` and fails open on
 error rather than aborting the run.
 
 Phase 3 plan 05 (Task 1) adds the prompt and verdict-validation half of that filter.
@@ -703,8 +702,20 @@ zero skips still shows the section rather than omitting it. `to_markdown` gains 
 `write_report` passes `reflection_skips` through to `to_markdown` (it already reached
 `write_review_ledger`). SKILL.md's "Diff-scoped review" section documents the dispatch: a
 `review-filter` subagent renders `render_reflection_prompt`, returns a verdict `validate_verdict`
-parses, and `apply_verdict` retracts — `cli.py review`'s tracer slice still calls it with an
-always-empty verdict, so live dispatch remains a later plan.
+parses, and `apply_verdict` retracts.
+
+REQ-P6 wires that filter live. `reflection.py` gains `reflection_label(path)` — a `review-filter-`
+prefixed label distinct from `review_agent.agent_label` so a file's review return and its reflection
+verdict never collide on disk — and `recorded_verdict_source(ws, *, base, head)`, a closure reading
+each file's verdict envelope (`{"base", "head", "verdict"}`) recorded under that label. It mirrors
+`review_agent.recorded_return_source`'s error contract: a missing verdict, invalid JSON, a base/head
+mismatch, or a non-dict `verdict` all raise `ValueError`, so a stale verdict can never retract this
+run's finding. `cli.py`'s `run_review` gained `reflection_source` (defaults to
+`recorded_verdict_source`) and a `--prepare-reflection` mode that, after the profile runs, renders
+one `review-filter` prompt per file with kept findings under `runs/reflection_prompts/<label>.md`
+and writes `runs/reflection_plan.json`. The consume run applies each file's recorded verdict; any
+`ValueError` lands in the existing per-file `ReflectionSkip` fail-open path (D-15) — never a silent
+keep-all.
 
 Phase 3 plan 05 (Task 3) attaches the D-12 receipt-gate disposition ladder to
 `findings_gate.py`, beside the existing `confirms_alone` check it leaves untouched.

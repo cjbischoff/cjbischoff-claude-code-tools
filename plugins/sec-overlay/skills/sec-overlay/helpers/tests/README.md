@@ -110,7 +110,10 @@ return is recorded, the return is not JSON, or the envelope's `base`/`head` is s
 kept (`REFUSED_REASON`), a reviewable file with findings but no recorded verdict fails open (finding
 survives AND a `reflection_skipped` entry is ledgered — never a silent keep-all), and
 `--prepare-reflection` renders one review-filter prompt per file with post-profile kept findings
-into `runs/reflection_prompts/`.
+into `runs/reflection_prompts/`. `test_reflection_failure_for_one_file_leaves_other_files_unaffected`
+records an unreadable verdict for one file (skip) and a valid empty verdict for another (kept),
+proving a per-file verdict failure is isolated — it too drives the real `recorded_verdict_source`
+rather than monkeypatching `apply_verdict`.
 
 `test_review_agent.py` (12 tests, Phase 3 Plan 06 Task 1) covers `review_agent.py`'s prompt
 render and response parse, monkeypatching `_review_file_template_path` to a `tmp_path` fixture
