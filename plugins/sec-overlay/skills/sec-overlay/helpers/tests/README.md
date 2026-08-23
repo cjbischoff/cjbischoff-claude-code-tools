@@ -1113,3 +1113,7 @@ label miss. It now enforces the row's position right after `Recon`.
 - `test_bench_driver.py` locks REQ-M2: `HeadlessDriver` token substitution,
   failure recording (never raises, never fabricates), and `CCSkillAdapter`
   grading the driven workspace via `reportable`.
+
+- `test_bench.py::test_seed_corpus_has_min_entries` locks REQ-M4: the seed
+  corpus holds at least 30 entries with at least 3 `dep-cve`, 5 `public-app`,
+  1 negative, and 1 locked entry, and validates clean.

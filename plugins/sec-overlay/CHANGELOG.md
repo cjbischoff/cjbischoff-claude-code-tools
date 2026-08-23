@@ -12,6 +12,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Tests first (REQ-M4): `tests/test_bench.py::test_seed_corpus_has_min_entries`
+  locks the seed corpus floor — at least 30 entries with at least 3 `dep-cve`,
+  5 `public-app`, 1 negative, and 1 locked entry, all valid.
+
 - Headless skill driver (REQ-M2): `bench/driver.py` + a runnable
   `CCSkillAdapter` — unattended benchmark runs over the corpus.
 

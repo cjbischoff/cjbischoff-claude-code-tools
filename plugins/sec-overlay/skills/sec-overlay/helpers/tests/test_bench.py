@@ -130,6 +130,20 @@ def test_seed_corpus_is_valid():
     assert any(e.source == "dep-cve" for e in c.entries)
 
 
+def test_seed_corpus_has_min_entries():
+    from pathlib import Path
+
+    from bench.corpus import load_corpus
+    seed = Path(__file__).resolve().parents[1] / "bench" / "corpus_seed"
+    c = load_corpus(seed)
+    assert c.validate() == []
+    assert len(c.entries) >= 30
+    assert sum(1 for e in c.entries if e.source == "dep-cve") >= 3
+    assert sum(1 for e in c.entries if e.source == "public-app") >= 5
+    assert len(c.negatives()) >= 1
+    assert len(c.locked()) >= 1
+
+
 # ---- f1 (REQ-M1) ----
 def _jr(fid, kind, detected, source="real-confirmed", cls="xss"):
     from bench.judge import JudgeResult
