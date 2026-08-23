@@ -11,11 +11,6 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   absent, for OPA `rego.New`, `cel.NewEnv`, `lua.NewState`, Jinja2
   `Environment`, and `requests` calls without a timeout.
 
-### Fixed
-
-- `test_absence_rules.py`'s metadata guard now checks that each rule's own
-  block carries a `cls:` line after its `metadata:` line, instead of a raw
-  file-wide `cls:` count that a rule with no `metadata.cls` could still pass.
 - Dependency-sink catalog (`references/dependency-sinks.json`) and its loader,
   naming dependencies whose own code holds the sink.
 - `match_manifests()`/`matched_classes()` and a `match --root <dir>` CLI
@@ -38,6 +33,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - A test pins `references/DETECTION_COVERAGE.md` to `detection_coverage.py`'s
   renderer, byte for byte. An edit to the renderer with no matching
   regeneration of the tracked file now fails the suite.
+
+### Fixed
+
+- `test_absence_rules.py`'s metadata guard now checks that each rule's own
+  block carries a `cls:` line after its `metadata:` line, instead of a raw
+  file-wide `cls:` count that a rule with no `metadata.cls` could still pass.
 
 ## 1.69.15 - 2026-08-22
 
