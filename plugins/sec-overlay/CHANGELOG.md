@@ -106,6 +106,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   `needs_follow_up` surface's `reason`/`next_step` now name the specific
   sink site instead of reusing class-level wording. A new test also pins
   `cls`/`site` on a per-site surface.
+- The CLAUDE.md phase-order row for `route-census` now names the deterministic phase the driver dispatches, instead of a CLI invocation that never called `write_census`.
+- `preflight.py`'s `TOOLS` list now includes `rg` as a required entry, so a missing ripgrep binary fails preflight instead of the `route-census` phase.
 
 ## 1.69.15 - 2026-08-22
 

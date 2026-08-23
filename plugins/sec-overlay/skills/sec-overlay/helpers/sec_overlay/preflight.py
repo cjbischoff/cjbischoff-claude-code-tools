@@ -24,6 +24,7 @@ def default_rules_dir() -> Path:
 # name, purpose, install command (macOS/Homebrew)
 TOOLS = [
     ("semgrep", "broad pattern SAST (all languages)", "brew install semgrep"),
+    ("rg", "route census + call-edge search (route-census, structural_index)", "brew install ripgrep"),
     (
         "codeql",
         "semantic dataflow/taint SAST (security-extended suite)",

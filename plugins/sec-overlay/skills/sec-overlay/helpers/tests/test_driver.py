@@ -13,9 +13,7 @@ def _ctx(tmp_path, *, target=None):
 
     ws = Workspace(tmp_path / "w")
     ws.ensure()
-    return AuditContext(
-        ws=ws, target=target or str(tmp_path / "t"), config="cfg", sha="deadbeef"
-    )
+    return AuditContext(ws=ws, target=target or str(tmp_path / "t"), config="cfg", sha="deadbeef")
 
 
 def test_run_deterministic_halts_on_missing_input(tmp_path):

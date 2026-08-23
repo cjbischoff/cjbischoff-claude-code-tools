@@ -1057,3 +1057,7 @@ in `test_driver.py`, `test_route_census_phase_writes_the_census_file`, runs
 checks `kb/route-census.json` exists afterward. `test_docs_invariants.py`'s
 `_PHASE_DOC_LABELS` gained a `"route-census": "Route census"` entry, so the CLAUDE.md
 phase-order guard also enforces this new row's position ahead of `Recon`.
+
+`test_preflight.py::test_rg_is_a_required_tool` checks `TOOLS` names `rg` and that
+`_OPTIONAL` excludes it. Both `route_census.py` and `structural_index.py` shell out
+to ripgrep, so a missing binary must fail preflight rather than the phase itself.

@@ -256,6 +256,10 @@ MEMORY.md, learnings/     durable per-repo memory across runs
 **Resume** an interrupted run: `python -m sec_overlay.cli memory --target <T>` reports
 `{finished, resumable, next_phase, stages_done}`.
 
+`CLAUDE.md`'s phase-order row for `route-census` names the driver phase, not a bare CLI
+command. Its `main()` only prints to stdout, so the driver phase is the supported path
+to `kb/route-census.json`.
+
 ---
 
 ## Develop

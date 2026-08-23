@@ -373,7 +373,8 @@ but recon never named now surfaces as a gap.
 `references/route-frameworks.json`'s framework patterns, so `route_control.py`'s table can read
 something recon did not produce. `census()` returns `[]` when ripgrep exits nonzero or matches
 nothing. A missing ripgrep binary raises `FileNotFoundError`, because preflight owns binary
-availability. `write_census(ws, sites)` persists the result to `kb/route-census.json`, and
+availability — `preflight.py`'s `TOOLS` list now includes `rg` as a required entry.
+`write_census(ws, sites)` persists the result to `kb/route-census.json`, and
 `load_census(ws)` reads it back as `RouteSite` records, returning `[]` when the file is absent or
 holds invalid JSON. The module map entry in [`../README.md`](../README.md) has the full contract.
 CLI-callable.
