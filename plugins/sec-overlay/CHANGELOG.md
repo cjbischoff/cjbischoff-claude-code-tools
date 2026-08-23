@@ -12,6 +12,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Background-context ingestion (REQ-P8, Task 16 RED): RED tests in
+  `tests/test_background.py` pin the `load_background` contract — a 1 MB cap
+  raising `ValueError`, control-character strip, envelope-delimiter guard, a
+  hard `SecretsPresent` abort on any detected secret, and file/text sourcing.
 - Consolidated review result artifact (REQ-P7, Task 15 GREEN): new
   `sec_overlay/review_result.py` with `write_review_result`, writing
   `artifacts/review_result.json` via `workspace._atomic_write`. It records

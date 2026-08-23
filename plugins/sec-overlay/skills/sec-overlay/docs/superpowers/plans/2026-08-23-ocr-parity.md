@@ -110,7 +110,7 @@
 
 ### Task 16: REQ-P8 — background context
 **Files:** Create `helpers/sec_overlay/background.py` (`load_background(text|path) -> str`: 1 MB cap → `ValueError`, control-char strip, envelope-delimiter neutralization, then `redactor.safe_for_prompt`); Modify `cli.py` (flags), `review_agent.py` (`{{BACKGROUND}}` in prompt inside envelope), `agents/review-file.md`; Tests `test_background.py` + append.
-- [ ] RED: cap exit 2; control chars stripped; secret aborts (`SecretsPresent`); prompt contains enveloped text. Commit.
+- [x] RED: cap exit 2; control chars stripped; secret aborts (`SecretsPresent`); prompt contains enveloped text. Commit.
 - [ ] GREEN: implement. Commit.
 
 ## Milestone 3
