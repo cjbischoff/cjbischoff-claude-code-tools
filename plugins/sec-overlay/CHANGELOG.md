@@ -11,6 +11,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Coverage honesty (REQ-T3d, Task 23 GREEN): `bench/tally.py` gains a
+  `coverage_ledgers` argument and a `coverage_honesty` scorecard block —
+  `rate` = honest runs / total runs, where a run is unsupported when its ledger
+  claimed `completeness == "complete"` while a surface needed follow-up or
+  `deferred` / `open_questions` were non-empty — surfaced in `to_dict` and as a
+  "Coverage honesty" markdown section. `bench/run.py` reads each workspace's
+  `kb/coverage-ledger.json` and passes the map to `tally`. The block is absent
+  when no ledgers are supplied.
 - Coverage honesty (REQ-T3d, Task 23 RED): RED tests in `tests/test_bench.py`
   pin that `tally(..., coverage_ledgers=...)` reports a `coverage_honesty` block
   (`runs`, `unsupported`, `rate`) flagging any run whose ledger claimed

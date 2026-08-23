@@ -123,9 +123,14 @@ def run_benchmark(corpus_dir, run_dir, adapter, *, clone_fn=git_clone_at_commit,
     cost = {"tokens": tokens, "wall_time_s": wall,
             "usd_estimate": usd if tokens else None}
 
+    coverage_ledgers = {}
+    for cl in sorted(ws_root.glob("*/kb/coverage-ledger.json")) if ws_root.exists() else []:
+        coverage_ledgers[cl.parent.parent.name] = json.loads(cl.read_text())
+
     results = judge_all(corpus.entries, findings_by_repo, llm_judge=llm_judge)
     findings_by_id = {f.id: f for fs in findings_by_repo.values() for f in fs}
-    scorecard = tally(results, corpus, cost=cost, findings_by_id=findings_by_id)
+    scorecard = tally(results, corpus, cost=cost, findings_by_id=findings_by_id,
+                      coverage_ledgers=coverage_ledgers)
     (run_dir / "scorecard.json").write_text(json.dumps(scorecard.to_dict(), indent=2))
     (run_dir / "scorecard.md").write_text(scorecard.to_markdown())
     return scorecard.to_dict()

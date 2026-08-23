@@ -44,6 +44,12 @@ Measures and locks in detection quality. Not part of the shipped harness. Three 
   (`fixed`, `confirmed`, `rate` = (`FIXED` ∪ `verified-static`) / confirmed
   true-positives) and a headline markdown row; `run.py` plumbs the per-repo
   findings in, and the rate stays absent when no fix data is supplied (REQ-T3c/T3h).
+  `tally(..., coverage_ledgers=...)` attaches a coverage-honesty block
+  (`runs`, `unsupported`, `rate`): a run whose `kb/coverage-ledger.json` claimed
+  `completeness == "complete"` while surfaces need follow-up or `deferred` /
+  `open_questions` were non-empty is an unsupported coverage claim. `run.py`
+  reads each workspace's ledger; the block stays absent when none are supplied
+  (REQ-T3d).
 - `aacr_adapter.py` — `aacr_entries(rows)` maps AACR review-dataset rows to
   `source="aacr"` corpus entries (excluded from the real-confirmed headline).
 - `ocr_ingest.py` — `ocr_findings(json_text)` parses `ocr review --format json` into

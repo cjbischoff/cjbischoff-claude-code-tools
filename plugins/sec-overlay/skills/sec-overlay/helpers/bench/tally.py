@@ -41,6 +41,7 @@ class Scorecard:
     false_positives: list = field(default_factory=list)
     cost: dict = field(default_factory=dict)  # {tokens, wall_time_s, usd_per_confirmed_tp} (REQ-M6)
     verified_fix: dict = field(default_factory=dict)  # {fixed, confirmed, rate} (REQ-T3c/T3h)
+    coverage_honesty: dict = field(default_factory=dict)  # {runs, unsupported, rate} (REQ-T3d)
 
     @property
     def verified_fix_rate(self) -> float | None:
@@ -61,6 +62,8 @@ class Scorecard:
             d["cost"] = self.cost
         if self.verified_fix:
             d["verified_fix"] = self.verified_fix
+        if self.coverage_honesty:
+            d["coverage_honesty"] = self.coverage_honesty
         return d
 
     def to_markdown(self) -> str:
@@ -113,6 +116,16 @@ class Scorecard:
                       f"- Tokens: {c.get('tokens', 0)}",
                       f"- Wall-time: {c.get('wall_time_s', 0.0):.1f}s",
                       f"- $ / confirmed-TP: {usd} (estimate — token-rate table, not billed)"]
+        if self.coverage_honesty:
+            ch = self.coverage_honesty
+            lines += ["", "## Coverage honesty (REQ-T3d)", "",
+                      (f"- Honest-coverage rate: **{pct(ch.get('rate'))}** "
+                       f"({ch.get('runs', 0) - len(ch.get('unsupported', []))}"
+                       f"/{ch.get('runs', 0)} runs claimed complete only when the ledger held "
+                       "no open surfaces, deferred items, or open questions)")]
+            if ch.get("unsupported"):
+                lines += ["", "Unsupported coverage claims (ledger claimed complete with gaps):"]
+                lines += [f"- {slug}" for slug in ch["unsupported"]]
         lines += ["", "## Scope confound", "",
                   ("This score carries a scope confound: a deterministic file selection "
                    "reviews less code, so a lower token count partly measures doing less, "
@@ -148,8 +161,42 @@ def _verified_fix(results, findings_by_id: dict) -> dict:
     return {"fixed": fixed, "confirmed": len(matched), "rate": fixed / len(matched)}
 
 
+def _unsupported_claim(ledger: dict) -> bool:
+    """True when a ledger claims ``complete`` while gaps remain (REQ-T3d).
+
+    A gap is any surface with ``disposition == "needs_follow_up"``, a non-empty
+    ``deferred`` list, or a non-empty ``open_questions`` list.
+    """
+    if ledger.get("completeness") != "complete":
+        return False
+    has_open = any(s.get("disposition") == "needs_follow_up"
+                   for s in ledger.get("surfaces", []))
+    return bool(has_open or ledger.get("deferred") or ledger.get("open_questions"))
+
+
+def _coverage_honesty(coverage_ledgers: dict) -> dict:
+    """Compute the coverage-honesty block over per-run coverage ledgers (REQ-T3d).
+
+    Args:
+        coverage_ledgers: ``{run_slug: ledger_dict}``.
+
+    Returns:
+        ``{runs, unsupported, rate}`` where ``unsupported`` is the sorted list of
+        run slugs whose ledger claimed complete with open gaps, and ``rate`` is the
+        honest share. ``{}`` when no ledgers are supplied.
+    """
+    if not coverage_ledgers:
+        return {}
+    unsupported = sorted(slug for slug, led in coverage_ledgers.items()
+                         if _unsupported_claim(led))
+    runs = len(coverage_ledgers)
+    return {"runs": runs, "unsupported": unsupported,
+            "rate": (runs - len(unsupported)) / runs}
+
+
 def tally(results, corpus, *, cost: dict | None = None,
-          findings_by_id: dict | None = None) -> Scorecard:
+          findings_by_id: dict | None = None,
+          coverage_ledgers: dict | None = None) -> Scorecard:
     """Aggregate judge results into a :class:`Scorecard`.
 
     Args:
@@ -158,6 +205,9 @@ def tally(results, corpus, *, cost: dict | None = None,
         cost: Optional run cost record ``{tokens, wall_time_s, usd_estimate}`` (REQ-M6).
             ``usd_per_confirmed_tp`` is derived as ``usd_estimate / real-confirmed TP``
             (``None`` when no TP), and reported as an estimate.
+        findings_by_id: Optional ``{finding_id: Finding}`` for the verified-fix block (REQ-T3c/T3h).
+        coverage_ledgers: Optional ``{run_slug: coverage_ledger_dict}`` for the coverage-honesty
+            block (REQ-T3d); a run claiming ``complete`` with open gaps is an unsupported claim.
 
     Returns:
         A :class:`Scorecard`. ``.regressions`` lists locked positives now missed —
@@ -189,6 +239,8 @@ def tally(results, corpus, *, cost: dict | None = None,
                    "usd_per_confirmed_tp": per_tp}
     if findings_by_id:
         sc.verified_fix = _verified_fix(results, findings_by_id)
+    if coverage_ledgers:
+        sc.coverage_honesty = _coverage_honesty(coverage_ledgers)
     return sc
 
 
