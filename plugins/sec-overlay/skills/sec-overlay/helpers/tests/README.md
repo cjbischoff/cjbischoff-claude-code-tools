@@ -1109,7 +1109,9 @@ label miss. It now enforces the row's position right after `Recon`.
 - `test_bench.py` locks REQ-M5 variance: `aggregate_scorecards(cards)` reports
   mean/min/max per metric (precision, recall, f1, fp_rate) across repeated runs,
   and skips `None` metrics (a metric with no defined value yields
-  `{"mean": None, "min": None, "max": None}`).
+  `{"mean": None, "min": None, "max": None}`); `test_run_repeated_writes_aggregate`
+  locks that `run_repeated(..., repeats=N)` writes each `run-<n>/scorecard.md` and
+  the parent `scorecard_agg.{json,md}`.
 
 - `test_calibrate.py` also locks REQ-P9: a judge `severity-inflated`/`downgrade`
   verdict writes the downgraded severity band back to `f.severity` with a

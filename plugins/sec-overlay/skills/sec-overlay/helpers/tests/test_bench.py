@@ -131,6 +131,24 @@ def test_run_benchmark_only_local_skips_http(tmp_path):
     assert sc["overall"]["tp"] == 1           # local target still graded
 
 
+def test_run_repeated_writes_aggregate(tmp_path):
+    from bench.run import run_repeated
+    corpus_dir = tmp_path / "corpus"; corpus_dir.mkdir()
+    (corpus_dir / "r.json").write_text(json.dumps([
+        _entry("L1", repo_url="", commit="", local_path="fix", file="a.py",
+               line=1, cls="sqli").__dict__,
+    ]))
+    scanned = Workspace(tmp_path / "pre"); scanned.ensure()
+    write_findings(scanned, [_f("C1", "sqli", "a.py", 1)])
+    adapter = WorkspaceAdapter(lambda repo: scanned)
+    agg = run_repeated(corpus_dir, tmp_path / "run", adapter, repeats=2, only_local=True)
+    assert agg["repeats"] == 2
+    assert (tmp_path / "run" / "run-1" / "scorecard.md").exists()
+    assert (tmp_path / "run" / "run-2" / "scorecard.md").exists()
+    assert (tmp_path / "run" / "scorecard_agg.json").exists()
+    assert (tmp_path / "run" / "scorecard_agg.md").exists()
+
+
 def test_reportable_filters_status(tmp_path):
     ws = Workspace(tmp_path); ws.ensure()
     write_findings(ws, [_f("C1", "xss", "a.js", 1, status=FindingStatus.CONFIRMED),

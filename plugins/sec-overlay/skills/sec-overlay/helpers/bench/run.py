@@ -15,7 +15,7 @@ from pathlib import Path
 from bench.adapter import BinaryAdapter, WorkspaceAdapter, reportable, tier1_detected
 from bench.corpus import load_corpus
 from bench.judge import judge_all
-from bench.tally import tally
+from bench.tally import Scorecard, aggregate_scorecards, tally
 from sec_overlay.models import Finding
 from sec_overlay.repo_memory import repo_slug
 from sec_overlay.workspace import Workspace
@@ -115,6 +115,45 @@ def run_benchmark(corpus_dir, run_dir, adapter, *, clone_fn=git_clone_at_commit,
     return scorecard.to_dict()
 
 
+def _agg_markdown(agg: dict) -> str:
+    """Render an aggregate scorecard (mean ± range across repeats) as markdown."""
+    def cell(v):
+        return "n/a" if v is None else f"{v:.4f}"
+    lines = [f"# Aggregate scorecard ({agg['repeats']} repeats)", "",
+             "| metric | mean | min | max |", "|--------|------|-----|-----|"]
+    for metric in ("precision", "recall", "f1", "fp_rate"):
+        m = agg[metric]
+        lines.append(f"| {metric} | {cell(m['mean'])} | {cell(m['min'])} | {cell(m['max'])} |")
+    return "\n".join(lines) + "\n"
+
+
+def run_repeated(corpus_dir, run_dir, adapter, *, repeats, **kwargs) -> dict:
+    """Run the benchmark ``repeats`` times into ``run_dir/run-<n>/`` and aggregate.
+
+    Args:
+        corpus_dir: Directory of corpus JSON files.
+        run_dir: Parent directory; each repeat gets its own ``run-<n>`` subdir.
+        adapter: A :class:`bench.adapter.ScanAdapter`.
+        repeats: Number of runs (>= 1).
+        **kwargs: Forwarded to :func:`run_benchmark`.
+
+    Returns:
+        The aggregate dict from :func:`bench.tally.aggregate_scorecards`, also
+        written to ``run_dir/scorecard_agg.{json,md}``.
+    """
+    run_dir = Path(run_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    cards = []
+    for n in range(1, repeats + 1):
+        d = run_benchmark(corpus_dir, run_dir / f"run-{n}", adapter, **kwargs)
+        cards.append(Scorecard(overall=d["overall"], by_source=d["by_source"],
+                               by_class=d["by_class"]))
+    agg = aggregate_scorecards(cards)
+    (run_dir / "scorecard_agg.json").write_text(json.dumps(agg, indent=2))
+    (run_dir / "scorecard_agg.md").write_text(_agg_markdown(agg))
+    return agg
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI: run the benchmark. ``--binary`` drives a scanner binary; default reads
     an already-scanned workspace per repo (operator/CC-skill flow)."""
@@ -128,7 +167,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--only-local", action="store_true",
                    help="grade only local fixtures; skip http clone targets (offline CI gate)")
     p.add_argument("--no-resume", action="store_true")
+    p.add_argument("--repeats", type=int, default=1,
+                   help="run N times into run-<n>/ and write scorecard_agg.{json,md} (REQ-M5)")
     args = p.parse_args(argv)
+    if args.repeats < 1:
+        p.error("--repeats must be >= 1")
     reader = tier1_detected if args.grade_mode == "detection" else reportable
     if args.binary:
         if args.grade_mode == "detection":
@@ -139,6 +182,12 @@ def main(argv: list[str] | None = None) -> int:
         adapter = WorkspaceAdapter(lambda repo: Workspace(base / Path(repo).name), reader=reader)
     else:
         p.error("supply --binary or --workspaces")
+    if args.repeats > 1:
+        agg = run_repeated(args.corpus, args.run_dir, adapter, repeats=args.repeats,
+                           resume=not args.no_resume, only_local=args.only_local)
+        print(f"aggregate ({agg['repeats']} repeats): "
+              f"recall mean={agg['recall']['mean']} precision mean={agg['precision']['mean']}")
+        return 0
     sc = run_benchmark(args.corpus, args.run_dir, adapter, resume=not args.no_resume,
                        only_local=args.only_local)
     print(f"scorecard: real recall={sc['overall']['recall']} regressed={sc['regressed']}")

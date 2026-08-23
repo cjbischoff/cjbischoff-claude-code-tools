@@ -8,6 +8,7 @@ corpus padded with easy seeded bugs can't flatter the score.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import cast
 
 
 def _metrics(results) -> dict:
@@ -126,3 +127,27 @@ def tally(results, corpus) -> Scorecard:
                    regressions=regressions, missed=missed, false_positives=fps)
     sc._real = _metrics([r for r in results if r.source == "real-confirmed"]) or {}
     return sc
+
+
+_AGG_METRICS = ("precision", "recall", "f1", "fp_rate")
+
+
+def aggregate_scorecards(cards: list[Scorecard]) -> dict:
+    """Summarise the headline metrics across repeated benchmark runs (REQ-M5).
+
+    Args:
+        cards: One :class:`Scorecard` per repeat.
+
+    Returns:
+        ``{"repeats": N, "<metric>": {"mean", "min", "max"}}`` for precision,
+        recall, f1, and fp_rate. ``None`` values (undefined metrics) are skipped;
+        a metric with no defined value across any run yields all-``None``.
+    """
+    agg: dict = {"repeats": len(cards)}
+    for metric in _AGG_METRICS:
+        vals = [cast(float, v) for c in cards if (v := c.overall.get(metric)) is not None]
+        if vals:
+            agg[metric] = {"mean": sum(vals) / len(vals), "min": min(vals), "max": max(vals)}
+        else:
+            agg[metric] = {"mean": None, "min": None, "max": None}
+    return agg
