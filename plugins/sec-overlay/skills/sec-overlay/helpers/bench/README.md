@@ -51,7 +51,9 @@ Measures and locks in detection quality. Not part of the shipped harness. Three 
   reads each workspace's ledger; the block stays absent when none are supplied
   (REQ-T3d).
 - `aacr_adapter.py` — `aacr_entries(rows)` maps AACR review-dataset rows to
-  `source="aacr"` corpus entries (excluded from the real-confirmed headline).
+  `source="aacr"` corpus entries (excluded from the real-confirmed headline); a
+  security-category row is tagged `source="aacr-security"` so `tally` emits a
+  distinct `aacr-security` slice (REQ-T3e).
 - `ocr_ingest.py` — `ocr_findings(json_text)` parses `ocr review --format json` into
   benchmark-only CONFIRMED findings tagged `llm-claimed:ocr` (never harness findings).
 

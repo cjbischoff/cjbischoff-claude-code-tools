@@ -13,11 +13,24 @@ import re
 from .corpus import CorpusEntry
 
 _SLUG = re.compile(r"[^a-z0-9]+")
+# ponytail: substring match — extend if the dataset labels security another way.
+_SECURITY_SIGNALS = ("security", "vulnerab")
 
 
 def _cls(category: str) -> str:
     """Kebab-case a dataset ``category`` for use as an attack-class key."""
     return _SLUG.sub("-", category.strip().lower()).strip("-") or "review-comment"
+
+
+def _source(category: str) -> str:
+    """Tag security-category rows so ``tally`` emits a distinct ``aacr-security`` slice.
+
+    M3d found no distinct security category in the dataset preview; the full
+    distribution is unverified, so this matches any category whose text signals
+    security (``security`` / ``vulnerab``). Non-security rows stay ``aacr``.
+    """
+    low = category.lower()
+    return "aacr-security" if any(s in low for s in _SECURITY_SIGNALS) else "aacr"
 
 
 def aacr_entries(rows: list[dict]) -> list[CorpusEntry]:
@@ -29,7 +42,8 @@ def aacr_entries(rows: list[dict]) -> list[CorpusEntry]:
             ``category``, and ``label``.
 
     Returns:
-        One :class:`CorpusEntry` per row, tagged ``source="aacr"``. ``label`` truthy
+        One :class:`CorpusEntry` per row, tagged ``source="aacr"`` (or
+        ``"aacr-security"`` for a security-category row). ``label`` truthy
         maps to a positive (a valid review comment the reviewer should raise), falsy
         to a negative. ``finding_id`` is ``aacr-<index>`` for stable uniqueness.
 
@@ -44,7 +58,7 @@ def aacr_entries(rows: list[dict]) -> list[CorpusEntry]:
         entries.append(CorpusEntry(
             finding_id=f"aacr-{i}",
             kind="positive" if row.get("label") else "negative",
-            source="aacr",
+            source=_source(str(row.get("category", ""))),
             cls=_cls(str(row.get("category", ""))),
             repo_url=str(row.get("pr_url", "")),
             commit=str(row.get("pr_source_commit", "")),

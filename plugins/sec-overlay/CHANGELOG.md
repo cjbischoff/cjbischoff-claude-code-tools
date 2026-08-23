@@ -12,6 +12,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Security slice (REQ-T3e, Task 24 GREEN): `bench/aacr_adapter.py` tags an AACR
+  row whose `category` signals security (`security` / `vulnerab`) as
+  `source="aacr-security"`, and `bench/corpus.py` registers that source. `tally`
+  emits the distinct `aacr-security` `by_source` slice automatically, kept out of
+  the real-confirmed headline. Non-security rows stay `source="aacr"`. The
+  predicate is dataset-agnostic, honoring M3d's unverified-distribution caveat.
 - Security slice (REQ-T3e, Task 24 RED): RED tests in `tests/test_aacr_adapter.py`
   pin that `aacr_entries` tags a security-category row as `source="aacr-security"`
   (a distinct slice `tally` emits in `by_source`, kept out of the real-confirmed
