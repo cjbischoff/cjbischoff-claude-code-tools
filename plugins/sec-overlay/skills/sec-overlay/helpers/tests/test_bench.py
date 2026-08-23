@@ -332,3 +332,43 @@ def test_verified_fix_rate_absent_without_fix_data():
     sc = tally([_jr("V1", "positive", True)], corpus)
     assert sc.verified_fix_rate is None
     assert "verified_fix" not in sc.to_dict()
+
+
+# ---- coverage honesty (REQ-T3d) ----
+def test_coverage_honesty_flags_unsupported_claim():
+    """REQ-T3d: a ledger claiming complete with open surfaces is an unsupported claim."""
+    corpus = Corpus([_entry("V1")])
+    ledgers = {
+        "honest": {"completeness": "complete", "deferred": [], "open_questions": [],
+                   "surfaces": [{"id": "xss@a.js:1", "disposition": "reported"}]},
+        "dishonest": {"completeness": "complete", "deferred": [], "open_questions": [],
+                      "surfaces": [{"id": "sqli@b.js:2", "disposition": "needs_follow_up",
+                                    "reason": "r", "next_step": "n"}]},
+    }
+    sc = tally([_jr("V1", "positive", True)], corpus, coverage_ledgers=ledgers)
+    ch = sc.to_dict()["coverage_honesty"]
+    assert ch["runs"] == 2
+    assert ch["unsupported"] == ["dishonest"]
+    assert ch["rate"] == 0.5
+    assert "coverage honesty" in sc.to_markdown().lower()
+
+
+def test_coverage_honesty_deferred_and_open_questions_are_unsupported():
+    corpus = Corpus([_entry("V1")])
+    ledgers = {
+        "deferred": {"completeness": "complete", "surfaces": [],
+                     "deferred": ["skipped module"], "open_questions": []},
+        "questioned": {"completeness": "complete", "surfaces": [],
+                       "deferred": [], "open_questions": ["is X reachable?"]},
+        "partial": {"completeness": "partial", "surfaces": [], "deferred": ["x"],
+                    "open_questions": []},
+    }
+    sc = tally([_jr("V1", "positive", True)], corpus, coverage_ledgers=ledgers)
+    ch = sc.to_dict()["coverage_honesty"]
+    assert ch["unsupported"] == ["deferred", "questioned"]  # partial is honest
+    assert ch["rate"] == 1 / 3
+
+
+def test_coverage_honesty_absent_without_ledgers():
+    sc = tally([_jr("V1", "positive", True)], Corpus([_entry("V1")]))
+    assert "coverage_honesty" not in sc.to_dict()

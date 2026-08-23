@@ -11,6 +11,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Coverage honesty (REQ-T3d, Task 23 RED): RED tests in `tests/test_bench.py`
+  pin that `tally(..., coverage_ledgers=...)` reports a `coverage_honesty` block
+  (`runs`, `unsupported`, `rate`) flagging any run whose ledger claimed
+  `completeness == "complete"` while surfaces need follow-up or `deferred` /
+  `open_questions` were non-empty, plus a "Coverage honesty" markdown section;
+  omitted when no ledgers are supplied.
 - Verified-fix rate (REQ-T3c/T3h, Task 22 GREEN): `bench/tally.py` gains a
   `findings_by_id` argument and a `verified_fix` scorecard block —
   `rate` = (`FindingStatus.FIXED` ∪ `verification == "verified-static"`) over the

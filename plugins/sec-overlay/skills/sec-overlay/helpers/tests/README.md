@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-120 pytest files, 1614 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+120 pytest files, 1617 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -1187,6 +1187,13 @@ label miss. It now enforces the row's position right after `Recon`.
   findings_by_id=...)` reports a `verified_fix` block (`fixed`, `confirmed`,
   `rate` = (`FIXED` ∪ `verified-static`) / confirmed true-positives) plus a
   headline markdown row, and omits it when no fix data is supplied.
+
+- `test_bench.py` locks REQ-T3d coverage honesty: `tally(results, corpus,
+  coverage_ledgers=...)` reports a `coverage_honesty` block (`runs`,
+  `unsupported`, `rate`), flagging any run whose ledger claimed
+  `completeness == "complete"` while surfaces need follow-up or `deferred` /
+  `open_questions` were non-empty, plus a "Coverage honesty" markdown section;
+  omitted when no ledgers are supplied.
 
 - `test_bench.py::test_scorecard_markdown_states_scope_confound` and
   `test_docs_invariants.py::test_bench_readme_documents_annotation_and_reproducibility`
