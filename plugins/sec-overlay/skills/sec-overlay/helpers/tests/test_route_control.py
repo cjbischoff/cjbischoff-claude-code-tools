@@ -171,3 +171,15 @@ def test_check_catalog_classes_is_silent_when_recon_named_the_class():
 
     entry = next(e for e in load_catalog() if e.id == "opa-rego-http-send")
     assert check_catalog_classes([entry], {"attack_surface": ["ssrf"]}) == []
+
+
+def test_check_catalog_classes_dedupes_two_entries_sharing_a_class():
+    """cel-go and starlark-go both route expr-eval-rce; the gap must not double."""
+    from sec_overlay.dependency_sinks import load_catalog
+    from sec_overlay.route_control import check_catalog_classes
+
+    catalog = {e.id: e for e in load_catalog()}
+    entries = [catalog["cel-go-expression-eval"], catalog["starlark-go-exec"]]
+    assert entries[0].cls == entries[1].cls == "expr-eval-rce"
+    gaps = check_catalog_classes(entries, {"attack_surface": []})
+    assert len(gaps) == 1

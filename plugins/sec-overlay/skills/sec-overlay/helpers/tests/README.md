@@ -472,6 +472,10 @@ Two more guards cover `check_catalog_classes`. The OPA catalog entry (`opa-rego-
 class `ssrf`) becomes a `needs_follow_up` gap when `attack_surface` omits `ssrf`. The same entry
 stays silent when `attack_surface` already names `ssrf`.
 
+A third guard passes two catalog entries that share a class. Both `cel-go-expression-eval` and
+`starlark-go-exec` route `expr-eval-rce`, so the guard asserts exactly one gap. This pins the
+dedupe branch a mutation test once found untested.
+
 `test_route_census.py` (new) covers `route_census.py` with eight guards: every framework entry
 carries a pattern and globs, framework names are unique, `FRAMEWORKS_PATH` resolves to the
 tracked reference file, `census()` finds every route in the `fixtures/route_repo` fixture
