@@ -12,6 +12,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- GitHub PR review poster (REQ-S1, Task 18 RED): RED tests in
+  `tests/test_pr_poster.py` pin the poster contract — severity routing
+  (critical/high inline, medium/low/info summary), a `COMMENT` review payload,
+  and a `post_review` call to the pulls reviews endpoint with bearer auth.
 - Assurance case (REQ-S3): `skills/sec-overlay/ASSURANCE_CASE.md` documents the
   actors, trust boundaries, threats, and countermeasures behind the harness
   invariants, with each countermeasure cited to a resolving `file:line`. RED
