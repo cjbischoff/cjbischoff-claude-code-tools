@@ -12,6 +12,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Tests first (REQ-M2): `tests/test_bench_driver.py` locks the headless
+  driver contract for `CCSkillAdapter`.
+
 - F1 in the bench scorecard (`bench/tally.py`): overall, per-source, and
   headline rows; `None` when undefined (REQ-M1; tests first in
   `tests/test_bench.py`).

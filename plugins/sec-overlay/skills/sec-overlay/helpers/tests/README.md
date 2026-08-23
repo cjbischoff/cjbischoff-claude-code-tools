@@ -1109,3 +1109,7 @@ label miss. It now enforces the row's position right after `Recon`.
 - `test_calibrate.py` also locks REQ-P9: a judge `severity-inflated`/`downgrade`
   verdict writes the downgraded severity band back to `f.severity` with a
   `calibrate:severity-downgraded` history event; no verdict leaves severity alone.
+
+- `test_bench_driver.py` locks REQ-M2: `HeadlessDriver` token substitution,
+  failure recording (never raises, never fabricates), and `CCSkillAdapter`
+  grading the driven workspace via `reportable`.
