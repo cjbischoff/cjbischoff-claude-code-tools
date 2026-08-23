@@ -1,15 +1,20 @@
 # Seed corpus
 
-One JSON file per scanned repo. Positives = confirmed vulns the harness MUST find
-(lifecycle `locked` = regression-guarded). Negatives = correctly-rejected leads the
-harness MUST NOT report (measures false-positive rate). `local_path` scans the local
-checkout directly (these are private repos, not clonable URLs); `commit` is provenance.
-Grow this file every time the harness confirms/rejects a real finding.
+One JSON file per source class. Positives = vulnerabilities the harness must find;
+negatives = correctly-rejected leads it must not report (measures false-positive rate).
+`lifecycle: locked` marks a regression-guarded positive that must stay detected. Every
+entry is public: synthetic fixtures under `helpers/fixtures/`, dep-CVE lockfiles, or
+public-app advisories pinned to a commit. Never add a confirmed vuln from private code.
 
-`absence.json` pins the absence-rule pair from `fixtures/absence_repo`. It has two
-`locked` positives: the rego.Capabilities gap in `vulnerable.go`, and the jinja2
-sandbox gap in `render.py`. It has one negative, `safe.go`, which must not be reported.
+| File | Source | Target | Notes |
+|------|--------|--------|-------|
+| `dogfood.json` | synthetic | `fixtures/vulnerable_repo`, `fixtures/absence_repo`, `fixtures/dep_sink_repo`, `fixtures/route_repo` | Two `locked` positives at `vulnerable_repo` (`secrets` app.py:9, `sqli` app.py:18) — both semgrep-detectable, the CI detection gate. The rest are `open`. |
+| `absence.json` | synthetic | `fixtures/absence_repo` | Absence-rule positives (`open`) plus one negative. |
+| `negatives.json` | synthetic | `fixtures/absence_repo` | Safe variants that must stay silent. |
+| `dep_cves.json` | dep-cve | `fixtures/dep_cve_repo` | Pinned vulnerable package versions with a CVE per line of `requirements.txt`. |
+| `public_apps.json` | public-app | Juice Shop @ pinned commit | Advisory-backed findings with verified file/line; graded only when cloned (skipped by `--only-local`). |
 
-`CorpusEntry` declares `repo_url` and `commit` as required fields. A local-only entry
-sets both to the empty string. `validate()` skips both target checks when `local_path`
-is set, so an empty pair is valid there.
+`local_path` scans a local checkout directly; `commit`/`repo_url` are empty for local
+entries. `validate()` skips both target checks when `local_path` is set, so an empty
+pair is valid there. `CorpusEntry` tolerates extra keys, so `package`/`cve` on dep-CVE
+entries and `lifecycle` are optional per source.

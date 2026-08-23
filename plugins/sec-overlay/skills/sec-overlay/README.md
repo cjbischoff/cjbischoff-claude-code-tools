@@ -276,7 +276,7 @@ to `kb/route-census.json`.
 From `helpers/` (stdlib-only core; dev deps pytest/ruff/ty):
 
 ```bash
-uv run pytest -q          # 575 tests (2 env-only failures — see CLAUDE.md §1)
+uv run pytest -q          # full suite green; seed corpus + rules ship committed (CLAUDE.md §1)
 uv run ruff check sec_overlay/ bench/ tests/
 uv run ty check
 ```

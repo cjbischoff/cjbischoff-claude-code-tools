@@ -12,6 +12,19 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Committed seed corpus (REQ-M4): `bench/corpus_seed/` now ships 30 public
+  entries — 8 `dogfood.json` (2 `locked` at `fixtures/vulnerable_repo`), 3
+  `absence.json`, 4 `negatives.json`, 5 `dep_cves.json`, 10 Juice Shop
+  `public_apps.json` — plus the `fixtures/dep_cve_repo` lockfile. Replaces the
+  prior local-only, gitignored corpus.
+
+- Detection-grading path (REQ-M4): `bench/adapter.py` `tier1_detected` reads
+  any-status findings backed by a Tier-1 receipt, and `bench.run`
+  `--grade-mode detection` / `--only-local` grade whether a deterministic scan
+  located each locked ground-truth finding. The confirmation gate
+  (`reportable`) is untouched — a deterministic-only scan never CONFIRMS. Tests
+  first in `tests/test_bench.py`.
+
 - Tests first (REQ-M4): `tests/test_bench.py::test_seed_corpus_has_min_entries`
   locks the seed corpus floor — at least 30 entries with at least 3 `dep-cve`,
   5 `public-app`, 1 negative, and 1 locked entry, all valid.

@@ -14,6 +14,7 @@ from __future__ import annotations
 import subprocess
 from typing import Protocol
 
+from sec_overlay.evidence import confirms_alone
 from sec_overlay.models import Finding, FindingStatus
 from sec_overlay.workspace import Workspace, read_findings
 
@@ -31,19 +32,33 @@ def reportable(ws: Workspace) -> list[Finding]:
             if f.status in (FindingStatus.CONFIRMED, FindingStatus.FIXED)]
 
 
+def tier1_detected(ws: Workspace) -> list[Finding]:
+    """Read Tier-1-receipt findings from a workspace, at ANY status (detection grading).
+
+    A deterministic-only CI scan never confirms (confirmation needs an adversarial LLM
+    pass), so :func:`reportable` returns nothing and cannot grade detection. This grades
+    whether a confirming tool (codeql/semgrep/sca/secrets) located the finding at all —
+    the CI regression signal. It does NOT change ``reportable`` or any confirmation gate.
+    """
+    return [f for f in read_findings(ws) if confirms_alone(f.evidence_sources)]
+
+
 class WorkspaceAdapter:
     """Adapter for an ALREADY-scanned workspace — reads its findings, runs no scan.
 
     Use when a scan already ran (e.g. re-tally a prior run, or grade findings the
-    operator produced by driving the CC skill by hand into this workspace).
+    operator produced by driving the CC skill by hand into this workspace). ``reader``
+    selects what to grade: :func:`reportable` (confirmation, default) or
+    :func:`tier1_detected` (detection).
     """
 
-    def __init__(self, workspace_for):
+    def __init__(self, workspace_for, *, reader=reportable):
         # workspace_for: callable(repo_path) -> Workspace with existing findings
         self._workspace_for = workspace_for
+        self._reader = reader
 
     def scan(self, repo_path: str, workspace: Workspace) -> list[Finding]:
-        return reportable(self._workspace_for(repo_path))
+        return self._reader(self._workspace_for(repo_path))
 
 
 class BinaryAdapter:

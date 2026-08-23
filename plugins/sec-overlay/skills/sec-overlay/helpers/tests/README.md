@@ -1117,3 +1117,11 @@ label miss. It now enforces the row's position right after `Recon`.
 - `test_bench.py::test_seed_corpus_has_min_entries` locks REQ-M4: the seed
   corpus holds at least 30 entries with at least 3 `dep-cve`, 5 `public-app`,
   1 negative, and 1 locked entry, and validates clean.
+
+- `test_bench.py::test_tier1_detected_reads_receipt_candidates` locks the
+  detection-grading reader (REQ-M4): `tier1_detected` returns any-status findings
+  backed by a Tier-1 receipt, where `reportable` (confirmation) returns none.
+
+- `test_bench.py::test_run_benchmark_only_local_skips_http` locks the offline CI
+  gate (REQ-M4): `run_benchmark(only_local=True)` grades local fixtures and never
+  clones http targets.

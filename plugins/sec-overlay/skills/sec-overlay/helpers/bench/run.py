@@ -12,7 +12,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from bench.adapter import BinaryAdapter, WorkspaceAdapter
+from bench.adapter import BinaryAdapter, WorkspaceAdapter, reportable, tier1_detected
 from bench.corpus import load_corpus
 from bench.judge import judge_all
 from bench.tally import tally
@@ -58,7 +58,7 @@ def git_clone_at_commit(repo_url: str, commit: str, dest: Path, *, runner=subpro
 
 
 def run_benchmark(corpus_dir, run_dir, adapter, *, clone_fn=git_clone_at_commit,
-                  llm_judge=None, resume=True) -> dict:
+                  llm_judge=None, resume=True, only_local=False) -> dict:
     """Run the full benchmark and write a scorecard.
 
     Args:
@@ -87,6 +87,8 @@ def run_benchmark(corpus_dir, run_dir, adapter, *, clone_fn=git_clone_at_commit,
     for key in corpus.by_repo():
         target, commit = key
         is_local = not target.startswith("http")
+        if only_local and not is_local:
+            continue
         if is_local:
             slug = repo_slug(target)
         else:
@@ -121,16 +123,24 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--run-dir", required=True)
     p.add_argument("--binary", default=None, help="scanner binary argv (space-joined) to drive")
     p.add_argument("--workspaces", default=None, help="dir of pre-scanned workspaces (one per repo slug)")
+    p.add_argument("--grade-mode", choices=("real", "detection"), default="real",
+                   help="real = confirmed/fixed (default); detection = Tier-1-receipt candidates (CI)")
+    p.add_argument("--only-local", action="store_true",
+                   help="grade only local fixtures; skip http clone targets (offline CI gate)")
     p.add_argument("--no-resume", action="store_true")
     args = p.parse_args(argv)
+    reader = tier1_detected if args.grade_mode == "detection" else reportable
     if args.binary:
+        if args.grade_mode == "detection":
+            p.error("--grade-mode detection requires --workspaces, not --binary")
         adapter = BinaryAdapter(args.binary.split())
     elif args.workspaces:
         base = Path(args.workspaces)
-        adapter = WorkspaceAdapter(lambda repo: Workspace(base / Path(repo).name))
+        adapter = WorkspaceAdapter(lambda repo: Workspace(base / Path(repo).name), reader=reader)
     else:
         p.error("supply --binary or --workspaces")
-    sc = run_benchmark(args.corpus, args.run_dir, adapter, resume=not args.no_resume)
+    sc = run_benchmark(args.corpus, args.run_dir, adapter, resume=not args.no_resume,
+                       only_local=args.only_local)
     print(f"scorecard: real recall={sc['overall']['recall']} regressed={sc['regressed']}")
     return 1 if sc["regressed"] else 0
 

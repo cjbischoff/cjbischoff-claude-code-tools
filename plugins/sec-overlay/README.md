@@ -54,6 +54,10 @@ source, instead of only from recon's own output.
 A dependency-sink catalog (`dependency_sinks.py`) names dependencies whose own code holds the
 sink. Run it directly with `python -m sec_overlay.dependency_sinks match --root <dir>`.
 
+The dev benchmark ships a committed seed corpus (`skills/sec-overlay/helpers/bench/corpus_seed/`,
+public entries only), and `.github/workflows/sec-overlay-tests.yml` gates every pull request on
+the two `locked` fixtures staying detected by a deterministic scan.
+
 ## More
 
 | To understand… | Read |

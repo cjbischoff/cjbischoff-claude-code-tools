@@ -22,35 +22,46 @@ Measures and locks in detection quality. Not part of the shipped harness. Three 
   headline (real-confirmed only).
 - `adapter.py` — `ScanAdapter` protocol. `BinaryAdapter` drives a scanner binary (the
   Go migration); `WorkspaceAdapter` grades an already-scanned workspace (CC-skill flow);
-  `CCSkillAdapter` is the documented seam for a native SDK driver.
+  `CCSkillAdapter` is the documented seam for a native SDK driver. Two readers select
+  what a `WorkspaceAdapter` grades: `reportable` (confirmed/fixed — the confirmation
+  gate, default) and `tier1_detected` (any-status findings backed by a Tier-1 receipt —
+  detection grading, never touches `reportable`).
 - `run.py` — orchestrates clone/scan/judge/tally; resumable via a findings cache;
-  exit 1 if any locked finding regressed.
+  exit 1 if any locked finding regressed. `--grade-mode {real,detection}` picks the
+  reader (default `real`); `--only-local` skips http clone targets for an offline gate.
 
 ## Run
 ```bash
-# grade workspaces the operator scanned by driving the CC skill:
+# grade workspaces the operator scanned by driving the CC skill (confirmation):
 python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --workspaces <dir>
 # or drive a scanner binary (future Go build):
 python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --binary "sec-overlay-go scan"
+# offline detection-regression gate (CI): a deterministic scan never CONFIRMS, so grade
+# whether a Tier-1 receipt located each locked ground-truth finding instead.
+python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench \
+  --workspaces <dir> --grade-mode detection --only-local
 ```
 
+`.github/workflows/sec-overlay-tests.yml` runs the last form: it smoke-scans
+`fixtures/vulnerable_repo` into a workspace, then gates on the two `locked` dogfood
+entries staying detected. Detection mode exists because `reportable` returns nothing
+for a deterministic-only scan (confirmation needs the adversarial LLM pass) — the
+confirmation gate stays unchanged and cannot run in CI.
+
 ## Corpus
-`corpus_seed/` is seeded from this project's real session findings (confirmed = locked
-positives; correctly-rejected leads = negatives; one dep-CVE). Grow it every time the
-harness confirms/rejects a real finding — that is Layer B.
+`corpus_seed/` ships committed (public entries only — see `corpus_seed/README.md`).
+The two `locked` positives live in `dogfood.json` at `fixtures/vulnerable_repo`
+(`secrets` app.py:9, `sqli` app.py:18) — both semgrep-detectable, so the CI detection
+gate can assert them. Grow the corpus every time the harness confirms/rejects a real
+finding — that is Layer B. Never edit a corpus entry to force a pass. A `locked`
+positive that goes undetected is a rule defect, not a corpus one.
 
-`corpus_seed/absence.json` locks the absence-rule pair. Both positives must stay
-detected. The negative must stay silent. Never edit a corpus entry to force a
-pass. A `locked` positive that goes undetected is a rule defect, not a corpus one.
-
-Grading the absence pair needs a scanned workspace or `--binary`. `WorkspaceAdapter`
+Grading any positive needs a scanned workspace or `--binary`. `WorkspaceAdapter`
 only reads findings. It runs no scan. An empty `--workspaces` directory therefore
-reports `recall=0.0` for these entries. That is an empty input, not a rule
-regression.
-
-The run also exits 1, because a locked positive counts as regressed. Do not gate
-CI on that exit status without a pre-scanned workspace. To check the rules alone,
-run `semgrep scan --config rules/absence fixtures/absence_repo` from `helpers/`.
+reports `recall=0.0` and the run exits 1 (a locked positive counts as regressed). Do
+not gate CI on that exit status without a pre-scanned workspace. To check the absence
+rules alone, run `semgrep scan --config rules/absence fixtures/absence_repo` from
+`helpers/`.
 
 Scorecard metrics include F1 (`2PR/(P+R)`, `None` when precision or recall is
 undefined or both are zero) in `overall`, per-source, and headline rows (REQ-M1).

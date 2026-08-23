@@ -13,8 +13,8 @@ nothing here overrides it.
 From `skills/sec-overlay/helpers/`:
 
 ```bash
-uv run pytest -q                                   # full suite (2 env-only failures — see
-                                                     # skill CLAUDE.md §1)
+uv run pytest -q                                   # full suite (all green; seed corpus + rules
+                                                     # ship committed — see skill CLAUDE.md §1)
 uv run pytest tests/test_fingerprint.py -q         # single file
 uv run pytest tests/test_x.py::test_name           # single test
 uv run ruff check sec_overlay/ bench/ tests/       # lint (line-length 100)

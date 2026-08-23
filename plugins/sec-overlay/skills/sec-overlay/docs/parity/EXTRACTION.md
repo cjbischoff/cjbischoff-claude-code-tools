@@ -187,3 +187,15 @@ Rows re-verified stale relative to the analysis (closed between `0a65ee9` and cu
 All other analysis file:line cites for sec-overlay re-resolved at current source without drift
 (`adapter.py:67,78`, `cli.py:553`, `profile.py:42`, `calibrate.py:214-236`,
 `review_agent.py:56-60`, `cli.py:630-634`).
+
+## Corrections logged during implementation (constraint 7)
+
+1. REQ-M4 (seed corpus): `absence.json` held two `lifecycle: locked` synthetic
+   positives on `fixtures/absence_repo`. A deterministic-only CI scan cannot
+   CONFIRM (confirmation needs the adversarial LLM pass), and the absence rules
+   are not part of the smoke-scan detection gate, so a `locked` status there
+   would regress the offline gate for a reason unrelated to detection quality.
+   Both entries were changed to `open`. The two `locked` positives now live only
+   in `dogfood.json` at `fixtures/vulnerable_repo` (`secrets` app.py:9, `sqli`
+   app.py:18), which the smoke scan does exercise. This corrects the corpus to
+   what the CI gate can actually assert; it does not weaken any confirmation gate.

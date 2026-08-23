@@ -112,11 +112,43 @@ def test_run_benchmark_end_to_end(tmp_path):
     assert clones == []
 
 
+def test_run_benchmark_only_local_skips_http(tmp_path):
+    corpus_dir = tmp_path / "corpus"; corpus_dir.mkdir()
+    (corpus_dir / "r.json").write_text(json.dumps([
+        _entry("H1", file="app.js", line=10).__dict__,                       # http target
+        _entry("L1", repo_url="", commit="", local_path="fix", file="a.py",
+               line=1, cls="sqli").__dict__,                                  # local target
+    ]))
+    scanned = Workspace(tmp_path / "pre"); scanned.ensure()
+    write_findings(scanned, [_f("C1", "sqli", "a.py", 1)])
+    adapter = WorkspaceAdapter(lambda repo: scanned)
+    clones = []
+    def fake_clone(url, commit, dest):
+        clones.append(url); dest.mkdir(parents=True, exist_ok=True); return dest
+    sc = run_benchmark(corpus_dir, tmp_path / "run", adapter, clone_fn=fake_clone,
+                       only_local=True)
+    assert clones == []                       # http target never cloned
+    assert sc["overall"]["tp"] == 1           # local target still graded
+
+
 def test_reportable_filters_status(tmp_path):
     ws = Workspace(tmp_path); ws.ensure()
     write_findings(ws, [_f("C1", "xss", "a.js", 1, status=FindingStatus.CONFIRMED),
                         _f("C2", "xss", "a.js", 2, status=FindingStatus.REJECTED)])
     assert [f.id for f in reportable(ws)] == ["C1"]
+
+
+def test_tier1_detected_reads_receipt_candidates(tmp_path):
+    from bench.adapter import tier1_detected
+    ws = Workspace(tmp_path); ws.ensure()
+    cand = _f("D1", "sqli", "app.py", 18, status=FindingStatus.CANDIDATE)
+    cand.evidence_sources = ["semgrep:rules.python-sqli-string-format"]
+    tier2 = _f("D2", "sqli", "app.py", 20, status=FindingStatus.CANDIDATE)
+    tier2.evidence_sources = ["ripgrep:match"]
+    write_findings(ws, [cand, tier2])
+    # detection mode grades a Tier-1 candidate; reportable() (confirmation) sees neither
+    assert [f.id for f in tier1_detected(ws)] == ["D1"]
+    assert reportable(ws) == []
 
 
 def test_seed_corpus_is_valid():
