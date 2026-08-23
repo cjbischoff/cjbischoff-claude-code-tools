@@ -11,6 +11,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ## Unreleased
 
+### Added
+
+- Add `.github/workflows/sec-overlay-tests.yml`: on every pull request it runs the sec-overlay pytest suite and an offline detection-regression gate that smoke-scans the committed fixtures and asserts the two `locked` seed-corpus entries stay detected.
+
 ### Changed
 
 - Add the three sec-overlay recall-gaps implementation plans under `docs/superpowers/plans/`: Plan 1 builds the dependency-sink catalog and the policy-engine indicators (features F3 and F5), Plan 2 builds the absence rule pack and the catalog-gated proof tuples (F1 and F4), and Plan 3 builds the deterministic route census and the recall adversary (F6 and F2); together they cover sec-overlay versions 1.70.0 through 1.86.0.
