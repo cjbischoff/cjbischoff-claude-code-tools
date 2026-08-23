@@ -1026,3 +1026,12 @@ with no finding still emits one class-level surface, with `id` equal to the clas
 `site`. This closes the gap where a second `ssrf` sink in a different file inherited "covered"
 from an unrelated confirmed finding in the same class. The completeness invariant now runs per
 site instead of per class, so it rejects `complete` more often.
+
+Fix round 1 closed three gaps this site-keying opened. `rethreshold.py`'s `_ledger_disposition`
+now matches a surface by its `cls` field first, then falls back to bare `id`. A covered class's
+cross-repo compensating-control lookup now resolves against a site-keyed surface again. The
+per-site `needs_follow_up` branch's `reason`/`next_step` now name the specific sink site (e.g.
+"no terminal finding at sink site b.py:20 this pass" / "adjudicate b.py:20"). The old wording
+reused the class-level prose, reading as if the whole class were uncovered even when a sibling
+site was already `reported`. The class-level branch's wording — a class with zero findings —
+stays unchanged.

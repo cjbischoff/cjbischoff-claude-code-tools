@@ -75,8 +75,8 @@ def build_coverage_ledger(ws: Workspace) -> dict:
                 disp = "needs_follow_up"
             surface = {"id": f"{cls}@{site}", "cls": cls, "site": site, "disposition": disp}
             if disp == "needs_follow_up":
-                surface["reason"] = "no terminal finding for this attack surface this pass"
-                surface["next_step"] = f"hunt {cls} or record why it is not applicable"
+                surface["reason"] = f"no terminal finding at sink site {site} this pass"
+                surface["next_step"] = f"adjudicate {site}"
             surfaces.append(surface)
     completeness = (
         "complete"

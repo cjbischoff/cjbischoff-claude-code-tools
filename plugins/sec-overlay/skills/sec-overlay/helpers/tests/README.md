@@ -444,6 +444,17 @@ A candidate sink at one site keeps its own surface `needs_follow_up`. The ledger
 still emits one class-level surface keyed by the bare class name. Two findings landing on the
 same site collapse into one surface, so `surfaces` ids stay unique.
 
+Two more guards pin Fix round 1's C1/I1/I2 fixes. `test_per_site_surface_carries_cls_and_site`
+asserts a per-site surface keeps its `cls` and `site` fields.
+`test_per_site_pending_surface_validates_and_has_reason_and_next_step` asserts a per-site
+`needs_follow_up` surface carries a non-empty `reason` and `next_step` and that
+`validate_coverage_ledger` accepts the builder's own output.
+
+`test_correlate_rethreshold.py` gained
+`test_demote_when_enforcer_ledger_is_site_keyed`. It builds a real, site-keyed coverage ledger
+via `build_coverage_ledger`, not a hand-written dict. It asserts `rethreshold`'s demote path
+still resolves the enforcer's disposition through `_ledger_disposition`'s `cls`-field match.
+
 `test_route_control.py` (new, ISSUE-027/029/036) covers `route_control.py`: a table control the
 architecture markdown omits is a `needs_follow_up` gap, a table entrypoint the threat model drops
 is a gap, no gap when everything is present, and `record_route_gaps` round-trips a gap's

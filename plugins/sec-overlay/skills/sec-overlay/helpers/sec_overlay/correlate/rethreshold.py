@@ -66,7 +66,7 @@ def _ledger_disposition(coverage: dict, member_key: str, cls: str) -> str | None
         The disposition string (e.g. ``no_issue_found``, ``needs_follow_up``), or None.
     """
     for s in coverage.get(member_key, {}).get("surfaces", []):
-        if s.get("id") == cls:
+        if s.get("cls") == cls or s.get("id") == cls:
             return s.get("disposition")
     return None
 

@@ -192,6 +192,29 @@ def test_a_class_with_no_finding_still_appears_as_one_surface(tmp_path: Path):
     assert "authz" in ids
 
 
+def test_per_site_surface_carries_cls_and_site(tmp_path: Path):
+    """Regression guard for I2: cls/site must survive on a per-site surface."""
+    ws = Workspace(tmp_path); ws.ensure()
+    _profile(ws, ["ssrf"])
+    write_findings(ws, [_f("ssrf", FindingStatus.CONFIRMED, "f1", file="a.py", line=10)])
+    surface = build_coverage_ledger(ws)["surfaces"][0]
+    assert surface["cls"] == "ssrf"
+    assert surface["site"] == "a.py:10"
+
+
+def test_per_site_pending_surface_validates_and_has_reason_and_next_step(tmp_path: Path):
+    """Regression guard for I1: a per-site needs_follow_up surface must carry both fields."""
+    ws = Workspace(tmp_path); ws.ensure()
+    _profile(ws, ["ssrf"])
+    write_findings(ws, [_f("ssrf", FindingStatus.CANDIDATE, "f2", file="b.py", line=20)])
+    led = build_coverage_ledger(ws)
+    surface = led["surfaces"][0]
+    assert surface["disposition"] == "needs_follow_up"
+    assert (surface.get("reason") or "").strip()
+    assert (surface.get("next_step") or "").strip()
+    assert validate_coverage_ledger(led) == []
+
+
 def test_surface_ids_stay_unique(tmp_path: Path):
     ws = Workspace(tmp_path); ws.ensure()
     _profile(ws, ["ssrf"])

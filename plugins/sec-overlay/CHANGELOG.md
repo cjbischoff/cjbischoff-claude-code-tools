@@ -96,6 +96,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - `sec_overlay/README.md` no longer implies `check_census_routes` still
   flags a route that appears only as a prefix inside a longer profile path.
   A profile field carrying the route path as a prefix suppresses the gap.
+- `rethreshold._ledger_disposition` now matches a coverage surface by its
+  `cls` field, falling back to bare `id`. Site-keyed surfaces no longer
+  break the cross-repo demote and promote paths. The per-site
+  `needs_follow_up` surface's `reason`/`next_step` now name the specific
+  sink site instead of reusing class-level wording. A new test also pins
+  `cls`/`site` on a per-site surface.
 
 ## 1.69.15 - 2026-08-22
 
