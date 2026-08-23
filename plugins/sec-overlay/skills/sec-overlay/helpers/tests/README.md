@@ -974,4 +974,9 @@ entry exists with `cls == "ssrf"`, `package == "github.com/open-policy-agent/opa
 same id set as loading the catalog directly, with no duplicate ids; and
 `validate_catalog` reports a defect fragment (`entries`, `package`, or `duplicate`) for
 each of three malformed documents — an empty entries key, an entry missing a required
-field, and an entry list with a duplicate id.
+field, and an entry list with a duplicate id. Four more guards cover manifest matching
+against the `fixtures/dep_sink_repo` fixture (a `go.mod` declaring the OPA dependency
+plus a `policy.go` using it): `match_manifests` finds only `opa-rego-http-send` in that
+fixture; `matched_classes` reduces it to `["ssrf"]`; a repo with an unrelated `go.mod`
+matches nothing; and a `go.mod` planted under `node_modules/` is ignored, proving the
+vendored-directory skip.

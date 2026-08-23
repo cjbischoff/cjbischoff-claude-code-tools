@@ -8,6 +8,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 - Dependency-sink catalog (`references/dependency-sinks.json`) and its loader,
   naming dependencies whose own code holds the sink.
+- `match_manifests()`/`matched_classes()` and a `match --root <dir>` CLI
+  subcommand, to check a target repo's manifests against the catalog.
 
 ## 1.69.15 - 2026-08-22
 

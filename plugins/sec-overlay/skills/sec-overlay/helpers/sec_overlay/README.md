@@ -18,8 +18,9 @@ pointer if the package layout changed — in the same commit (enforced by the pr
 
 `dependency_sinks.py` (new) loads and validates `../references/dependency-sinks.json` — the
 catalog of dependencies whose own code holds a sink — and exposes `catalog_ids()` for later
-receipt-id validation. See the module map entry in [`../README.md`](../README.md) for the
-full contract and the CLI-callable list for its `python -m sec_overlay.dependency_sinks` entry.
+receipt-id validation, plus `match_manifests()`/`matched_classes()` to check a target repo's
+manifests against the catalog. See the module map entry in [`../README.md`](../README.md) for
+the full contract and the CLI-callable list for its `list`/`match` subcommands.
 
 `review_findings.py` (new, REV-01) adds the review-profile gate `apply_profile` — see the
 module map entry in [`../README.md`](../README.md) for the full contract; `cli.py`'s

@@ -124,7 +124,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `asvs.py` / `codeguard.py` | Load the ASVS JSON / CodeGuard checklists from [`../references/`](../references/). |
 | `citations.py` | Auto-attach ASVS + CodeGuard citations to findings (deterministic). CLI-callable. |
 | `custom_checks.py` | Discover in-repo `.sec-overlay/checks/` custom-check bundles a target ships. |
-| `dependency_sinks.py` | Loads and validates `references/dependency-sinks.json` — dependencies whose own code holds a sink (an OPA policy calling `http.send`, a CEL program calling a host function). `catalog_ids()` names every entry for later receipt-id validation. CLI-callable. |
+| `dependency_sinks.py` | Loads and validates `references/dependency-sinks.json` — dependencies whose own code holds a sink (an OPA policy calling `http.send`, a CEL program calling a host function). `catalog_ids()` names every entry for later receipt-id validation. `match_manifests()` walks a target repo's manifest files (skipping vendored/build/cache trees) and returns the catalog entries it declares; `matched_classes()` reduces that to the sorted, deduplicated attack-class keys. CLI-callable: `list` prints the catalog, `match --root <dir>` prints what a target repo declares. |
 
 ### Graph & structural substrate (the "where does this reach?" engine)
 | Module | Purpose |
@@ -287,7 +287,7 @@ steps the orchestrator calls between agent phases:
 | `report` | Assemble final SARIF + Markdown. |
 | `redactor` | Mask/verify secrets in a text blob. |
 | `postflight` | Write durable `kb/prior_context.json`. |
-| `dependency_sinks` | Print the dependency-sink catalog, one `id`/`cls`/`package` line per entry. |
+| `dependency_sinks` | `list` prints the catalog, one `id`/`cls`/`package` line per entry; `match --root <dir>` prints the entries a target repo declares. |
 
 ---
 
