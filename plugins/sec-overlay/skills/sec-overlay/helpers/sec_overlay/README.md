@@ -222,7 +222,9 @@ review-improvements branch; keep them that way (run `ruff format` before committ
 
 `phases.py` (new) is the ordered phase table (`PhaseSpec`, `PHASE_TABLE`) plus pure sequencer
 helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit driver walks —
-see the module map entry. `PHASE_TABLE` now ends with `redteam` (agent, `agents/redteam.md`,
+`PHASE_TABLE` now opens with `route-census` (deterministic, no inputs, output `_route_census` —
+`kb/route-census.json`). It runs before `recon` so the census reads only the target's source,
+never recon's own output — see the module map entry. `PHASE_TABLE` now ends with `redteam` (agent, `agents/redteam.md`,
 input `_findings_dir`, output `_redteam_plan` — `reports/redteam-plan.md`) after `selfscore` and
 before `artifact-gate` (deterministic, input `_report`/`_sarif`, output `_artifact_gate_json`) —
 `artifact_gate.run_artifact_gate` hard-requires `redteam-plan.md` to exist, so redteam must run
@@ -249,7 +251,9 @@ target, config, pinned SHA, and lazily-loaded `ScanProfile` an action needs. `re
 returns the printable block for an agent phase — prompt file plus `{{TARGET}}`/`{{WORKSPACE}}`/
 `{{SHA}}` substitutions, plus an optional `{{ATTACK_CLASS}}` line when called with `classes=` —
 with no side effects; the orchestrator runs the model. It raises if called on a deterministic
-phase (`prompt is None`). At the `investigate` phase, `run_audit` reads `agents_to_spawn` from
+phase (`prompt is None`). `_act_route_census` calls `route_census.census(ctx.target)` and
+`write_census` to persist `kb/route-census.json`. This action registers under `"route-census"`
+in `DETERMINISTIC_ACTIONS` and runs before the `recon` dispatch. At the `investigate` phase, `run_audit` reads `agents_to_spawn` from
 `kb/scan-profile.json`, widens it with `partition.reconcile_plan` (recon-omitted classes, plus —
 via `target_root=ctx.target` — every attack class of a matched dependency-sink catalog entry),
 passes the reconciled list to `render_dispatch(classes=...)`, and appends `unrouted_triage_dispatch`'s

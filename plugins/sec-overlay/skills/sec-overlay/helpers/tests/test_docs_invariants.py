@@ -182,6 +182,7 @@ def test_evidence_vocabulary_block_lists_all_values():
 # is relative order — every doc-labelled phase must appear in PHASE_TABLE order (T-06-02-06).
 _CLAUDE_MD = Path(__file__).resolve().parents[2] / "CLAUDE.md"
 _PHASE_DOC_LABELS = {
+    "route-census": "Route census",
     "recon": "Recon",
     "architecture": "Architecture",
     "arch-gate": "Arch gate",

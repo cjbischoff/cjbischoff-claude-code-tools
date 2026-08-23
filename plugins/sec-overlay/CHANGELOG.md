@@ -68,6 +68,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - `build_coverage_ledger` now keys a covered class's surfaces by sink site,
   not by class, so a second sink in the same class no longer inherits
   "covered" from an unrelated confirmed finding.
+- A `route-census` deterministic phase, wired into `PHASE_TABLE` ahead of
+  `recon`. `_act_route_census` writes `kb/route-census.json` from the
+  target's source, so the file exists for the recon gate, `check_census_routes`,
+  and the recall adversary before recon ever runs.
 
 ### Fixed
 

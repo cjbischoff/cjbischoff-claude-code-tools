@@ -90,7 +90,14 @@ def _redteam_plan(ws: Workspace) -> Path:
     return ws.reports / "redteam-plan.md"
 
 
+def _route_census(ws: Workspace) -> Path:
+    return ws.kb / "route-census.json"
+
+
 PHASE_TABLE: tuple[PhaseSpec, ...] = (
+    # No inputs: the census reads the target's source, never recon's output —
+    # that is what lets it catch a route recon never named.
+    PhaseSpec("route-census", "deterministic", (), (_route_census,)),
     PhaseSpec("recon", "agent", (), (_profile,), prompt="recon.md"),
     PhaseSpec("architecture", "agent", (_profile,), (_arc42, _container), prompt="architecture.md"),
     PhaseSpec("arch-gate", "deterministic", (_arc42, _container), (_arch_gate_json,)),

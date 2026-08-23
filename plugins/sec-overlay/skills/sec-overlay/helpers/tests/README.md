@@ -1047,3 +1047,13 @@ things: the rule id sits under `sec-overlay.absence.`, a `pattern-not` half name
 option, and `metadata.safe_option` records it.
 `test_emit_semgrep_rule_without_a_safe_option_is_unchanged` checks the plain rule id and
 patterns stay unaffected.
+
+Two new guards in `test_phases.py` cover the `route-census` row wired into `PHASE_TABLE`.
+`test_route_census_runs_before_recon` asserts its index precedes `recon`'s index.
+`test_route_census_declares_no_inputs` asserts the spec is deterministic, takes no inputs,
+and declares exactly one output — the census never reads recon's own artifact. A new guard
+in `test_driver.py`, `test_route_census_phase_writes_the_census_file`, runs
+`DETERMINISTIC_ACTIONS["route-census"]` against the `fixtures/route_repo` fixture and
+checks `kb/route-census.json` exists afterward. `test_docs_invariants.py`'s
+`_PHASE_DOC_LABELS` gained a `"route-census": "Route census"` entry, so the CLAUDE.md
+phase-order guard also enforces this new row's position ahead of `Recon`.

@@ -104,7 +104,8 @@ flowchart TD
     P0["0 · preflight<br/>tools + CodeQL packs present?"] --> P1["1 · begin_pass<br/>pin SHA"]
     P1 --> C1(("C1 · context-ingest → context-adversary<br/>repo docs as UNTRUSTED leads"))
     C1 --> T1["T1 · graph build<br/>Tier-1 substrate (LLM-free)"]
-    T1 --> RA(("2 · recon → architecture<br/>gated by phase-adversary (opus)"))
+    T1 --> RC["R0 · route-census<br/>code-derived route inventory (LLM-free)"]
+    RC --> RA(("2 · recon → architecture<br/>gated by phase-adversary (opus)"))
     RA --> AG2["3.5 · arch-gate<br/>diagram_gate + ste_lint, halts on violation"]
     AG2 --> TM(("4 · threat-model<br/>gated by phase-adversary (opus)"))
     TM --> TG["4.5 · tm-gate<br/>diagram_gate + ste_lint + duplication check"]
@@ -231,6 +232,7 @@ uv run python -m sec_overlay.postflight    --workspace <WS> --sha <sha>   # 15, 
 Everything lands in `<target>/.sec-overlay/<slug>/` (self-ignoring):
 
 ```
+kb/route-census.json     code-derived route inventory, written before recon (never from recon)
 kb/scan-profile.json      recon output: languages, frameworks, attack_surface, sast_plan
 architecture/             C4 diagrams + runtime views + arc42.md (building blocks in §5)
 threat-model/             dfd.mmd (derived) + attack-sequences/ + threat-model.md (hunt list)

@@ -58,6 +58,7 @@ local semgrep ruleset.
 C1 Context-ingest   agents/context-ingest.md (sonnet) → context-adversary.md (opus)   # repo docs as UNTRUSTED
 T1 Tier-1 substrate  python -m sec_overlay.graph build --target <T> --workspace <WS> --sha <sha>
                      # LLM-free: structural_index + regex call-edges + osv/secrets/crypto → kb/graph.json v1
+R0 Route census      python -m sec_overlay.route_census --root <T>   # code-derived route inventory; runs BEFORE recon
 2  Recon            agents/recon.md (sonnet) → kb/scan-profile.json  # → PHASE GATE (opus)
 3  Architecture     agents/architecture.md (sonnet) → architecture/ tree (C4 + arc42)  # → PHASE GATE
 3.5 Arch gate       python -m sec_overlay.diagram_gate + ste_lint  # caps/prose, halts on violation

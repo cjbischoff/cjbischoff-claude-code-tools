@@ -29,6 +29,7 @@ from sec_overlay.prefilter import run_prefilter
 from sec_overlay.profile import ScanProfile, load_profile
 from sec_overlay.redactor import safe_for_prompt
 from sec_overlay.report import write_report
+from sec_overlay.route_census import census, write_census
 from sec_overlay.selfscore import write_self_score
 from sec_overlay.state import load_state, save_state
 from sec_overlay.verify import verify_findings
@@ -283,6 +284,14 @@ def _act_tm_gate(ctx: AuditContext) -> None:
         raise PhaseHalt(f"tm-gate rejected {len(errors)} issue(s): " + "; ".join(errors))
 
 
+def _act_route_census(ctx: AuditContext) -> None:
+    """Write the code-derived route inventory.
+
+    Runs before recon so the inventory cannot be derived from recon's own output.
+    """
+    write_census(ctx.ws, census(ctx.target))
+
+
 def _act_postflight(ctx: AuditContext) -> None:
     from sec_overlay.postflight import run_postflight  # local: avoid import cycle
 
@@ -304,6 +313,7 @@ DETERMINISTIC_ACTIONS.update(
         "arch-gate": _act_arch_gate,
         "tm-gate": _act_tm_gate,
         "postflight": _act_postflight,
+        "route-census": _act_route_census,
     }
 )
 

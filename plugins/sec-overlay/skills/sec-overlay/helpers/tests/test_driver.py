@@ -1,15 +1,21 @@
+from pathlib import Path
+
 import pytest
 
 from sec_overlay.campaign import record_stage
 from sec_overlay.workspace import Workspace
 
+_ROUTE_FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "route_repo"
 
-def _ctx(tmp_path):
+
+def _ctx(tmp_path, *, target=None):
     from sec_overlay.driver import AuditContext
 
     ws = Workspace(tmp_path / "w")
     ws.ensure()
-    return AuditContext(ws=ws, target=str(tmp_path / "t"), config="cfg", sha="deadbeef")
+    return AuditContext(
+        ws=ws, target=target or str(tmp_path / "t"), config="cfg", sha="deadbeef"
+    )
 
 
 def test_run_deterministic_halts_on_missing_input(tmp_path):
@@ -453,3 +459,12 @@ def test_every_deterministic_phase_has_a_registered_action():
     for phase in PHASE_TABLE:
         if phase.kind == "deterministic":
             assert phase.name in DETERMINISTIC_ACTIONS, phase.name
+
+
+def test_route_census_phase_writes_the_census_file(tmp_path):
+    """The recall adversary and the recon gate both read this file."""
+    from sec_overlay.driver import DETERMINISTIC_ACTIONS
+
+    ctx = _ctx(tmp_path, target=str(_ROUTE_FIXTURE))
+    DETERMINISTIC_ACTIONS["route-census"](ctx)
+    assert (ctx.ws.kb / "route-census.json").exists()
