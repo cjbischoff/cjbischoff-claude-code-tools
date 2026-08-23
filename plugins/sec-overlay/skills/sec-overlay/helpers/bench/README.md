@@ -42,3 +42,9 @@ harness confirms/rejects a real finding — that is Layer B.
 `corpus_seed/absence.json` locks the absence-rule pair. Both positives must stay
 detected. The negative must stay silent. Never edit a corpus entry to force a
 pass. A `locked` positive that goes undetected is a rule defect, not a corpus one.
+
+Grading the absence pair needs a scanned workspace or `--binary`. `WorkspaceAdapter`
+reads findings; it runs no scan. An empty `--workspaces` directory therefore reports
+`recall=0.0` for these entries. That is an empty input, not a rule regression. To
+check the rules alone, run
+`semgrep scan --config rules/absence fixtures/absence_repo` from `helpers/`.

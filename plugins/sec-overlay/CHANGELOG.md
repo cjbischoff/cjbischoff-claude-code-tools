@@ -67,6 +67,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - `findings_gate.validate_findings` now rejects a `dependency-catalog:<id>`
   receipt whose `<id>` is not a real `dependency-sinks.json` catalog entry.
   Free text after the colon read as a receipt before this check.
+- `corpus_seed/absence.json` now sets `repo_url` and `commit` to the empty
+  string on each entry. `CorpusEntry` declares both as required fields, so
+  `load_corpus` raised `TypeError` and every bench run failed to start.
 
 ## 1.69.15 - 2026-08-22
 

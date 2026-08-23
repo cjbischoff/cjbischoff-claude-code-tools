@@ -9,3 +9,7 @@ Grow this file every time the harness confirms/rejects a real finding.
 `absence.json` pins the absence-rule pair from `fixtures/absence_repo`. It has two
 `locked` positives: the rego.Capabilities gap in `vulnerable.go`, and the jinja2
 sandbox gap in `render.py`. It has one negative, `safe.go`, which must not be reported.
+
+`CorpusEntry` declares `repo_url` and `commit` as required fields. A local-only entry
+sets both to the empty string. `validate()` skips both target checks when `local_path`
+is set, so an empty pair is valid there.
