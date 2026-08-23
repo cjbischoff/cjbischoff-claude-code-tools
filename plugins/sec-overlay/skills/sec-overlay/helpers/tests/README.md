@@ -717,7 +717,16 @@ a "Do not report" exclusion block, that the four TS/JS extensions all resolve to
 `ts_js_tsx_jsx.md`, that a representative path per language resolves to its own doc, that an
 extensionless or unmatched-extension path resolves to `default.md`, that a two-entry map
 collision resolves to the first entry (`monkeypatch` on `BUILTIN_PATH_RULE_MAP` and
-`builtin_rule_docs_dir`, not real files), and that `resolve_rule_doc` is idempotent.
+`builtin_rule_docs_dir`, not real files), and that `resolve_rule_doc` is idempotent. Its
+`test_builtin_path_rule_map_has_thirty_six_distinct_docs` pins the map at 36 docs after the
+REQ-P2 port (Task 11).
+
+`test_rule_glob.py`'s Task 11 (REQ-P2) block covers the 27 rule docs ported from open-code-review
+(`_PORTED_DOCS`): each is on disk, carries the `Adapted from open-code-review (Apache-2.0)`
+attribution line, and is referenced by a `BUILTIN_PATH_RULE_MAP` entry. `_NEW_PATH_RESOLUTIONS`
+checks representative paths resolve to the right doc, including first-match order cases — the two
+`.github` patterns before the plain `**/*.{yaml,yml}` pattern, and `package.json` / `Cargo.toml` /
+`pom.xml` before the generic `json`/`xml` patterns.
 
 `test_review_profiles.py` (phase 3 plan 04, REV-01) covers `sec_overlay.review_findings`:
 `classify` returns `None` for a non-allowlisted `Finding.cls` and the class itself for each of

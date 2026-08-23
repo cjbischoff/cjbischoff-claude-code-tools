@@ -12,6 +12,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Rule-doc port tests (REQ-P2, RED): failing tests in `tests/test_rule_glob.py`
+  and `tests/test_rule_docs.py` pin the coming 9 → 36 rule-doc port — the map
+  holds 36 distinct docs, each of the 27 ported docs carries the
+  `Adapted from open-code-review (Apache-2.0)` attribution line and a
+  `BUILTIN_PATH_RULE_MAP` entry, and representative paths resolve to the right
+  doc including first-match order cases (`.github` patterns before plain YAML;
+  `package.json`/`Cargo.toml`/`pom.xml` before generic `json`/`xml`).
+
 - Sibling-context review (REQ-P1): the review-file prompt now embeds a file's
   bundle-mate diffs. New module `review_budget.py` holds the shared size
   primitive `estimate_tokens(text) = len(text) // 4`.

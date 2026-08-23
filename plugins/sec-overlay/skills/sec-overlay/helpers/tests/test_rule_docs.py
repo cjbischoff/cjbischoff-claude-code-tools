@@ -45,8 +45,8 @@ def test_required_rule_sections_has_five_families():
     assert set(REQUIRED_RULE_SECTIONS) == set(RULE_SECTION_SYNONYMS)
 
 
-def test_builtin_path_rule_map_has_nine_distinct_docs():
-    assert len(set(BUILTIN_PATH_RULE_MAP.values())) == 9
+def test_builtin_path_rule_map_has_thirty_six_distinct_docs():
+    assert len(set(BUILTIN_PATH_RULE_MAP.values())) == 36
 
 
 @pytest.mark.parametrize("doc_name", _all_doc_names())
