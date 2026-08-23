@@ -6,7 +6,9 @@ skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
 `test_detection_coverage.py` guards the coverage document: `generate()`'s output must name the
 dependency-internal sink limit and cite `dependency-sinks.json`, so the doc cannot silently
-drop the routing-versus-proof distinction.
+drop the routing-versus-proof distinction. A second test asserts `generate()`'s output equals
+the tracked `references/DETECTION_COVERAGE.md`, byte for byte. This closes the drift the first
+test cannot see: an edit to `detection_coverage.py` with no matching regeneration of the file.
 
 The fake-response `R` classes in `test_review_tracer.py` and `test_diffscope.py` declare
 `stdout = ""` as a class attribute so `ty check` resolves the attribute; behavior is unchanged.

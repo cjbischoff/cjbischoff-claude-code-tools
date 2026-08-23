@@ -25,6 +25,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   but never proves the sink. `recon.md` now reads `dependency-sinks.json` and
   emits `dependency_sinks`; `SKILL.md` documents `reconcile_plan`'s catalog
   merge.
+- A test pins `references/DETECTION_COVERAGE.md` to `detection_coverage.py`'s
+  renderer, byte for byte. An edit to the renderer with no matching
+  regeneration of the tracked file now fails the suite.
 
 ## 1.69.15 - 2026-08-22
 
