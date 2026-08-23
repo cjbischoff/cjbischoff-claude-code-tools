@@ -74,6 +74,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - `corpus_seed/absence.json` now sets `repo_url` and `commit` to the empty
   string on each entry. `CorpusEntry` declares both as required fields, so
   `load_corpus` raised `TypeError` and every bench run failed to start.
+- `bench/README.md` now states that the documented `bench.run` command exits 1
+  when no scanned workspace is supplied. A locked positive counts as regressed,
+  so an operator must not gate CI on that exit status.
 
 ## 1.69.15 - 2026-08-22
 
