@@ -1113,6 +1113,12 @@ label miss. It now enforces the row's position right after `Recon`.
   locks that `run_repeated(..., repeats=N)` writes each `run-<n>/scorecard.md` and
   the parent `scorecard_agg.{json,md}`.
 
+- `test_bench.py` locks REQ-M6 cost columns: `tally(results, corpus, cost=...)`
+  attaches a `cost` block (`tokens`, `wall_time_s`, `usd_per_confirmed_tp`) to
+  `to_dict`/markdown; `usd_per_confirmed_tp` is `usd_estimate / real-confirmed TP`
+  (`None` when no TP), rendered as a labeled estimate; the section is omitted when
+  no cost is supplied. Per-class FP-rate rows render in the "By class" table.
+
 - `test_calibrate.py` also locks REQ-P9: a judge `severity-inflated`/`downgrade`
   verdict writes the downgraded severity band back to `f.severity` with a
   `calibrate:severity-downgraded` history event; no verdict leaves severity alone.
