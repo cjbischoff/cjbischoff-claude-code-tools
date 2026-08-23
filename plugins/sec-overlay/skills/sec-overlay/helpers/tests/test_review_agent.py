@@ -71,6 +71,58 @@ def test_render_review_prompt_raises_on_missing_substitution(tmp_path, monkeypat
         render_review_prompt("app.py", _PY_RULE, _DIFF, [])
 
 
+# --- render_review_prompt sibling diffs (REQ-P1) ------------------------------
+
+_TEMPLATE_WITH_SIBLINGS = _TEMPLATE + "siblings:\n{{SIBLING_DIFFS}}\n"
+
+
+def test_render_review_prompt_includes_sibling_diff_fenced_blocks(tmp_path, monkeypatch):
+    tp = tmp_path / "rf.md"
+    tp.write_text(_TEMPLATE_WITH_SIBLINGS)
+    monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: tp)
+    sib = {"helper.py": "@@ -1 +1 @@\n-old\n+new_sibling_line\n"}
+    rendered = render_review_prompt("app.py", _PY_RULE, _DIFF, ["helper.py"], sibling_diffs=sib)
+    assert "helper.py" in rendered
+    assert "new_sibling_line" in rendered
+    assert "```" in rendered
+
+
+def test_render_review_prompt_truncates_oversized_sibling_with_marker(tmp_path, monkeypatch):
+    tp = tmp_path / "rf.md"
+    tp.write_text(_TEMPLATE_WITH_SIBLINGS)
+    monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: tp)
+    big = "+padding_line\n" * 5000
+    rendered = render_review_prompt(
+        "app.py", _PY_RULE, _DIFF, ["huge.py"], sibling_diffs={"huge.py": big}, cap_tokens=10
+    )
+    assert "omitted (token cap)" in rendered
+    assert big not in rendered
+
+
+def test_render_review_prompt_renders_siblings_largest_first(tmp_path, monkeypatch):
+    tp = tmp_path / "rf.md"
+    tp.write_text(_TEMPLATE_WITH_SIBLINGS)
+    monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: tp)
+    sib = {"small.py": "@@ +1 @@\n+a\n", "big.py": "@@ +1 @@\n+" + ("z" * 400) + "\n"}
+    rendered = render_review_prompt("app.py", _PY_RULE, _DIFF, list(sib), sibling_diffs=sib)
+    assert rendered.index("big.py") < rendered.index("small.py")
+
+
+def test_render_review_prompt_annotates_sibling_in_changed_files_block(tmp_path, monkeypatch):
+    tp = tmp_path / "rf.md"
+    tp.write_text(_TEMPLATE_WITH_SIBLINGS)
+    monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: tp)
+    rendered = render_review_prompt(
+        "app.py", _PY_RULE, _DIFF, ["helper.py", "stranger.py"],
+        sibling_diffs={"helper.py": "@@ +1 @@\n+x\n"},
+    )
+    changed_block = rendered.split("changed:", 1)[1]
+    helper_line = next(ln for ln in changed_block.splitlines() if "helper.py" in ln)
+    stranger_line = next(ln for ln in changed_block.splitlines() if "stranger.py" in ln)
+    assert "diff included below" in helper_line
+    assert "diff included below" not in stranger_line
+
+
 # --- parse_review_response -----------------------------------------------------
 
 

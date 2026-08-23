@@ -7,7 +7,7 @@ names: impl/test pairs and locale/config siblings. Everything else falls back to
 its own single-member unit.
 """
 
-from sec_overlay.bundle import ReviewUnit, group_bundles
+from sec_overlay.bundle import MAX_UNIT_TOKENS, ReviewUnit, group_bundles
 from sec_overlay.diffscope import ChangedFile
 
 
@@ -96,6 +96,49 @@ def test_group_bundles_unrelated_files_each_get_their_own_unit():
     assert len(units) == 2
     assert units[0].files == ("app.py",)
     assert units[1].files == ("other.rb",)
+
+
+# --- REQ-P1: C/C++ header-impl pairs, interface/impl stems, token cap split -----
+
+
+def test_group_bundles_pairs_c_header_and_impl():
+    units = group_bundles([_cf("src/foo.h"), _cf("src/foo.c")])
+    assert len(units) == 1
+    assert set(units[0].files) == {"src/foo.h", "src/foo.c"}
+
+
+def test_group_bundles_pairs_cpp_header_and_impl():
+    units = group_bundles([_cf("src/foo.hpp"), _cf("src/foo.cpp")])
+    assert len(units) == 1
+    assert set(units[0].files) == {"src/foo.hpp", "src/foo.cpp"}
+
+
+def test_group_bundles_pairs_interface_and_impl_stem():
+    units = group_bundles([_cf("src/svc.ts"), _cf("src/svc.impl.ts")])
+    assert len(units) == 1
+    assert set(units[0].files) == {"src/svc.ts", "src/svc.impl.ts"}
+
+
+def test_group_bundles_does_not_pair_c_headers_across_directories():
+    units = group_bundles([_cf("a/foo.h"), _cf("b/foo.c")])
+    assert len(units) == 2
+
+
+def test_group_bundles_splits_unit_exceeding_max_tokens():
+    # Each file alone estimates above the cap, so the pair cannot share a unit.
+    over = "x" * (MAX_UNIT_TOKENS * 4 + 8)
+    diffs = {"src/foo.h": over, "src/foo.c": over}
+    units = group_bundles([_cf("src/foo.h"), _cf("src/foo.c")], diffs=diffs)
+    seen = sorted(p for u in units for p in u.files)
+    assert seen == ["src/foo.c", "src/foo.h"]  # totality preserved
+    assert len(units) == 2  # pair split apart
+
+
+def test_group_bundles_keeps_unit_within_token_cap():
+    small = "x" * 8
+    diffs = {"src/foo.h": small, "src/foo.c": small}
+    units = group_bundles([_cf("src/foo.h"), _cf("src/foo.c")], diffs=diffs)
+    assert len(units) == 1
 
 
 def test_review_unit_rejects_empty_files():

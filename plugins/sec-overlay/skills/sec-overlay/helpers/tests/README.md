@@ -1162,6 +1162,14 @@ label miss. It now enforces the row's position right after `Recon`.
   gate (REQ-M4): `run_benchmark(only_local=True)` grades local fixtures and never
   clones http targets.
 
+- `test_review_agent.py` + `test_bundle.py` lock REQ-P1 (sibling context): the
+  review prompt embeds sibling diffs as fenced blocks, renders them largest-first,
+  truncates any sibling over `cap_tokens` with an `omitted (token cap)` marker, and
+  annotates each embedded sibling in the changed-files block; `group_bundles` pairs
+  C/C++ header-impl files (`.h/.c`, `.hpp/.cpp`) and interface/impl stems
+  (`svc.ts`/`svc.impl.ts`) within a directory, and splits any unit over
+  `MAX_UNIT_TOKENS` when per-file `diffs` are supplied.
+
 - `test_aacr_adapter.py` locks REQ-M3: `aacr_entries` maps AACR dataset rows to
   `source="aacr"` corpus entries that validate and never move the real-confirmed
   headline; `ocr_findings` parses `ocr review --format json` into benchmark-only

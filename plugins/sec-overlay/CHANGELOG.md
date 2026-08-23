@@ -12,6 +12,15 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Sibling-context review tests (REQ-P1, failing): `test_review_agent.py` and
+  `test_bundle.py` assert the review prompt embeds sibling diffs as fenced
+  blocks rendered largest-first, truncates an over-cap sibling with an
+  `omitted (token cap)` marker, and annotates each embedded sibling in the
+  changed-files block; and that `group_bundles` pairs C/C++ header-impl files
+  and interface/impl stems within a directory and splits a unit over
+  `MAX_UNIT_TOKENS`. Red phase — the `render_review_prompt` `sibling_diffs`
+  parameter and `bundle.MAX_UNIT_TOKENS` do not exist yet.
+
 - Live-reflection wiring (REQ-P6): `run_review` now consumes recorded
   review-filter verdicts through `reflection.recorded_verdict_source` instead
   of an always-empty verdict. `reflection_label(path)` names each file's
