@@ -1010,3 +1010,10 @@ Two more guards in `test_findings_gate.py` cover the catalog-id check:
 source and checks the gate names that id in an error; `test_findings_gate_accepts_a_known_catalog_id`
 writes `dependency-catalog:opa-rego-http-send`, a real catalog id, and checks the gate
 raises no `dependency-catalog` error for it.
+
+Two more guards in `test_bucket_b.py` cover `emit_semgrep_rule`'s `safe_option` keyword.
+`test_emit_semgrep_rule_emits_the_absence_shape_when_a_safe_option_is_named` checks three
+things: the rule id sits under `sec-overlay.absence.`, a `pattern-not` half names the safe
+option, and `metadata.safe_option` records it.
+`test_emit_semgrep_rule_without_a_safe_option_is_unchanged` checks the plain rule id and
+patterns stay unaffected.

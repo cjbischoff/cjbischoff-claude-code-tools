@@ -20,6 +20,11 @@ pointer if the package layout changed — in the same commit (enforced by the pr
 rule-sources table — see the module map entry in [`../README.md`](../README.md) for the
 full contract.
 
+`rule_gaps.py`'s `emit_semgrep_rule` takes a new `safe_option` keyword. With it, the emitted
+rule is an absence rule: it fires only on a construction missing the named safe option. Its
+id then sits under `sec-overlay.absence.` instead of `sec-overlay.`. Without it, behavior is
+unchanged.
+
 `dependency_sinks.py` (new) loads and validates `../references/dependency-sinks.json` — the
 catalog of dependencies whose own code holds a sink — and exposes `catalog_ids()` for later
 receipt-id validation, plus `match_manifests()`/`matched_classes()` to check a target repo's

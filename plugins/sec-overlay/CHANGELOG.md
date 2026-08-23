@@ -50,6 +50,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   receipt for element 1 and a `semgrep:sec-overlay.absence.*` receipt for
   element 2. `investigate.md`'s tool-grounding rule names
   `dependency-catalog` as a Tier-2 receipt that never confirms a gate alone.
+- `emit_semgrep_rule()` takes a `safe_option` keyword. With it, the codified
+  rule is an absence rule: it fires only on a construction missing the named
+  safe option. Its id then sits under `sec-overlay.absence.`.
+  `corpus_seed/absence.json` pins the rego.Capabilities and jinja2-sandbox
+  pair as locked bench positives, plus a negative that must stay silent.
 
 ### Fixed
 
