@@ -1105,3 +1105,7 @@ label miss. It now enforces the row's position right after `Recon`.
 
 - `test_bench.py` also locks the REQ-M1 F1 contract: `_metrics` carries `f1`
   (`2PR/(P+R)`), `None` when undefined; the scorecard markdown renders it.
+
+- `test_calibrate.py` also locks REQ-P9: a judge `severity-inflated`/`downgrade`
+  verdict writes the downgraded severity band back to `f.severity` with a
+  `calibrate:severity-downgraded` history event; no verdict leaves severity alone.

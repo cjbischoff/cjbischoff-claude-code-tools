@@ -6,6 +6,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Failing REQ-P9 tests: judge severity write-back (`tests/test_calibrate.py`).
+
 - F1 in the bench scorecard (`bench/tally.py`): overall, per-source, and
   headline rows; `None` when undefined (REQ-M1).
 
