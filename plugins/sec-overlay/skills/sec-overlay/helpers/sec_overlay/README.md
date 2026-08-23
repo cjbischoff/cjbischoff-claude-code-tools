@@ -28,7 +28,8 @@ unchanged.
 `dependency_sinks.py` (new) loads and validates `../references/dependency-sinks.json` — the
 catalog of dependencies whose own code holds a sink — and exposes `catalog_ids()` for later
 receipt-id validation, plus `match_manifests()`/`matched_classes()` to check a target repo's
-manifests against the catalog. See the module map entry in [`../README.md`](../README.md) for
+manifests against the catalog. `manifest_paths()` returns the declaring manifest per matched
+entry, relative to the target root, so a recall claim can cite a ref the reader can open. See the module map entry in [`../README.md`](../README.md) for
 the full contract and the CLI-callable list for its `list`/`match` subcommands.
 
 `review_findings.py` (new, REV-01) adds the review-profile gate `apply_profile` — see the
@@ -371,8 +372,9 @@ read why the class applies.
 `phase_gate.py`'s `recall_claims(ws, profile, *, target_root)` (new) is the first caller of
 `check_census_routes` and `check_catalog_classes` for the recall adversary
 (`agents/recall-adversary.md`). It builds one `{"id", "refs"}` claim per deterministic omission. A census route gap keeps
-the route's own `file:line` as its ref. A catalog-class gap points at
-`references/dependency-sinks.json`. Every claim carries a ref by construction, since an
+the route's own `file:line` as its ref. A catalog-class gap points at the manifest that declares
+the package, from `dependency_sinks.manifest_paths()`, since the adversary resolves a ref from
+the target root. Every claim carries a ref by construction, since an
 unrefable omission gives the adversary nowhere to look. It imports `dependency_sinks`,
 `route_census`, and `route_control` at module level — none of the three imports back from
 `phase_gate`, so no import cycle exists.

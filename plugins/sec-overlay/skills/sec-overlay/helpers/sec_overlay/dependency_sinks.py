@@ -183,6 +183,38 @@ def match_manifests(root: str | Path, *, path: Path = CATALOG_PATH) -> list[Sink
     return matched
 
 
+def manifest_paths(root: str | Path, *, path: Path = CATALOG_PATH) -> dict[str, str]:
+    """Map each matched entry id to the manifest that declares its package.
+
+    A recall claim needs a ref the reader can open from the target repository.
+    The catalog file itself is not one: it lives in the overlay, not in the
+    target. The declaring manifest is the only target-side evidence.
+
+    Args:
+        root: Target repository root.
+        path: Catalog path; defaults to the shipped reference file.
+
+    Returns:
+        One item per matched entry. Each value is a path relative to ``root``.
+    """
+    entries = load_catalog(path)
+    names = {name for e in entries for name in e.manifests}
+    root_path = Path(root)
+    texts: list[tuple[Path, str]] = []
+    for manifest in _manifest_files(root_path, names):
+        try:
+            texts.append((manifest, manifest.read_text(errors="replace")))
+        except OSError:
+            continue
+    found: dict[str, str] = {}
+    for e in entries:
+        for manifest, text in texts:
+            if manifest.name in e.manifests and e.package in text:
+                found[e.id] = manifest.relative_to(root_path).as_posix()
+                break
+    return found
+
+
 def matched_classes(root: str | Path, *, path: Path = CATALOG_PATH) -> list[str]:
     """Return the sorted, deduplicated attack classes of every matched entry."""
     return sorted({e.cls for e in match_manifests(root, path=path)})

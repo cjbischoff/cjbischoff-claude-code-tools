@@ -89,6 +89,35 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- `go-lua-state-missing-skipopenlibs` no longer fires on a hardened call site.
+
+  gopher-lua takes `Options` by value. The pointer-literal `pattern-not` never
+  matched `lua.NewState(lua.Options{SkipOpenLibs: true})`. The negation now
+  uses the value form, quoted so the YAML stays valid.
+
+- The three untested absence rules gained a fixture pair and a test each.
+
+  The three are `go-cel-env-missing-declarations`,
+  `go-lua-state-missing-skipopenlibs`, and `python-requests-missing-timeout`.
+  Each test asserts the vulnerable site by `(file, rule, line)`. Each also
+  asserts the hardened site's silence.
+
+- `recall_claims` cites the manifest that declares the package.
+
+  The ref comes from the new `dependency_sinks.manifest_paths()`. The old ref
+  `references/dependency-sinks.json` resolves only inside the overlay. The
+  recall adversary's drop rule therefore discarded every catalog claim.
+
+- `plugins/sec-overlay/CLAUDE.md`'s CLI-callable module list names
+  `dependency_sinks`.
+
+- `agents/README.md`'s recall-adversary row no longer claims that an
+  `OMISSION` row reaches the coverage ledger.
+
+  The deterministic `recall-gate` phase records the gaps its own checks
+  compute. An adversary-only omission stays manual follow-up work. `SKILL.md`
+  already stated that.
+
 - `test_absence_rules.py`'s metadata guard now checks that each rule's own
   block carries a `cls:` line after its `metadata:` line, instead of a raw
   file-wide `cls:` count that a rule with no `metadata.cls` could still pass.

@@ -520,4 +520,23 @@ def test_recall_claims_include_a_real_catalog_class_recon_omitted(tmp_path):
     ws = _workspace_with_census(tmp_path, [])
     claims = recall_claims(ws, {"entrypoints": [], "attack_surface": []}, target_root=str(tmp_path))
     assert any(entry.id in c["id"] for c in claims)
-    assert any(c["refs"] == ["references/dependency-sinks.json"] for c in claims)
+    assert any(c["refs"] == ["go.mod"] for c in claims)
+
+
+def test_a_catalog_claim_cites_a_ref_that_resolves_from_the_target_root(tmp_path):
+    """The adversary drops a claim it cannot confirm at its ref, reading from the target.
+
+    An overlay-relative ref such as ``references/dependency-sinks.json`` never
+    resolves there, so every catalog claim was built and then discarded.
+    """
+    from sec_overlay.dependency_sinks import load_catalog
+    from sec_overlay.phase_gate import recall_claims
+
+    entry = next(e for e in load_catalog() if e.cls == "ssrf")
+    (tmp_path / "deps").mkdir()
+    (tmp_path / "deps" / "go.mod").write_text(f"module example\nrequire {entry.package} v1.0.0\n")
+    ws = _workspace_with_census(tmp_path, [])
+    claims = recall_claims(ws, {"entrypoints": [], "attack_surface": []}, target_root=str(tmp_path))
+    refs = [r for c in claims for r in c["refs"]]
+    assert "deps/go.mod" in refs
+    assert all((tmp_path / r).exists() for r in refs)

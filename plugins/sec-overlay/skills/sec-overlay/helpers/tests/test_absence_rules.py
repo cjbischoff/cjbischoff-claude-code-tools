@@ -25,8 +25,16 @@ def _scan() -> list[dict]:
     return json.loads(completed.stdout)["results"]
 
 
+def _hits() -> set[tuple[str, str, int]]:
+    """Return one (file name, rule id, line) tuple per hit in the fixture repo."""
+    return {
+        (Path(r["path"]).name, r["check_id"].rsplit(".", 1)[-1], r["start"]["line"])
+        for r in _scan()
+    }
+
+
 def test_pack_flags_the_construction_that_omits_the_safe_option():
-    hits = {(Path(r["path"]).name, r["check_id"].rsplit(".", 1)[-1]) for r in _scan()}
+    hits = {(name, rule) for name, rule, _ in _hits()}
     assert ("vulnerable.go", "go-rego-new-missing-capabilities") in hits
     assert ("render.py", "python-jinja2-environment-missing-sandbox") in hits
 
@@ -35,6 +43,30 @@ def test_pack_stays_silent_on_the_construction_that_carries_the_safe_option():
     """The whole value of an absence rule is that the fixed site produces no finding."""
     flagged = {Path(r["path"]).name for r in _scan()}
     assert "safe.go" not in flagged
+
+
+def test_cel_env_rule_finds_the_undeclared_environment_and_ignores_the_declared_one():
+    """cel.NewEnv with no declaration list inherits every host function."""
+    hits = _hits()
+    rule = "go-cel-env-missing-declarations"
+    assert ("engines_unsafe.go", rule, 11) in hits
+    assert not [h for h in hits if h[0] == "engines_safe.go" and h[1] == rule]
+
+
+def test_lua_state_rule_finds_the_default_library_state_and_ignores_the_skipping_one():
+    """gopher-lua takes Options by value; a pointer-literal negation fires on fixed code."""
+    hits = _hits()
+    rule = "go-lua-state-missing-skipopenlibs"
+    assert ("engines_unsafe.go", rule, 17) in hits
+    assert not [h for h in hits if h[0] == "engines_safe.go" and h[1] == rule]
+
+
+def test_requests_rule_finds_the_untimed_call_and_ignores_the_timed_one():
+    """The timed call sits in the same file, so this pair is keyed by line."""
+    hits = _hits()
+    rule = "python-requests-missing-timeout"
+    assert ("fetch.py", rule, 8) in hits
+    assert ("fetch.py", rule, 13) not in hits
 
 
 def test_every_absence_rule_declares_its_class_in_metadata():

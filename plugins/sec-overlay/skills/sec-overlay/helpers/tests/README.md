@@ -338,7 +338,7 @@ the regression guard for the CLI no longer calling `state.begin_pass` on every i
 | `test_wiring.py` | Silent-backend / clsmap / dead-link regressions and attack-class routing. |
 | `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules, the `EVIDENCE_VOCABULARY` block listing every `sec_overlay.evidence` tier/status/disposition value verbatim, the `CLAUDE.md` phase-order block tracking `PHASE_TABLE`'s relative order, (06-06, WR-01) that no live doc wrongly denies review's --workspace support — premise pinned against `run_review`'s real signature; the matcher covers three denial wordings, with pattern tests pinning both denial and corrected phrasing — and that every `dependency-sinks.json` catalog entry's `sink`/`indicators` tokens appear inside the specific table row named by its `cls` value in `attack-classes.md` — not merely anywhere in the file — so recon's class table never drifts from the catalog, in the row `reconcile_plan` actually routes by. Two more guards pin the class-file side of that routing: every catalogued `cls` value (`ssrf`, `expr-eval-rce`, `ssti`) has a matching `agents/classes/<cls>.md` file, and `expr-eval-rce.md` carries all five required section headings — so `reconcile_plan` can never select a class with no class prompt behind it. |
 | `test_frozen_contract.py` | Byte-identity: `models.py`/`evidence.py` are frozen mirrors of a separate Go port (D-15) — a sha256 pin fails loudly on any edit. `fingerprint()` golden-value pins (fully-populated, minimally-populated, field-order-permuted) prove its behavior independent of that byte check. REL-03: `pyproject.toml`'s `[project] dependencies` stays `[]`. |
-| `test_absence_rules.py` | The `rules/absence` semgrep pack against `fixtures/absence_repo`: it flags the missing-safe-option site, stays silent on the fixed site, and every rule's own block carries a `cls:` line after its `metadata:` line — not just a raw count of `cls:` occurrences in the file. Skips when `semgrep` is absent from `PATH`. |
+| `test_absence_rules.py` | The `rules/absence` semgrep pack against `fixtures/absence_repo`: it flags the missing-safe-option site, stays silent on the fixed site, and every rule's own block carries a `cls:` line after its `metadata:` line — not just a raw count of `cls:` occurrences in the file. One test per rule now covers all five. Each asserts the vulnerable site by `(file, rule, line)` and the hardened site's silence. The three added pairs are `engines_unsafe.go`/`engines_safe.go` for `cel.NewEnv` and `lua.NewState`, plus `fetch.py`'s two `requests.get` lines. Skips when `semgrep` is absent from `PATH`. |
 | `test_astgrep.py` (4 new) | `build_rule()` emits a `not:`-wrapped relational rule; `run_astgrep_rule()` passes the rule inline via `--inline-rules` and returns parsed matches; the live case runs `fixtures/absence_repo/rego-absence.yaml` and asserts the Go absence rule flags `vulnerable.go` and stays silent on `safe.go`. Skips when `ast-grep` is absent from `PATH`. |
 
 ## The rest
@@ -489,6 +489,10 @@ with `_workspace_with_census`. That helper round-trips through `route_census.wri
 a hand-written JSON file. The guard asserts a census route recon never mentioned produces a
 claim carrying a `file:line` ref. The other asserts an empty claim list when recon's
 `entrypoints` already name the route.
+
+A third guard covers the catalog half of `recall_claims`. It writes the declaring manifest into
+a subdirectory and asserts every claim ref resolves under the target root. That fails on the old
+overlay-relative ref, which the adversary's drop rule discarded.
 
 `test_contracts.py` gained two guards. One confirms `agents/recall-adversary.md` exists and
 states both its `OMISSION` row format and the `NO OMISSION FOUND` line, and mentions opus. The

@@ -48,5 +48,8 @@ rules:
       safe_option: SkipOpenLibs
     patterns:
       - pattern: lua.NewState(...)
-      - pattern-not: |
-          lua.NewState(&lua.Options{..., SkipOpenLibs: true, ...})
+      # gopher-lua takes Options BY VALUE (func NewState(opts ...Options)), so a
+      # pointer-literal negation never matches a hardened call and the rule fires
+      # on fixed code. Quote the pattern: `SkipOpenLibs: true` inside a plain
+      # scalar is invalid YAML and semgrep rejects the whole file.
+      - pattern-not: 'lua.NewState(..., lua.Options{..., SkipOpenLibs: true, ...}, ...)'

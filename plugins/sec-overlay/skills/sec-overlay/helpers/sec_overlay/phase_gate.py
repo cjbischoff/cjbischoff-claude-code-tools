@@ -19,7 +19,7 @@ import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from sec_overlay.dependency_sinks import match_manifests
+from sec_overlay.dependency_sinks import manifest_paths, match_manifests
 from sec_overlay.diffhunks import hunk_for_line
 from sec_overlay.positioning import resolve_position
 from sec_overlay.route_census import load_census
@@ -361,8 +361,17 @@ def recall_claims(ws, profile: dict, *, target_root) -> list[dict]:
     for gap in check_census_routes(sites, profile):
         ref = next((v for k, v in by_path.items() if k in gap["id"]), None)
         claims.append({"id": gap["id"], "refs": [ref] if ref else [str(target_root)]})
-    for gap in check_catalog_classes(match_manifests(target_root), profile):
-        claims.append({"id": gap["id"], "refs": ["references/dependency-sinks.json"]})
+    entries = match_manifests(target_root)
+    manifests = manifest_paths(target_root)
+    for gap in check_catalog_classes(entries, profile):
+        # The adversary drops a claim it cannot confirm at its ref, and it reads
+        # refs from the target root. Cite the declaring manifest, not the catalog.
+        ref = next(
+            (manifests[e.id] for e in entries
+             if f"dependency-catalog:{e.id}," in gap["id"] and e.id in manifests),
+            None,
+        )
+        claims.append({"id": gap["id"], "refs": [ref or str(target_root)]})
     return claims
 
 
