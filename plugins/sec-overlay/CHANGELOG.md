@@ -37,6 +37,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - A test pins `references/DETECTION_COVERAGE.md` to `detection_coverage.py`'s
   renderer, byte for byte. An edit to the renderer with no matching
   regeneration of the tracked file now fails the suite.
+- `astgrep.py` gains `build_rule()`/`run_astgrep_rule()`, plus a `run --not
+  <pattern>` flag and a `rule --file <path>` subcommand, so the investigate
+  agent can run a structural absence check ad hoc. Go needs a hand-written
+  rule (`fixtures/absence_repo/rego-absence.yaml`): a bare selector-call
+  pattern such as `rego.New($ARGS)` matches nothing there.
 
 ### Fixed
 

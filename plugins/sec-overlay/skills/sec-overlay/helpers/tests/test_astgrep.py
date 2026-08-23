@@ -70,3 +70,66 @@ def test_file_root_excludes_same_named_sibling(tmp_path):
     assert hits[0]["file"].endswith("index.ts")
     from pathlib import Path
     assert Path(hits[0]["file"]).resolve() == target.resolve()
+
+
+def test_build_rule_emits_a_relational_absence_rule():
+    from sec_overlay.astgrep import build_rule
+
+    text = build_rule("Environment($$$)", "python", not_pattern="SandboxedEnvironment($$$)")
+    assert "language: python" in text
+    assert "pattern: Environment($$$)" in text
+    assert "not:" in text
+    assert "SandboxedEnvironment($$$)" in text
+
+
+def test_run_astgrep_rule_passes_the_rule_inline():
+    from sec_overlay.astgrep import run_astgrep_rule
+
+    seen = {}
+
+    def fake(cmd, **kwargs):
+        seen["cmd"] = cmd
+
+        class R:
+            stdout = "[]"
+
+        return R()
+
+    run_astgrep_rule("rule: {}", "/tmp/x", runner=fake)
+    assert "scan" in seen["cmd"]
+    assert "--inline-rules" in seen["cmd"]
+    assert "rule: {}" in seen["cmd"]
+    assert "--json" in seen["cmd"]
+
+
+def test_run_astgrep_rule_returns_parsed_matches():
+    from sec_overlay.astgrep import run_astgrep_rule
+
+    payload = '[{"file":"a.py","range":{"start":{"line":4}},"text":"Environment()"}]'
+
+    def fake(cmd, **kwargs):
+        class R:
+            stdout = payload
+
+        return R()
+
+    assert run_astgrep_rule("rule: {}", "/tmp/x", runner=fake) == [
+        {"file": "a.py", "line": 5, "text": "Environment()"}
+    ]
+
+
+@pytest.mark.skipif(not astgrep_available(), reason="ast-grep not installed")
+def test_relational_rule_finds_the_go_construction_that_omits_the_option(tmp_path):
+    """Go needs kind/has anchoring: a bare `rego.New($ARGS)` pattern matches nothing."""
+    from pathlib import Path
+
+    from sec_overlay.astgrep import run_astgrep_rule
+
+    rule = (
+        Path(__file__).resolve().parents[1]
+        / "fixtures" / "absence_repo" / "rego-absence.yaml"
+    ).read_text()
+    fixture = Path(__file__).resolve().parents[1] / "fixtures" / "absence_repo"
+    hits = {Path(m["file"]).name for m in run_astgrep_rule(rule, str(fixture))}
+    assert "vulnerable.go" in hits
+    assert "safe.go" not in hits

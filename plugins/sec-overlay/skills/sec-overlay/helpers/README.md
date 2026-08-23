@@ -132,7 +132,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `graph.py` | The two-tier code graph. **Tier-1** (LLM-free): definitions + one-hop call edges + osv/secrets/crypto facts. **Tier-2**: post-prefilter CodeQL/semgrep taint merged in. Answers reachability / attacker-control / `no_path`. Persisted to `kb/graph.json`. CLI-callable. |
 | `structural_index.py` | Ripgrep-backed symbol index (definitions, callers, function boundaries). CLI-callable. |
 | `entrypoints.py` | Regex classification of routes / user-input / CLI args / env vars to seed Tier-1. |
-| `astgrep.py` | ast-grep availability check + structural-search wrapper. CLI-callable. |
+| `astgrep.py` | ast-grep availability check + structural-search wrapper. `build_rule()` builds inline-rule YAML for a relational absence query (`pattern` present, `not_pattern` absent); `run_astgrep_rule()` runs it. Go needs hand-written `kind`/`has` anchoring — a bare selector pattern like `rego.New($ARGS)` matches nothing there. CLI-callable: `run --not <pattern>` for a pattern-level absence check, `rule --file <path>` for a hand-written rule. |
 | `reachability.py` | Reachability verdict + blocker taxonomy (sanitizer/auth/validation/dead-code/flag) — the static-vs-runtime discriminator. |
 
 ### False-positive reduction & finding identity
@@ -272,7 +272,7 @@ steps the orchestrator calls between agent phases:
 | `preflight` | Report which SAST tools + CodeQL packs are installed; print setup commands. |
 | `graph` | Build/query the Tier-1/Tier-2 code graph → `kb/graph.json`. |
 | `structural_index` | Build the ripgrep symbol index. |
-| `astgrep` | ast-grep availability + structural search. |
+| `astgrep` | ast-grep availability + structural search; `run --not <pattern>` for a relational absence check, `rule --file <path>` for a hand-written rule (Go needs one). |
 | `dedupe` | Mark duplicates + stamp fingerprints. |
 | `cluster` | Group ≥3 same-class, same-sink `raw` findings into one systemic cluster. |
 | `findings_gate` | Schema + tool-receipt gate over `findings/*.json`. |

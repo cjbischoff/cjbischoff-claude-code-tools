@@ -110,6 +110,12 @@ flowchart TD
 On pass N>1, prior `rejected` findings are injected as `{{FP_FEEDBACK}}` negative examples so
 the agent doesn't re-raise known false positives.
 
+`investigate.md`'s allowed-tools list also documents an ast-grep absence check: `astgrep run
+--not <safe-pattern>` for a construction that omits its safe option, and `astgrep rule --file
+<path>` for a hand-written rule when Go's `kind`/`has` anchoring is needed (a bare selector-call
+pattern such as `rego.New($ARGS)` matches nothing). The agent must confirm the rule fires on a
+known-bad line before trusting its silence.
+
 ### Phase 4 — False-positive ladder
 | Prompt | Model | Job |
 |--------|-------|-----|

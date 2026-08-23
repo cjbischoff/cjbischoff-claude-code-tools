@@ -48,6 +48,12 @@ a true positive you silently filter here is gone for good.
 - `rg` (ripgrep), file reads, directory listing.
 - ast-grep, run from `{{HELPERS_DIR}}`:
   - `uv run python -m sec_overlay.astgrep run --pattern <p> --lang <l> --root {{TARGET}}`
+  - Absence check (a construction that omits its safe option):
+    `uv run python -m sec_overlay.astgrep run --pattern <p> --not <safe> --lang <l> --root {{TARGET}}`
+  - Go needs a hand-written rule: a selector-call pattern such as `rego.New($ARGS)` matches
+    nothing. Write the `kind: call_expression` + `has: {field: function, regex: ...}` form to a
+    file and run `uv run python -m sec_overlay.astgrep rule --file <f> --root {{TARGET}}`.
+    Confirm the rule fires on a known-bad line before you trust its silence.
 - The structural index CLI, run from `{{HELPERS_DIR}}`:
   - `uv run python -m sec_overlay.structural_index defs --path <file>`
   - `uv run python -m sec_overlay.structural_index boundary --path <file> --line <n>`

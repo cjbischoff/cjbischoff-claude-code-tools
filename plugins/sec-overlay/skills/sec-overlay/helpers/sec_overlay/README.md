@@ -973,3 +973,10 @@ string — the Fix line rendered `` Bump `` `` with nothing between the backtick
 on the last `@` instead (`pkg.rsplit('@', 1)[0] or pkg`), and falls back to the untouched string
 when that split empties out (a versionless scoped package like `@scope/name` has only one `@`,
 which is the scope delimiter, not a version separator).
+
+`astgrep.py` gained `build_rule()` and `run_astgrep_rule()`, plus a `run --not <pattern>` flag
+and a `rule --file <path>` subcommand — a relational-query wrapper for the absence idiom (a
+construction present, its safe option absent). Go needs hand-written `kind`/`has` anchoring;
+`build_rule()` does not generate it, because a bare selector-call pattern such as
+`rego.New($ARGS)` matches nothing in Go. See the module map entry in [`../README.md`](../README.md)
+for the full contract.

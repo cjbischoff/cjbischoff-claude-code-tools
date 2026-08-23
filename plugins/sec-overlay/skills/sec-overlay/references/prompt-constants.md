@@ -92,6 +92,10 @@ identifier silently rewritten — a verdict grounded on that would be wrong).
 - ast-grep patterns are exact: a too-rigid pattern silently matches nothing (e.g.
   `implements X` will miss `implements A, X`). Widen the pattern or fall back to
   `rg` for discovery — but treat a Read as the source of truth for the bytes.
+- An absence check inverts that risk: an over-rigid pattern reports every call site as unsafe,
+  including the ones already fixed. Before you cite an absence, run the rule against a site you
+  know carries the safe option and confirm it produces no match. A rule that fires on the fixed
+  code is not evidence.
 - Only mechanical receipts satisfy gates; a receipt you cannot reproduce with a
   Read/ast-grep is not a receipt.
 

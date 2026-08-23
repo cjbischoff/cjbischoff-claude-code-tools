@@ -1,0 +1,17 @@
+id: go-absence-rego-capabilities
+language: go
+rule:
+  kind: call_expression
+  all:
+    - has:
+        field: function
+        regex: "^rego\\.New$"
+    - not:
+        has:
+          stopBy: end
+          kind: call_expression
+          has:
+            field: function
+            regex: "^rego\\.Capabilities$"
+severity: warning
+message: rego.New without rego.Capabilities
