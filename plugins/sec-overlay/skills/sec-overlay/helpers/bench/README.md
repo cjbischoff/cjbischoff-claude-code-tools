@@ -74,3 +74,51 @@ substituted). `CCSkillAdapter` wraps it: drive, then grade the workspace with
 `reportable`. A failed run records `{target, error}` on `driver.failures` and yields
 zero findings for that target — never fabricated results. `bench.run`'s per-target
 findings cache makes interrupted benchmark runs resumable.
+
+## External datasets and cross-tool judging (REQ-M3)
+
+Two optional adapters let the bench compare against outside data. Neither feeds the
+harness; both stay inside the bench oracle.
+
+### AACR review dataset (`aacr_adapter.py`)
+
+`aacr_entries(rows)` maps rows from the `Alibaba-Aone/aacr-bench` code-review dataset
+to `CorpusEntry` objects tagged `source="aacr"`. That source is excluded from the
+real-confirmed headline, so AACR rows never move the parity number (`tally` guard).
+
+Dataset shape, read from the live Hugging Face viewer on 2026-08-23 (one `default`
+subset, one `train` split, 2,150 rows). Row columns:
+
+| column | type | meaning |
+|--------|------|---------|
+| `project_main_language` | string | repo primary language |
+| `pr_url`, `pr_source_commit`, `pr_target_commit` | string | pull-request coordinates |
+| `pr_change_line_count` | int64 | diff size |
+| `pr_category` | string | pull-request kind (e.g. "Bug Fix") |
+| `is_ai_comment` | bool | true = model-authored review comment |
+| `source_model` | string | model name when `is_ai_comment`; empty otherwise |
+| `note` | string | the review-comment text |
+| `path` | string | file the comment targets |
+| `side` | string | diff side ("right") |
+| `from_line`, `to_line` | int64 | comment line span |
+| `category` | string | comment class |
+| `context` | string | "File Level" / "Diff Level" / "Repo Level" |
+| `label` | int64 | ground-truth flag |
+
+Caveats — the viewer preview covered about 100 of 2,150 rows. In that preview:
+`category` held only "Code Defect", "Maintainability and Readability", and
+"Performance"; no distinct "Security" category value was observed (only three
+case-insensitive "security" text hits across the whole scraped page). `label` showed
+only the value 1. The full-corpus distinct-value distribution for `category` and
+`label` is unverified — the parquet was not loaded in this environment. The T3e
+security slice (Task 24) must re-check whether a Security category exists before it
+depends on one.
+
+### OCR cross-tool findings (`ocr_ingest.py`)
+
+`ocr_findings(json_text)` parses the JSON that `ocr review --format json` emits
+(top level `{"comments": [...], ...}`; each comment `{path, content, start_line,
+end_line, severity?, category?}`) into benchmark-only `Finding` objects. Each carries
+status CONFIRMED (so the judge scores it) and evidence source `llm-claimed:ocr`.
+These objects exist only to score OCR through the same judge; they are never harness
+findings and never satisfy the tool-receipt gate.

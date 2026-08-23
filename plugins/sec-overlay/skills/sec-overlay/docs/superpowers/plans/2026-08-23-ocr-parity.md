@@ -46,14 +46,14 @@
 
 ### Task 4: REQ-M4 — corpus ≥30 + CI gate
 **Files:** Modify `helpers/bench/corpus_seed/` (new JSON files: `dogfood.json`, `dep_cves.json`, `public_apps.json`, `negatives.json`); Create `.github/workflows/sec-overlay-tests.yml`; Test `helpers/tests/test_bench.py` (append).
-- [ ] RED: `test_seed_corpus_has_min_entries` — `load_corpus(corpus_seed)` ≥30, validates clean, ≥3 `dep-cve`, ≥5 `public-app`, ≥1 negative, ≥1 locked. Commit.
-- [ ] GREEN: author entries — positives/negatives from `fixtures/vulnerable_repo` + `fixtures/absence_repo` (local_path, locked), dep-CVEs from `fixtures/dep_sink_repo` lockfile CVEs, public-app entries pinned to real Juice Shop/WebGoat commits with documented file/line from public advisories. Workflow: checkout → `uv run pytest` → `python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --workspaces <fixture-out>` regression gate. Update `bench/README.md` + skill `CLAUDE.md` §1 stale "gitignored" sentence. Commit.
+- [x] RED: `test_seed_corpus_has_min_entries` — `load_corpus(corpus_seed)` ≥30, validates clean, ≥3 `dep-cve`, ≥5 `public-app`, ≥1 negative, ≥1 locked. Commit. (`50664a1`)
+- [x] GREEN: 30 committed public entries; detection-grading path (`tier1_detected` + `--grade-mode detection` + `--only-local`, `reportable` untouched); CI workflow smoke-scans fixtures and gates on the two locked dogfood entries; docs updated; absence.json locked→open correction logged in `docs/parity/EXTRACTION.md`. Commits `9eab7c8` (plugin) + `198e932` (CI workflow + root docs).
 
 ### Task 5: REQ-M3 — AACR adapter + judge publishing
 **Files:** Create `helpers/bench/aacr_adapter.py`, `helpers/bench/ocr_ingest.py`; Modify `helpers/bench/tally.py` (headline guard already excludes non-real sources — add test), `helpers/bench/README.md`; Test `helpers/tests/test_aacr_adapter.py`.
 **Produces:** `aacr_entries(rows: list[dict]) -> list[CorpusEntry]` (`source="aacr"` — extend `SOURCES` tuple in `corpus.py`); `ocr_findings(json_text: str) -> list[Finding]` mapping `ocr review --format json` comments to `Finding` (status CONFIRMED for judging, evidence `llm-claimed:ocr` — benchmark-only objects, never harness findings); scorecard markdown gains judge-statement + same-judge caveat block.
-- [ ] Investigate AACR dataset (M3d): fetch dataset card/schema; record findings in `bench/README.md`; if unreachable, document the assumed row shape and mark untested.
-- [ ] RED: fixture AACR rows → entries with source `aacr`; tally test proves `aacr` results never move `_real` headline; `ocr_ingest` fixture JSON → findings with file/line/severity. Commit.
+- [x] Investigate AACR dataset (M3d): fetch dataset card/schema; record findings in `bench/README.md`; if unreachable, document the assumed row shape and mark untested. (schema from live HF viewer 2026-08-23; full-corpus `category`/`label` distribution unverified — noted in `bench/README.md`)
+- [x] RED: fixture AACR rows → entries with source `aacr`; tally test proves `aacr` results never move `_real` headline; `ocr_ingest` fixture JSON → findings with file/line/severity. Commit. (`test_aacr_adapter.py`)
 - [ ] GREEN: implement both; append judge statement text to `Scorecard.to_markdown`. Commit.
 
 ### Task 6: REQ-M5 — variance
