@@ -65,6 +65,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   flags a code-registered route the recon profile never names. This closes
   the circularity where the route-to-control check compared recon against
   its own output.
+- `build_coverage_ledger` now keys a covered class's surfaces by sink site,
+  not by class, so a second sink in the same class no longer inherits
+  "covered" from an unrelated confirmed finding.
 
 ### Fixed
 

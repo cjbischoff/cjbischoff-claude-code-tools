@@ -25,12 +25,16 @@ _SETTLED_NO_ISSUE = {FindingStatus.REJECTED, FindingStatus.INFORMATIONAL}
 def build_coverage_ledger(ws: Workspace) -> dict:
     """Derive + persist the coverage-completeness ledger from attack_surface × findings.
 
-    One surface per non-``deps`` ``attack_surface`` class:
-    ``reported`` (≥1 confirmed/fixed/needs-deployment-testing finding), ``no_issue_found``
-    (only rejected/informational findings), or ``needs_follow_up`` (no finding at all — an
-    uncovered class). ``completeness`` is ``complete`` only when no surface needs follow-up,
-    else ``partial``; ``unknown`` when there is no scan-profile. Writes
-    ``kb/coverage-ledger.json`` and returns the ledger.
+    One surface per distinct ``(file, line)`` sink site within each non-``deps``
+    ``attack_surface`` class, so a second sink in the same class never inherits a
+    coverage claim its sibling earned: ``reported`` (≥1 confirmed/fixed/needs-
+    deployment-testing finding at that site), ``no_issue_found`` (only rejected/
+    informational findings at that site), or ``needs_follow_up`` (a non-terminal
+    finding at that site). A class with no finding at all still emits one
+    class-level surface (``id`` equal to the class name, no ``site``) so it does
+    not vanish from the ledger. ``completeness`` is ``complete`` only when no
+    surface needs follow-up, else ``partial``; ``unknown`` when there is no
+    scan-profile. Writes ``kb/coverage-ledger.json`` and returns the ledger.
 
     Args:
         ws: Workspace to read the profile + findings from and write the ledger into.
@@ -48,24 +52,32 @@ def build_coverage_ledger(ws: Workspace) -> dict:
         return ledger
     profile = json.loads(prof_path.read_text())
     classes = [c for c in profile.get("attack_surface", []) if c != "deps"]
-    by_cls: dict[str, list[FindingStatus]] = {}
+    by_site: dict[tuple[str, str, int], list[FindingStatus]] = {}
     for f in read_findings(ws):
-        by_cls.setdefault(f.cls, []).append(f.status)
+        by_site.setdefault((f.cls, f.file, f.line), []).append(f.status)
     surfaces = []
     for cls in classes:
-        statuses = by_cls.get(cls, [])
-        if any(s in _REPORTED for s in statuses):
-            disp = "reported"
-        elif statuses and all(s in _SETTLED_NO_ISSUE for s in statuses):
-            disp = "no_issue_found"
-        else:
-            # no findings, or non-terminal statuses (RAW/CANDIDATE/STALE/DUPLICATE) remain
-            disp = "needs_follow_up"
-        surface = {"id": cls, "disposition": disp}
-        if disp == "needs_follow_up":
+        sites = {k: v for k, v in by_site.items() if k[0] == cls}
+        if not sites:
+            surface = {"id": cls, "cls": cls, "disposition": "needs_follow_up"}
             surface["reason"] = "no terminal finding for this attack surface this pass"
             surface["next_step"] = f"hunt {cls} or record why it is not applicable"
-        surfaces.append(surface)
+            surfaces.append(surface)
+            continue
+        for (_, file, line), statuses in sites.items():
+            site = f"{file}:{line}"
+            if any(s in _REPORTED for s in statuses):
+                disp = "reported"
+            elif statuses and all(s in _SETTLED_NO_ISSUE for s in statuses):
+                disp = "no_issue_found"
+            else:
+                # non-terminal statuses (RAW/CANDIDATE/STALE/DUPLICATE) remain
+                disp = "needs_follow_up"
+            surface = {"id": f"{cls}@{site}", "cls": cls, "site": site, "disposition": disp}
+            if disp == "needs_follow_up":
+                surface["reason"] = "no terminal finding for this attack surface this pass"
+                surface["next_step"] = f"hunt {cls} or record why it is not applicable"
+            surfaces.append(surface)
     completeness = (
         "complete"
         if not any(s["disposition"] == "needs_follow_up" for s in surfaces)

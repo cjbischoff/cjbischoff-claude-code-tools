@@ -12,9 +12,9 @@ from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.workspace import Workspace, write_findings
 
 
-def _f(cls: str, status: FindingStatus, fid: str) -> Finding:
+def _f(cls: str, status: FindingStatus, fid: str, file: str = "a.py", line: int = 1) -> Finding:
     return Finding(id=fid, rule_id="r", cls=cls, status=status, severity=Severity.MEDIUM,
-                   file="a.py", line=1, message="m", evidence_sources=["semgrep:x"])
+                   file=file, line=line, message="m", evidence_sources=["semgrep:x"])
 
 
 def _profile(ws: Workspace, attack_surface: list[str]) -> None:
@@ -32,7 +32,7 @@ def test_uncovered_class_blocks_complete(tmp_path: Path):
     write_findings(ws, [_f("authz", FindingStatus.CONFIRMED, "A-1")])  # sqli has NO finding
     led = build_coverage_ledger(ws)
     disp = {s["id"]: s["disposition"] for s in led["surfaces"]}
-    assert disp["authz"] == "reported"
+    assert disp["authz@a.py:1"] == "reported"
     assert disp["sqli"] == "needs_follow_up"
     assert led["completeness"] == "partial"
     assert validate_coverage_ledger(led) == []  # partial+needs_follow_up is valid
@@ -47,8 +47,8 @@ def test_all_covered_is_complete(tmp_path: Path):
                         _f("secrets", FindingStatus.REJECTED, "S-1")])
     led = build_coverage_ledger(ws)
     disp = {s["id"]: s["disposition"] for s in led["surfaces"]}
-    assert disp["authz"] == "reported"
-    assert disp["secrets"] == "no_issue_found"
+    assert disp["authz@a.py:1"] == "reported"
+    assert disp["secrets@a.py:1"] == "no_issue_found"
     assert led["completeness"] == "complete"
     assert validate_coverage_ledger(led) == []
 
@@ -66,8 +66,8 @@ def test_raw_only_class_is_needs_follow_up_not_complete(tmp_path: Path):
                         _f("sqli", FindingStatus.RAW, "S-1")])
     led = build_coverage_ledger(ws)
     disp = {s["id"]: s["disposition"] for s in led["surfaces"]}
-    assert disp["authz"] == "reported"
-    assert disp["sqli"] == "needs_follow_up"   # NOT no_issue_found
+    assert disp["authz@a.py:1"] == "reported"
+    assert disp["sqli@a.py:1"] == "needs_follow_up"   # NOT no_issue_found
     assert led["completeness"] == "partial"     # NOT complete
 
 
@@ -154,3 +154,50 @@ def test_render_shows_reason_and_next_step():
                       "reason": "R", "next_step": "N"}],
         "deferred": [], "open_questions": []})
     assert "R" in md and "N" in md
+
+
+def test_two_sinks_in_one_class_produce_two_surfaces(tmp_path: Path):
+    """One terminal finding used to mark the whole class covered, so a second sink
+    inherited a coverage claim nobody made."""
+    ws = Workspace(tmp_path); ws.ensure()
+    _profile(ws, ["ssrf"])
+    write_findings(ws, [
+        _f("ssrf", FindingStatus.CONFIRMED, "f1", file="a.py", line=10),
+        _f("ssrf", FindingStatus.CANDIDATE, "f2", file="b.py", line=20),
+    ])
+    ledger = build_coverage_ledger(ws)
+    ids = {s["id"] for s in ledger["surfaces"]}
+    assert "ssrf@a.py:10" in ids
+    assert "ssrf@b.py:20" in ids
+
+
+def test_a_pending_sink_keeps_the_ledger_partial(tmp_path: Path):
+    """The candidate sink must hold the class open even though its sibling is confirmed."""
+    ws = Workspace(tmp_path); ws.ensure()
+    _profile(ws, ["ssrf"])
+    write_findings(ws, [
+        _f("ssrf", FindingStatus.CONFIRMED, "f1", file="a.py", line=10),
+        _f("ssrf", FindingStatus.CANDIDATE, "f2", file="b.py", line=20),
+    ])
+    ledger = build_coverage_ledger(ws)
+    pending = [s for s in ledger["surfaces"] if s["disposition"] == "needs_follow_up"]
+    assert any(s["id"] == "ssrf@b.py:20" for s in pending)
+    assert ledger["completeness"] != "complete"
+
+
+def test_a_class_with_no_finding_still_appears_as_one_surface(tmp_path: Path):
+    ws = Workspace(tmp_path); ws.ensure()
+    _profile(ws, ["authz"])
+    ids = {s["id"] for s in build_coverage_ledger(ws)["surfaces"]}
+    assert "authz" in ids
+
+
+def test_surface_ids_stay_unique(tmp_path: Path):
+    ws = Workspace(tmp_path); ws.ensure()
+    _profile(ws, ["ssrf"])
+    write_findings(ws, [
+        _f("ssrf", FindingStatus.CONFIRMED, "f1", file="a.py", line=10),
+        _f("ssrf", FindingStatus.REJECTED, "f2", file="a.py", line=10),
+    ])
+    ids = [s["id"] for s in build_coverage_ledger(ws)["surfaces"]]
+    assert len(ids) == len(set(ids))

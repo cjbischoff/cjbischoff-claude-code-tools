@@ -1018,3 +1018,11 @@ for the full contract.
 catches. A missing `ast-grep`/`sg` binary still raises `FileNotFoundError` from `runner(...)` —
 correct, since the harness treats a backend that never ran as a coverage hole, not a clean
 empty result.
+
+`coverage_ledger.py`'s `build_coverage_ledger` now keys a covered class's surfaces by sink
+site, not by class. It emits one surface per distinct `(file, line)` finding site. Each
+surface's `id` is shaped `f"{cls}@{file}:{line}"` and carries `cls` and `site` fields. A class
+with no finding still emits one class-level surface, with `id` equal to the class name and no
+`site`. This closes the gap where a second `ssrf` sink in a different file inherited "covered"
+from an unrelated confirmed finding in the same class. The completeness invariant now runs per
+site instead of per class, so it rejects `complete` more often.

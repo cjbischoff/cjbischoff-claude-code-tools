@@ -437,6 +437,13 @@ raising `ValueError` that names it, and extra unused `subs` keys being ignored.
 surfaces now carrying `reason`/`next_step`: `validate_coverage_ledger` rejects one missing
 either field, accepts one carrying both, and `render_markdown` renders both columns.
 
+Four more guards pin the site-keyed surface. Two sinks in the same class at different files
+produce two surfaces, `ssrf@a.py:10` and `ssrf@b.py:20`, instead of one shared class surface.
+A candidate sink at one site keeps its own surface `needs_follow_up`. The ledger stays
+`partial` even though a sibling site in the same class is confirmed. A class with no finding
+still emits one class-level surface keyed by the bare class name. Two findings landing on the
+same site collapse into one surface, so `surfaces` ids stay unique.
+
 `test_route_control.py` (new, ISSUE-027/029/036) covers `route_control.py`: a table control the
 architecture markdown omits is a `needs_follow_up` gap, a table entrypoint the threat model drops
 is a gap, no gap when everything is present, and `record_route_gaps` round-trips a gap's
