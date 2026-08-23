@@ -131,7 +131,9 @@ For the recon phase only, `RA`'s phase-adversary pass is followed by one more ga
 `sec_overlay.phase_gate.recall_claims` and `kb/route-census.json`. A separate
 deterministic `recall-gate` phase runs right after recon. It recomputes the
 same checks and writes each gap through `route_control.record_route_gaps` into
-`kb/coverage-ledger.json`, demoting `completeness` to `partial`.
+`kb/coverage-ledger.json`, demoting `completeness` to `partial`. `CLAUDE.md`'s
+phase-order table lists this `recall-gate` row right after `recon`, matching
+`PHASE_TABLE`.
 
 The phase legend with exact commands is in [`SKILL.md`](SKILL.md); the hard operating rules
 (a partial scan is a coverage hole, not "clean") are in [`CLAUDE.md`](CLAUDE.md) §2.

@@ -135,6 +135,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - `sec_overlay/README.md` no longer claims `route_control` imports from
   `phase_gate`. `phase_gate.py`'s three `route_control`/`route_census`/
   `dependency_sinks` imports moved to module level. No cycle exists.
+- `CLAUDE.md`'s phase-order block now lists `recall-gate` right after `recon`.
+  `_PHASE_DOC_LABELS` gained a matching entry, so the phase-order test now
+  enforces the row's position.
+- `SKILL.md`'s recall-gate paragraph no longer claims every omission reaches
+  the ledger. A deterministic omission still cannot be lost. An
+  adversary-only omission needs a reviewer to record it by hand.
 
 ## 1.69.15 - 2026-08-22
 

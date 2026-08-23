@@ -184,6 +184,7 @@ _CLAUDE_MD = Path(__file__).resolve().parents[2] / "CLAUDE.md"
 _PHASE_DOC_LABELS = {
     "route-census": "Route census",
     "recon": "Recon",
+    "recall-gate": "Recall gate",
     "architecture": "Architecture",
     "arch-gate": "Arch gate",
     "threat_model": "Threat model",

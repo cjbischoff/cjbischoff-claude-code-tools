@@ -1094,3 +1094,7 @@ adversary call that no code path reaches.
 `dependency_sinks.load_catalog()`'s real `ssrf` entry, not a synthetic `SinkEntry`. A
 deleted `check_catalog_classes` loop inside `recall_claims` fails this test, instead of
 leaving the suite green.
+
+`test_docs_invariants.py`'s `_PHASE_DOC_LABELS` gained a `"recall-gate": "Recall gate"`
+entry. The CLAUDE.md phase-order guard had silently skipped `recall-gate` on the earlier
+label miss. It now enforces the row's position right after `Recon`.

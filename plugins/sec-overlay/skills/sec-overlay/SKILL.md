@@ -52,8 +52,11 @@ For the recon phase only, one extra adversary runs after the phase adversary:
 `kb/route-census.json`. A separate deterministic phase, `recall-gate`, runs right after recon.
 It recomputes the same census and catalog checks and writes each gap into
 `kb/coverage-ledger.json` through `route_control.record_route_gaps`. That call demotes
-`completeness` to `partial`. An omission therefore cannot be lost by the audit reporting
-`complete`.
+`completeness` to `partial`. A deterministic omission therefore cannot be lost by the audit
+reporting `complete`.
+
+An adversary-only omission has no automatic route into the ledger. A reviewer must record
+that omission by hand as follow-up work.
 
 The recall adversary has its own output contract. `agents/phase-adversary.md`'s verdict
 tables are count-invariant: a verdict count must match a claim count. A recall row has no
