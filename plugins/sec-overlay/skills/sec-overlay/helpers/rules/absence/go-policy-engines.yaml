@@ -1,6 +1,6 @@
-# First-party absence rules. NEVER move these under rules/semgrep/ — that
-# directory is a gitignored clone that preflight.py recreates, so a rule placed
-# there is deleted and never committed.
+# First-party absence rules. NEVER move these under rules/semgrep/.
+# That directory is a gitignored clone that preflight.py recreates, so a rule
+# placed there is deleted and never committed.
 #
 # The idiom: `patterns` requires the dangerous construction, `pattern-not`
 # requires that the safe option is absent from it. A rule with only the

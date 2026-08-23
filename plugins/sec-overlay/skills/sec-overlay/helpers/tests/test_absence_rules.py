@@ -38,11 +38,26 @@ def test_pack_stays_silent_on_the_construction_that_carries_the_safe_option():
 
 
 def test_every_absence_rule_declares_its_class_in_metadata():
-    """The prefilter routes a semgrep hit by metadata.cls; a rule without one routes nowhere."""
+    """The prefilter routes a semgrep hit by metadata.cls; a rule without one routes nowhere.
+
+    Checks placement, not just a raw count: each rule's own block must contain a
+    `metadata:` line followed by a `cls:` line, so a `cls:` that belongs to an
+    unrelated rule or sits outside `metadata:` cannot pass this guard.
+    """
     import re
 
+    id_re = re.compile(r"^\s*-?\s*id:\s*(\S+)")
     for path in sorted(_PACK.glob("*.yaml")):
-        text = path.read_text()
-        ids = re.findall(r"^\s*-?\s*id:\s*(\S+)", text, re.MULTILINE)
-        assert ids, f"{path.name}: no rule ids"
-        assert text.count("cls:") >= len(ids), f"{path.name}: a rule is missing metadata.cls"
+        lines = path.read_text().splitlines()
+        starts = [i for i, line in enumerate(lines) if id_re.match(line)]
+        assert starts, f"{path.name}: no rule ids"
+        for start, end in zip(starts, starts[1:] + [len(lines)]):
+            block = lines[start:end]
+            id_match = id_re.match(block[0])
+            assert id_match is not None
+            rule_id = id_match.group(1)
+            meta_at = next((i for i, l in enumerate(block) if "metadata:" in l), None)
+            assert meta_at is not None, f"{path.name}: {rule_id} has no metadata block"
+            assert any("cls:" in l for l in block[meta_at + 1 :]), (
+                f"{path.name}: {rule_id} is missing metadata.cls"
+            )

@@ -19,8 +19,8 @@ Uses the standard query suites from the CodeQL bundle (default:
 ## Absence rules
 
 `rules/absence/` holds tracked, first-party semgrep rules. Never move a first-party rule under
-`rules/semgrep/` — that directory is a gitignored clone `preflight.py` recreates, so anything
-placed there is deleted and never committed.
+`rules/semgrep/`. That directory is a gitignored clone `preflight.py` recreates, so a rule placed
+there is deleted and never committed.
 
 An absence rule flags a dangerous construction that lacks its safe option. A plain `pattern`
 rule cannot express this: it fires on every call site, safe ones included. The idiom pairs

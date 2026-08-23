@@ -10,6 +10,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   rules that flag a dangerous construction only when its safe option is
   absent, for OPA `rego.New`, `cel.NewEnv`, `lua.NewState`, Jinja2
   `Environment`, and `requests` calls without a timeout.
+
+### Fixed
+
+- `test_absence_rules.py`'s metadata guard now checks that each rule's own
+  block carries a `cls:` line after its `metadata:` line, instead of a raw
+  file-wide `cls:` count that a rule with no `metadata.cls` could still pass.
 - Dependency-sink catalog (`references/dependency-sinks.json`) and its loader,
   naming dependencies whose own code holds the sink.
 - `match_manifests()`/`matched_classes()` and a `match --root <dir>` CLI
