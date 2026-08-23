@@ -226,10 +226,12 @@ def test_review_cli_parses_rule_and_exclude_and_reaches_run_review(tmp_path, mon
 
     captured = {}
 
-    def fake_run_review(base, head, root, *, profile="security", rule_path=None,
+    def fake_run_review(base, head, root, *, commit=None, workspace_dirty=False,
+                         profile="security", rule_path=None,
                          excludes=None, runner=None, reflection_source=None, prepare=False,
-                         prepare_reflection=False, concurrency=8,
-                         timeout=600, max_git_procs=16, model=None, workspace=None):
+                         prepare_reflection=False, plan=False, concurrency=8,
+                         timeout=600, max_git_procs=16, model=None, workspace=None,
+                         token_budget=0, background="", tier="assured"):
         captured["rule_path"] = rule_path
         captured["excludes"] = excludes
         captured["workspace"] = workspace

@@ -1239,3 +1239,9 @@ label miss. It now enforces the row's position right after `Recon`.
   security-category row is tagged `source="aacr-security"` (a distinct slice that
   `tally` emits in `by_source`), and that slice never moves the real-confirmed
   headline.
+
+`test_rule_glob.py`'s `fake_run_review` spy gained `commit`, `workspace_dirty`,
+`plan`, `token_budget`, `background`, and `tier` keyword parameters to match the
+real `run_review` signature after the `--commit`/`--workspace-dirty` review scopes
+(4918b39) added those keyword arguments to `main()`'s `review` dispatch — the same
+stub-drift `TypeError` class the `model`/`workspace` fixes closed before.

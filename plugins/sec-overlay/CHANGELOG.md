@@ -10,6 +10,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   Task 24 (REQ-T3e) complete in `docs/superpowers/plans/2026-08-23-ocr-parity.md`
   (maintainer doc, not shipped).
 
+### Fixed
+
+- `test_rule_glob.py`'s `fake_run_review` spy accepts the `commit`,
+  `workspace_dirty`, `plan`, `token_budget`, `background`, and `tier` keyword
+  arguments the real `run_review` now takes; the stale stub raised
+  `TypeError` in the full suite after the `--commit`/`--workspace-dirty` review
+  scopes landed. Test-only; no runtime change.
+
 ### Added
 
 - Security slice (REQ-T3e, Task 24 GREEN): `bench/aacr_adapter.py` tags an AACR
