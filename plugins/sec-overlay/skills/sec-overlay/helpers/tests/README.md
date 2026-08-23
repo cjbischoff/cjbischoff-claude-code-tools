@@ -1119,6 +1119,13 @@ label miss. It now enforces the row's position right after `Recon`.
   (`None` when no TP), rendered as a labeled estimate; the section is omitted when
   no cost is supplied. Per-class FP-rate rows render in the "By class" table.
 
+- `test_bench.py::test_scorecard_markdown_states_scope_confound` and
+  `test_docs_invariants.py::test_bench_readme_documents_annotation_and_reproducibility`
+  lock REQ-R3 + REQ-R1/R4: the scorecard markdown states the scope confound
+  ("reviews less"), and `bench/README.md` carries the "## Annotation protocol",
+  "## Reproducing the benchmark", and "## Scope confound" sections with
+  single-maintainer adjudication stated plainly.
+
 - `test_calibrate.py` also locks REQ-P9: a judge `severity-inflated`/`downgrade`
   verdict writes the downgraded severity band back to `f.severity` with a
   `calibrate:severity-downgraded` history event; no verdict leaves severity alone.

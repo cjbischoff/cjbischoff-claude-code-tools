@@ -12,6 +12,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Protocol + reproducibility docs (REQ-R3 + REQ-R1/R4): failing tests pin that the
+  scorecard markdown states the scope confound and `bench/README.md` documents the
+  annotation protocol (single-maintainer adjudication), a one-command reproduce, and
+  the scope confound. Tests first in `tests/test_bench.py` and
+  `tests/test_docs_invariants.py`.
+
 - Cost/latency columns (REQ-M6): `bench/tally.py` `tally(..., cost=...)` attaches a
   `cost` block (`tokens`, `wall_time_s`, `usd_per_confirmed_tp` = USD estimate /
   real-confirmed TP, `None` when no TP) and `to_markdown` renders a "Cost & latency

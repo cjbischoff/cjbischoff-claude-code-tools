@@ -283,3 +283,17 @@ def test_every_catalogued_expr_eval_class_has_a_class_file():
 
     for entry in load_catalog():
         assert (_CLASSES_DIR / f"{entry.cls}.md").exists(), entry.cls
+
+
+_BENCH_README = Path(__file__).resolve().parents[1] / "bench" / "README.md"
+
+
+def test_bench_readme_documents_annotation_and_reproducibility():
+    txt = _BENCH_README.read_text()
+    for heading in (
+        "## Annotation protocol",
+        "## Reproducing the benchmark",
+        "## Scope confound",
+    ):
+        assert heading in txt, heading
+    assert "single-maintainer" in txt

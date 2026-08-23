@@ -293,3 +293,10 @@ def test_scorecard_markdown_omits_cost_when_absent():
     sc = tally([_jr("V1", "positive", True)], Corpus([_entry("V1")]))
     assert "cost" not in sc.to_dict()
     assert "wall-time" not in sc.to_markdown().lower()
+
+
+def test_scorecard_markdown_states_scope_confound():
+    corpus = Corpus([_entry("V1")])
+    md = tally([_jr("V1", "positive", True)], corpus).to_markdown().lower()
+    assert "confound" in md
+    assert "reviews less" in md
