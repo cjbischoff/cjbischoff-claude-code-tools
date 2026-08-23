@@ -84,6 +84,14 @@ class Scorecard:
         if self.false_positives:
             lines += ["", "## False positives (flagged a known-negative)", ""]
             lines += [f"- {fid}" for fid in self.false_positives]
+        lines += ["", "## Judging statement", "",
+                  ("Every finding above — sec-overlay and any cross-tool (OCR) findings — "
+                   "is scored by the same judge (`bench.judge`: deterministic match, then an "
+                   "optional injected LLM judge)."),
+                  ("A cross-tool comparison therefore shares one judge for both tools. Read "
+                   "the same-judge caveat: the judge can favour output shaped like its own "
+                   "expectations, so a head-to-head number carries shared-judge bias and is not "
+                   "a neutral referee's verdict.")]
         return "\n".join(lines) + "\n"
 
     _real: dict = field(default_factory=dict)

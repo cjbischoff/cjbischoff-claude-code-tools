@@ -54,7 +54,7 @@
 **Produces:** `aacr_entries(rows: list[dict]) -> list[CorpusEntry]` (`source="aacr"` — extend `SOURCES` tuple in `corpus.py`); `ocr_findings(json_text: str) -> list[Finding]` mapping `ocr review --format json` comments to `Finding` (status CONFIRMED for judging, evidence `llm-claimed:ocr` — benchmark-only objects, never harness findings); scorecard markdown gains judge-statement + same-judge caveat block.
 - [x] Investigate AACR dataset (M3d): fetch dataset card/schema; record findings in `bench/README.md`; if unreachable, document the assumed row shape and mark untested. (schema from live HF viewer 2026-08-23; full-corpus `category`/`label` distribution unverified — noted in `bench/README.md`)
 - [x] RED: fixture AACR rows → entries with source `aacr`; tally test proves `aacr` results never move `_real` headline; `ocr_ingest` fixture JSON → findings with file/line/severity. Commit. (`test_aacr_adapter.py`)
-- [ ] GREEN: implement both; append judge statement text to `Scorecard.to_markdown`. Commit.
+- [x] GREEN: implement both; append judge statement text to `Scorecard.to_markdown`. Commit. (`aacr_adapter.py`, `ocr_ingest.py`, `SOURCES += ("aacr",)`, same-judge block in `tally.py`)
 
 ### Task 6: REQ-M5 — variance
 **Files:** Modify `helpers/bench/run.py` (`--repeats`), `helpers/bench/tally.py` (`aggregate_scorecards(cards: list[Scorecard]) -> dict` mean ± min/max for P/R/F1/FP-rate); Test `helpers/tests/test_bench.py` (append).

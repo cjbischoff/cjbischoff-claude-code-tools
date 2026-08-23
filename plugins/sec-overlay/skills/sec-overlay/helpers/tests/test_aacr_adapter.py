@@ -85,6 +85,16 @@ def test_aacr_never_moves_real_headline():
     assert real_only.get("tp") == 1 and real_only.get("fn") == 1
 
 
+def test_scorecard_markdown_carries_same_judge_caveat():
+    corpus = Corpus(entries=[])
+    md = tally([], corpus).to_markdown()
+    lowered = md.lower()
+    assert "judge" in lowered
+    # cross-tool comparisons run OCR and sec-overlay through the same judge; the
+    # scorecard must disclose that shared-judge bias so the number is read honestly.
+    assert "same judge" in lowered
+
+
 def test_ocr_findings_parse_to_confirmed_llm_claimed():
     payload = json.dumps({
         "comments": [

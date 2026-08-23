@@ -29,6 +29,10 @@ Measures and locks in detection quality. Not part of the shipped harness. Three 
 - `run.py` — orchestrates clone/scan/judge/tally; resumable via a findings cache;
   exit 1 if any locked finding regressed. `--grade-mode {real,detection}` picks the
   reader (default `real`); `--only-local` skips http clone targets for an offline gate.
+- `aacr_adapter.py` — `aacr_entries(rows)` maps AACR review-dataset rows to
+  `source="aacr"` corpus entries (excluded from the real-confirmed headline).
+- `ocr_ingest.py` — `ocr_findings(json_text)` parses `ocr review --format json` into
+  benchmark-only CONFIRMED findings tagged `llm-claimed:ocr` (never harness findings).
 
 ## Run
 ```bash

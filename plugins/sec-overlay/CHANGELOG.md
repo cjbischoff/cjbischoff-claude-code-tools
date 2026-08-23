@@ -12,12 +12,16 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
-- External-dataset adapter tests (REQ-M3, tests first): `tests/test_aacr_adapter.py`
-  asserts `aacr_entries` maps AACR review-dataset rows to `source="aacr"` corpus
-  entries that validate and never move the real-confirmed headline, and
-  `ocr_findings` parses `ocr review --format json` into benchmark-only CONFIRMED
-  findings tagged `llm-claimed:ocr`. `bench/README.md` records the live AACR
-  schema (2026-08-23) with its unverified-distribution caveat.
+- External-dataset adapters (REQ-M3): `bench/aacr_adapter.py` `aacr_entries` maps
+  AACR review-dataset rows to `source="aacr"` corpus entries (registered in
+  `bench/corpus.py` `SOURCES`; excluded from the real-confirmed headline), and
+  `bench/ocr_ingest.py` `ocr_findings` parses `ocr review --format json` into
+  benchmark-only CONFIRMED findings tagged `llm-claimed:ocr` — never harness
+  findings, never receipt-backed. `Scorecard.to_markdown` now appends a
+  same-judge caveat block so a cross-tool comparison discloses that both tools
+  share one judge. `bench/README.md` records the live AACR schema (2026-08-23)
+  with its unverified-distribution caveat. Tests first in
+  `tests/test_aacr_adapter.py`.
 
 - Committed seed corpus (REQ-M4): `bench/corpus_seed/` now ships 30 public
   entries — 8 `dogfood.json` (2 `locked` at `fixtures/vulnerable_repo`), 3

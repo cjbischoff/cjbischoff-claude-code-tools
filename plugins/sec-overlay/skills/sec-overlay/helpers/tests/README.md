@@ -1129,4 +1129,5 @@ label miss. It now enforces the row's position right after `Recon`.
 - `test_aacr_adapter.py` locks REQ-M3: `aacr_entries` maps AACR dataset rows to
   `source="aacr"` corpus entries that validate and never move the real-confirmed
   headline; `ocr_findings` parses `ocr review --format json` into benchmark-only
-  CONFIRMED findings tagged `llm-claimed:ocr`.
+  CONFIRMED findings tagged `llm-claimed:ocr`; and `Scorecard.to_markdown` carries
+  the same-judge caveat block for cross-tool comparisons.
