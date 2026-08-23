@@ -997,3 +997,9 @@ passing the `dep_sink_repo` fixture as `target_root` adds `ssrf` to a plan that 
 named `authz`, with `authz` still first (a planned class is never removed or reordered);
 omitting `target_root` leaves a plan unchanged; and passing `target_root` when `ssrf` is
 already planned does not duplicate it.
+
+Two more guards in `test_findings_gate.py` cover the catalog-id check:
+`test_findings_gate_rejects_an_unknown_catalog_id` writes a `dependency-catalog:not-a-real-entry`
+source and checks the gate names that id in an error; `test_findings_gate_accepts_a_known_catalog_id`
+writes `dependency-catalog:opa-rego-http-send`, a real catalog id, and checks the gate
+raises no `dependency-catalog` error for it.

@@ -169,6 +169,25 @@ def test_receipt_tier_is_stamped(tmp_path):
     assert stamped["receipt_tier"] == 1
 
 
+def test_findings_gate_rejects_an_unknown_catalog_id(tmp_path):
+    # A free-text catalog receipt would be an unfalsifiable claim dressed as a receipt.
+    ws = _ws_raw(tmp_path)
+    _write_raw(
+        ws, "F-5", evidence_sources=["dependency-catalog:not-a-real-entry"], status="candidate"
+    )
+    errors = validate_findings(ws)
+    assert any("not-a-real-entry" in e for e in errors), errors
+
+
+def test_findings_gate_accepts_a_known_catalog_id(tmp_path):
+    ws = _ws_raw(tmp_path)
+    _write_raw(
+        ws, "F-6", evidence_sources=["dependency-catalog:opa-rego-http-send"], status="candidate"
+    )
+    errors = validate_findings(ws)
+    assert not any("dependency-catalog" in e for e in errors)
+
+
 def _shipping(fid: str, file: str, line: int) -> Finding:
     return Finding(
         id=fid, rule_id="r", cls="authz", status=FindingStatus.CONFIRMED,

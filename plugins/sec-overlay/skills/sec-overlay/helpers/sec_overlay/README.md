@@ -129,6 +129,10 @@ whose sink lives inside a dependency's own code. A catalog match proves the depe
 declared. It does not prove the sink is reached, so the receipt stays Tier 2 like `ripgrep`
 and `ast-grep` — it locates a finding and never confirms one alone.
 
+`findings_gate.validate_findings` now rejects a `dependency-catalog:<id>` receipt whose
+`<id>` is absent from `dependency_sinks.catalog_ids()`. Without this check, free text after
+the colon would read as a receipt with no real entry behind it.
+
 `models.py`'s `Finding` gained `receipt_tier: int | None` — an additive, nullable field that
 round-trips through `to_dict`/`from_dict`. It holds the value `evidence.receipt_tier()` derives
 once a gate stamps it; `None` before that.

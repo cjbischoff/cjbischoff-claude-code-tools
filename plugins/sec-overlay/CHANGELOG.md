@@ -55,6 +55,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - `run_astgrep_rule()`'s docstring now names only the non-JSON/empty-output
   case its code actually catches, instead of overclaiming coverage of a
   missing `ast-grep` binary, which still raises `FileNotFoundError`.
+- `findings_gate.validate_findings` now rejects a `dependency-catalog:<id>`
+  receipt whose `<id>` is not a real `dependency-sinks.json` catalog entry.
+  Free text after the colon read as a receipt before this check.
 
 ## 1.69.15 - 2026-08-22
 
