@@ -20,6 +20,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Parity audit (Task 25): `docs/parity/PARITY-AUDIT.md` walks `EXTRACTION.md`
+  row by row and gives every item (M/P/S/T3/R/W/G/D/X/V/HR — 87 rows) a final
+  disposition with `file:line` evidence, `rejected:<reason>`, or
+  `deferred:<reason + where>`. Zero-loss verified: the audit's id set covers
+  every EXTRACTION id. Honors SPEC dispositions G18/G19/G20 (rejected) and
+  G21/T3g (deferred). Maintainer doc.
 - Security slice (REQ-T3e, Task 24 GREEN): `bench/aacr_adapter.py` tags an AACR
   row whose `category` signals security (`security` / `vulnerab`) as
   `source="aacr-security"`, and `bench/corpus.py` registers that source. `tally`
