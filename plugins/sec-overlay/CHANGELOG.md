@@ -6,6 +6,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- OCR-parity workstream docs: `docs/parity/EXTRACTION.md` (inventory of the
+  OCR-vs-sec-overlay analysis, 3 extraction passes), `docs/parity/SPEC.md`
+  (requirements + traceability matrix + dispositions), and
+  `docs/superpowers/plans/2026-08-23-ocr-parity.md` (implementation plan).
+
 - Recall adversary (`agents/recall-adversary.md`, opus): judges what the recon
   phase left out, using `sec_overlay.phase_gate.recall_claims`,
   `kb/route-census.json`, and dependency-catalog matches.
