@@ -161,9 +161,14 @@ The evidence, status, and disposition vocabularies are closed sets. Use only the
 - **Tier-1 receipts (confirm a finding alone):** `codeql`, `semgrep`, `sca`, `secrets`.
   Each is proof-complete for its shape (a dataflow path, a vulnerable version, a live secret).
 - **Tier-2 receipts (corroborate only, never confirm):** `ripgrep`, `structural-index`,
-  `ast-grep`, `tree-sitter`. These locate code; they do not prove reachability. A finding
-  whose only receipts are Tier-2 cannot reach `confirmed` — route it to
-  `needs-deployment-testing`.
+  `ast-grep`, `tree-sitter`, `dependency-catalog`. These locate code; they do not prove
+  reachability. A finding whose only receipts are Tier-2 cannot reach `confirmed` —
+  route it to `needs-deployment-testing`.
+- `dependency-catalog:<entry-id>` — Tier 2. The target declares a
+  `references/dependency-sinks.json` package, and the entry names a sink inside that
+  dependency's own code. Use it when no first-party line holds the sink (an OPA policy
+  calling `http.send`). It locates the sink; it never confirms a finding alone.
+  `<entry-id>` must be a real catalog id — the findings gate rejects an unknown id.
 - **Shipping statuses (a reader acts on these):** `confirmed`, `fixed`,
   `needs-deployment-testing`.
 - **`runtime_disposition` (closed enum):** `needs-runtime`, `static-settled`, `unassessed`.

@@ -124,6 +124,11 @@ findings (ISSUE-043) — measurement only, nothing gates on the rate.
 `confirms_alone()` predicates — a single source of truth for later modules that need to know
 whether a source can confirm a finding alone.
 
+`evidence.py`'s `TIER2_RECEIPTS` also holds `dependency-catalog`, the receipt for a finding
+whose sink lives inside a dependency's own code. A catalog match proves the dependency is
+declared. It does not prove the sink is reached, so the receipt stays Tier 2 like `ripgrep`
+and `ast-grep` — it locates a finding and never confirms one alone.
+
 `models.py`'s `Finding` gained `receipt_tier: int | None` — an additive, nullable field that
 round-trips through `to_dict`/`from_dict`. It holds the value `evidence.receipt_tier()` derives
 once a gate stamps it; `None` before that.

@@ -347,7 +347,10 @@ ISSUE-053: a `static-only` re-verify routes the finding to `needs-deployment-tes
 `test_evidence.py` gained coverage for the shared tier/status vocab: `TIER1_RECEIPTS |
 TIER2_RECEIPTS` partitions `_MECHANICAL` exactly, `receipt_tier()` grades colon-form sources,
 `confirms_alone()` requires a Tier-1 receipt, and `SHIPPING_STATUSES`/`RUNTIME_DISPOSITIONS` match
-their fixed literal sets.
+their fixed literal sets. Two more guards cover the `dependency-catalog` receipt:
+`test_dependency_catalog_is_a_tier_two_receipt` checks it sits in `TIER2_RECEIPTS`, not
+`TIER1_RECEIPTS`, and grades to tier 2; `test_dependency_catalog_alone_cannot_confirm` checks
+`confirms_alone()` returns `False` for it alone and `True` once a Tier-1 receipt joins it.
 
 `test_models.py` gained coverage for `Finding.receipt_tier` — defaults to `None`, round-trips a
 set value through `to_dict`/`from_dict`, and an absent key loads as `None`.

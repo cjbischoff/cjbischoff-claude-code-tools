@@ -42,6 +42,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   agent can run a structural absence check ad hoc. Go needs a hand-written
   rule (`fixtures/absence_repo/rego-absence.yaml`): a bare selector-call
   pattern such as `rego.New($ARGS)` matches nothing there.
+- `dependency-catalog` receipt: a Tier-2 evidence source for a finding whose
+  sink lives inside a declared dependency's own code. It locates the sink
+  named by a `dependency-sinks.json` catalog entry; it never confirms a
+  finding alone. `EVIDENCE_VOCABULARY` documents the new receipt form.
 
 ### Fixed
 

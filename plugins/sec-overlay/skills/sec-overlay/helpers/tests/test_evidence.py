@@ -59,3 +59,21 @@ def test_confirms_alone_requires_tier1():
 def test_shipping_and_disposition_sets():
     assert SHIPPING_STATUSES == {"confirmed", "fixed", "needs-deployment-testing"}
     assert RUNTIME_DISPOSITIONS == {"needs-runtime", "static-settled", "unassessed"}
+
+
+def test_dependency_catalog_is_a_tier_two_receipt():
+    from sec_overlay.evidence import TIER1_RECEIPTS, TIER2_RECEIPTS, is_tool_receipt, receipt_tier
+
+    assert "dependency-catalog" in TIER2_RECEIPTS
+    assert "dependency-catalog" not in TIER1_RECEIPTS
+    assert is_tool_receipt("dependency-catalog:opa-rego-http-send")
+    assert receipt_tier("dependency-catalog:opa-rego-http-send") == 2
+
+
+def test_dependency_catalog_alone_cannot_confirm():
+    """A manifest match proves the dependency is declared, not that the sink is reached."""
+    from sec_overlay.evidence import confirms_alone
+
+    assert confirms_alone(["dependency-catalog:opa-rego-http-send"]) is False
+    assert confirms_alone(["dependency-catalog:opa-rego-http-send",
+                           "semgrep:sec-overlay.absence.go-rego-new-missing-capabilities"]) is True
