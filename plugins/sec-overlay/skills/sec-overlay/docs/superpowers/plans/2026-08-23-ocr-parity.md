@@ -139,7 +139,7 @@
 
 ### Task 22: REQ-T3c/T3h — verified-fix rate
 **Files:** Modify `helpers/bench/tally.py` (`verified_fix_rate` when run records carry fix data) + `run.py` plumb; Test append.
-- [ ] RED/GREEN as above. Commits.
+- [x] RED/GREEN as above. Commits.
 
 ### Task 23: REQ-T3d — coverage-honesty rate
 **Files:** Modify `helpers/bench/run.py` (read each workspace's `kb/coverage-ledger.json`; a run claiming complete with open surfaces = unsupported claim), `tally.py` column; Test append.

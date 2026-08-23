@@ -4,6 +4,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Changed
+
+- Parity plan tracking: marked Task 22 (REQ-T3c/T3h) complete in
+  `docs/superpowers/plans/2026-08-23-ocr-parity.md` (maintainer doc, not shipped).
+
 ### Added
 
 - Verified-fix rate (REQ-T3c/T3h, Task 22 GREEN): `bench/tally.py` gains a
