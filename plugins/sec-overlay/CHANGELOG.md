@@ -12,6 +12,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   subcommand, to check a target repo's manifests against the catalog.
 - `reconcile_plan()` takes an optional `target_root` and merges every attack
   class of a matched dependency-sink catalog entry into the agent plan.
+- `attack-classes.md`'s `expr-eval-rce` row names every server-side policy and
+  script engine sink from `dependency-sinks.json`, so recon can select the
+  right class for a catalogued dependency with no first-party indicator.
 
 ## 1.69.15 - 2026-08-22
 

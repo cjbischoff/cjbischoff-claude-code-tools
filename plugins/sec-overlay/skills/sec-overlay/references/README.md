@@ -128,6 +128,11 @@ discriminate confusable shapes. Split into **universal** classes (always conside
 as the source of truth for CWE→class mapping. Evidence-based only: an empty class list beats
 a guessed one.
 
+The `expr-eval-rce` row also covers server-side policy and rule engines (OPA/Rego, CEL,
+Starlark, goja, gopher-lua, Spring SpEL). Its indicators stay pinned to every `sink` and
+`indicators` value in `dependency-sinks.json`, checked by
+`test_docs_invariants.py::test_every_catalog_indicator_appears_in_the_attack_class_table`.
+
 #### `architecture-standards.md` — the C4 + arc42 contract for the architecture phase
 Fixes which C4 diagrams `architecture.md` produces (context, container, component-when-complex,
 runtime-view sequences), the arc42 section table (`5. Building Block View` replaces the old
