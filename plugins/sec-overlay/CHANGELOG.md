@@ -6,6 +6,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Verified-fix rate (REQ-T3c/T3h, Task 22 GREEN): `bench/tally.py` gains a
+  `findings_by_id` argument and a `verified_fix` scorecard block —
+  `rate` = (`FindingStatus.FIXED` ∪ `verification == "verified-static"`) over the
+  confirmed real true-positives — surfaced in `to_dict` and as a headline
+  markdown row. `bench/run.py` builds the id→finding map from `findings_by_repo`
+  and passes it to `tally`. The block is absent when no fix data is supplied.
 - Verified-fix rate (REQ-T3c/T3h, Task 22 RED): RED tests in
   `tests/test_bench.py` pin that `tally(..., findings_by_id=...)` reports a
   `verified_fix_rate` = (`fixed` ∪ `verified-static`) / confirmed true-positives,

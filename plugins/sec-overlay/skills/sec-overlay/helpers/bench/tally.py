@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import cast
 
+from sec_overlay.models import FindingStatus
+
 
 def _metrics(results) -> dict:
     """Compute tp/fn/fp/tn + precision/recall for a set of JudgeResults."""
@@ -38,6 +40,12 @@ class Scorecard:
     missed: list = field(default_factory=list)         # all missed positives (for analyze-misses)
     false_positives: list = field(default_factory=list)
     cost: dict = field(default_factory=dict)  # {tokens, wall_time_s, usd_per_confirmed_tp} (REQ-M6)
+    verified_fix: dict = field(default_factory=dict)  # {fixed, confirmed, rate} (REQ-T3c/T3h)
+
+    @property
+    def verified_fix_rate(self) -> float | None:
+        """Share of confirmed true-positives that were fixed or statically verified-fixed."""
+        return self.verified_fix.get("rate")
 
     def to_dict(self) -> dict:
         d = {
@@ -51,6 +59,8 @@ class Scorecard:
         }
         if self.cost:
             d["cost"] = self.cost
+        if self.verified_fix:
+            d["verified_fix"] = self.verified_fix
         return d
 
     def to_markdown(self) -> str:
@@ -66,7 +76,13 @@ class Scorecard:
                   f"F1: **{pct(self._real.get('f1'))}**  |  "
                   f"FP-rate: {pct(self._real.get('fp_rate'))}"),
                  "",
-                 "## Overall (all sources)", "",
+                 "## Overall (all sources)", "",]
+        if self.verified_fix:
+            vf = self.verified_fix
+            lines[6:6] = [(f"- Verified-fix rate: **{pct(vf.get('rate'))}** "
+                           f"({vf.get('fixed', 0)}/{vf.get('confirmed', 0)} confirmed fixed "
+                           f"or statically verified-fixed)")]
+        lines += [
                  (f"- Recall {pct(o['recall'])} | Precision {pct(o['precision'])} | "
                   f"F1 {pct(o['f1'])} | "
                   f"FP-rate {pct(o['fp_rate'])} | tp={o['tp']} fn={o['fn']} fp={o['fp']} tn={o['tn']}"),
@@ -114,7 +130,26 @@ class Scorecard:
     _real: dict = field(default_factory=dict)
 
 
-def tally(results, corpus, *, cost: dict | None = None) -> Scorecard:
+def _verified_fix(results, findings_by_id: dict) -> dict:
+    """Compute the verified-fix block over confirmed real true-positives (REQ-T3c/T3h).
+
+    Denominator: matched findings for detected real-confirmed positives (the confirmed
+    true-positives). Numerator: those whose status is ``FIXED`` or whose ``verification``
+    is ``verified-static``. Returns ``{}`` when no confirmed true-positive has fix data.
+    """
+    matched = [findings_by_id.get(r.matched_id) for r in results
+               if r.source == "real-confirmed" and r.kind == "positive"
+               and r.detected and r.matched_id]
+    matched = [f for f in matched if f is not None]
+    if not matched:
+        return {}
+    fixed = sum(1 for f in matched
+                if f.status == FindingStatus.FIXED or f.verification == "verified-static")
+    return {"fixed": fixed, "confirmed": len(matched), "rate": fixed / len(matched)}
+
+
+def tally(results, corpus, *, cost: dict | None = None,
+          findings_by_id: dict | None = None) -> Scorecard:
     """Aggregate judge results into a :class:`Scorecard`.
 
     Args:
@@ -152,6 +187,8 @@ def tally(results, corpus, *, cost: dict | None = None) -> Scorecard:
         sc.cost = {"tokens": int(cost.get("tokens", 0)),
                    "wall_time_s": float(cost.get("wall_time_s", 0.0)),
                    "usd_per_confirmed_tp": per_tp}
+    if findings_by_id:
+        sc.verified_fix = _verified_fix(results, findings_by_id)
     return sc
 
 

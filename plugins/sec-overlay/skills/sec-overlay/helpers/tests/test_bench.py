@@ -305,8 +305,8 @@ def test_scorecard_markdown_states_scope_confound():
 # ---- verified-fix rate (REQ-T3c/T3h) ----
 def _jrm(fid, matched_id, **kw):
     from bench.judge import JudgeResult
-    base = dict(kind="positive", source="real-confirmed", cls="xss", detected=True,
-                method="deterministic", reasoning="")
+    base = {"kind": "positive", "source": "real-confirmed", "cls": "xss", "detected": True,
+            "method": "deterministic", "reasoning": ""}
     base.update(kw)
     return JudgeResult(finding_id=fid, matched_id=matched_id, **base)
 

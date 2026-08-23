@@ -40,6 +40,10 @@ Measures and locks in detection quality. Not part of the shipped harness. Three 
   `usd_per_confirmed_tp` = USD estimate / real-confirmed TP, `None` when no TP);
   `to_markdown` renders a "Cost & latency (estimates)" section, and per-class
   FP-rate rows already publish in the "By class" table (REQ-M6, T3b).
+  `tally(..., findings_by_id=...)` attaches a verified-fix block
+  (`fixed`, `confirmed`, `rate` = (`FIXED` ∪ `verified-static`) / confirmed
+  true-positives) and a headline markdown row; `run.py` plumbs the per-repo
+  findings in, and the rate stays absent when no fix data is supplied (REQ-T3c/T3h).
 - `aacr_adapter.py` — `aacr_entries(rows)` maps AACR review-dataset rows to
   `source="aacr"` corpus entries (excluded from the real-confirmed headline).
 - `ocr_ingest.py` — `ocr_findings(json_text)` parses `ocr review --format json` into
