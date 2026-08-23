@@ -12,6 +12,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Cross-run variance (REQ-M5): failing tests in `tests/test_bench.py` specify
+  `bench/tally.py` `aggregate_scorecards(cards)` reporting mean/min/max per metric
+  (precision, recall, f1, fp_rate) across repeated runs, skipping `None` metrics.
+
 - External-dataset adapters (REQ-M3): `bench/aacr_adapter.py` `aacr_entries` maps
   AACR review-dataset rows to `source="aacr"` corpus entries (registered in
   `bench/corpus.py` `SOURCES`; excluded from the real-confirmed headline), and

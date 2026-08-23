@@ -58,7 +58,7 @@
 
 ### Task 6: REQ-M5 — variance
 **Files:** Modify `helpers/bench/run.py` (`--repeats`), `helpers/bench/tally.py` (`aggregate_scorecards(cards: list[Scorecard]) -> dict` mean ± min/max for P/R/F1/FP-rate); Test `helpers/tests/test_bench.py` (append).
-- [ ] RED: three synthetic scorecards → mean/range asserted. Commit.
+- [x] RED: three synthetic scorecards → mean/range asserted. Commit.
 - [ ] GREEN: implement; `run.py` loops repeats into `run_dir/run-<n>/`, writes `scorecard_agg.{json,md}`. Commit.
 
 ### Task 7: REQ-M6 — tokens/latency/$ columns + per-class FP publishing

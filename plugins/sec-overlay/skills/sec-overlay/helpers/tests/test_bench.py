@@ -205,3 +205,38 @@ def test_f1_rendered_in_markdown():
     sc = tally([_jr("V1", "positive", True)], corpus)
     assert "F1" in sc.to_markdown()
     assert "f1" in sc.to_dict()["overall"]
+
+
+# ---- variance across repeats (REQ-M5) ----
+def _card(precision, recall, f1, fp_rate):
+    from bench.tally import Scorecard
+    overall = {"tp": 0, "fn": 0, "fp": 0, "tn": 0,
+               "recall": recall, "precision": precision, "fp_rate": fp_rate, "f1": f1}
+    return Scorecard(overall=overall, by_source={}, by_class={})
+
+
+def test_aggregate_scorecards_mean_and_range():
+    from bench.tally import aggregate_scorecards
+    cards = [_card(0.2, 0.4, 0.3, 0.1),
+             _card(0.4, 0.6, 0.5, 0.3),
+             _card(0.6, 0.8, 0.7, 0.2)]
+    agg = aggregate_scorecards(cards)
+    assert agg["repeats"] == 3
+    for metric, (mean, lo, hi) in {
+        "precision": (0.4, 0.2, 0.6),
+        "recall": (0.6, 0.4, 0.8),
+        "f1": (0.5, 0.3, 0.7),
+        "fp_rate": (0.2, 0.1, 0.3),
+    }.items():
+        assert abs(agg[metric]["mean"] - mean) < 1e-9
+        assert abs(agg[metric]["min"] - lo) < 1e-9
+        assert abs(agg[metric]["max"] - hi) < 1e-9
+
+
+def test_aggregate_scorecards_ignores_none_metrics():
+    from bench.tally import aggregate_scorecards
+    cards = [_card(0.2, None, None, 0.1), _card(0.4, None, None, 0.3)]
+    agg = aggregate_scorecards(cards)
+    assert abs(agg["precision"]["mean"] - 0.3) < 1e-9
+    assert agg["recall"] == {"mean": None, "min": None, "max": None}
+    assert agg["f1"] == {"mean": None, "min": None, "max": None}
