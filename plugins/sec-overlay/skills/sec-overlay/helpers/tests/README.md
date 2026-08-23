@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-115 pytest files, 1553 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+115 pytest files, 1557 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -125,6 +125,14 @@ budget exactly still admits). `test_review_live.py` gains four end-to-end `run_r
 `--prepare` records a per-file `token_estimate`; a file over the 0.8 cap is excluded before
 review). `test_docs_invariants.py` gains `test_review_budget_constants_match_ocr_shape`, pinning
 the constant tuple against `(2000, 400, 7, 700)` and `0.8`.
+
+`test_diffscope.py` (REQ-P5, Task 13) gains
+`test_dirty_file_records_lists_staged_unstaged_untracked`, a real-repo check that
+`dirty_file_records` returns one record per working-tree change git reports (a staged
+modification, an unstaged modification, an untracked file). `test_review_live.py` gains three
+CLI tests: `--commit <sha>` scoping the review to `sha^..sha` (the plan entry pins the parent
+and commit SHAs), `--commit` with `--base` exiting 2 (mutual exclusion), and
+`--workspace-dirty` listing staged, unstaged, and untracked changes.
 
 `test_review_agent.py` (12 tests, Phase 3 Plan 06 Task 1) covers `review_agent.py`'s prompt
 render and response parse, monkeypatching `_review_file_template_path` to a `tmp_path` fixture

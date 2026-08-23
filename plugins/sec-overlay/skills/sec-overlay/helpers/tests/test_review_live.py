@@ -2,6 +2,7 @@
 
 import json
 import subprocess
+from functools import partial
 
 from sec_overlay import cli
 from sec_overlay.cli import main, run_review
@@ -670,3 +671,77 @@ def test_review_workspace_override_permits_a_second_profile_without_weakening_th
         profile="security",
     )
     assert rc2 == 2
+
+
+def _two_commit_repo(repo):
+    """Build a real repo with two commits changing app.py; return (base_sha, head_sha)."""
+    repo.mkdir()
+
+    def git(*args):
+        subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+
+    def git_out(*args):
+        return subprocess.run(
+            ["git", *args], cwd=repo, check=True, capture_output=True, text=True
+        ).stdout.strip()
+
+    git("init", "-q")
+    git("config", "user.email", "t@example.com")
+    git("config", "user.name", "t")
+    (repo / "app.py").write_text("print('hi')\n")
+    git("add", "app.py")
+    git("commit", "-q", "-m", "base")
+    base_sha = git_out("rev-parse", "HEAD")
+    (repo / "app.py").write_text("print('hi')\nprint('bye')\n")
+    git("add", "app.py")
+    git("commit", "-q", "-m", "head")
+    head_sha = git_out("rev-parse", "HEAD")
+    return base_sha, head_sha
+
+
+def test_commit_mode_diffs_parent_to_commit(tmp_path):
+    """`--commit <sha>` resolves base=sha^ and head=sha — the plan entry pins the
+    parent and the commit SHAs, so the review scopes to exactly that commit."""
+    repo = tmp_path / "repo"
+    base_sha, head_sha = _two_commit_repo(repo)
+
+    rc = main(["review", "--commit", head_sha, "--root", str(repo), "--prepare"])
+    assert rc == 0
+
+    ws = _sidecar_ws(str(repo))
+    plan = json.loads((ws.runs / "review_plan.json").read_text())
+    assert [e["path"] for e in plan] == ["app.py"]
+    assert plan[0]["base"] == base_sha
+    assert plan[0]["head"] == head_sha
+
+
+def test_commit_with_base_exits_2(tmp_path):
+    """`--commit` and `--base` are mutually exclusive: supplying both exits 2."""
+    repo = tmp_path / "repo"
+    _base_sha, head_sha = _two_commit_repo(repo)
+
+    rc = main(
+        ["review", "--commit", head_sha, "--base", head_sha, "--root", str(repo), "--prepare"]
+    )
+    assert rc == 2
+
+
+def test_workspace_dirty_lists_uncommitted_changes(tmp_path):
+    """`--workspace-dirty` scopes the review to the working tree: a staged
+    modification, an unstaged modification, and an untracked file all appear."""
+    repo = tmp_path / "repo"
+    _two_commit_repo(repo)
+
+    def git(*args):
+        subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+
+    (repo / "app.py").write_text("print('hi')\nprint('bye')\nprint('dirty')\n")
+    git("add", "app.py")  # staged modification
+    (repo / "new.py").write_text("x = 1\n")  # untracked
+
+    rc = main(["review", "--workspace-dirty", "--root", str(repo), "--prepare"])
+    assert rc == 0
+
+    ws = _sidecar_ws(str(repo))
+    plan = json.loads((ws.runs / "review_plan.json").read_text())
+    assert {e["path"] for e in plan} == {"app.py", "new.py"}

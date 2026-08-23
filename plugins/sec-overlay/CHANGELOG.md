@@ -12,6 +12,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Commit and workspace-dirty review scopes (REQ-P5, Task 13): failing tests
+  first (RED in 1.96.1) for `diffscope.dirty_file_records` (a real-repo check
+  that it lists staged, unstaged, and untracked working-tree changes) and three
+  CLI tests — `--commit <sha>` scoping the review to `sha^..sha`, `--commit`
+  with `--base` exiting 2, and `--workspace-dirty` listing uncommitted changes.
+
 - Hard token budget (REQ-P4, Task 12): `review_budget.estimate_review_cost`
   projects OCR's plan-loop cost per file (prompt 2000, plan-out 400, 7 rounds,
   round-out 700; empty diff 21300) while `estimate_tokens` stays the raw

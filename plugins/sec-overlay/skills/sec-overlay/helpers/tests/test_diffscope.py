@@ -1,11 +1,15 @@
 """Tests for git diff scoping helpers."""
 
+import subprocess
+from functools import partial
+
 import pytest
 
 from sec_overlay.diffscope import (
     binary_paths,
     changed_file_records,
     changed_files,
+    dirty_file_records,
     file_diff_line_count,
     head_sha,
     resolve_ref_sha,
@@ -192,3 +196,32 @@ def test_rev_parse_precedes_diff_and_diff_never_sees_a_raw_ref(tmp_path):
     for i in diff_indexes:
         assert "main" not in runner.calls[i]
         assert "develop" not in runner.calls[i]
+
+
+def test_dirty_file_records_lists_staged_unstaged_untracked(tmp_path):
+    """`dirty_file_records` covers every working-tree change git reports: a staged
+    modification, an unstaged modification, and an untracked new file — the three
+    states `git status --porcelain` distinguishes, all against a real repo so the
+    parser is proven, not re-asserted from a hand-built fake."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    def git(*args):
+        subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+
+    git("init", "-q")
+    git("config", "user.email", "t@example.com")
+    git("config", "user.name", "t")
+    (repo / "staged.py").write_text("a = 1\n")
+    (repo / "unstaged.py").write_text("b = 1\n")
+    git("add", "staged.py", "unstaged.py")
+    git("commit", "-q", "-m", "base")
+
+    (repo / "staged.py").write_text("a = 2\n")
+    git("add", "staged.py")  # staged modification
+    (repo / "unstaged.py").write_text("b = 2\n")  # unstaged modification
+    (repo / "new.py").write_text("c = 1\n")  # untracked
+
+    runner = partial(subprocess.run, cwd=repo)
+    records = dirty_file_records(runner=runner)
+    assert {r.path for r in records} == {"staged.py", "unstaged.py", "new.py"}
