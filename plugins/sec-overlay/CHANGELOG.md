@@ -6,6 +6,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Failing REQ-M1 tests: F1 in the bench scorecard (`tests/test_bench.py`).
+
 - OCR-parity workstream docs: `docs/parity/EXTRACTION.md` (inventory of the
   OCR-vs-sec-overlay analysis, 3 extraction passes), `docs/parity/SPEC.md`
   (requirements + traceability matrix + dispositions), and

@@ -1102,3 +1102,6 @@ leaving the suite green.
 `test_docs_invariants.py`'s `_PHASE_DOC_LABELS` gained a `"recall-gate": "Recall gate"`
 entry. The CLAUDE.md phase-order guard had silently skipped `recall-gate` on the earlier
 label miss. It now enforces the row's position right after `Recon`.
+
+- `test_bench.py` also locks the REQ-M1 F1 contract: `_metrics` carries `f1`
+  (`2PR/(P+R)`), `None` when undefined; the scorecard markdown renders it.

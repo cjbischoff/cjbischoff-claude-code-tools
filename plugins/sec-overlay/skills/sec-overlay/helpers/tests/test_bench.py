@@ -128,3 +128,34 @@ def test_seed_corpus_is_valid():
     assert c.validate() == []
     assert len(c.positives()) >= 5 and len(c.negatives()) >= 3
     assert any(e.source == "dep-cve" for e in c.entries)
+
+
+# ---- f1 (REQ-M1) ----
+def _jr(fid, kind, detected, source="real-confirmed", cls="xss"):
+    from bench.judge import JudgeResult
+    return JudgeResult(finding_id=fid, kind=kind, source=source, cls=cls,
+                       detected=detected, method="deterministic", matched_id=None, reasoning="")
+
+
+def test_f1_computed():
+    from bench.tally import _metrics
+    results = ([_jr(f"P{i}", "positive", True) for i in range(3)]
+               + [_jr("P3", "positive", False)]
+               + [_jr("N0", "negative", True)])
+    m = _metrics(results)
+    assert abs(m["f1"] - 0.75) < 1e-9
+
+
+def test_f1_none_when_undefined():
+    from bench.tally import _metrics
+    assert _metrics([])["f1"] is None
+    # precision defined (0.0), recall defined (0.0) -> P+R == 0 -> None
+    m = _metrics([_jr("P0", "positive", False), _jr("N0", "negative", True)])
+    assert m["f1"] is None
+
+
+def test_f1_rendered_in_markdown():
+    corpus = Corpus([_entry("V1")])
+    sc = tally([_jr("V1", "positive", True)], corpus)
+    assert "F1" in sc.to_markdown()
+    assert "f1" in sc.to_dict()["overall"]
