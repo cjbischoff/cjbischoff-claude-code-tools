@@ -16,7 +16,7 @@ each candidate's class. `test_wiring.py` guards the wiring.
 | `injection.md` | Injection — canonical fix shape for SQL/command/template/etc. injection. |
 | `prompt-injection.md` | Prompt injection — canonical fix shape for untrusted-text-into-model attacks. |
 | `resource.md` | Resource exhaustion — canonical fix shape for DoS/unbounded-resource issues. |
-| `ssrf.md` | SSRF — canonical fix shape for server-side request forgery. |
+| `ssrf.md` | SSRF — canonical fix shape for server-side request forgery. Its proof tuple admits a `dependency-catalog:<entry-id>` receipt for element 1, when the sink lives in a dependency. It also admits a `semgrep:sec-overlay.absence.*` receipt for element 2, a construction that omits its safe option. |
 | `ssti.md` | Server-side template injection — discriminates caller text compiled as template source from caller text passed as template context; routes a sandbox escape in a non-template expression engine to `expr-eval-rce` instead. The `jinja2-sandbox-escape` catalog entry cites this file. |
 
 When a file here changes, update this README in the same commit (enforced by the pre-commit hook).

@@ -30,7 +30,18 @@ URL argument).
 
 A confirmable SSRF needs all three, each with a `file:line`:
 1. **Server-side request built from input** — a fetch/HTTP-client call whose destination (host, path, or redirect target) incorporates user-controllable data.
+   When the request is built inside a dependency rather than in first-party source, cite the
+   `references/dependency-sinks.json` entry with a `dependency-catalog:<entry-id>` receipt plus
+   the `file:line` where the caller hands text to that dependency. The OPA reference case: the
+   `rego.New` construction line is the citation, `dependency-catalog:opa-rego-http-send` names
+   the `http.send` sink. This receipt is Tier 2 — it locates the sink and never confirms alone,
+   so element 2 or element 3 must carry a Tier-1 receipt.
 2. **No allowlist/SSRF guard on every path** — missing or bypassable validation on the destination before the request fires.
+   An absence receipt satisfies this element:
+   `semgrep:sec-overlay.absence.<rule-id>` from `helpers/rules/absence/`, which fires only on a
+   construction that omits its safe option. State which option is absent by name
+   (`rego.Capabilities`, `SandboxedEnvironment`, a `timeout` argument). "No guard found" with no
+   named option is not element 2.
 3. **Attacker-controlled destination** — an attacker can steer the resolved address to an internal/unintended target.
 
 **Instance preservation:** do NOT collapse sibling instances that share a CWE but hit distinct concrete sinks/routes into one finding. Expand every concrete instance as its own candidate; dedupe merges only exact `(file,line,cls)` collisions.

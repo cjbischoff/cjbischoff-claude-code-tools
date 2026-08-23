@@ -116,6 +116,11 @@ the agent doesn't re-raise known false positives.
 pattern such as `rego.New($ARGS)` matches nothing). The agent must confirm the rule fires on a
 known-bad line before trusting its silence.
 
+Its tool-grounding rule also names `dependency-catalog:<entry-id>` as a mechanical receipt. It
+is a Tier-2 receipt: it locates a sink inside a dependency but never confirms a finding alone.
+A gate needs a paired Tier-1 receipt too — a `semgrep:sec-overlay.absence.*` hit on the missing
+safe option, or a codeql dataflow path.
+
 ### Phase 4 — False-positive ladder
 | Prompt | Model | Job |
 |--------|-------|-----|

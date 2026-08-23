@@ -101,3 +101,31 @@ def test_architecture_prompt_requires_all_controls():
 def test_threat_model_retains_every_entrypoint():
     txt = (AGENTS / "threat-model.md").read_text().lower()
     assert "every entrypoint" in txt or "each entrypoint" in txt
+
+
+def _proof_tuple_section(txt):
+    marker = "## Proof tuple (required evidence)"
+    start = txt.index(marker)
+    rest = txt[start + len(marker) :]
+    next_heading = rest.find("\n## ")
+    end = start + len(marker) + (next_heading if next_heading != -1 else len(rest))
+    return txt[start:end]
+
+
+def test_ssrf_proof_tuple_admits_the_dependency_internal_sink():
+    """Without this, an OPA http.send finding can never leave `raw`: there is no
+    first-party line to cite for element 1."""
+    from pathlib import Path
+
+    txt = (Path(__file__).resolve().parents[2] / "agents" / "classes" / "ssrf.md").read_text()
+    section = _proof_tuple_section(txt)
+    assert "dependency-catalog" in section
+    assert "sec-overlay.absence" in section
+
+
+def test_investigate_tool_grounding_names_the_two_new_receipts():
+    from pathlib import Path
+
+    txt = (Path(__file__).resolve().parents[2] / "agents" / "investigate.md").read_text()
+    assert "dependency-catalog" in txt
+    assert "never confirms alone" in txt or "cannot confirm alone" in txt

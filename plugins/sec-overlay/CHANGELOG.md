@@ -46,6 +46,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   sink lives inside a declared dependency's own code. It locates the sink
   named by a `dependency-sinks.json` catalog entry; it never confirms a
   finding alone. `EVIDENCE_VOCABULARY` documents the new receipt form.
+- The SSRF class prompt's proof tuple now admits a `dependency-catalog:<id>`
+  receipt for element 1 and a `semgrep:sec-overlay.absence.*` receipt for
+  element 2. `investigate.md`'s tool-grounding rule names
+  `dependency-catalog` as a Tier-2 receipt that never confirms a gate alone.
 
 ### Fixed
 

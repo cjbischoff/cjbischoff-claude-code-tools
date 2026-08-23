@@ -136,6 +136,12 @@ tool-grounded gate (reachability, sanitizer-scope). If no tool can be run for
 a gate, say so explicitly and mark the finding lower-confidence, never
 silently pass it.
 
+`dependency-catalog:<entry-id>` is a mechanical receipt but a Tier-2 one: it satisfies the
+"where is the sink" half of a gate and never confirms alone. A finding whose only mechanical
+receipt is a catalog match stays `candidate`. Pair it with a Tier-1 receipt — a
+`semgrep:sec-overlay.absence.*` hit on the missing safe option, or a codeql dataflow path to
+the construction.
+
 ## Output (REQUIRED)
 Write each finding as JSON to `{{WORKSPACE}}/findings/<id>.json` matching this shape
 (the Finding schema — see `{{HELPERS_DIR}}/fixtures/golden_raw_finding.json`):
