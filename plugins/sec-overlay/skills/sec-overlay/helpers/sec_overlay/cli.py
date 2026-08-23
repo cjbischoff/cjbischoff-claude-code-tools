@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
+import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -68,7 +70,13 @@ from sec_overlay.review_coverage import (
 )
 from sec_overlay.review_findings import GatedFinding, apply_profile, classify
 from sec_overlay.review_result import write_review_result
-from sec_overlay.rule_glob import RuleSafetyError, build_resolution, glob_match, resolve_rule_doc
+from sec_overlay.rule_glob import (
+    RuleSafetyError,
+    build_resolution,
+    glob_match,
+    resolve_rule_doc,
+    resolve_with_layer,
+)
 from sec_overlay.sarif import to_sarif
 from sec_overlay.sast import run_semgrep
 from sec_overlay.scanscope import resolve as _resolve_scope
@@ -877,6 +885,25 @@ def run_review(
     return 3
 
 
+class _SuggestingParser(argparse.ArgumentParser):
+    """Argparse parser that names the nearest valid choice on a bad subcommand.
+
+    On an "invalid choice" error, appends a `difflib`-derived "Did you mean"
+    line so a misspelled subcommand or flag points at the closest match
+    (REQ-S4) before delegating to the standard exit-2 behavior.
+    """
+
+    def error(self, message: str):
+        match = re.search(r"invalid choice: '([^']+)'", message)
+        if match:
+            quoted = re.findall(r"'([^']+)'", message)
+            bad, choices = quoted[0], quoted[1:]
+            close = difflib.get_close_matches(bad, choices, n=1)
+            if close:
+                message = f"{message}\n\nDid you mean '{close[0]}'?"
+        super().error(message)
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point.
 
@@ -886,7 +913,7 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         Process exit code.
     """
-    parser = argparse.ArgumentParser(prog="sec-overlay")
+    parser = _SuggestingParser(prog="sec-overlay")
     sub = parser.add_subparsers(dest="cmd", required=True)
     scan = sub.add_parser("scan", help="Run the deterministic scan pipeline.")
     scan.add_argument("--target", required=True)
@@ -917,6 +944,12 @@ def main(argv: list[str] | None = None) -> int:
     sessions_show.add_argument("session", help="A slug, or 'latest'.")
     sessions_show.add_argument("--target", required=True)
     sessions_show.add_argument("--severity", default=None, help="Filter findings by severity.")
+
+    rules_p = sub.add_parser("rules", help="Inspect resolved review-rule layers.")
+    rules_sub = rules_p.add_subparsers(dest="rules_cmd", required=True)
+    rules_check = rules_sub.add_parser("check", help="Show the rule doc + layer for a path.")
+    rules_check.add_argument("path", help="Repo-relative path to resolve a rule for.")
+    rules_check.add_argument("--root", default=".", help="Repo root holding .sec-overlay/rule.json.")
 
     audit = sub.add_parser("audit", help="run the deterministic audit driver")
     audit.add_argument("--target", required=True)
@@ -1068,6 +1101,13 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         detail = sessions_mod.session_detail(session_dir, severity=args.severity)
         print(sessions_mod.render_detail(detail))
+        return 0
+
+    if args.cmd == "rules":
+        resolution = build_resolution(None, [], Path(args.root))
+        layer, text = resolve_with_layer(args.path, resolution)
+        print(f"layer: {layer}")
+        print(text)
         return 0
 
     if args.cmd == "audit":

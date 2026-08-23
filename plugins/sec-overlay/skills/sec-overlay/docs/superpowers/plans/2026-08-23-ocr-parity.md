@@ -129,7 +129,7 @@
 
 ### Task 20: REQ-S4 — rules check + did-you-mean
 **Files:** Modify `cli.py` (`rules check <path>` printing doc + layer; argparse error hook via `difflib.get_close_matches`); Test append.
-- [ ] RED: resolver output test; misspelled subcommand names nearest. Commit. GREEN: implement. Commit.
+- [x] RED: resolver output test; misspelled subcommand names nearest. Commit. GREEN: implement. Commit.
 
 ## Milestone 4
 

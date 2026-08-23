@@ -13,6 +13,10 @@ test cannot see: an edit to `detection_coverage.py` with no matching regeneratio
 The fake-response `R` classes in `test_review_tracer.py` and `test_diffscope.py` declare
 `stdout = ""` as a class attribute so `ty check` resolves the attribute; behavior is unchanged.
 
+`test_rules_check.py` covers the `rules check` CLI and `resolve_with_layer`: the project layer
+resolves to the mapped rule doc, an unmapped path falls through to the built-in doc, and a
+misspelled top-level subcommand names the nearest valid one via `difflib` (REQ-S4).
+
 `test_stage_validate.py` covers the `_adapt_dict` / `_adapt_optional_dict` rejection paths:
 a non-dict output for a dict-adapted stage returns `["stage output must be an object"]`, a
 non-dict non-None output for `reachability` returns `["stage output must be an object or null"]`,

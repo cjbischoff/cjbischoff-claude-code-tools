@@ -15,7 +15,7 @@ def repo_with_rule(tmp_path: Path) -> Path:
     repo = tmp_path / "repo"
     sidecar = repo / ".sec-overlay"
     sidecar.mkdir(parents=True)
-    (sidecar / "myrule.md").write_text("PROJECT RULE BODY")
+    (repo / "myrule.md").write_text("PROJECT RULE BODY")
     (sidecar / "rule.json").write_text(
         json.dumps({"rules": [{"path": "src/**", "rule": "myrule.md"}]})
     )

@@ -548,3 +548,31 @@ def resolve_rule_doc(path: str, resolution: RuleResolution | None = None) -> str
                     return merge_with_system_rule(_resolve_builtin_or_default(path), entry.rule)
                 return entry.rule
     return _resolve_builtin_or_default(path)
+
+
+def resolve_with_layer(path: str, resolution: RuleResolution | None = None) -> tuple[str, str]:
+    """Resolve a path to its rule-doc text and the layer that answered.
+
+    Same per-path fallthrough as :func:`resolve_rule_doc`, but also names the
+    winning layer so `rules check` can show a human which rule applies and why.
+
+    Args:
+        path: A forward-slash-separated relative path to the file.
+        resolution: The four-layer resolution to walk; `None` resolves against
+            the built-in map alone.
+
+    Returns:
+        A ``(layer, text)`` pair. ``layer`` is ``custom``, ``project``,
+        ``global``, or ``builtin`` (with a ``+builtin`` suffix when the entry
+        merged the built-in rule text).
+    """
+    labels = ("custom", "project", "global")
+    if resolution is not None:
+        for label, layer in zip(labels, resolution.layers, strict=False):
+            entry = match_project_rule_entry(layer, path)
+            if entry is not None:
+                if entry.merge_system_rule:
+                    merged = merge_with_system_rule(_resolve_builtin_or_default(path), entry.rule)
+                    return f"{label}+builtin", merged
+                return label, entry.rule
+    return "builtin", _resolve_builtin_or_default(path)

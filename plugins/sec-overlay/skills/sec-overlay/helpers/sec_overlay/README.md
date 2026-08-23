@@ -804,6 +804,15 @@ gate's `repo_root` is exactly whatever base `load_project_rule` was already pass
 custom/global), not a separately threaded true project root, since a global config under
 `~/.sec-overlay/` is essentially never nested under an arbitrary project's `repo_root`.
 
+REQ-S4 adds `resolve_with_layer(path, resolution)`, a thin sibling of `resolve_rule_doc` that
+returns a `(layer, text)` pair — the winning layer label (`custom`/`project`/`global`, or
+`custom+builtin` etc. when the entry merges the system rule, else `builtin`) alongside the resolved
+doc text. `cli.py`'s `rules check <path> --root` prints that pair for one path, so a maintainer can
+see which layer a rule came from without running a review. The top-level parser is a
+`_SuggestingParser`: on an argparse "invalid choice" error it appends a `difflib.get_close_matches`
+"Did you mean '<x>'?" line before the standard exit-2, so a misspelled subcommand names the nearest
+valid one.
+
 Phase 3 plan 03 (Task 1) extends `BUILTIN_PATH_RULE_MAP` from its single `python.md` entry to
 nine, mirroring OCR's `system_rules.json` pattern strings and doc filenames exactly (D-02): one
 entry per built-in language plus a trailing `"**/*": "default.md"` catch-all, so `default.md` is

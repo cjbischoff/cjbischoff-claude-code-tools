@@ -12,11 +12,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
-- Rules check + did-you-mean (REQ-S4, Task 20 RED): RED tests in
-  `tests/test_rules_check.py` pin `rule_glob.resolve_with_layer` (returns the
-  matched layer label plus the rule-doc text, falling through to `builtin`), a
-  `rules check <path> --root` CLI subcommand that prints both, and an argparse
-  error hook that names the nearest valid subcommand for a misspelling.
+- Rules check + did-you-mean (REQ-S4): `rule_glob.resolve_with_layer` returns
+  the matched layer label plus the rule-doc text (falling through to `builtin`),
+  a `rules check <path> --root` CLI subcommand prints both, and a
+  `_SuggestingParser` appends a `difflib` "Did you mean" line naming the nearest
+  valid subcommand for a misspelling. Tests in `tests/test_rules_check.py`.
 - Sessions list/show (REQ-S2, Task 19 GREEN): new read-only
   `sec_overlay/sessions.py` renders the sidecar `state.json` plus review
   ledgers — `session_rows`/`render_rows` produce one row per slug (pass, sha,
