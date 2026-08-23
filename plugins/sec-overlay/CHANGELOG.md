@@ -6,6 +6,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Verified-fix rate (REQ-T3c/T3h, Task 22 RED): RED tests in
+  `tests/test_bench.py` pin that `tally(..., findings_by_id=...)` reports a
+  `verified_fix_rate` = (`fixed` ∪ `verified-static`) / confirmed true-positives,
+  exposes a `verified_fix` block in the scorecard dict and a headline markdown
+  row, and leaves the rate `None` when no fix data is supplied.
 - Fast/assured tiers (REQ-T3a, Task 21 GREEN): `run_review` gains a `tier`
   argument (`--tier fast|assured`, default `assured`). The `fast` tier skips the
   plan half — a `--prepare --plan` run returns without writing

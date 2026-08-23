@@ -300,3 +300,35 @@ def test_scorecard_markdown_states_scope_confound():
     md = tally([_jr("V1", "positive", True)], corpus).to_markdown().lower()
     assert "confound" in md
     assert "reviews less" in md
+
+
+# ---- verified-fix rate (REQ-T3c/T3h) ----
+def _jrm(fid, matched_id, **kw):
+    from bench.judge import JudgeResult
+    base = dict(kind="positive", source="real-confirmed", cls="xss", detected=True,
+                method="deterministic", reasoning="")
+    base.update(kw)
+    return JudgeResult(finding_id=fid, matched_id=matched_id, **base)
+
+
+def test_verified_fix_rate_counts_fixed_and_verified_static():
+    """REQ-T3c/T3h: verified_fix_rate = (fixed ∪ verified-static) / confirmed TPs."""
+    corpus = Corpus([_entry("V1"), _entry("V2"), _entry("V3")])
+    results = [_jrm("V1", "f1"), _jrm("V2", "f2"), _jrm("V3", "f3")]
+    findings_by_id = {
+        "f1": _f("f1", "xss", "app.js", 10, status=FindingStatus.FIXED),
+        "f2": replace(_f("f2", "xss", "app.js", 10), verification="verified-static"),
+        "f3": _f("f3", "xss", "app.js", 10),   # confirmed, not fixed
+    }
+    sc = tally(results, corpus, findings_by_id=findings_by_id)
+    assert sc.verified_fix_rate == 2 / 3
+    vf = sc.to_dict()["verified_fix"]
+    assert vf == {"fixed": 2, "confirmed": 3, "rate": 2 / 3}
+    assert "verified-fix rate" in sc.to_markdown().lower()
+
+
+def test_verified_fix_rate_absent_without_fix_data():
+    corpus = Corpus([_entry("V1")])
+    sc = tally([_jr("V1", "positive", True)], corpus)
+    assert sc.verified_fix_rate is None
+    assert "verified_fix" not in sc.to_dict()
