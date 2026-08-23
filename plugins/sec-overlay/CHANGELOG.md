@@ -48,6 +48,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - `test_absence_rules.py`'s metadata guard now checks that each rule's own
   block carries a `cls:` line after its `metadata:` line, instead of a raw
   file-wide `cls:` count that a rule with no `metadata.cls` could still pass.
+- `run_astgrep_rule()`'s docstring now names only the non-JSON/empty-output
+  case its code actually catches, instead of overclaiming coverage of a
+  missing `ast-grep` binary, which still raises `FileNotFoundError`.
 
 ## 1.69.15 - 2026-08-22
 

@@ -136,8 +136,7 @@ def run_astgrep_rule(yaml_text: str, root: str, *, runner=subprocess.run) -> lis
         runner: Injection point for tests.
 
     Returns:
-        One ``{"file", "line", "text"}`` dict per match; empty on any parse or
-        tool failure, so a broken rule never blocks the caller.
+        Parsed matches ``[{file, line, text}]``; empty on non-JSON/empty output.
     """
     cmd = [_binary(), "scan", "--inline-rules", yaml_text, "--json", root]
     completed = runner(cmd, capture_output=True, text=True, check=False)

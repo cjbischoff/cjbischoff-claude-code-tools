@@ -94,8 +94,8 @@ identifier silently rewritten — a verdict grounded on that would be wrong).
   `rg` for discovery — but treat a Read as the source of truth for the bytes.
 - An absence check inverts that risk: an over-rigid pattern reports every call site as unsafe,
   including the ones already fixed. Before you cite an absence, run the rule against a site you
-  know carries the safe option and confirm it produces no match. A rule that fires on the fixed
-  code is not evidence.
+  know carries the safe option. Confirm the rule produces no match there. A rule that fires on
+  the fixed code is not evidence.
 - Only mechanical receipts satisfy gates; a receipt you cannot reproduce with a
   Read/ast-grep is not a receipt.
 

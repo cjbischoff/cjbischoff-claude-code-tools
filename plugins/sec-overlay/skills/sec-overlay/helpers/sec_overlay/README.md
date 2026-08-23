@@ -980,3 +980,8 @@ construction present, its safe option absent). Go needs hand-written `kind`/`has
 `build_rule()` does not generate it, because a bare selector-call pattern such as
 `rego.New($ARGS)` matches nothing in Go. See the module map entry in [`../README.md`](../README.md)
 for the full contract.
+
+`run_astgrep_rule()`'s docstring now names only the non-JSON/empty-output case its `except`
+catches. A missing `ast-grep`/`sg` binary still raises `FileNotFoundError` from `runner(...)` —
+correct, since the harness treats a backend that never ran as a coverage hole, not a clean
+empty result.
