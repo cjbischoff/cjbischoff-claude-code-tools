@@ -358,8 +358,9 @@ part of a longer word (`auth` inside `authorization`) is still flagged as a gap.
 `route_census.py` (new) derives a route inventory straight from source, via ripgrep over
 `references/route-frameworks.json`'s framework patterns — `route_control.py`'s table reads
 recon's own `kb/scan-profile.json`, so this module gives a later check something recon did not
-produce. `census()` returns `[]` on any ripgrep failure; the module map entry in
-[`../README.md`](../README.md) has the full contract. CLI-callable.
+produce. `census()` returns `[]` when ripgrep exits nonzero or matches nothing. A missing ripgrep
+binary raises `FileNotFoundError`, because preflight owns binary availability. The module map entry
+in [`../README.md`](../README.md) has the full contract. CLI-callable.
 
 `class_ext.py` (new) provides `class_extension_status(classes, classes_dir)` to check which
 investigate/patch extension files exist; absent classes are logged as gaps so coverage is never

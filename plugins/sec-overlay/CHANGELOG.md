@@ -77,6 +77,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - `bench/README.md` now states that the documented `bench.run` command exits 1
   when no scanned workspace is supplied. A locked positive counts as regressed,
   so an operator must not gate CI on that exit status.
+- The two module-map entries for `route_census.census()` no longer claim an
+  empty return on any ripgrep failure. A missing ripgrep binary raises
+  `FileNotFoundError`, because preflight owns binary availability.
 
 ## 1.69.15 - 2026-08-22
 

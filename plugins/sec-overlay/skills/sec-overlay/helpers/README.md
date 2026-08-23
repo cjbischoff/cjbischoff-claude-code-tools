@@ -199,7 +199,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `coverage_guide.py` | Auto-stop condition for multi-pass campaigns (coverage-complete AND yield-below-threshold). |
 | `discovery_ledger.py` | Loop-until-dry saturation state: stop after K consecutive waves add no new fingerprints. |
 | `route_control.py` | One route-to-control table from `kb/scan-profile.json`; checks recon/architecture/threat-model output against it, logging a `needs_follow_up` gap (never dropping) via `record_route_gaps` into `coverage-ledger.json`. |
-| `route_census.py` | Derives a route inventory from source code via `references/route-frameworks.json` + ripgrep, never from recon's own output. `census()` returns empty on a ripgrep failure; a phase never halts on it. CLI-callable. |
+| `route_census.py` | Derives a route inventory from source code via `references/route-frameworks.json` + ripgrep, never from recon's own output. `census()` returns empty when ripgrep exits nonzero or matches nothing. A missing ripgrep binary raises `FileNotFoundError`, because preflight owns binary availability. CLI-callable. |
 
 ### Diff-scoped review (`sec-overlay review` — tracer path)
 | Module | Purpose |
