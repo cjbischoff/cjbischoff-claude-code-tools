@@ -12,6 +12,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Live-reflection wiring tests (REQ-P6, RED): failing tests in
+  `tests/test_reflection.py` and `tests/test_review_live.py` pin the coming
+  recorded-verdict source — `reflection_label(path)`,
+  `recorded_verdict_source(ws, *, base, head)`, end-to-end retraction/refusal
+  through `run_review`, missing-verdict `ReflectionSkip` (never a silent
+  keep-all), and a `--prepare-reflection` prompt-render mode.
+
 - Protocol + reproducibility docs (REQ-R3 + REQ-R1/R4): the scorecard markdown now
   emits a "Scope confound" statement, and `bench/README.md` documents the annotation
   protocol (single-maintainer adjudication, judge-disagreement handling), a

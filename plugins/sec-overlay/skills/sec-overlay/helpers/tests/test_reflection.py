@@ -18,6 +18,8 @@ from sec_overlay.reflection import (
     ReflectionRetraction,
     ReflectionSkip,
     apply_verdict,
+    recorded_verdict_source,
+    reflection_label,
     render_reflection_prompt,
     validate_verdict,
 )
@@ -27,7 +29,7 @@ from sec_overlay.report import (
     to_markdown,
     write_review_ledger,
 )
-from sec_overlay.workspace import Workspace
+from sec_overlay.workspace import Workspace, record_agent_return
 
 
 class _Finding:
@@ -228,3 +230,48 @@ def test_write_review_ledger_writes_no_second_artifact_file_for_reflection(tmp_p
     json_files = list((tmp_path / "artifacts").glob("*.json"))
     reflection_named = [p for p in json_files if "reflection" in p.name]
     assert reflection_named == []
+
+
+# --- recorded_verdict_source (Task 9, REQ-P6) ---------------------------------
+
+_BASE = "a" * 40
+_HEAD = "b" * 40
+
+
+def _record_verdict(ws: Workspace, path: str, verdict: dict, *, base=_BASE, head=_HEAD) -> None:
+    envelope = json.dumps({"base": base, "head": head, "verdict": verdict})
+    record_agent_return(ws, reflection_label(path), envelope)
+
+
+def test_recorded_verdict_source_returns_the_recorded_mapping(tmp_path: Path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    _record_verdict(ws, "app.py", {"review-abc": "sanitized upstream"})
+    source = recorded_verdict_source(ws, base=_BASE, head=_HEAD)
+    assert source("app.py") == {"review-abc": "sanitized upstream"}
+
+
+def test_recorded_verdict_source_raises_when_no_return_recorded(tmp_path: Path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    source = recorded_verdict_source(ws, base=_BASE, head=_HEAD)
+    with pytest.raises(ValueError):
+        source("app.py")
+
+
+def test_recorded_verdict_source_raises_on_invalid_json(tmp_path: Path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    record_agent_return(ws, reflection_label("app.py"), "not-json")
+    source = recorded_verdict_source(ws, base=_BASE, head=_HEAD)
+    with pytest.raises(ValueError):
+        source("app.py")
+
+
+def test_recorded_verdict_source_refuses_a_stale_base_head(tmp_path: Path):
+    ws = Workspace(tmp_path)
+    ws.ensure()
+    _record_verdict(ws, "app.py", {"review-abc": "x"}, base="c" * 40, head="d" * 40)
+    source = recorded_verdict_source(ws, base=_BASE, head=_HEAD)
+    with pytest.raises(ValueError):
+        source("app.py")

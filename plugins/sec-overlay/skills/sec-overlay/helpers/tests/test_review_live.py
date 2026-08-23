@@ -6,7 +6,8 @@ import subprocess
 from sec_overlay import cli
 from sec_overlay.cli import main, run_review
 from sec_overlay.repo_memory import RepoMemory
-from sec_overlay.review_agent import agent_label
+from sec_overlay.reflection import REFUSED_REASON, RETRACTED_REASON, reflection_label
+from sec_overlay.review_agent import _stable_finding_id, agent_label
 from sec_overlay.workspace import record_agent_return
 
 _BASE_SHA = "a" * 40
@@ -103,6 +104,14 @@ def _record_return(root, path, *, base=_BASE_SHA, head=_HEAD_SHA, calls):
 def _code_comment(path, line, message, defect_class="sqli"):
     return {"tool": "code_comment", "path": path, "line": line, "message": message,
             "defect_class": defect_class}
+
+
+def _record_verdict(root, path, verdict, *, base=_BASE_SHA, head=_HEAD_SHA):
+    """Record a review-filter verdict envelope for `path` (production disk format)."""
+    ws = _sidecar_ws(root)
+    ws.ensure()
+    envelope = json.dumps({"base": base, "head": head, "verdict": verdict})
+    record_agent_return(ws, reflection_label(path), envelope)
 
 
 def test_prepare_writes_plan_and_prompt_per_file(tmp_path, monkeypatch):
@@ -268,6 +277,83 @@ def test_reflection_failure_for_one_file_leaves_other_files_unaffected(tmp_path,
     assert len(ledger["reflection_skipped"]) == 1
     assert ledger["reflection_skipped"][0]["path"] == "app.py"
     assert {rf["path"] for rf in ledger["review_findings"]} == {"app.py", "other.py"}
+
+
+def test_recorded_verdict_retracts_a_nonprotected_finding_end_to_end(tmp_path, monkeypatch):
+    """Task 9 (REQ-P6): a recorded review-filter verdict retracts a live finding
+    through `run_review` with no monkeypatch of `apply_verdict` — the real
+    recorded-verdict source drives the retraction."""
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+    fid = _stable_finding_id("review", "app.py", 2, "sqli")
+    _record_verdict(str(tmp_path), "app.py", {fid: "sanitized upstream"})
+
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc == 0
+
+    ws = _sidecar_ws(tmp_path)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
+    assert ledger["review_findings"] == []
+    assert len(ledger["reflection_retractions"]) == 1
+    assert ledger["reflection_retractions"][0]["reason"] == RETRACTED_REASON
+
+
+def test_recorded_verdict_refuses_a_protected_class_finding_end_to_end(tmp_path, monkeypatch):
+    """Task 9 (REQ-P6): a verdict naming a protected-class finding is refused —
+    the finding stays kept and the refusal is ledgered, never silently dropped."""
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "unsynchronized shared state", "concurrency")])
+    fid = _stable_finding_id("review", "app.py", 2, "concurrency")
+    _record_verdict(str(tmp_path), "app.py", {fid: "looks harmless"})
+
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc == 0
+
+    ws = _sidecar_ws(tmp_path)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
+    assert len(ledger["review_findings"]) == 1
+    assert ledger["review_findings"][0]["defect_class"] == "concurrency"
+    assert len(ledger["reflection_retractions"]) == 1
+    assert ledger["reflection_retractions"][0]["reason"] == REFUSED_REASON
+
+
+def test_missing_verdict_records_a_reflection_skip_not_a_silent_keep(tmp_path, monkeypatch):
+    """Task 9 (REQ-P6): a reviewable file with findings but no recorded verdict
+    fails open — the finding survives AND a reflection_skipped entry is ledgered
+    (never a silent keep-all)."""
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security")
+    assert rc == 0
+
+    ws = _sidecar_ws(tmp_path)
+    ledger = json.loads((ws.artifacts / "review_ledger.json").read_text())
+    assert len(ledger["review_findings"]) == 1
+    assert len(ledger["reflection_skipped"]) == 1
+    assert ledger["reflection_skipped"][0]["path"] == "app.py"
+
+
+def test_prepare_reflection_writes_a_filter_prompt_per_file_with_findings(tmp_path, monkeypatch):
+    """Task 9 (REQ-P6): `--prepare-reflection` renders a review-filter prompt for
+    each file with post-profile kept findings into runs/reflection_prompts/."""
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+
+    rc = main(["review", "--base", _BASE_SHA, "--head", _HEAD_SHA, "--root", str(tmp_path),
+               "--prepare-reflection"])
+    assert rc == 0
+
+    ws = _sidecar_ws(tmp_path)
+    plan = json.loads((ws.runs / "reflection_plan.json").read_text())
+    assert {e["path"] for e in plan} == {"app.py"}
+    for entry in plan:
+        prompt_text = (ws.runs / "reflection_prompts" / f"{entry['agent_label']}.md").read_text()
+        assert "{{" not in prompt_text
 
 
 def test_finding_on_an_unreflected_path_survives(tmp_path, monkeypatch):

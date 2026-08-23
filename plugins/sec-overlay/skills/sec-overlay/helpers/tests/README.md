@@ -97,7 +97,20 @@ never mutates its input list. Six more tests (Task 2) cover the ledger's markdow
 path/reason/error row per `ReflectionSkip`; `to_markdown` renders `REFLECTION_SKIPPED_HEADING` even
 with zero findings; `write_review_ledger` writes a `reflection_skipped` key matching the dataclass
 fields, keeps applied and refused retractions in the same `reflection_retractions` list, and never
-writes a second `*reflection*.json` artifact file.
+writes a second `*reflection*.json` artifact file. Four more tests (Task 9, REQ-P6) pin the
+recorded-verdict source that drives production reflection: `recorded_verdict_source(ws, *, base,
+head)` returns the recorded `{id: analysis}` mapping for a path, and raises `ValueError` when no
+return is recorded, the return is not JSON, or the envelope's `base`/`head` is stale — mirroring
+`review_agent.recorded_return_source`. The envelope is written under `reflection_label(path)` via
+`record_agent_return`.
+
+`test_review_live.py` (Task 9, REQ-P6) adds four end-to-end tests through `run_review` with no
+`apply_verdict` monkeypatch: a recorded verdict retracts a non-protected finding
+(`RETRACTED_REASON`), a verdict naming a protected-class finding is refused and the finding stays
+kept (`REFUSED_REASON`), a reviewable file with findings but no recorded verdict fails open (finding
+survives AND a `reflection_skipped` entry is ledgered — never a silent keep-all), and
+`--prepare-reflection` renders one review-filter prompt per file with post-profile kept findings
+into `runs/reflection_prompts/`.
 
 `test_review_agent.py` (12 tests, Phase 3 Plan 06 Task 1) covers `review_agent.py`'s prompt
 render and response parse, monkeypatching `_review_file_template_path` to a `tmp_path` fixture
