@@ -1,0 +1,52 @@
+# First-party absence rules. NEVER move these under rules/semgrep/ — that
+# directory is a gitignored clone that preflight.py recreates, so a rule placed
+# there is deleted and never committed.
+#
+# The idiom: `patterns` requires the dangerous construction, `pattern-not`
+# requires that the safe option is absent from it. A rule with only the
+# `pattern` half reports every call site, safe ones included.
+rules:
+  - id: go-rego-new-missing-capabilities
+    languages: [go]
+    severity: WARNING
+    message: >-
+      rego.New without rego.Capabilities. A policy evaluated here may call the
+      http.send builtin, so caller-supplied policy text is an outbound-request
+      sink inside OPA. Pass rego.Capabilities with http.send removed.
+    metadata:
+      cls: ssrf
+      source: sec-overlay:absence
+      safe_option: rego.Capabilities
+    patterns:
+      - pattern: rego.New(...)
+      - pattern-not: rego.New(..., rego.Capabilities(...), ...)
+
+  - id: go-cel-env-missing-declarations
+    languages: [go]
+    severity: WARNING
+    message: >-
+      cel.NewEnv with no declaration list. Every host function the environment
+      inherits is reachable from caller-supplied expression text.
+    metadata:
+      cls: expr-eval-rce
+      source: sec-overlay:absence
+      safe_option: cel.Declarations
+    patterns:
+      - pattern: cel.NewEnv(...)
+      - pattern-not: cel.NewEnv(..., cel.Declarations(...), ...)
+      - pattern-not: cel.NewEnv(..., cel.Variable(...), ...)
+
+  - id: go-lua-state-missing-skipopenlibs
+    languages: [go]
+    severity: WARNING
+    message: >-
+      lua.NewState without SkipOpenLibs. The default standard library exposes os
+      and io functions to caller-supplied Lua.
+    metadata:
+      cls: expr-eval-rce
+      source: sec-overlay:absence
+      safe_option: SkipOpenLibs
+    patterns:
+      - pattern: lua.NewState(...)
+      - pattern-not: |
+          lua.NewState(&lua.Options{..., SkipOpenLibs: true, ...})

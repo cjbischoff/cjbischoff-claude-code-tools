@@ -1,0 +1,36 @@
+# First-party absence rules. See go-policy-engines.yaml for the placement rule.
+rules:
+  - id: python-jinja2-environment-missing-sandbox
+    languages: [python]
+    severity: WARNING
+    message: >-
+      jinja2.Environment renders caller-supplied template text. Attribute
+      traversal from a template reaches Python objects. Use
+      jinja2.sandbox.SandboxedEnvironment.
+    metadata:
+      cls: ssti
+      source: sec-overlay:absence
+      safe_option: SandboxedEnvironment
+    patterns:
+      - pattern-either:
+          - pattern: Environment(...).from_string(...)
+          - pattern: jinja2.Environment(...).from_string(...)
+      - pattern-not: SandboxedEnvironment(...).from_string(...)
+      - pattern-not: jinja2.sandbox.SandboxedEnvironment(...).from_string(...)
+
+  - id: python-requests-missing-timeout
+    languages: [python]
+    severity: WARNING
+    message: >-
+      requests call with no timeout. A slow or hostile endpoint holds the worker
+      until the socket closes.
+    metadata:
+      cls: resource
+      source: sec-overlay:absence
+      safe_option: timeout
+    patterns:
+      - pattern-either:
+          - pattern: requests.get(...)
+          - pattern: requests.post(...)
+          - pattern: requests.request(...)
+      - pattern-not: requests.$M(..., timeout=$T, ...)

@@ -6,6 +6,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Tracked absence rule pack (`helpers/rules/absence/`): first-party semgrep
+  rules that flag a dangerous construction only when its safe option is
+  absent, for OPA `rego.New`, `cel.NewEnv`, `lua.NewState`, Jinja2
+  `Environment`, and `requests` calls without a timeout.
 - Dependency-sink catalog (`references/dependency-sinks.json`) and its loader,
   naming dependencies whose own code holds the sink.
 - `match_manifests()`/`matched_classes()` and a `match --root <dir>` CLI
