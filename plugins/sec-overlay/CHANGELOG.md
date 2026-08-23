@@ -4,6 +4,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- Fast/assured tiers (REQ-T3a, Task 21 RED): RED tests in
+  `tests/test_review_live.py` pin that `run_review(..., tier="fast")` records the
+  tier in `review_result.json` and its coverage manifest, and that a fast-tier
+  `--prepare --plan` run skips the plan half (no `plan_manifest.json`) while the
+  assured default still emits it over the plan-line threshold.
+
 ### Fixed
 
 - Judge severity write-back (REQ-P9): `calibrate.py` now lowers `f.severity`

@@ -818,6 +818,41 @@ def test_recorded_plan_guidance_injected_into_review_prompt(tmp_path, monkeypatc
     assert "{{" not in prompt
 
 
+def test_consume_records_fast_tier(tmp_path, monkeypatch):
+    """REQ-T3a: the consume path records the assurance tier in review_result.json."""
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security", tier="fast")
+    assert rc == 0
+    ws = _sidecar_ws(tmp_path)
+    result = json.loads((ws.artifacts / "review_result.json").read_text())
+    assert result["tier"] == "fast"
+    assert result["coverage_manifest"]["tier"] == "fast"
+
+
+def test_fast_tier_skips_plan_half_assured_keeps_it(tmp_path, monkeypatch):
+    """REQ-T3a: fast tier skips the plan half even with --plan; assured keeps it."""
+    diffs = {"big.py": _diff_for("big.py")}
+    sizes = {"big.py": PLAN_LINE_THRESHOLD}
+    monkeypatch.setattr(subprocess, "run", _fake_run_planmode(diffs, sizes))
+    assured = tmp_path / "assured"
+    fast = tmp_path / "fast"
+    assured.mkdir()
+    fast.mkdir()
+
+    rc_a = run_review(_BASE_SHA, _HEAD_SHA, str(assured), prepare=True, plan=True)
+    assert rc_a == 0
+    ws_a = _sidecar_ws(str(assured))
+    assert (ws_a.runs / "plan_manifest.json").exists()
+
+    rc_f = run_review(_BASE_SHA, _HEAD_SHA, str(fast), prepare=True, plan=True, tier="fast")
+    assert rc_f == 0
+    ws_f = _sidecar_ws(str(fast))
+    assert not (ws_f.runs / "plan_manifest.json").exists()
+    assert (ws_f.runs / "review_prompts").is_dir()
+
+
 def test_invalid_plan_return_fails_open_and_records_skip(tmp_path, monkeypatch):
     diffs = {"big.py": _diff_for("big.py")}
     sizes = {"big.py": PLAN_LINE_THRESHOLD}
