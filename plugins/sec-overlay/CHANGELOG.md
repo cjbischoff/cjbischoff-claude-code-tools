@@ -6,6 +6,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Fast/assured tiers (REQ-T3a, Task 21 GREEN): `run_review` gains a `tier`
+  argument (`--tier fast|assured`, default `assured`). The `fast` tier skips the
+  plan half — a `--prepare --plan` run returns without writing
+  `plan_manifest.json` — while `assured` runs the full chain. The tier is
+  recorded in `review_result.json` and its `CoverageManifest`
+  (`review_coverage.py` threads `tier` through `__init__`/`to_dict`/`from_dict`).
 - Fast/assured tiers (REQ-T3a, Task 21 RED): RED tests in
   `tests/test_review_live.py` pin that `run_review(..., tier="fast")` records the
   tier in `review_result.json` and its coverage manifest, and that a fast-tier

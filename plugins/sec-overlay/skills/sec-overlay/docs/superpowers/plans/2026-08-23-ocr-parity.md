@@ -135,7 +135,7 @@
 
 ### Task 21: REQ-T3a — fast/assured tiers
 **Files:** Modify `cli.py` (`--tier`, recorded in manifest/result; fast skips plan + reflection-prepare requirement? No — fast keeps reflection, skips plan and marks tier for benchmark labeling; assured = full); Test append.
-- [ ] RED: tier recorded; fast path skips plan even with `--plan`. Commit. GREEN: implement. Commit.
+- [x] RED: tier recorded; fast path skips plan even with `--plan`. Commit. GREEN: implement. Commit.
 
 ### Task 22: REQ-T3c/T3h — verified-fix rate
 **Files:** Modify `helpers/bench/tally.py` (`verified_fix_rate` when run records carry fix data) + `run.py` plumb; Test append.

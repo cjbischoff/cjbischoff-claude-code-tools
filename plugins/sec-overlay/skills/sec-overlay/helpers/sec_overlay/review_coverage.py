@@ -61,6 +61,7 @@ class CoverageManifest:
         *,
         model: str | None = None,
         profile: str | None = None,
+        tier: str | None = None,
     ) -> None:
         """Start a manifest for one run.
 
@@ -70,6 +71,7 @@ class CoverageManifest:
             path: File the manifest persists to (``ws.artifacts / MANIFEST_FILENAME``).
             model: This run's model identity, or ``None`` when not supplied.
             profile: This run's review profile, or ``None`` when not supplied.
+            tier: This run's assurance tier, or ``None`` when not supplied.
         """
         self.version = MANIFEST_VERSION
         self.base_sha = base_sha
@@ -77,6 +79,7 @@ class CoverageManifest:
         self.path = path
         self.model = model
         self.profile = profile
+        self.tier = tier
         self._seal: str | None = None
         self.budget_exceeded = False
         self.files: list[FileCoverage] = []
@@ -161,6 +164,7 @@ class CoverageManifest:
             "head_sha": self.head_sha,
             "model": self.model,
             "profile": self.profile,
+            "tier": self.tier,
             "seal": self._seal,
             "budget_exceeded": self.budget_exceeded,
             "files": [asdict(entry) for entry in self.files],
@@ -186,6 +190,7 @@ class CoverageManifest:
             path=path,
             model=data.get("model"),
             profile=data.get("profile"),
+            tier=data.get("tier"),
         )
         manifest.version = data.get("version", 1)
         manifest._seal = data.get("seal")

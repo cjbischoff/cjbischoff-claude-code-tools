@@ -331,6 +331,7 @@ def run_review(
     workspace: str | None = None,
     token_budget: int = 0,
     background: str = "",
+    tier: str = "assured",
 ) -> int:
     """Run one review pass end to end: resolve refs, select files, position, seal.
 
@@ -567,7 +568,9 @@ def run_review(
     if reflection_source is None:
         reflection_source = recorded_verdict_source(ws, base=base_sha, head=head_sha)
 
-    manifest = CoverageManifest(base_sha, head_sha, manifest_path, model=model, profile=profile)
+    manifest = CoverageManifest(
+        base_sha, head_sha, manifest_path, model=model, profile=profile, tier=tier
+    )
     hunks_by_path: dict[str, list] = {}
     diff_text_by_path: dict[str, str] = {}
     file_text_by_path: dict[str, str] = {}
@@ -663,7 +666,7 @@ def run_review(
             return 2
         rule_docs.append({"path": record.path, "text": rule_text})
 
-    if prepare and plan:
+    if prepare and plan and tier != "fast":
         # Plan half: emit a plan prompt for each over-threshold unit for SKILL.md
         # to dispatch. A subsequent normal `--prepare` consumes the recorded
         # returns and injects their guidance (D3 shape parity).
@@ -856,7 +859,7 @@ def run_review(
             head=head_sha,
             model=model,
             profile=profile,
-            tier=None,
+            tier=tier,
         )
 
     comments = [comment_from_finding(rf.finding) for rf in review_findings]
@@ -970,6 +973,12 @@ def main(argv: list[str] | None = None) -> int:
     review.add_argument("--head", default="HEAD")
     review.add_argument("--root", default=".")
     review.add_argument("--profile", choices=["security", "general"], default="security")
+    review.add_argument(
+        "--tier",
+        choices=["fast", "assured"],
+        default="assured",
+        help="Assurance tier: fast skips the plan half and heavy chain; assured runs it all.",
+    )
     review.add_argument("--rule", default=None, help="Path to a custom rule.json layer.")
     review.add_argument(
         "--exclude",
@@ -1158,6 +1167,7 @@ def main(argv: list[str] | None = None) -> int:
             workspace=args.workspace,
             token_budget=args.token_budget,
             background=background_text,
+            tier=args.tier,
         )
     return 1
 
