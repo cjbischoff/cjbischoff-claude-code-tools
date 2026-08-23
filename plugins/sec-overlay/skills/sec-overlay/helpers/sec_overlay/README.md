@@ -1130,3 +1130,20 @@ runner)` parses `git status --porcelain` (untracked lines become status `"?"`);
 base against the working tree. Dirty mode fetches serially and synthesizes an all-add
 hunk for untracked files read from disk. `validate_ref`'s allowlist now permits `^`
 (safe: every git call is list-form, never a shell) so `sha^` resolves.
+
+`review_agent.py`/`cli.py` (REQ-P3): a two-phase per-file plan step ports OCR's plan pass.
+`review_agent.py` adds `PLAN_LINE_THRESHOLD = 100` (a unit's diff at/over this many changed lines
+gets a plan pass), `render_plan_prompt(path, rule_text, diff, *, repo_root, overlay_root)` (renders
+`agents/review-plan.md`), `plan_agent_label(path)` (a `plan-file-` sha256-prefixed dispatch label
+distinct from `agent_label`), and `plan_guidance_from_return(text)` (parses the plan agent's strict
+JSON `{"issues":[{"severity","guidance"}]}`, orders issues most-severe-first, and raises `ValueError`
+on invalid JSON, an unknown severity, a non-list `issues`, or a missing/empty `guidance`).
+`render_review_prompt` gains a keyword-only `plan_guidance=""` that fills the review prompt's new
+`{{PLAN_GUIDANCE}}` token. `cli.run_review` gains `plan: bool`; `--plan --prepare` writes plan
+prompts for over-threshold units to `runs/plan_prompts/<plan_agent_label>.md` plus a
+`runs/plan_manifest.json` and returns early (0), for `SKILL.md` to dispatch. A subsequent normal
+`--prepare` reads each over-threshold unit's recorded plan return under `plan_agent_label`, injects
+its `plan_guidance` into the review prompt, and fails open — a missing or invalid plan return yields
+empty guidance and a `runs/plan_skips.json` entry (D-15: a plan failure never becomes a coverage
+failure). Plan guidance is advisory: never a tool receipt, never a finding, and deliberately not
+subject to the base/head staleness envelope that review returns carry.

@@ -43,6 +43,20 @@ _KNOWN_TOOLS = frozenset({CODE_COMMENT_TOOL, TASK_DONE_TOOL})
 # ledgered identically — a reviewer failure, never a coverage failure (D-15).
 SOURCE_SKIPPED_REASON = "review-source-skipped"
 
+# A unit whose diff spans at least this many lines gets an optional plan pass
+# before its review (OCR shape D3). Documented, not tunable — a change here is a
+# change to the shape parity claim.
+PLAN_LINE_THRESHOLD = 100
+
+# Severity rank for ordering plan guidance most-severe-first. Higher = worse.
+_SEVERITY_RANK = {
+    Severity.CRITICAL: 4,
+    Severity.HIGH: 3,
+    Severity.MEDIUM: 2,
+    Severity.LOW: 1,
+    Severity.INFO: 0,
+}
+
 
 class ReviewResponseError(Exception):
     """A review-file response is malformed or names an unknown tool."""
@@ -56,6 +70,14 @@ def _review_file_template_path() -> Path:
     caller runs.
     """
     return Path(__file__).resolve().parents[2] / "agents" / "review-file.md"
+
+
+def _review_plan_template_path() -> Path:
+    """Return the `review-plan.md` agent prompt path, resolved from this file.
+
+    Same cwd-independent resolution as `_review_file_template_path`.
+    """
+    return Path(__file__).resolve().parents[2] / "agents" / "review-plan.md"
 
 
 def _render_change_files_block(
@@ -105,6 +127,7 @@ def render_review_prompt(
     overlay_root: str = "",
     sibling_diffs: dict[str, str] | None = None,
     cap_tokens: int = DEFAULT_SIBLING_CAP_TOKENS,
+    plan_guidance: str = "",
 ) -> str:
     """Render the `agents/review-file.md` prompt for one file's review pass.
 
@@ -129,6 +152,9 @@ def render_review_prompt(
             into `{{SIBLING_DIFFS}}` and annotated in `{{CHANGE_FILES}}`. A
             sibling over `cap_tokens` is listed with its body omitted.
         cap_tokens: Per-sibling token cap for the embedded diff body.
+        plan_guidance: Optional severity-ordered guidance text from a prior
+            plan pass, substituted into `{{PLAN_GUIDANCE}}`. Advisory only —
+            never a tool receipt, never a finding. Empty by default.
 
     Returns:
         The fully rendered prompt text.
@@ -147,8 +173,99 @@ def render_review_prompt(
         "REPO_ROOT": repo_root,
         "OVERLAY_ROOT": overlay_root,
         "SIBLING_DIFFS": _render_sibling_diffs_block(siblings, cap_tokens),
+        "PLAN_GUIDANCE": plan_guidance,
     }
     return render_prompt(template, subs)
+
+
+def render_plan_prompt(
+    path: str,
+    rule_text: str,
+    diff: str,
+    *,
+    repo_root: str = "",
+    overlay_root: str = "",
+) -> str:
+    """Render the `agents/review-plan.md` prompt for one over-threshold unit.
+
+    The plan pass reads the same rule doc and diff as the review pass and emits
+    strict-JSON guidance (`issues[]`) `plan_guidance_from_return` parses. It is
+    advisory: its output never becomes a finding or a tool receipt.
+
+    Args:
+        path: The file to plan, substituted into `{{CURRENT_FILE_PATH}}`.
+        rule_text: The resolved rule doc, substituted into `{{SYSTEM_RULE}}`.
+        diff: The file's diff hunk text, substituted into `{{DIFF}}`.
+        repo_root: Substituted into `{{REPO_ROOT}}` (`PATH_BASE`); empty default.
+        overlay_root: Substituted into `{{OVERLAY_ROOT}}`; empty default.
+
+    Returns:
+        The fully rendered plan prompt text.
+
+    Raises:
+        ValueError: A template token had no substitution.
+    """
+    template = _review_plan_template_path().read_text()
+    subs = {
+        "CURRENT_FILE_PATH": path,
+        "SYSTEM_RULE": rule_text,
+        "DIFF": diff,
+        "REPO_ROOT": repo_root,
+        "OVERLAY_ROOT": overlay_root,
+    }
+    return render_prompt(template, subs)
+
+
+def plan_agent_label(path: str) -> str:
+    """Derive a stable, filesystem-safe recorded-return label for a plan pass.
+
+    Same hash-of-path derivation as `agent_label`, distinct prefix so a plan
+    return and a review return for one path never collide.
+    """
+    digest = hashlib.sha256(path.encode("utf-8")).hexdigest()[:16]
+    return f"plan-file-{digest}"
+
+
+def plan_guidance_from_return(text: str) -> str:
+    """Parse a recorded plan return into severity-ordered guidance text.
+
+    Args:
+        text: The raw recorded plan response, a JSON object
+            `{"issues": [{"severity", "guidance"}, ...]}`.
+
+    Returns:
+        Guidance text, one issue per line, most-severe-first.
+
+    Raises:
+        ValueError: `text` is not a JSON object, lacks `issues`, or any issue
+            carries an unknown severity or an empty/missing guidance.
+    """
+    try:
+        parsed = json.loads(text)
+    except (json.JSONDecodeError, TypeError) as exc:
+        raise ValueError(f"plan return is not valid JSON: {exc}") from exc
+    if not isinstance(parsed, dict) or "issues" not in parsed:
+        raise ValueError("plan return must be an object with an 'issues' key")
+    issues = parsed["issues"]
+    if not isinstance(issues, list):
+        raise ValueError("plan return 'issues' must be a list")  # noqa: TRY004 - CLI fail-open catches ValueError
+
+    by_value = {s.value: s for s in Severity}
+    rows: list[tuple[int, str, str]] = []
+    for issue in issues:
+        if not isinstance(issue, dict):
+            raise ValueError(f"plan issue must be an object: {issue!r}")  # noqa: TRY004 - CLI fail-open catches ValueError
+        sev_raw = issue.get("severity")
+        if sev_raw not in by_value:
+            raise ValueError(f"plan issue has unknown severity: {sev_raw!r}")
+        guidance = issue.get("guidance")
+        if not guidance:
+            raise ValueError(f"plan issue missing guidance: {issue!r}")
+        sev = by_value[sev_raw]
+        rows.append((_SEVERITY_RANK[sev], sev.value, guidance))
+
+    rows.sort(key=lambda r: r[0], reverse=True)
+    return "\n".join(f"- [{sev}] {guidance}" for _rank, sev, guidance in rows)
 
 
 def _stable_finding_id(rule_id_prefix: str, path: str, line: int, cls: str) -> str:

@@ -56,6 +56,8 @@ is an observation, not a profile decision.
   A path marked `(diff included below)` has its diff under **Sibling diffs**, for context only.
 - `{{SIBLING_DIFFS}}` — diffs of this file's bundle-mates (impl/test, header/impl, or config
   siblings), for context only. Never file a comment against a sibling path — the parser discards it.
+- `{{PLAN_GUIDANCE}}` — advisory notes from a prior plan pass, below (may be empty). Hints only —
+  never findings, never evidence.
 - `{{SYSTEM_RULE}}` — the review checklist resolved for this file's language, below (open-code-review's
   original `system_rule` token, renamed to this skill's uppercase-token convention).
 
@@ -104,6 +106,13 @@ Path: `{{CURRENT_FILE_PATH}}`
 ### Sibling diffs
 
 {{SIBLING_DIFFS}}
+
+### Plan guidance
+
+Advisory notes from a prior plan pass (severity-ordered, may be empty) — hints on where to look,
+never findings and never evidence. Confirm or discard each against the diff yourself.
+
+{{PLAN_GUIDANCE}}
 
 ### Review Checklist
 

@@ -306,3 +306,12 @@ def test_review_budget_constants_match_ocr_shape():
 
     assert (rb.PLAN_PROMPT, rb.PLAN_OUT, rb.ROUNDS, rb.ROUND_OUT) == (2000, 400, 7, 700)
     assert rb.FILE_BUDGET_FRACTION == 0.8
+
+
+def test_plan_line_threshold_is_pinned():
+    """Task 14 (REQ-P3): the per-file plan phase fires at a documented diff-line
+    threshold (OCR shape D3). A drift here changes the shape parity claim, so it
+    is pinned, not tunable."""
+    from sec_overlay import review_agent as ra
+
+    assert ra.PLAN_LINE_THRESHOLD == 100

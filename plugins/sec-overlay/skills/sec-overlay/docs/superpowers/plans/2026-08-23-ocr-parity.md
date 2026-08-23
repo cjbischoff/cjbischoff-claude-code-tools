@@ -100,8 +100,8 @@
 
 ### Task 14: REQ-P3 — per-file plan phase
 **Files:** Create `skills/sec-overlay/agents/review-plan.md` (strict-JSON plan prompt, severity-ordered `issues[]`); Modify `review_agent.py` (`render_plan_prompt`, `{{PLAN_GUIDANCE}}` token in `render_review_prompt`), `cli.py` (`--plan`, threshold `PLAN_LINE_THRESHOLD = 100` documented, prepare writes plan prompts; consume injects recorded plan JSON, fail-open skip); Tests append.
-- [ ] RED: below threshold no plan prompt; above threshold prompt written; recorded plan text appears in review prompt; invalid plan → prompt without guidance + recorded skip. Commit.
-- [ ] GREEN: implement; docs-invariants pin threshold; agents/README row. Commit.
+- [x] RED: below threshold no plan prompt; above threshold prompt written; recorded plan text appears in review prompt; invalid plan → prompt without guidance + recorded skip. Commit.
+- [x] GREEN: implement; docs-invariants pin threshold; agents/README row. Commit.
 
 ### Task 15: REQ-P7 — consolidated `review_result.json`
 **Files:** Create `helpers/sec_overlay/review_result.py` (`write_review_result(ws, *, findings, dropped, declines, retractions, skips, manifest, budget_exceeded, tokens, base, head, model, profile, tier) -> Path`); Modify `cli.py` (call last); Test `test_review_result.py`.

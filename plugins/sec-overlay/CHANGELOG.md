@@ -12,6 +12,17 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Per-file plan phase implementation (REQ-P3, Task 14 GREEN): `review_agent.py`
+  gains `render_plan_prompt`, `plan_agent_label`, `plan_guidance_from_return`,
+  and `PLAN_LINE_THRESHOLD = 100`; `render_review_prompt` gains a keyword-only
+  `plan_guidance` filling the new `{{PLAN_GUIDANCE}}` token. New agent prompt
+  `agents/review-plan.md`. `cli.run_review` gains `--plan`: `--plan --prepare`
+  writes plan prompts for over-threshold units and returns early; a following
+  `--prepare` injects each recorded plan return's guidance and fails open
+  (missing or invalid return yields empty guidance and a `plan_skips.json`
+  entry). Plan guidance is advisory — never a receipt, never a finding.
+  Review-mode only, so `bench.run` is unchanged.
+
 - Per-file plan phase (REQ-P3, Task 14): failing tests first (RED) for the
   review prepare plan step. `test_review_agent.py` pins `render_review_prompt`
   injecting a `{{PLAN_GUIDANCE}}` body (empty by default), `render_plan_prompt`

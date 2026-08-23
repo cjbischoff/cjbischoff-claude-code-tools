@@ -176,14 +176,18 @@ lighter pipeline over one diff — not the full audit above. It has two prompts 
 | Prompt | Model | Reads | Writes / does |
 |--------|-------|-------|----------------|
 | `review-file.md` | sonnet | one changed file's path and diff, the other changed files (context only), and the review checklist `rule_glob.resolve_rule_doc` resolved for that file's language | the producer: a `code_comment` per confirmed issue (`path`, `line`, `message`, `defect_class`) plus a closing `task_done`. Ported from open-code-review's main task prompt under D-02 (role/capabilities/strict-focus/reply-limit prose), adapted to this skill's single-shot, no-tool dispatch and its uppercase token/prompt-constants conventions. `sec_overlay.review_agent.parse_review_response` is the sole reader of its response — every finding it builds carries `REVIEW_AGENT_CLAIM` (`llm-claimed:review-agent`) as evidence and `FindingStatus.RAW`, both fixed in code, never trusted from the response; a `code_comment` naming a path other than the file under review is discarded, never converted (REV-03, Strict Focus Rules enforced mechanically). |
+| `review-plan.md` | sonnet | one over-threshold changed file's path, diff, and the resolved review checklist | an advisory, severity-ordered plan (`issues[]` with `severity` + `guidance`), never a finding and never a mechanical receipt. Ported from open-code-review's plan step (D3, shape parity): a unit whose diff spans at least `PLAN_LINE_THRESHOLD` (100) lines gets this pass before its review. `sec_overlay.review_agent.plan_guidance_from_return` parses its response — invalid JSON, an unknown severity, a missing `issues` key, or an issue without guidance raises, and the review prepare step fails open (the review prompt renders without guidance, `runs/plan_skips.json` records the skip). The guidance it survives is injected into `review-file.md`'s `{{PLAN_GUIDANCE}}` as hints only; the review pass confirms or discards each against the diff. |
 | `review-filter.md` | sonnet | one changed file's path, diff, and the review comments (findings) that survived positioning + the hunk gate | a **retract-only** fact-checking verdict — `approve_all_comments` or `report_incorrect_comments` naming only ids it was shown. It does not fit the producer/adversary pair above: there is no separate adversary pass, because the real safety guarantee is a mechanical code-level veto (`sec_overlay.reflection.PROTECTED_SUBJECT_CLASSES`), not model tier or a second opinion. `sec_overlay.reflection.validate_verdict` parses its raw response before any finding sees it; `apply_verdict` is the sole code path that may act on it, and even then only to retract — never to add, rank, or rewrite. |
 
 `review-file.md` uses this skill's uppercase token set (`{{CURRENT_FILE_PATH}}`, `{{DIFF}}`,
-`{{CHANGE_FILES}}`, `{{SIBLING_DIFFS}}`, `{{SYSTEM_RULE}}`, plus the `{{OVERLAY_ROOT}}`/`{{REPO_ROOT}}`
+`{{CHANGE_FILES}}`, `{{SIBLING_DIFFS}}`, `{{PLAN_GUIDANCE}}`, `{{SYSTEM_RULE}}`, plus the
+`{{OVERLAY_ROOT}}`/`{{REPO_ROOT}}`
 path anchors), rendered by `sec_overlay.review_agent.render_review_prompt`. `{{SIBLING_DIFFS}}` carries
 the diffs of a file's bundle-mates (REQ-P1) for context, largest-first, each over `cap_tokens`
 replaced by an `omitted (token cap)` marker; `{{CHANGE_FILES}}` annotates those bundle-mates with
-`(diff included below)`. `review-filter.md` uses its own
+`(diff included below)`; `{{PLAN_GUIDANCE}}` carries the advisory plan output (REQ-P3), empty by
+default. `review-plan.md` uses `{{CURRENT_FILE_PATH}}`, `{{DIFF}}`, `{{SYSTEM_RULE}}` plus the same
+path anchors, rendered by `sec_overlay.review_agent.render_plan_prompt`. `review-filter.md` uses its own
 token set (`{{PATH}}`, `{{DIFF}}`, `{{COMMENTS}}`), rendered by
 `sec_overlay.reflection.render_reflection_prompt` — none of the audit-pipeline tokens below apply
 to either, since both are dispatched per file rather than by the orchestrator's phase driver.

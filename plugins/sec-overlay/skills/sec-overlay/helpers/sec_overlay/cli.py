@@ -39,11 +39,15 @@ from sec_overlay.reflection import (
 from sec_overlay.repo_memory import RepoMemory, repo_slug
 from sec_overlay.report import to_markdown, write_report
 from sec_overlay.review_agent import (
+    PLAN_LINE_THRESHOLD,
     SOURCE_SKIPPED_REASON,
     ReviewPlanEntry,
     ReviewSourceSkip,
     agent_label,
+    plan_agent_label,
+    plan_guidance_from_return,
     recorded_return_source,
+    render_plan_prompt,
     render_review_prompt,
     write_review_plan,
 )
@@ -66,7 +70,13 @@ from sec_overlay.sarif import to_sarif
 from sec_overlay.sast import run_semgrep
 from sec_overlay.scanscope import resolve as _resolve_scope
 from sec_overlay.scanscope import write_scope
-from sec_overlay.workspace import Workspace, _atomic_write, load_paths, write_findings
+from sec_overlay.workspace import (
+    Workspace,
+    _atomic_write,
+    load_paths,
+    read_agent_return,
+    write_findings,
+)
 
 # SCALE-02: ceilings and defaults for the review subcommand's three bound flags.
 # Two separate ceilings (not one shared value) because a worker-count ceiling
@@ -302,6 +312,7 @@ def run_review(
     reflection_source=None,
     prepare: bool = False,
     prepare_reflection: bool = False,
+    plan: bool = False,
     concurrency: int = DEFAULT_CONCURRENCY,
     timeout: int = DEFAULT_TIMEOUT_SECONDS,
     max_git_procs: int = DEFAULT_MAX_GIT_PROCS,
@@ -640,16 +651,67 @@ def run_review(
             return 2
         rule_docs.append({"path": record.path, "text": rule_text})
 
+    if prepare and plan:
+        # Plan half: emit a plan prompt for each over-threshold unit for SKILL.md
+        # to dispatch. A subsequent normal `--prepare` consumes the recorded
+        # returns and injects their guidance (D3 shape parity).
+        rule_text_by_path = {d["path"]: d["text"] for d in rule_docs}
+        overlay_root = str(Path(__file__).resolve().parents[2])
+        plan_dir = ws.runs / "plan_prompts"
+        plan_dir.mkdir(parents=True, exist_ok=True)
+        plan_manifest: list[dict[str, str]] = []
+        for record in selection.reviewable:
+            if record.path not in hunks_by_path:
+                continue
+            if diff_line_counts.get(record.path, 0) < PLAN_LINE_THRESHOLD:
+                continue
+            label = plan_agent_label(record.path)
+            prompt = render_plan_prompt(
+                record.path,
+                rule_text_by_path[record.path],
+                diff_text_by_path[record.path],
+                repo_root=root,
+                overlay_root=overlay_root,
+            )
+            prompt_path = plan_dir / f"{label}.md"
+            _atomic_write(prompt_path, prompt)
+            plan_manifest.append(
+                {
+                    "path": record.path,
+                    "prompt_path": str(prompt_path),
+                    "agent_label": label,
+                    "base": base_sha,
+                    "head": head_sha,
+                }
+            )
+        _atomic_write(ws.runs / "plan_manifest.json", json.dumps(plan_manifest, indent=2))
+        return 0
+
     if prepare:
         rule_text_by_path = {d["path"]: d["text"] for d in rule_docs}
         overlay_root = str(Path(__file__).resolve().parents[2])
         prompts_dir = ws.runs / "review_prompts"
         prompts_dir.mkdir(parents=True, exist_ok=True)
         entries: list[ReviewPlanEntry] = []
+        plan_skips: list[dict[str, str]] = []
         for record in selection.reviewable:
             if record.path not in hunks_by_path:
                 continue
             label = agent_label(record.path)
+            # Over-threshold units may carry recorded plan guidance from a prior
+            # `--prepare --plan` step. A missing or invalid return fails open:
+            # the review prompt renders without guidance and the skip is ledgered
+            # (D-15) — a plan failure is never a coverage failure.
+            plan_guidance = ""
+            if diff_line_counts.get(record.path, 0) >= PLAN_LINE_THRESHOLD:
+                raw = read_agent_return(ws, plan_agent_label(record.path))
+                if raw is None:
+                    plan_skips.append({"path": record.path, "error": "no recorded plan return"})
+                else:
+                    try:
+                        plan_guidance = plan_guidance_from_return(raw)
+                    except ValueError as exc:
+                        plan_skips.append({"path": record.path, "error": str(exc)})
             unit_mate_diffs = {
                 mate: diff_text_by_path[mate]
                 for mate in bundle_paths_by_path.get(record.path, frozenset())
@@ -663,6 +725,7 @@ def run_review(
                 sibling_diffs=unit_mate_diffs,
                 repo_root=root,
                 overlay_root=overlay_root,
+                plan_guidance=plan_guidance,
             )
             prompt_path = prompts_dir / f"{label}.md"
             _atomic_write(prompt_path, prompt)
@@ -676,6 +739,8 @@ def run_review(
                     token_estimate=estimate_review_cost(diff_text_by_path[record.path]),
                 )
             )
+        if plan_skips:
+            _atomic_write(ws.runs / "plan_skips.json", json.dumps(plan_skips, indent=2))
         write_review_plan(ws, entries)
         return 0
 
@@ -857,6 +922,13 @@ def main(argv: list[str] | None = None) -> int:
         "kept findings; skip the reflection verdict apply.",
     )
     review.add_argument(
+        "--plan",
+        action="store_true",
+        help="With --prepare: write plan prompts for units at or over the diff-line "
+        "threshold; skip review-prompt rendering. Recorded plan returns are injected "
+        "on the next --prepare run.",
+    )
+    review.add_argument(
         "--concurrency",
         type=int,
         default=DEFAULT_CONCURRENCY,
@@ -964,6 +1036,7 @@ def main(argv: list[str] | None = None) -> int:
             excludes=args.exclude,
             prepare=args.prepare,
             prepare_reflection=args.prepare_reflection,
+            plan=args.plan,
             concurrency=args.concurrency,
             timeout=args.timeout,
             max_git_procs=args.max_git_procs,
