@@ -78,6 +78,7 @@ class CoverageManifest:
         self.model = model
         self.profile = profile
         self._seal: str | None = None
+        self.budget_exceeded = False
         self.files: list[FileCoverage] = []
 
     def entries(self) -> list[FileCoverage]:
@@ -161,6 +162,7 @@ class CoverageManifest:
             "model": self.model,
             "profile": self.profile,
             "seal": self._seal,
+            "budget_exceeded": self.budget_exceeded,
             "files": [asdict(entry) for entry in self.files],
         }
 
@@ -187,6 +189,7 @@ class CoverageManifest:
         )
         manifest.version = data.get("version", 1)
         manifest._seal = data.get("seal")
+        manifest.budget_exceeded = data.get("budget_exceeded", False)
         manifest.files = [
             FileCoverage(path=entry["path"], state=entry["state"], note=entry.get("note"))
             for entry in data.get("files", [])

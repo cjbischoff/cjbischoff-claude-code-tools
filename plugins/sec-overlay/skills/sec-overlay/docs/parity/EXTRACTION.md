@@ -199,3 +199,23 @@ All other analysis file:line cites for sec-overlay re-resolved at current source
    in `dogfood.json` at `fixtures/vulnerable_repo` (`secrets` app.py:9, `sqli`
    app.py:18), which the smoke scan does exercise. This corrects the corpus to
    what the CI gate can actually assert; it does not weaken any confirmation gate.
+
+2. REQ-P4 (token budget), naming: the plan text implied one `estimate_tokens`
+   would grow into the budget projection. That would overload the raw size
+   primitive `bundle.py` and `review_agent.py` already share (`len // 4`) with a
+   plan-loop cost formula, changing every existing caller's meaning. Instead
+   `estimate_tokens` stays the raw primitive and a new
+   `estimate_review_cost(diff_text)` holds the projection. Same numbers as the
+   plan; the split keeps the shared primitive stable.
+
+3. REQ-P4 dispositions (rows carried in this plan):
+   - P4a (per-file over-cap exclusion): DONE — files over `FILE_BUDGET_FRACTION`
+     (0.8) of the budget are excluded as `too-large-tokens` before review.
+   - D1/D4/D5/D10 (budget constants and the plan-loop cost shape): DONE —
+     `PLAN_PROMPT`, `PLAN_OUT`, `ROUNDS`, `ROUND_OUT`, `FILE_BUDGET_FRACTION`,
+     `BUDGET_SKIP_NOTE` in `review_budget.py`; asserted in
+     `tests/test_docs_invariants.py`.
+   - P1a (single-file units get non-mate sibling diffs under budget): the
+     Task-10 deferral is re-dispositioned to DONE — bounded by the Task-12
+     budget rather than pending it.
+   - Bench: no-op — `bench.run` grades the audit pipeline, not review mode.

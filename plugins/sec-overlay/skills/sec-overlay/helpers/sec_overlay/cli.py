@@ -22,7 +22,7 @@ from sec_overlay.diffscope import (
     file_text_at_ref,
     resolve_ref_sha,
 )
-from sec_overlay.file_select import partition
+from sec_overlay.file_select import ExcludedFile, partition
 from sec_overlay.models import Finding
 from sec_overlay.normalize import normalize
 from sec_overlay.phase_gate import review_position_gate
@@ -45,6 +45,12 @@ from sec_overlay.review_agent import (
     recorded_return_source,
     render_review_prompt,
     write_review_plan,
+)
+from sec_overlay.review_budget import (
+    BUDGET_SKIP_NOTE,
+    FILE_BUDGET_FRACTION,
+    BudgetGate,
+    estimate_review_cost,
 )
 from sec_overlay.review_comments import comment_from_finding, write_review_comments
 from sec_overlay.review_coverage import (
@@ -256,6 +262,7 @@ def run_review(
     max_git_procs: int = DEFAULT_MAX_GIT_PROCS,
     model: str | None = None,
     workspace: str | None = None,
+    token_budget: int = 0,
 ) -> int:
     """Run one review pass end to end: resolve refs, select files, position, seal.
 
@@ -485,6 +492,34 @@ def run_review(
                     )
         finally:
             ex.shutdown(wait=False)
+
+    # P4a: a single file whose projected review cost exceeds the per-file
+    # fraction of the whole budget is excluded before review — one oversized
+    # file must not consume the budget every other file shares. Estimates need
+    # the fetched diff, so this reclassification runs post-fetch. Excluded files
+    # never enter the coverage manifest.
+    gate = BudgetGate(token_budget)
+    if token_budget > 0:
+        per_file_cap = FILE_BUDGET_FRACTION * token_budget
+        over_cap: list[str] = []
+        for record in selection.reviewable:
+            fetched = fetch_by_path[record.path]
+            if isinstance(fetched, Exception):
+                continue
+            diff_text = fetched[0]
+            if estimate_review_cost(diff_text) > per_file_cap:
+                over_cap.append(record.path)
+        if over_cap:
+            over_cap_set = frozenset(over_cap)
+            selection = replace(
+                selection,
+                reviewable=[r for r in selection.reviewable if r.path not in over_cap_set],
+                excluded=[
+                    *selection.excluded,
+                    *(ExcludedFile(path=p, reason="too-large-tokens") for p in over_cap),
+                ],
+            )
+
     for record in selection.reviewable:
         fetched = fetch_by_path[record.path]
         manifest.add(record.path)
@@ -494,6 +529,12 @@ def run_review(
             manifest.fail(record.path, note=str(fetched))
             continue
         diff_text, hunks, file_text = fetched
+        if not gate.admit(estimate_review_cost(diff_text)):
+            # Budget latched closed: this file and every later one seal as a
+            # coverage gap, not a crash — the run reports "partial", not "clean".
+            manifest.fail(record.path, note=BUDGET_SKIP_NOTE)
+            manifest.budget_exceeded = True
+            continue
         diff_text_by_path[record.path] = diff_text
         hunks_by_path[record.path] = hunks
         file_text_by_path[record.path] = file_text
@@ -538,6 +579,7 @@ def run_review(
                     agent_label=label,
                     base=base_sha,
                     head=head_sha,
+                    token_estimate=estimate_review_cost(diff_text_by_path[record.path]),
                 )
             )
         write_review_plan(ws, entries)
@@ -639,6 +681,12 @@ def run_review(
     if seal == "complete":
         return 0
 
+    non_done = [e for e in manifest.entries() if e.state != "done"]
+    if manifest.budget_exceeded and all(e.note == BUDGET_SKIP_NOTE for e in non_done):
+        for entry in non_done:
+            print(f"budget-skipped file: {entry.path}")
+        return 0
+
     for entry in manifest.entries():
         if entry.state != "done":
             print(f"unfinished file: {entry.path} (state={entry.state}, note={entry.note})")
@@ -737,6 +785,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Override the workspace; mirrors `audit`'s flag "
         "(default: per-repo sidecar beneath --root).",
     )
+    review.add_argument(
+        "--token-budget",
+        type=int,
+        default=0,
+        help="Hard review token budget; 0 (default) means unlimited. A file whose projected "
+        "cost exceeds the budget latches the gate: later files seal 'partial' and exit 0.",
+    )
     args = parser.parse_args(argv)
 
     if args.cmd == "scan":
@@ -810,6 +865,7 @@ def main(argv: list[str] | None = None) -> int:
             max_git_procs=args.max_git_procs,
             model=args.model,
             workspace=args.workspace,
+            token_budget=args.token_budget,
         )
     return 1
 

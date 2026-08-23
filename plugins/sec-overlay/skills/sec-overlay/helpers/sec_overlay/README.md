@@ -946,6 +946,23 @@ new `{{SIBLING_DIFFS}}` token largest-first as fenced diffs, each over the cap r
 receive non-mate sibling diffs (gated on REQ-P4's budget, Task 12), and `import_adjacency
 (graph_json)` grouping is not built (SPEC-optional; review mode must not require `kb/graph.json`).
 
+Parity plan Task 12 (REQ-P4) adds a hard token budget over the same size primitive.
+`review_budget.py` keeps `estimate_tokens` as the raw `len(text) // 4` primitive and adds
+`estimate_review_cost(diff_text)`, which projects OCR's plan-loop cost for one file:
+`diff_tokens + (PLAN_PROMPT + PLAN_OUT) + ROUNDS * (diff_tokens + PLAN_PROMPT) + ROUNDS * ROUND_OUT`
+(constants `PLAN_PROMPT=2000`, `PLAN_OUT=400`, `ROUNDS=7`, `ROUND_OUT=700`; an empty diff costs
+21300). `BudgetGate(budget)` is a latching admission gate: a budget of 0 admits every file
+(unlimited); otherwise `admit(estimate)` commits the spend when `spent + estimate <= budget`, and
+the first projected breach latches the gate closed so it refuses every later file. `cli.run_review`
+gains a keyword-only `token_budget` parameter (CLI `--token-budget`, default 0). After fetch, a file
+whose `estimate_review_cost` exceeds `FILE_BUDGET_FRACTION` (0.8) of the budget is excluded as
+`too-large-tokens` before review; each remaining file passes through the gate, and a refused file is
+sealed `partial` with the `BUDGET_SKIP_NOTE = "skipped(budget)"` note at exit 0 (a budget stop is a
+planned outcome, not the fetch-failure `partial` at exit 3). `ReviewPlanEntry` carries a
+`token_estimate` field surfaced in `--prepare`, and `CoverageManifest` records a `budget_exceeded`
+flag round-tripped through `to_dict`/`load`. This closes the Task-10 deferral: single-file units are
+still not given non-mate sibling diffs, now bounded by this budget rather than pending it.
+
 Phase 4 plan 03 (Task 2, SCALE-03) adds a resume-identity gate. `review_coverage.py`'s
 `MANIFEST_VERSION` is now 2: `CoverageManifest` gains keyword-only `model`/`profile` fields,
 round-tripped through `to_dict`/`load` (a version-1 manifest, or a version-2 one written before

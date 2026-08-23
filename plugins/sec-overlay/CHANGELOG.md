@@ -12,13 +12,18 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
-- Hard token budget (REQ-P4, Task 12): failing tests first (RED in 1.95.1) for
-  `review_budget.estimate_review_cost` (OCR's plan-loop cost shape: prompt 2000,
-  plan-out 400, 7 rounds, round-out 700) and a latching `BudgetGate`, plus
-  end-to-end `run_review` tests for a tiny budget sealing `partial` with a
-  `skipped(budget)` note at exit 0, a zero budget reviewing every file, a
-  per-file `token_estimate` in `--prepare`, and a file over the
-  `FILE_BUDGET_FRACTION` (0.8) cap excluded before review.
+- Hard token budget (REQ-P4, Task 12): `review_budget.estimate_review_cost`
+  projects OCR's plan-loop cost per file (prompt 2000, plan-out 400, 7 rounds,
+  round-out 700; empty diff 21300) while `estimate_tokens` stays the raw
+  `len // 4` primitive, and a latching `BudgetGate` admits files until the first
+  projected breach then refuses the rest. `cli.run_review` gains a
+  `--token-budget` flag (default 0 = unlimited): a file over the
+  `FILE_BUDGET_FRACTION` (0.8) cap is excluded as `too-large-tokens` before
+  review, a file refused by the gate seals `partial` with a `skipped(budget)`
+  note at exit 0, `--prepare` surfaces a per-file `token_estimate`, and the
+  coverage manifest records `budget_exceeded`. Tests (RED in 1.95.1) now pass.
+  This closes the Task-10 deferral: single-file units stay without non-mate
+  sibling diffs, now bounded by this budget rather than pending it.
 
 - Rule-doc port (REQ-P2): `BUILTIN_PATH_RULE_MAP` now holds OCR's full
   35-pattern `system_rules.json` set plus the trailing `**/*` catch-all (36

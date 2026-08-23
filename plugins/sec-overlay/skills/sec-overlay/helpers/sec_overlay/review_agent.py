@@ -263,6 +263,7 @@ class ReviewPlanEntry:
     agent_label: str
     base: str
     head: str
+    token_estimate: int = 0
 
 
 def write_review_plan(ws: Workspace, entries: Sequence[ReviewPlanEntry]) -> Path:
