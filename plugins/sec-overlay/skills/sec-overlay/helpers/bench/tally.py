@@ -97,6 +97,10 @@ class Scorecard:
                       f"- Tokens: {c.get('tokens', 0)}",
                       f"- Wall-time: {c.get('wall_time_s', 0.0):.1f}s",
                       f"- $ / confirmed-TP: {usd} (estimate — token-rate table, not billed)"]
+        lines += ["", "## Scope confound", "",
+                  ("This score carries a scope confound: a deterministic file selection "
+                   "reviews less code, so a lower token count partly measures doing less, "
+                   "not doing better. A cross-tool token gap is not a pure efficiency signal.")]
         lines += ["", "## Judging statement", "",
                   ("Every finding above — sec-overlay and any cross-tool (OCR) findings — "
                    "is scored by the same judge (`bench.judge`: deterministic match, then an "

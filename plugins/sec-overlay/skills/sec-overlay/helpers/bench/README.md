@@ -63,6 +63,39 @@ entries staying detected. Detection mode exists because `reportable` returns not
 for a deterministic-only scan (confirmation needs the adversarial LLM pass) — the
 confirmation gate stays unchanged and cannot run in CI.
 
+## Annotation protocol
+
+The internal corpus is labeled by a single maintainer. Each entry records a ground
+truth (`kind` positive/negative, `cls`, `file`, `line`) tied to a public advisory,
+a dep-CVE lockfile, or a synthetic fixture. Adjudication is single-maintainer: one
+person decides each label; there is no second annotator and no inter-annotator
+agreement statistic, and none is invented. When the deterministic judge disagrees
+with a label — a positive it cannot match, or a negative it flags — the maintainer
+resolves it by correcting the corpus entry or the rule, and records the correction
+in `docs/parity/EXTRACTION.md`. Labels are never edited to force a pass (see
+`corpus_seed/README.md`).
+
+## Reproducing the benchmark
+
+One command reproduces the benchmark end to end over the committed seed corpus:
+
+```bash
+python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --workspaces <dir>
+```
+
+It clones each target at its pinned commit (or scans a local checkout), judges every
+finding under one judge, and writes `scorecard.{json,md}`. `--repeats N` runs it N
+times and adds `scorecard_agg.{json,md}` (mean ± range). See the `## Run` section for
+the binary and offline-detection variants.
+
+## Scope confound
+
+The scorecard states a scope confound, and any cross-tool comparison inherits it: a
+deterministic file selection reviews less code, so a lower token count partly measures
+doing less, not doing better. A token gap is not a pure efficiency signal. When a
+cross-tool run grades OCR, OCR is scored under the same judge (REQ-M3.3); the losses
+it reports are accepted and published unedited.
+
 ## Corpus
 `corpus_seed/` ships committed (public entries only — see `corpus_seed/README.md`).
 The two `locked` positives live in `dogfood.json` at `fixtures/vulnerable_repo`

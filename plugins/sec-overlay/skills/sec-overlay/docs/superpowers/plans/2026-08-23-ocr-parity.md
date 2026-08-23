@@ -68,7 +68,7 @@
 
 ### Task 8: REQ-R3 + REQ-R1/R4 — protocol + reproducibility docs
 **Files:** Modify `helpers/bench/README.md` (annotation protocol, adjudication, one-command reproduce, scope-confound statement); Modify `helpers/tests/test_docs_invariants.py` (assert sections exist).
-- [ ] RED: docs-invariants test for the three section headings. Commit. GREEN: write sections. Commit.
+- [x] RED: docs-invariants test for the three section headings. Commit. GREEN: write sections. Commit.
 
 ## Milestone 2 (each GREEN commit records before/after bench delta from `python -m bench.run` over the internal corpus)
 
