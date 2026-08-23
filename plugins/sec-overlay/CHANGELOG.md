@@ -12,11 +12,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
-- Assurance case (REQ-S3, Task 17 RED): RED tests in
-  `tests/test_docs_invariants.py` pin the `ASSURANCE_CASE.md` contract —
-  required sections (actors, trust boundaries, threats, countermeasures,
-  automated checks, open-code-review contrast), every `file:line` citation
-  resolving to an existing line, and STE structural lint clean.
+- Assurance case (REQ-S3): `skills/sec-overlay/ASSURANCE_CASE.md` documents the
+  actors, trust boundaries, threats, and countermeasures behind the harness
+  invariants, with each countermeasure cited to a resolving `file:line`. RED
+  tests in `tests/test_docs_invariants.py` pin the contract — required sections,
+  every citation resolving to an existing line, and STE structural lint clean.
 - Background-context ingestion (REQ-P8, Task 16 GREEN): new
   `sec_overlay/background.py` with `load_background`, sanitizing
   developer-supplied context in order — a 1 MB `BACKGROUND_MAX_BYTES` cap

@@ -117,7 +117,7 @@
 
 ### Task 17: REQ-S3 — ASSURANCE_CASE.md
 **Files:** Create `skills/sec-overlay/ASSURANCE_CASE.md`; Test append `test_docs_invariants.py` (citation file:line resolution walk + `ste_lint` clean).
-- [ ] RED: invariants test for required sections + resolvable citations. Commit. GREEN: write the case. Commit.
+- [x] RED: invariants test for required sections + resolvable citations. Commit. GREEN: write the case. Commit.
 
 ### Task 18: REQ-S1 — GitHub Action + poster
 **Files:** Create `plugins/sec-overlay/action.yml`, `helpers/sec_overlay/pr_poster.py` (stdlib `urllib` GitHub API client; severity routing critical/high → inline, medium/low → summary; `event: COMMENT`); Test `test_pr_poster.py` (fake transport).

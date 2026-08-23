@@ -46,6 +46,9 @@ These hold everywhere and are enforced in code where possible, prompt otherwise:
    an Opus "adversary" on a different model family; a false-positive ladder + a
    `needs-deployment-testing` verdict for bugs unprovable-from-source keep the report clean.
 
+[`ASSURANCE_CASE.md`](ASSURANCE_CASE.md) states the actors, trust boundaries, threats, and
+countermeasures behind these invariants, each countermeasure cited to a `file:line`.
+
 ---
 
 ## Architecture — three folders, three jobs
