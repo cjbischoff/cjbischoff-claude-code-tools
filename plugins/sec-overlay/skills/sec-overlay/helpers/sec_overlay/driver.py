@@ -364,7 +364,9 @@ def run_audit(
                     "scan-profile.json"
                 ) from None
             planned = list(profile.get("agents_to_spawn", []))
-            reconciled = reconcile_plan(ctx.ws, planned)  # ISSUE-006: recon-omitted classes
+            reconciled = reconcile_plan(
+                ctx.ws, planned, target_root=ctx.target
+            )  # ISSUE-006: recon-omitted classes
             block = render_dispatch(phase, ctx, classes=reconciled)
             if phase.name != "investigate":
                 return block

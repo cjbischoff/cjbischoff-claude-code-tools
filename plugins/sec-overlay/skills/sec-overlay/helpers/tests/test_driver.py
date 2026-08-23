@@ -161,7 +161,7 @@ def test_run_audit_appends_triage_block_at_investigate(tmp_path, monkeypatch):
     (ws.kb / "scan-profile.json").write_text('{"agents_to_spawn": ["sqli"]}')
     ctx = AuditContext(ws=ws, target=str(tmp_path / "t"), config="cfg", sha="sha1")
 
-    monkeypatch.setattr(driver, "reconcile_plan", lambda ws, plan: list(plan))
+    monkeypatch.setattr(driver, "reconcile_plan", lambda ws, plan, **kw: list(plan))
     monkeypatch.setattr(
         driver, "unrouted_candidate_classes", lambda ws, plan: {"security-other": 2}
     )
@@ -181,7 +181,7 @@ def test_run_audit_investigate_dispatch_includes_reconciled_class(tmp_path, monk
     (ws.kb / "scan-profile.json").write_text('{"agents_to_spawn": ["sqli"]}')
     ctx = AuditContext(ws=ws, target=str(tmp_path / "t"), config="cfg", sha="sha1")
 
-    monkeypatch.setattr(driver, "reconcile_plan", lambda ws, plan: [*plan, "idor"])
+    monkeypatch.setattr(driver, "reconcile_plan", lambda ws, plan, **kw: [*plan, "idor"])
     monkeypatch.setattr(driver, "unrouted_candidate_classes", lambda ws, plan: {})
     out = run_audit(ctx)
     assert "NEXT AGENT PHASE: investigate" in out

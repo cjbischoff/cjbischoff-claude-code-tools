@@ -10,6 +10,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   naming dependencies whose own code holds the sink.
 - `match_manifests()`/`matched_classes()` and a `match --root <dir>` CLI
   subcommand, to check a target repo's manifests against the catalog.
+- `reconcile_plan()` takes an optional `target_root` and merges every attack
+  class of a matched dependency-sink catalog entry into the agent plan.
 
 ## 1.69.15 - 2026-08-22
 

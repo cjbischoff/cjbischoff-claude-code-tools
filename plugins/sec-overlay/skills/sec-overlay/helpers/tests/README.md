@@ -980,3 +980,9 @@ plus a `policy.go` using it): `match_manifests` finds only `opa-rego-http-send` 
 fixture; `matched_classes` reduces it to `["ssrf"]`; a repo with an unrelated `go.mod`
 matches nothing; and a `go.mod` planted under `node_modules/` is ignored, proving the
 vendored-directory skip.
+
+Three guards in `test_partition.py` cover `reconcile_plan`'s new `target_root` keyword:
+passing the `dep_sink_repo` fixture as `target_root` adds `ssrf` to a plan that only
+named `authz`, with `authz` still first (a planned class is never removed or reordered);
+omitting `target_root` leaves a plan unchanged; and passing `target_root` when `ssrf` is
+already planned does not duplicate it.
