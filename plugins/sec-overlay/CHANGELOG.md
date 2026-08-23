@@ -4,20 +4,17 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
-### Added
-
 ### Fixed
 
 - Judge severity write-back (REQ-P9): `calibrate.py` now lowers `f.severity`
-  to the downgraded score band, so reports no longer show the inflated
-  severity a judge already rejected.
+  to the downgraded score band (tests first in `tests/test_calibrate.py`), so
+  reports no longer show the inflated severity a judge already rejected.
 
-- Failing REQ-P9 tests: judge severity write-back (`tests/test_calibrate.py`).
+### Added
 
 - F1 in the bench scorecard (`bench/tally.py`): overall, per-source, and
-  headline rows; `None` when undefined (REQ-M1).
-
-- Failing REQ-M1 tests: F1 in the bench scorecard (`tests/test_bench.py`).
+  headline rows; `None` when undefined (REQ-M1; tests first in
+  `tests/test_bench.py`).
 
 - OCR-parity workstream docs: `docs/parity/EXTRACTION.md` (inventory of the
   OCR-vs-sec-overlay analysis, 3 extraction passes), `docs/parity/SPEC.md`
