@@ -79,7 +79,9 @@ flowchart TB
 ```
 
 - **`references/`** is stated once, obeyed everywhere — severity bands, scope rules, JSON
-  schemas, the crypto allow/deny lists, and the deep hunting guides. → [details](references/README.md)
+  schemas, the crypto allow/deny lists, and the deep hunting guides.
+  `dependency-sinks.json` routes an attack class from a manifest match when the sink lives
+  inside a dependency's own source. → [details](references/README.md)
 - **`agents/`** are the LLM prompts. Producers (Sonnet) find things; adversaries (Opus, a
   different family) try to prove them wrong. → [details](agents/README.md)
 - **`helpers/`** is the deterministic Python that runs the tools and *enforces the gates no
@@ -104,7 +106,7 @@ flowchart TD
     RA --> AG2["3.5 · arch-gate<br/>diagram_gate + ste_lint, halts on violation"]
     AG2 --> TM(("4 · threat-model<br/>gated by phase-adversary (opus)"))
     TM --> TG["4.5 · tm-gate<br/>diagram_gate + ste_lint + duplication check"]
-    TG --> PRE["5 · prefilter<br/>semgrep+codeql+sca+secrets, never-silent"]
+    TG --> PRE["5 · prefilter<br/>semgrep+codeql+sca+secrets+dependency-sinks, never-silent"]
     PRE --> INV(("6 · investigate<br/>parallel per class, loop-until-dry"))
     INV --> DED["7 · dedupe<br/>refactor-resistant fingerprint"]
     DED --> CLUS["7.5 · cluster<br/>≥3 same-class/sink -> systemic cluster"]

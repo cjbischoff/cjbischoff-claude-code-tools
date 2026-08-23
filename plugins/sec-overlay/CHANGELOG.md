@@ -20,6 +20,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   routes to. Two `test_docs_invariants.py` guards check that every catalogued
   `cls` has a matching class file and that `expr-eval-rce.md` carries all
   five required sections.
+- A `DETECTION_COVERAGE.md` row naming the dependency-internal sink limit: no
+  backend reads a dependency's own source, so the catalog routes the class
+  but never proves the sink. `recon.md` now reads `dependency-sinks.json` and
+  emits `dependency_sinks`; `SKILL.md` documents `reconcile_plan`'s catalog
+  merge.
 
 ## 1.69.15 - 2026-08-22
 

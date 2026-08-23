@@ -1,8 +1,12 @@
 # `tests/` — the deterministic test suite
 
-108 pytest files, 1285 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+110 pytest files, 1306 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+`test_detection_coverage.py` guards the coverage document: `generate()`'s output must name the
+dependency-internal sink limit and cite `dependency-sinks.json`, so the doc cannot silently
+drop the routing-versus-proof distinction.
 
 The fake-response `R` classes in `test_review_tracer.py` and `test_diffscope.py` declare
 `stdout = ""` as a class attribute so `ty check` resolves the attribute; behavior is unchanged.

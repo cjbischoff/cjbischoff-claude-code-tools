@@ -16,6 +16,10 @@ entry point; read the parent map for the full inventory.
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
 
+`detection_coverage.py`'s `generate()` now emits a dependency-internal sink row in the
+rule-sources table — see the module map entry in [`../README.md`](../README.md) for the
+full contract.
+
 `dependency_sinks.py` (new) loads and validates `../references/dependency-sinks.json` — the
 catalog of dependencies whose own code holds a sink — and exposes `catalog_ids()` for later
 receipt-id validation, plus `match_manifests()`/`matched_classes()` to check a target repo's

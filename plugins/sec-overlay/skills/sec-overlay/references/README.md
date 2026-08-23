@@ -180,7 +180,10 @@ names all 11 CVSS v4.0 base metrics (AV, AC, AT, PR, UI, VC, VI, VA, SC, SI, SA)
 #### `DETECTION_COVERAGE.md` — an honest "what we can and can't see" statement
 A falsifiable statement of what each backend covers per class/language, and known blind
 spots (e.g. Liquid/Handlebars templates, single-function OSS-semgrep taint, no CodeQL for
-PHP). Its purpose is to **direct agent effort to the gaps SAST can't reach.**
+PHP). A dedicated row names the dependency-internal sink limit: no backend reads a
+dependency's own source. `dependency-sinks.json` routes the attack class from a manifest
+match; it never proves the sink. Its purpose is to **direct agent effort to the gaps SAST
+can't reach.**
 
 **Consumed by:** generated from the live `clsmap` inventory by
 `helpers/…/detection_coverage.py` (so it can't drift from reality) and embedded in the final

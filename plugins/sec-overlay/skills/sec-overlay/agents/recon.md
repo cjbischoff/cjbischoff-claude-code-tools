@@ -68,6 +68,11 @@ as you spot them.
    false authz-gap lead.
 6. **sast_plan:** choose backends:
    - `semgrep`: ALWAYS emit `"run": true` alongside `rulesets` (every backend block carries an explicit `run` — a rulesets-but-no-run block is a config bug). Set `rulesets` to the vendored per-language dirs that exist, e.g. `["rules/semgrep/<lang>"]` for each detected language. Paths are relative to `{{HELPERS_DIR}}` (where the prefilter runs) — do NOT prefix with `{{HELPERS_DIR}}/`. Fall back to `["rules/smoke.yaml"]` only if no vendored dir exists. Leave `security_only` unset (defaults true — the prefilter drops non-security lint and reports the count).
+   - Read `references/dependency-sinks.json`. For every entry whose `package` appears in a
+     manifest of the target, include the entry's `cls` in `attack_surface` and record
+     `{"id": <entry id>, "package": <package>, "sink": <sink>, "safe_option": <safe_option>}`
+     in `dependency_sinks`. A dependency-internal sink has no first-party line to cite, so the
+     manifest declaration is the evidence for selecting the class.
    - `codeql`: set `{"run": true, "languages": [<codeql-supported langs present>], "suite": "security-extended"}` when a CodeQL-supported language is present (go, python, javascript, java, csharp, cpp, ruby, swift); else `{"run": false, "reason": "..."}`.
    - `sca`: `run: true` if lockfiles/manifests exist; list them in `lockfiles`.
    - `secrets`: `run: true` almost always.

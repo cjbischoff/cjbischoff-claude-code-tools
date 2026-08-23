@@ -38,6 +38,12 @@ def generate() -> str:
         "| source | what it covers |",
         "|--------|----------------|",
         "| semgrep | broad pattern SAST, all languages; vendored security rulesets |",
+        (
+            "| dependency-internal sink | No backend reads a dependency's own source, so a sink "
+            "inside OPA/CEL/Starlark/goja/Lua is invisible to pattern and dataflow rules. "
+            "`references/dependency-sinks.json` closes the routing half: a manifest match routes "
+            "the attack class. It does not prove the sink; the class prompt's proof tuple does. |"
+        ),
         "| codeql | semantic dataflow/taint (`security-extended`), compiled + " + ", ".join(_CODEQL_LANGS),
         "| osv-scanner (sca) | dependency CVEs from lockfiles/manifests |",
         "| secrets (in-house) | distinctive-prefix credentials; broad via optional gitleaks |",
