@@ -344,23 +344,33 @@ fails before the model runs instead of silently reaching it.
 a `reason`/`next_step` too (previously bare), matching the shape `route_control.py`'s gap dicts
 already used; `validate_coverage_ledger` rejects a `needs_follow_up` surface missing either field.
 
-`route_control.py` (new, ISSUE-027/029/036) derives one route-to-control table from
-`kb/scan-profile.json` (`build_route_control_table`) and checks recon, architecture, and threat-
-model output against it (`check_recon_routes`, `check_architecture_controls`,
-`check_threat_entrypoints`). A missing route, control, or entrypoint is never dropped: each check
-returns a `needs_follow_up` gap dict with `reason`/`next_step`, and `record_route_gaps` appends
-those gaps into `kb/coverage-ledger.json`'s `surfaces`, demoting `completeness` to `partial` so the
-ledger's own "complete forbids needs_follow_up" invariant still holds after the append.
+`route_control.py` (new, ISSUE-027/029/036) derives one route-to-control table
+(`build_route_control_table`) and checks recon, architecture, and threat-model output against it
+(`check_recon_routes`, `check_census_routes`, `check_architecture_controls`,
+`check_threat_entrypoints`). The table prefers the code-derived census: it calls
+`route_census.load_census(ws)` by default, or takes a `census=` list of `RouteSite` directly, and
+stamps `"source": "route-census"` on the table. Without a census, it falls back to
+`kb/scan-profile.json`'s `entrypoints`, stamping `"source": "scan-profile"`. The fallback path is
+unchanged. Recon-derived routes still work when a target has no ripgrep-visible framework.
+A missing route, control, or entrypoint is never dropped: each check returns a `needs_follow_up`
+gap dict with `reason`/`next_step`, and `record_route_gaps` appends those gaps into
+`kb/coverage-ledger.json`'s `surfaces`, demoting `completeness` to `partial` so the ledger's own
+"complete forbids needs_follow_up" invariant still holds after the append.
 `check_architecture_controls`/`check_threat_entrypoints` match a control or entrypoint via
 `_mentions`, a word-bounded (alphanumeric-neighbor guard) check, not substring — so a token that is
-part of a longer word (`auth` inside `authorization`) is still flagged as a gap.
+part of a longer word (`auth` inside `authorization`) is still flagged as a gap. `check_census_routes`
+runs the same `_mentions` guard against the recon profile's whole JSON blob, so a route named in
+`entrypoints`, `subsystems`, or any free-text field counts as covered; this is the check that closes
+the circularity — a route the code registers but recon never named now surfaces as a gap.
 
 `route_census.py` (new) derives a route inventory straight from source, via ripgrep over
-`references/route-frameworks.json`'s framework patterns — `route_control.py`'s table reads
-recon's own `kb/scan-profile.json`, so this module gives a later check something recon did not
-produce. `census()` returns `[]` when ripgrep exits nonzero or matches nothing. A missing ripgrep
-binary raises `FileNotFoundError`, because preflight owns binary availability. The module map entry
-in [`../README.md`](../README.md) has the full contract. CLI-callable.
+`references/route-frameworks.json`'s framework patterns, so `route_control.py`'s table can read
+something recon did not produce. `census()` returns `[]` when ripgrep exits nonzero or matches
+nothing. A missing ripgrep binary raises `FileNotFoundError`, because preflight owns binary
+availability. `write_census(ws, sites)` persists the result to `kb/route-census.json`;
+`load_census(ws)` reads it back as `RouteSite` records, returning `[]` when the file is absent or
+holds invalid JSON. The module map entry in [`../README.md`](../README.md) has the full contract.
+CLI-callable.
 
 `class_ext.py` (new) provides `class_extension_status(classes, classes_dir)` to check which
 investigate/patch extension files exist; absent classes are logged as gaps so coverage is never

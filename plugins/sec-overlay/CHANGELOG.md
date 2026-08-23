@@ -59,6 +59,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   inventory derived from source via ripgrep, for Flask, FastAPI, Django
   urls, Go net/http, Go chi/gin/echo, Express, and Spring. Reads code
   instead of recon's own output, so an omitted route can appear as a gap.
+- `write_census`/`load_census` persist the census to `kb/route-census.json`.
+  `build_route_control_table` now prefers the census over
+  `kb/scan-profile.json`, stamping `source`, and `check_census_routes`
+  flags a code-registered route the recon profile never names. This closes
+  the circularity where the route-to-control check compared recon against
+  its own output.
 
 ### Fixed
 

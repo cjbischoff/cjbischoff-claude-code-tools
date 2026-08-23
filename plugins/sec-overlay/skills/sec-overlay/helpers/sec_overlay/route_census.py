@@ -130,6 +130,38 @@ def census(
     return sorted(seen.values(), key=lambda s: s.id)
 
 
+def write_census(ws, sites: list[RouteSite]) -> Path:
+    """Write the census to ``kb/route-census.json``.
+
+    Args:
+        ws: Workspace.
+        sites: Sites from ``census``.
+
+    Returns:
+        The written path.
+    """
+    out = ws.kb / "route-census.json"
+    out.write_text(json.dumps([vars(s) for s in sites], indent=2) + "\n")
+    return out
+
+
+def load_census(ws) -> list[RouteSite]:
+    """Read the census back.
+
+    Returns:
+        One RouteSite per record. Empty when the file is absent or is not
+        valid JSON, so a consumer never has to guard the call.
+    """
+    src = ws.kb / "route-census.json"
+    if not src.exists():
+        return []
+    try:
+        raw = json.loads(src.read_text())
+    except json.JSONDecodeError:
+        return []
+    return [RouteSite(**r) for r in raw]
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI: print one ``file:line<TAB>METHOD<TAB>path<TAB>framework`` row per site."""
     ap = argparse.ArgumentParser(prog="sec_overlay.route_census")

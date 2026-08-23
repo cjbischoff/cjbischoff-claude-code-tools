@@ -198,8 +198,8 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `coverage_ledger.py` | The machine-checked completeness ledger — refuses `completeness=="complete"` while any surface `needs_follow_up`/`deferred` or open questions remain. |
 | `coverage_guide.py` | Auto-stop condition for multi-pass campaigns (coverage-complete AND yield-below-threshold). |
 | `discovery_ledger.py` | Loop-until-dry saturation state: stop after K consecutive waves add no new fingerprints. |
-| `route_control.py` | One route-to-control table from `kb/scan-profile.json`; checks recon/architecture/threat-model output against it, logging a `needs_follow_up` gap (never dropping) via `record_route_gaps` into `coverage-ledger.json`. |
-| `route_census.py` | Derives a route inventory from source code via `references/route-frameworks.json` + ripgrep, never from recon's own output. `census()` returns empty when ripgrep exits nonzero or matches nothing. A missing ripgrep binary raises `FileNotFoundError`, because preflight owns binary availability. CLI-callable. |
+| `route_control.py` | One route-to-control table, preferring the code-derived census (`build_route_control_table(ws, census=...)`, `source: "route-census"`) and falling back to `kb/scan-profile.json` (`source: "scan-profile"`) only when no census exists. Checks recon/architecture/threat-model output against the table, logging a `needs_follow_up` gap (never dropping) via `record_route_gaps` into `coverage-ledger.json`. `check_census_routes` flags any code-registered route the recon profile never names. |
+| `route_census.py` | Derives a route inventory from source code via `references/route-frameworks.json` + ripgrep, never from recon's own output. `census()` returns empty when ripgrep exits nonzero or matches nothing. A missing ripgrep binary raises `FileNotFoundError`, because preflight owns binary availability. `write_census`/`load_census` persist the result to `kb/route-census.json` and read it back, closing the circularity where `route_control.py` used to read recon's own output. CLI-callable. |
 
 ### Diff-scoped review (`sec-overlay review` — tracer path)
 | Module | Purpose |

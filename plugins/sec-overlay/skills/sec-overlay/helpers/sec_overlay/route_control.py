@@ -10,29 +10,54 @@ import json
 import re
 
 from sec_overlay.coverage_ledger import build_coverage_ledger
+from sec_overlay.route_census import RouteSite, load_census
 from sec_overlay.workspace import Workspace
 
 
-def build_route_control_table(ws: Workspace) -> dict:
-    """Build the route-to-control table from ``kb/scan-profile.json``.
+def build_route_control_table(ws: Workspace, *, census: list[RouteSite] | None = None) -> dict:
+    """Build the route-to-control table, preferring the code-derived census.
+
+    Reading ``kb/scan-profile.json`` for routes made the recon check compare
+    recon against itself. The census (code-derived) is now the primary
+    source; the scan profile is a fallback for when no census exists.
 
     Args:
-        ws: The audit workspace holding ``kb/scan-profile.json``.
+        ws: The audit workspace holding ``kb/scan-profile.json`` and, when
+            present, ``kb/route-census.json``.
+        census: Sites to use; defaults to ``load_census(ws)``.
 
     Returns:
-        ``{"routes": [...], "controls": [...], "entrypoints": [...]}``. Empty
-        lists when the profile is absent or a field is missing.
+        ``{"routes": [...], "controls": [...], "entrypoints": [...], "source": ...}``.
+        ``source`` is ``"route-census"`` when the census supplies the routes,
+        else ``"scan-profile"``. Empty lists when both sources are absent.
     """
+    sites = load_census(ws) if census is None else census
     path = ws.kb / "scan-profile.json"
-    if not path.exists():
-        return {"routes": [], "controls": [], "entrypoints": []}
-    prof = json.loads(path.read_text())
+    prof = json.loads(path.read_text()) if path.exists() else {}
     entrypoints = [str(e) for e in prof.get("entrypoints", [])]
     surface = prof.get("attack_surface", []) or []
     # "controls" is not a scan-profile field; attack_surface is the closest proxy.
     controls = sorted({str(c) for c in prof.get("controls", surface)})
+
+    if sites:
+        routes = [
+            {"route": f"{s.method} {s.path}", "entrypoint": s.path, "evidence": f"{s.file}:{s.line}"}
+            for s in sites
+        ]
+        return {
+            "routes": routes,
+            "controls": controls,
+            "entrypoints": entrypoints,
+            "source": "route-census",
+        }
+
     routes = [{"route": str(e), "entrypoint": str(e), "evidence": ""} for e in entrypoints]
-    return {"routes": routes, "controls": controls, "entrypoints": entrypoints}
+    return {
+        "routes": routes,
+        "controls": controls,
+        "entrypoints": entrypoints,
+        "source": "scan-profile",
+    }
 
 
 def _gap(item: str, kind: str) -> dict:
@@ -63,6 +88,25 @@ def _mentions(token: str, text: str) -> bool:
     (``/login``) still matches while ``auth`` no longer matches inside ``authorization``.
     """
     return re.search(rf"(?<![a-z0-9]){re.escape(token.lower())}(?![a-z0-9])", text) is not None
+
+
+def check_census_routes(census_sites: list[RouteSite], profile: dict) -> list[dict]:
+    """Report every code-derived route the recon profile never mentions.
+
+    Args:
+        census_sites: RouteSite records from route_census.
+        profile: The recon scan profile.
+
+    Returns:
+        One gap row per unmentioned route. An empty list means recon named every
+        route the code registers.
+    """
+    text = json.dumps(profile).lower()
+    return [
+        _gap(f"{s.method} {s.path} ({s.file}:{s.line})", "route")
+        for s in census_sites
+        if not _mentions(s.path, text)
+    ]
 
 
 def check_architecture_controls(table: dict, architecture_md: str) -> list[dict]:

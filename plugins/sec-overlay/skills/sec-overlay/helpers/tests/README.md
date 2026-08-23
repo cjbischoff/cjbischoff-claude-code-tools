@@ -444,14 +444,19 @@ is a gap, no gap when everything is present, and `record_route_gaps` round-trips
 returns no errors. Word-boundary gap tests pin the fix for substring false-negatives: a control
 that is a substring of a longer word (`auth` inside `authorization`) is still a gap, the same
 control as a standalone token is covered, and an entrypoint carrying path punctuation (`/login`)
-still matches as a standalone mention.
+still matches as a standalone mention. Four more guards pin the census-first table. It stamps
+`source: "route-census"` and includes the census route when a `census=` list is passed. It falls
+back to `source: "scan-profile"` when no census exists. `check_census_routes` reports a
+code-registered route the profile never mentions as a `needs_follow_up` gap, and stays silent
+when the profile names the route anywhere in its JSON.
 
-`test_route_census.py` (new) covers `route_census.py` with six guards: every framework entry
+`test_route_census.py` (new) covers `route_census.py` with eight guards: every framework entry
 carries a pattern and globs, framework names are unique, `FRAMEWORKS_PATH` resolves to the
 tracked reference file, `census()` finds every route in the `fixtures/route_repo` fixture
-(Flask and Go net/http), site ids are stable and unique across two runs, and a failing ripgrep
-runner returns an empty list rather than raising. The two fixture-reading tests skip when `rg`
-is not installed.
+(Flask and Go net/http), site ids are stable and unique across two runs, a failing ripgrep
+runner returns an empty list rather than raising, `write_census`/`load_census` round-trip a
+list of `RouteSite` records through `kb/route-census.json`, and `load_census` returns an empty
+list when the file is absent. The two fixture-reading tests skip when `rg` is not installed.
 
 `test_class_ext.py` (new) covers `class_ext.py`: an alias map (sqli/cmdi/xss → injection.md)
 counts coarse extension files, direct files count by name, and uncovered classes log gaps so

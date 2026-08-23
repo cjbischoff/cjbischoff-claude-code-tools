@@ -10,6 +10,13 @@ from sec_overlay.route_control import (
 from sec_overlay.workspace import Workspace
 
 
+def _workspace_with_profile(tmp_path, profile: dict) -> Workspace:
+    ws = Workspace(tmp_path)
+    ws.kb.mkdir(parents=True, exist_ok=True)
+    (ws.kb / "scan-profile.json").write_text(json.dumps(profile))
+    return ws
+
+
 def test_architecture_gap_when_control_unreported():
     table = {"routes": [], "controls": ["auth", "rate-limit", "csrf"], "entrypoints": []}
     arch = "# Architecture\nThe app enforces auth on all routes.\n"  # mentions only auth
@@ -76,3 +83,45 @@ def test_record_route_gaps_round_trips_through_ledger(tmp_path):
     from sec_overlay.coverage_ledger import validate_coverage_ledger
 
     assert validate_coverage_ledger(ledger) == []
+
+
+def test_route_control_table_prefers_the_census_over_the_scan_profile(tmp_path):
+    """Deriving routes from the scan profile made the check compare recon to itself."""
+    from sec_overlay.route_census import RouteSite
+    from sec_overlay.route_control import build_route_control_table
+
+    ws = _workspace_with_profile(tmp_path, {"entrypoints": ["/health"]})
+    sites = [RouteSite("route:app.py:9:/policy/evaluate", "app.py", 9, "POST",
+                       "/policy/evaluate", "flask")]
+    table = build_route_control_table(ws, census=sites)
+    assert table["source"] == "route-census"
+    assert any("/policy/evaluate" in str(r) for r in table["routes"])
+
+
+def test_route_control_table_falls_back_to_the_profile_without_a_census(tmp_path):
+    from sec_overlay.route_control import build_route_control_table
+
+    ws = _workspace_with_profile(tmp_path, {"entrypoints": ["/health"]})
+    assert build_route_control_table(ws)["source"] == "scan-profile"
+
+
+def test_check_census_routes_reports_a_route_the_profile_never_mentions(tmp_path):
+    """This is the whole point of F6: an unmentioned route becomes a gap row."""
+    from sec_overlay.route_census import RouteSite
+    from sec_overlay.route_control import check_census_routes
+
+    sites = [RouteSite("route:app.py:9:/policy/evaluate", "app.py", 9, "POST",
+                       "/policy/evaluate", "flask")]
+    gaps = check_census_routes(sites, {"entrypoints": ["/health"]})
+    assert len(gaps) == 1
+    assert gaps[0]["disposition"] == "needs_follow_up"
+    assert "/policy/evaluate" in gaps[0]["id"]
+
+
+def test_check_census_routes_is_silent_when_the_profile_mentions_the_route(tmp_path):
+    from sec_overlay.route_census import RouteSite
+    from sec_overlay.route_control import check_census_routes
+
+    sites = [RouteSite("route:app.py:9:/policy/evaluate", "app.py", 9, "POST",
+                       "/policy/evaluate", "flask")]
+    assert check_census_routes(sites, {"entrypoints": ["POST /policy/evaluate"]}) == []

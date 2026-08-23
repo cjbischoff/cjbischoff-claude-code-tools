@@ -61,3 +61,24 @@ def test_census_returns_empty_when_the_tool_fails():
         return R()
 
     assert census(_FIXTURE, runner=fake) == []
+
+
+def test_write_and_load_census_round_trip(tmp_path):
+    from sec_overlay.route_census import RouteSite, load_census, write_census
+    from sec_overlay.workspace import Workspace
+
+    ws = Workspace(tmp_path)
+    ws.kb.mkdir(parents=True, exist_ok=True)
+    sites = [RouteSite("route:a.py:3:/x", "a.py", 3, "GET", "/x", "flask")]
+    out = write_census(ws, sites)
+    assert out.name == "route-census.json"
+    assert load_census(ws) == sites
+
+
+def test_load_census_is_empty_when_absent(tmp_path):
+    from sec_overlay.route_census import load_census
+    from sec_overlay.workspace import Workspace
+
+    ws = Workspace(tmp_path)
+    ws.kb.mkdir(parents=True, exist_ok=True)
+    assert load_census(ws) == []
