@@ -966,3 +966,12 @@ Phase 8 (v5.1, DOC-03) promotes `selfscore` from a deliberately-omitted PHASE_TA
 an enforced label in `test_docs_invariants.py`'s `_PHASE_DOC_LABELS`: the CLAUDE.md
 phase-order block must now carry `Selfscore` between `Report` and `Red Team`, in
 PHASE_TABLE order. Only `factcheck` and `demote-noise` remain condensed-view omissions.
+
+`test_dependency_sinks.py` (new) covers `sec_overlay.dependency_sinks`: the shipped
+catalog loads and passes `validate_catalog` with zero errors; the `opa-rego-http-send`
+entry exists with `cls == "ssrf"`, `package == "github.com/open-policy-agent/opa"`,
+`"go.mod"` in its manifests, and a non-empty `safe_option`; `catalog_ids()` returns the
+same id set as loading the catalog directly, with no duplicate ids; and
+`validate_catalog` reports a defect fragment (`entries`, `package`, or `duplicate`) for
+each of three malformed documents — an empty entries key, an entry missing a required
+field, and an entry list with a duplicate id.

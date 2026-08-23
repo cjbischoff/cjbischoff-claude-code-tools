@@ -225,6 +225,7 @@ they never confirm a finding.
 | `approved-crypto-algorithms.yaml` | `crypto_policy.py` | Approved algos (aes-256-gcm, chacha20-poly1305, sha256+, argon2/bcrypt/scrypt/pbkdf2); denied (md5, sha1, des, 3des, rc4, ecb …); floors (rsa≥3072, pbkdf2≥600000, ecc≥256, aes≥128). |
 | `approved-key-sources.yaml` | `crypto_policy.py` | Approved key sources (kms, vault, chamber, gcp-secret-manager, azure-keyvault, env); denied (literal, hardcoded, filesystem, source). |
 | `asvs/asvs_5.0.0.json` | `asvs.py` | A curated 12-item OWASP ASVS 5.0 seed, indexed by id/chapter/CWE; `citations.py` attaches ASVS IDs (advisory). |
+| `dependency-sinks.json` | `dependency_sinks.py` | Dependencies whose own code holds the sink; consumed by `sec_overlay.dependency_sinks` and by recon routing. |
 
 `crypto_policy.check(algo, params, key_source)` turns "is this weak crypto?" from an LLM
 opinion into a deterministic lookup — that is the whole point of the two YAML files.

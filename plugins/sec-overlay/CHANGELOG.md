@@ -2,6 +2,13 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## Unreleased
+
+### Added
+
+- Dependency-sink catalog (`references/dependency-sinks.json`) and its loader,
+  naming dependencies whose own code holds the sink.
+
 ## 1.69.15 - 2026-08-22
 
 ### Fixed

@@ -7,7 +7,7 @@ scoring, reporting, campaign state, and per-repo memory. Stdlib-only (no runtime
 table lists every module by job and is kept current with the code. This file is the in-package
 entry point; read the parent map for the full inventory.
 
-- Package layout: ~72 modules at the top level, plus the `correlate/` subpackage (cross-repo
+- Package layout: ~73 modules at the top level, plus the `correlate/` subpackage (cross-repo
   correlation — see the parent map's `sec_overlay/correlate/` section).
 - Two in-code invariants enforced here: the tool-receipt gate (`evidence.py` + `findings_gate.py`)
   and never-silent backends (`prefilter.py`). See [`../README.md`](../README.md#the-two-invariants-in-code).
@@ -15,6 +15,11 @@ entry point; read the parent map for the full inventory.
 
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
+
+`dependency_sinks.py` (new) loads and validates `../references/dependency-sinks.json` — the
+catalog of dependencies whose own code holds a sink — and exposes `catalog_ids()` for later
+receipt-id validation. See the module map entry in [`../README.md`](../README.md) for the
+full contract and the CLI-callable list for its `python -m sec_overlay.dependency_sinks` entry.
 
 `review_findings.py` (new, REV-01) adds the review-profile gate `apply_profile` — see the
 module map entry in [`../README.md`](../README.md) for the full contract; `cli.py`'s
