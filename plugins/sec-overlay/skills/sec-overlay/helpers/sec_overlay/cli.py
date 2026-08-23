@@ -909,6 +909,15 @@ def main(argv: list[str] | None = None) -> int:
     mem.add_argument("--learn", default=None, help="Append a dated learning.")
     mem.add_argument("--tag", default="", help="Optional tag for the learning.")
 
+    sessions_p = sub.add_parser("sessions", help="List/show read-only sidecar session state.")
+    sessions_sub = sessions_p.add_subparsers(dest="sessions_cmd", required=True)
+    sessions_list = sessions_sub.add_parser("list", help="One row per sidecar session.")
+    sessions_list.add_argument("--target", required=True)
+    sessions_show = sessions_sub.add_parser("show", help="Detail for one session.")
+    sessions_show.add_argument("session", help="A slug, or 'latest'.")
+    sessions_show.add_argument("--target", required=True)
+    sessions_show.add_argument("--severity", default=None, help="Filter findings by severity.")
+
     audit = sub.add_parser("audit", help="run the deterministic audit driver")
     audit.add_argument("--target", required=True)
     audit.add_argument("--workspace")
@@ -1042,6 +1051,23 @@ def main(argv: list[str] | None = None) -> int:
         print(f"memory: {memory.root}")
         print(f"status: {state} (pass {st['pass_number']} @ {st['active_sha']})")
         print(f"stages done: {', '.join(st['stages_done']) or '(none)'}")
+        return 0
+
+    if args.cmd == "sessions":
+        from sec_overlay import sessions as sessions_mod
+        from sec_overlay.repo_memory import memory_root
+
+        root = memory_root(args.target)
+        if args.sessions_cmd == "list":
+            print(sessions_mod.render_rows(sessions_mod.session_rows(root)))
+            return 0
+        try:
+            session_dir = sessions_mod.resolve_session(root, args.session)
+        except KeyError:
+            print(f"sessions: no session {args.session!r} under {root}", file=sys.stderr)
+            return 2
+        detail = sessions_mod.session_detail(session_dir, severity=args.severity)
+        print(sessions_mod.render_detail(detail))
         return 0
 
     if args.cmd == "audit":

@@ -125,7 +125,7 @@
 
 ### Task 19: REQ-S2 — sessions list/show
 **Files:** Modify `cli.py` (subcommands over sidecar `state.json` + review ledger; `show` takes `latest` or slug, `--severity` filter); Test append `test_cli_review.py` or new `test_sessions.py`.
-- [ ] RED: fixture sidecar → list row; show renders counts + filter. Commit. GREEN: implement. Commit.
+- [x] RED: fixture sidecar → list row; show renders counts + filter. Commit. GREEN: implement. Commit.
 
 ### Task 20: REQ-S4 — rules check + did-you-mean
 **Files:** Modify `cli.py` (`rules check <path>` printing doc + layer; argparse error hook via `difflib.get_close_matches`); Test append.

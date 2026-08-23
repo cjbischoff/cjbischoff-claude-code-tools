@@ -46,6 +46,12 @@ splits critical/high (inline) from the rest (summary), `build_review_payload` bu
 review, and `post_review` POSTs it with an injectable transport. The composite `action.yml` at
 the plugin root invokes it. See the module map entry in [`../README.md`](../README.md).
 
+`sessions.py` (new, REQ-S2) renders read-only over the per-repo sidecar — `session_rows` and
+`render_rows` list one row per slug (pass, sha, finding counts), `resolve_session` picks `latest`
+by mtime or a slug, and `session_detail`/`render_detail` show stages plus a ledger summary with a
+`--severity` finding filter. Wired as `cli.py`'s `sessions list|show` subcommand. See the module
+map entry in [`../README.md`](../README.md).
+
 `background.py` (new, REQ-P8) adds `load_background`, sanitizing developer-supplied background
 context before it enters a review prompt — a 1 MB `BACKGROUND_MAX_BYTES` cap, control-character
 strip, envelope-delimiter neutralization, a hard secret abort, then `redactor.safe_for_prompt`.

@@ -12,6 +12,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Sessions list/show (REQ-S2, Task 19 GREEN): new read-only
+  `sec_overlay/sessions.py` renders the sidecar `state.json` plus review
+  ledgers — `session_rows`/`render_rows` produce one row per slug (pass, sha,
+  finding counts), `resolve_session` resolves `latest` by mtime or a slug, and
+  `session_detail`/`render_detail` show stages, a ledger summary, and a
+  `--severity`-filtered finding list (X3 scope). Wired as the `sessions
+  list|show` CLI subcommand over `repo_memory.memory_root`.
 - Sessions list/show (REQ-S2, Task 19 RED): RED tests in `tests/test_sessions.py`
   pin the read-only renderer contract over sidecar `state.json` and review
   ledgers — one row per sidecar slug (pass, sha, finding counts), `latest`
