@@ -127,7 +127,7 @@ def test_group_bundles_does_not_pair_c_headers_across_directories():
 def test_group_bundles_splits_unit_exceeding_max_tokens():
     # Each file alone estimates above the cap, so the pair cannot share a unit.
     over = "x" * (MAX_UNIT_TOKENS * 4 + 8)
-    diffs = {"src/foo.h": over, "src/foo.c": over}
+    diffs: dict[str, str] = {"src/foo.h": over, "src/foo.c": over}
     units = group_bundles([_cf("src/foo.h"), _cf("src/foo.c")], diffs=diffs)
     seen = sorted(p for u in units for p in u.files)
     assert seen == ["src/foo.c", "src/foo.h"]  # totality preserved
@@ -136,7 +136,7 @@ def test_group_bundles_splits_unit_exceeding_max_tokens():
 
 def test_group_bundles_keeps_unit_within_token_cap():
     small = "x" * 8
-    diffs = {"src/foo.h": small, "src/foo.c": small}
+    diffs: dict[str, str] = {"src/foo.h": small, "src/foo.c": small}
     units = group_bundles([_cf("src/foo.h"), _cf("src/foo.c")], diffs=diffs)
     assert len(units) == 1
 

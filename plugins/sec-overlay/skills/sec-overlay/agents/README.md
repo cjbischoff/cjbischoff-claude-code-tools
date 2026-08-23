@@ -179,8 +179,11 @@ lighter pipeline over one diff — not the full audit above. It has two prompts 
 | `review-filter.md` | sonnet | one changed file's path, diff, and the review comments (findings) that survived positioning + the hunk gate | a **retract-only** fact-checking verdict — `approve_all_comments` or `report_incorrect_comments` naming only ids it was shown. It does not fit the producer/adversary pair above: there is no separate adversary pass, because the real safety guarantee is a mechanical code-level veto (`sec_overlay.reflection.PROTECTED_SUBJECT_CLASSES`), not model tier or a second opinion. `sec_overlay.reflection.validate_verdict` parses its raw response before any finding sees it; `apply_verdict` is the sole code path that may act on it, and even then only to retract — never to add, rank, or rewrite. |
 
 `review-file.md` uses this skill's uppercase token set (`{{CURRENT_FILE_PATH}}`, `{{DIFF}}`,
-`{{CHANGE_FILES}}`, `{{SYSTEM_RULE}}`, plus the `{{OVERLAY_ROOT}}`/`{{REPO_ROOT}}` path anchors),
-rendered by `sec_overlay.review_agent.render_review_prompt`. `review-filter.md` uses its own
+`{{CHANGE_FILES}}`, `{{SIBLING_DIFFS}}`, `{{SYSTEM_RULE}}`, plus the `{{OVERLAY_ROOT}}`/`{{REPO_ROOT}}`
+path anchors), rendered by `sec_overlay.review_agent.render_review_prompt`. `{{SIBLING_DIFFS}}` carries
+the diffs of a file's bundle-mates (REQ-P1) for context, largest-first, each over `cap_tokens`
+replaced by an `omitted (token cap)` marker; `{{CHANGE_FILES}}` annotates those bundle-mates with
+`(diff included below)`. `review-filter.md` uses its own
 token set (`{{PATH}}`, `{{DIFF}}`, `{{COMMENTS}}`), rendered by
 `sec_overlay.reflection.render_reflection_prompt` — none of the audit-pipeline tokens below apply
 to either, since both are dispatched per file rather than by the orchestrator's phase driver.

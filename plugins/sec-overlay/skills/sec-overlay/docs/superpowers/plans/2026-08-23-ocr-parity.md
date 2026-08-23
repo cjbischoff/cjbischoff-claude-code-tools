@@ -80,8 +80,8 @@
 
 ### Task 10: REQ-P1 — sibling diffs + richer bundling
 **Files:** Modify `helpers/sec_overlay/review_agent.py` (`render_review_prompt(..., sibling_diffs: dict[str,str] | None, cap_tokens: int)`), `helpers/sec_overlay/bundle.py` (header/impl + stem-pair rules; optional `import_adjacency(graph_json)` grouping; `MAX_UNIT_TOKENS` split), `helpers/sec_overlay/cli.py` prepare path; Tests append to `test_review_agent.py`, `test_bundle.py`.
-- [ ] RED: prompt includes sibling diff fenced blocks; oversized sibling truncates with `omitted (token cap)` marker; `.h/.c` pair groups; token cap splits a unit. Commit.
-- [ ] GREEN: implement (token estimate = `len(text)//4` shared helper from Task 12's module — implement `estimate_tokens` here first if Task 12 not yet landed, then Task 12 reuses it). Commit.
+- [x] RED: prompt includes sibling diff fenced blocks; oversized sibling truncates with `omitted (token cap)` marker; `.h/.c` pair groups; token cap splits a unit. Commit. (`de8a8b0`)
+- [x] GREEN: implemented. `estimate_tokens` landed in new `review_budget.py` (Task 12 reuses it); `render_review_prompt(sibling_diffs, cap_tokens)` + `{{SIBLING_DIFFS}}` token; `group_bundles(diffs=, max_unit_tokens=)` C-pair/impl-stem/split; `cli.run_review` prepare passes unit-mate diffs. Deferred (EXTRACTION P1a/P1b): single-file non-mate siblings → Task 12 budget; `import_adjacency` (SPEC-optional). Bench delta: no-op — `bench.run` grades the audit pipeline, not review mode (Task 9 convention). Commit.
 
 ### Task 11: REQ-P2 — rule docs 9 → 36
 **Files:** Create 27 docs under `skills/sec-overlay/rules/rule_docs/` (analysis priority order); Modify `helpers/sec_overlay/rule_glob.py` (`BUILTIN_PATH_RULE_MAP` globs, OCR order); Test `helpers/tests/test_rule_glob.py` (count, attribution line `Adapted from open-code-review (Apache-2.0)`, map→doc resolution).

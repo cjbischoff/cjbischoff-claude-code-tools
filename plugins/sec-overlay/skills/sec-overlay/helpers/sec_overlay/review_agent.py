@@ -24,7 +24,12 @@ from pathlib import Path
 from sec_overlay.evidence import as_llm_claim
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.prompts import render_prompt
+from sec_overlay.review_budget import estimate_tokens
 from sec_overlay.workspace import Workspace, _atomic_write, read_agent_return
+
+# Per-sibling diff token cap for the review prompt's context block. A sibling
+# whose diff estimates above this is listed by path but its body omitted.
+DEFAULT_SIBLING_CAP_TOKENS = 2_000
 
 REVIEW_AGENT_CLAIM = as_llm_claim("review-agent")
 
@@ -53,11 +58,41 @@ def _review_file_template_path() -> Path:
     return Path(__file__).resolve().parents[2] / "agents" / "review-file.md"
 
 
-def _render_change_files_block(changed_files: Sequence[str]) -> str:
-    """Render the diff's other changed paths into the `{{CHANGE_FILES}}` block."""
+def _render_change_files_block(
+    changed_files: Sequence[str], sibling_paths: frozenset[str] = frozenset()
+) -> str:
+    """Render the diff's other changed paths into the `{{CHANGE_FILES}}` block.
+
+    A path whose diff is embedded in the sibling-context block is annotated so
+    the reviewer knows its change is shown below, not merely named.
+    """
     if not changed_files:
         return "(no other files changed in this diff)"
-    return "\n".join(f"- {p}" for p in changed_files)
+    lines = []
+    for p in changed_files:
+        suffix = " (diff included below)" if p in sibling_paths else ""
+        lines.append(f"- {p}{suffix}")
+    return "\n".join(lines)
+
+
+def _render_sibling_diffs_block(sibling_diffs: dict[str, str], cap_tokens: int) -> str:
+    """Render sibling diffs largest-first, omitting any over the per-sibling cap.
+
+    Largest-first (by diff length) so the most substantial context leads; a
+    sibling whose estimated tokens exceed `cap_tokens` is kept as a path entry
+    with its body replaced by an explicit `omitted (token cap)` marker rather
+    than dropped silently.
+    """
+    if not sibling_diffs:
+        return "(no sibling diffs)"
+    blocks = []
+    for sib_path, sib_diff in sorted(sibling_diffs.items(), key=lambda kv: len(kv[1]), reverse=True):
+        if estimate_tokens(sib_diff) > cap_tokens:
+            body = "omitted (token cap)"
+        else:
+            body = f"```diff\n{sib_diff}\n```"
+        blocks.append(f"### {sib_path}\n{body}")
+    return "\n\n".join(blocks)
 
 
 def render_review_prompt(
@@ -68,6 +103,8 @@ def render_review_prompt(
     *,
     repo_root: str = "",
     overlay_root: str = "",
+    sibling_diffs: dict[str, str] | None = None,
+    cap_tokens: int = DEFAULT_SIBLING_CAP_TOKENS,
 ) -> str:
     """Render the `agents/review-file.md` prompt for one file's review pass.
 
@@ -87,6 +124,11 @@ def render_review_prompt(
         overlay_root: Substituted into `{{OVERLAY_ROOT}}` — where the
             harness's own `review_findings.py` lives, for the prompt's
             profile-decision note. Same empty default as `repo_root`.
+        sibling_diffs: Optional per-path diff text for files reviewed alongside
+            `path` (unit members, or nearby context), rendered largest-first
+            into `{{SIBLING_DIFFS}}` and annotated in `{{CHANGE_FILES}}`. A
+            sibling over `cap_tokens` is listed with its body omitted.
+        cap_tokens: Per-sibling token cap for the embedded diff body.
 
     Returns:
         The fully rendered prompt text.
@@ -96,13 +138,15 @@ def render_review_prompt(
             (`sec_overlay.prompts.render_prompt`).
     """
     template = _review_file_template_path().read_text()
+    siblings = sibling_diffs or {}
     subs = {
         "CURRENT_FILE_PATH": path,
         "SYSTEM_RULE": rule_text,
         "DIFF": diff,
-        "CHANGE_FILES": _render_change_files_block(changed_files),
+        "CHANGE_FILES": _render_change_files_block(changed_files, frozenset(siblings)),
         "REPO_ROOT": repo_root,
         "OVERLAY_ROOT": overlay_root,
+        "SIBLING_DIFFS": _render_sibling_diffs_block(siblings, cap_tokens),
     }
     return render_prompt(template, subs)
 

@@ -515,11 +515,17 @@ def run_review(
             if record.path not in hunks_by_path:
                 continue
             label = agent_label(record.path)
+            unit_mate_diffs = {
+                mate: diff_text_by_path[mate]
+                for mate in bundle_paths_by_path.get(record.path, frozenset())
+                if mate != record.path and mate in diff_text_by_path
+            }
             prompt = render_review_prompt(
                 record.path,
                 rule_text_by_path[record.path],
                 diff_text_by_path[record.path],
                 [r.path for r in selection.reviewable if r.path != record.path],
+                sibling_diffs=unit_mate_diffs,
                 repo_root=root,
                 overlay_root=overlay_root,
             )

@@ -53,6 +53,9 @@ is an observation, not a profile decision.
 - `{{CURRENT_FILE_PATH}}` — the path under review, below.
 - `{{DIFF}}` — that file's unified diff, below.
 - `{{CHANGE_FILES}}` — the other files this change touched, for context only (Strict Focus Rules).
+  A path marked `(diff included below)` has its diff under **Sibling diffs**, for context only.
+- `{{SIBLING_DIFFS}}` — diffs of this file's bundle-mates (impl/test, header/impl, or config
+  siblings), for context only. Never file a comment against a sibling path — the parser discards it.
 - `{{SYSTEM_RULE}}` — the review checklist resolved for this file's language, below (open-code-review's
   original `system_rule` token, renamed to this skill's uppercase-token convention).
 
@@ -97,6 +100,10 @@ Path: `{{CURRENT_FILE_PATH}}`
 ### Other changed files
 
 {{CHANGE_FILES}}
+
+### Sibling diffs
+
+{{SIBLING_DIFFS}}
 
 ### Review Checklist
 

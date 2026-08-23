@@ -12,14 +12,21 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
-- Sibling-context review tests (REQ-P1, failing): `test_review_agent.py` and
-  `test_bundle.py` assert the review prompt embeds sibling diffs as fenced
-  blocks rendered largest-first, truncates an over-cap sibling with an
-  `omitted (token cap)` marker, and annotates each embedded sibling in the
-  changed-files block; and that `group_bundles` pairs C/C++ header-impl files
-  and interface/impl stems within a directory and splits a unit over
-  `MAX_UNIT_TOKENS`. Red phase — the `render_review_prompt` `sibling_diffs`
-  parameter and `bundle.MAX_UNIT_TOKENS` do not exist yet.
+- Sibling-context review (REQ-P1): the review-file prompt now embeds a file's
+  bundle-mate diffs. New module `review_budget.py` holds the shared size
+  primitive `estimate_tokens(text) = len(text) // 4`.
+  `render_review_prompt(sibling_diffs=..., cap_tokens=...)` renders the new
+  `{{SIBLING_DIFFS}}` token largest-first as fenced diffs, replaces any sibling
+  over `cap_tokens` (default 2000) with an `omitted (token cap)` marker, and
+  annotates each embedded sibling `(diff included below)` in `{{CHANGE_FILES}}`.
+  `bundle.group_bundles` gains C/C++ header-impl (`.h/.c`, `.hpp/.cpp`) and
+  interface/impl stem (`svc.ts`/`svc.impl.ts`) pairing plus a keyword-only
+  `diffs`/`max_unit_tokens` (`MAX_UNIT_TOKENS = 50000`) first-fit split;
+  `diffs=None` leaves existing callers unchanged. `cli.run_review`'s prepare
+  path passes each file its unit-mates' diffs. Deferred: single-file units
+  receive non-mate sibling diffs only under REQ-P4's budget (Task 12); and
+  `import_adjacency(graph_json)` grouping (SPEC-optional; review mode must not
+  require `kb/graph.json`).
 
 - Live-reflection wiring (REQ-P6): `run_review` now consumes recorded
   review-filter verdicts through `reflection.recorded_verdict_source` instead

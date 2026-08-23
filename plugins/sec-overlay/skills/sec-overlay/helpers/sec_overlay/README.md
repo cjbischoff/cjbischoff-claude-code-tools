@@ -918,6 +918,23 @@ the accumulated `fetch_by_path` dict, performing every `manifest.add`/`start`/`f
 transition exactly as before — parallel fetch, serial manifest mutation, and a `seal()` of
 `"partial"` (rc 3) when any unit times out, unchanged for every other path.
 
+Parity plan Task 10 (REQ-P1) adds sibling-diff context and two grouping rules. New module
+`review_budget.py` holds `estimate_tokens(text) = len(text) // 4` — the single size primitive
+`bundle.py` and `review_agent.py` share (and REQ-P4's budget projection builds on). `bundle.py`
+grows two pairing rules — C/C++ header-impl (`.h/.c`, `.hpp/.cpp`, same directory) and
+interface/impl stem pairs (`svc.ts`/`svc.impl.ts`) — and a token-cap split: `group_bundles` now
+takes keyword-only `diffs` and `max_unit_tokens` (`MAX_UNIT_TOKENS = 50_000`), and when `diffs`
+is supplied a grouped unit whose members' estimated diffs exceed the cap is split into
+first-fit runs (an oversized single member becomes its own run, never dropped); `diffs=None`
+leaves every existing caller byte-identical. `review_agent.render_review_prompt` gains keyword-only
+`sibling_diffs` and `cap_tokens` (`DEFAULT_SIBLING_CAP_TOKENS = 2_000`): siblings render into the
+new `{{SIBLING_DIFFS}}` token largest-first as fenced diffs, each over the cap replaced by an
+`omitted (token cap)` marker, and each sibling path is annotated `(diff included below)` in
+`{{CHANGE_FILES}}`. `cli.run_review`'s prepare path passes each file its unit-mates' diffs as
+`sibling_diffs`. Deferred (recorded in `docs/parity/EXTRACTION.md`): single-file units do not yet
+receive non-mate sibling diffs (gated on REQ-P4's budget, Task 12), and `import_adjacency
+(graph_json)` grouping is not built (SPEC-optional; review mode must not require `kb/graph.json`).
+
 Phase 4 plan 03 (Task 2, SCALE-03) adds a resume-identity gate. `review_coverage.py`'s
 `MANIFEST_VERSION` is now 2: `CoverageManifest` gains keyword-only `model`/`profile` fields,
 round-tripped through `to_dict`/`load` (a version-1 manifest, or a version-2 one written before

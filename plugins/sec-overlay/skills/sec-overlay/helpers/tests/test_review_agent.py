@@ -105,7 +105,8 @@ def test_render_review_prompt_renders_siblings_largest_first(tmp_path, monkeypat
     monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: tp)
     sib = {"small.py": "@@ +1 @@\n+a\n", "big.py": "@@ +1 @@\n+" + ("z" * 400) + "\n"}
     rendered = render_review_prompt("app.py", _PY_RULE, _DIFF, list(sib), sibling_diffs=sib)
-    assert rendered.index("big.py") < rendered.index("small.py")
+    siblings_block = rendered.split("siblings:", 1)[1]
+    assert siblings_block.index("big.py") < siblings_block.index("small.py")
 
 
 def test_render_review_prompt_annotates_sibling_in_changed_files_block(tmp_path, monkeypatch):

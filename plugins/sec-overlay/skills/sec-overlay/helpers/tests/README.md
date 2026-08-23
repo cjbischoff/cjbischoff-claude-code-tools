@@ -1168,7 +1168,8 @@ label miss. It now enforces the row's position right after `Recon`.
   annotates each embedded sibling in the changed-files block; `group_bundles` pairs
   C/C++ header-impl files (`.h/.c`, `.hpp/.cpp`) and interface/impl stems
   (`svc.ts`/`svc.impl.ts`) within a directory, and splits any unit over
-  `MAX_UNIT_TOKENS` when per-file `diffs` are supplied.
+  `MAX_UNIT_TOKENS` when per-file `diffs` are supplied. The size estimate is
+  `review_budget.estimate_tokens` (`len // 4`), shared with REQ-P4.
 
 - `test_aacr_adapter.py` locks REQ-M3: `aacr_entries` maps AACR dataset rows to
   `source="aacr"` corpus entries that validate and never move the real-confirmed
