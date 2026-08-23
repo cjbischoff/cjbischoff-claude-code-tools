@@ -297,3 +297,12 @@ def test_bench_readme_documents_annotation_and_reproducibility():
     ):
         assert heading in txt, heading
     assert "single-maintainer" in txt
+
+
+def test_review_budget_constants_match_ocr_shape():
+    """Task 12 (REQ-P4): the round-cost shape constants are pinned to OCR's values so a
+    silent drift in the projection is caught here, not only in the unit suite."""
+    from sec_overlay import review_budget as rb
+
+    assert (rb.PLAN_PROMPT, rb.PLAN_OUT, rb.ROUNDS, rb.ROUND_OUT) == (2000, 400, 7, 700)
+    assert rb.FILE_BUDGET_FRACTION == 0.8

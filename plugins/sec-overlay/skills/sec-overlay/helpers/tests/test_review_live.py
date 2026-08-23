@@ -549,6 +549,97 @@ def test_run_review_falls_back_to_the_repo_sidecar_when_workspace_is_absent(tmp_
     assert (_sidecar_ws(str(target)).artifacts / "coverage_manifest.json").is_file()
 
 
+def test_tiny_token_budget_seals_partial_marks_skips_and_exits_zero(tmp_path, monkeypatch):
+    """Task 12 (REQ-P4/D4/D5): a budget that admits the first file but not the second
+    seals `partial`, fails the over-budget file with note `skipped(budget)`, sets the
+    manifest `budget_exceeded` flag, yet exits 0 (a budget stop with coverage is not a
+    run failure)."""
+    from sec_overlay.review_budget import BUDGET_SKIP_NOTE, estimate_review_cost
+
+    diffs = {"app.py": _diff_for("app.py"), "other.py": _diff_for("other.py")}
+    monkeypatch.setattr(subprocess, "run", _fake_run_for(diffs))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+    _record_return(str(tmp_path), "other.py",
+                    calls=[_code_comment("other.py", 2, "sql injection", "sqli")])
+
+    # Admit exactly one file: budget between one and two file-costs, and high
+    # enough that each single file clears the P4a fraction cap (0.8 * budget).
+    one_cost = estimate_review_cost(_diff_for("app.py"))
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security",
+                    token_budget=2 * one_cost - 1)
+    assert rc == 0
+
+    ws = _sidecar_ws(tmp_path)
+    manifest = json.loads((ws.artifacts / "coverage_manifest.json").read_text())
+    assert manifest["seal"] == "partial"
+    assert manifest["budget_exceeded"] is True
+    skipped = [f for f in manifest["files"] if f["note"] == BUDGET_SKIP_NOTE]
+    assert len(skipped) == 1
+    assert skipped[0]["state"] == "failed"
+
+
+def test_zero_token_budget_reviews_every_file(tmp_path, monkeypatch):
+    """Task 12: budget 0 means unlimited — every file completes, seal stays complete."""
+    diffs = {"app.py": _diff_for("app.py"), "other.py": _diff_for("other.py")}
+    monkeypatch.setattr(subprocess, "run", _fake_run_for(diffs))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+    _record_return(str(tmp_path), "other.py",
+                    calls=[_code_comment("other.py", 2, "sql injection", "sqli")])
+
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security", token_budget=0)
+    assert rc == 0
+
+    ws = _sidecar_ws(tmp_path)
+    manifest = json.loads((ws.artifacts / "coverage_manifest.json").read_text())
+    assert manifest["seal"] == "complete"
+    assert manifest["budget_exceeded"] is False
+
+
+def test_prepare_records_per_file_token_estimate(tmp_path, monkeypatch):
+    """Task 12 (D10): the prepare plan carries a per-file `token_estimate`."""
+    from sec_overlay.review_budget import estimate_review_cost
+
+    monkeypatch.setattr(subprocess, "run", _fake_run_for({"app.py": _diff_for("app.py")}))
+    rc = main(["review", "--base", _BASE_SHA, "--head", _HEAD_SHA, "--root", str(tmp_path),
+               "--prepare"])
+    assert rc == 0
+
+    ws = _sidecar_ws(tmp_path)
+    plan = json.loads((ws.runs / "review_plan.json").read_text())
+    assert plan[0]["token_estimate"] == estimate_review_cost(_diff_for("app.py"))
+
+
+def test_file_over_token_fraction_cap_excluded_not_reviewed(tmp_path, monkeypatch):
+    """Task 12 (REQ-P4a): a file whose estimate alone exceeds 0.8 * budget is excluded
+    before review — it never enters the coverage manifest — while a normal file under the
+    cap is still reviewed and the seal stays complete."""
+    big_body = "x" * 40000
+    big_diff = (
+        "diff --git a/big.py b/big.py\n"
+        "index 1111111..2222222 100644\n"
+        "--- a/big.py\n+++ b/big.py\n"
+        "@@ -1,1 +1,2 @@\n import os\n+" + big_body + "\n"
+    )
+    diffs = {"app.py": _diff_for("app.py"), "big.py": big_diff}
+    monkeypatch.setattr(subprocess, "run", _fake_run_for(diffs))
+    _record_return(str(tmp_path), "app.py",
+                    calls=[_code_comment("app.py", 2, "sql injection", "sqli")])
+
+    # budget high enough that app.py clears 0.8*budget but big.py does not.
+    rc = run_review(_BASE_SHA, _HEAD_SHA, str(tmp_path), profile="security",
+                    token_budget=100000)
+    assert rc == 0
+
+    ws = _sidecar_ws(tmp_path)
+    manifest = json.loads((ws.artifacts / "coverage_manifest.json").read_text())
+    paths = [f["path"] for f in manifest["files"]]
+    assert "app.py" in paths
+    assert "big.py" not in paths
+    assert manifest["seal"] == "complete"
+
+
 def test_review_workspace_override_permits_a_second_profile_without_weakening_the_resume_guard(
     tmp_path,
 ):

@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-110 pytest files, 1306 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+115 pytest files, 1553 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -114,6 +114,17 @@ into `runs/reflection_prompts/`. `test_reflection_failure_for_one_file_leaves_ot
 records an unreadable verdict for one file (skip) and a valid empty verdict for another (kept),
 proving a per-file verdict failure is isolated — it too drives the real `recorded_verdict_source`
 rather than monkeypatching `apply_verdict`.
+
+`test_review_budget.py` (new, REQ-P4, Task 12) covers the hard token budget: the OCR-shaped
+cost constants (`PLAN_PROMPT`, `PLAN_OUT`, `ROUNDS`, `ROUND_OUT`, `FILE_BUDGET_FRACTION`),
+`estimate_tokens` staying the raw `len//4` primitive, `estimate_review_cost` following OCR's
+plan-loop formula (empty diff == 21300, scaling with diff length), and `BudgetGate` admitting
+until a projected breach then latching closed (budget 0 unlimited; an estimate hitting the
+budget exactly still admits). `test_review_live.py` gains four end-to-end `run_review` tests
+(tiny budget seals `partial`, notes `skipped(budget)`, exits 0; zero budget reviews every file;
+`--prepare` records a per-file `token_estimate`; a file over the 0.8 cap is excluded before
+review). `test_docs_invariants.py` gains `test_review_budget_constants_match_ocr_shape`, pinning
+the constant tuple against `(2000, 400, 7, 700)` and `0.8`.
 
 `test_review_agent.py` (12 tests, Phase 3 Plan 06 Task 1) covers `review_agent.py`'s prompt
 render and response parse, monkeypatching `_review_file_template_path` to a `tmp_path` fixture

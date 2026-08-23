@@ -12,6 +12,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Hard token budget (REQ-P4, Task 12): failing tests first (RED in 1.95.1) for
+  `review_budget.estimate_review_cost` (OCR's plan-loop cost shape: prompt 2000,
+  plan-out 400, 7 rounds, round-out 700) and a latching `BudgetGate`, plus
+  end-to-end `run_review` tests for a tiny budget sealing `partial` with a
+  `skipped(budget)` note at exit 0, a zero budget reviewing every file, a
+  per-file `token_estimate` in `--prepare`, and a file over the
+  `FILE_BUDGET_FRACTION` (0.8) cap excluded before review.
+
 - Rule-doc port (REQ-P2): `BUILTIN_PATH_RULE_MAP` now holds OCR's full
   35-pattern `system_rules.json` set plus the trailing `**/*` catch-all (36
   distinct docs, exact OCR order), and 27 new docs are ported under
