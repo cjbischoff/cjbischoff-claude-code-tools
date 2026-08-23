@@ -7,7 +7,12 @@ from sec_overlay import cli
 from sec_overlay.cli import main, run_review
 from sec_overlay.reflection import REFUSED_REASON, RETRACTED_REASON, reflection_label
 from sec_overlay.repo_memory import RepoMemory
-from sec_overlay.review_agent import _stable_finding_id, agent_label
+from sec_overlay.review_agent import (
+    PLAN_LINE_THRESHOLD,
+    _stable_finding_id,
+    agent_label,
+    plan_agent_label,
+)
 from sec_overlay.workspace import record_agent_return
 
 _BASE_SHA = "a" * 40
@@ -744,3 +749,86 @@ def test_workspace_dirty_lists_uncommitted_changes(tmp_path):
     ws = _sidecar_ws(str(repo))
     plan = json.loads((ws.runs / "review_plan.json").read_text())
     assert {e["path"] for e in plan} == {"app.py", "new.py"}
+
+
+# --- REQ-P3: per-file plan phase --------------------------------------------
+
+
+def _fake_run_planmode(diffs, sizes, head_texts=None):
+    """Fake runner exposing a controllable `--unified=0` line count per path.
+
+    `_fake_run_for` returns nothing for `--unified=0`, so every file reads as a
+    zero-line diff and never crosses PLAN_LINE_THRESHOLD. This variant returns
+    `sizes[path]` newline-terminated lines for the `--unified=0` count call.
+    """
+    name_status = "".join(f"M\t{p}\n" for p in diffs)
+    texts = head_texts or {}
+
+    def fake(cmd, capture_output, text, check, **kwargs):
+        class R:
+            returncode = 0
+            stdout = ""
+
+        r = R()
+        if "--verify" in cmd:
+            r.stdout = f"{cmd[-1]}\n"
+        elif "--name-status" in cmd:
+            r.stdout = name_status
+        elif "--unified=0" in cmd:
+            n = sizes.get(cmd[-1], 0)
+            r.stdout = ("x\n" * n)
+        elif "--unified=3" in cmd:
+            r.stdout = diffs.get(cmd[-1], "")
+        elif cmd[1] == "show":
+            path = cmd[-1].split(":", 1)[1]
+            r.stdout = texts.get(path, _new_file_text_from_diff(diffs.get(path, "")))
+        else:
+            r.stdout = ""
+        return r
+
+    return fake
+
+
+def test_plan_prepare_writes_plan_prompt_only_over_threshold(tmp_path, monkeypatch):
+    diffs = {"big.py": _diff_for("big.py"), "small.py": _diff_for("small.py")}
+    sizes = {"big.py": PLAN_LINE_THRESHOLD, "small.py": 3}
+    monkeypatch.setattr(subprocess, "run", _fake_run_planmode(diffs, sizes))
+    rc = main(["review", "--base", _BASE_SHA, "--head", _HEAD_SHA, "--root", str(tmp_path),
+               "--prepare", "--plan"])
+    assert rc == 0
+    ws = _sidecar_ws(tmp_path)
+    plan_dir = ws.runs / "plan_prompts"
+    assert (plan_dir / f"{plan_agent_label('big.py')}.md").is_file()
+    assert not (plan_dir / f"{plan_agent_label('small.py')}.md").is_file()
+
+
+def test_recorded_plan_guidance_injected_into_review_prompt(tmp_path, monkeypatch):
+    diffs = {"big.py": _diff_for("big.py")}
+    sizes = {"big.py": PLAN_LINE_THRESHOLD}
+    monkeypatch.setattr(subprocess, "run", _fake_run_planmode(diffs, sizes))
+    ws = _sidecar_ws(tmp_path)
+    ws.ensure()
+    plan_json = json.dumps({"issues": [{"severity": "high", "guidance": "UNIQUE_PLAN_HINT taint"}]})
+    record_agent_return(ws, plan_agent_label("big.py"), plan_json)
+    rc = main(["review", "--base", _BASE_SHA, "--head", _HEAD_SHA, "--root", str(tmp_path),
+               "--prepare"])
+    assert rc == 0
+    prompt = (ws.runs / "review_prompts" / f"{agent_label('big.py')}.md").read_text()
+    assert "UNIQUE_PLAN_HINT" in prompt
+    assert "{{" not in prompt
+
+
+def test_invalid_plan_return_fails_open_and_records_skip(tmp_path, monkeypatch):
+    diffs = {"big.py": _diff_for("big.py")}
+    sizes = {"big.py": PLAN_LINE_THRESHOLD}
+    monkeypatch.setattr(subprocess, "run", _fake_run_planmode(diffs, sizes))
+    ws = _sidecar_ws(tmp_path)
+    ws.ensure()
+    record_agent_return(ws, plan_agent_label("big.py"), "{ not valid json")
+    rc = main(["review", "--base", _BASE_SHA, "--head", _HEAD_SHA, "--root", str(tmp_path),
+               "--prepare"])
+    assert rc == 0
+    prompt = (ws.runs / "review_prompts" / f"{agent_label('big.py')}.md").read_text()
+    assert "{{" not in prompt
+    skips = json.loads((ws.runs / "plan_skips.json").read_text())
+    assert any(s["path"] == "big.py" for s in skips)

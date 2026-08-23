@@ -12,6 +12,18 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Per-file plan phase (REQ-P3, Task 14): failing tests first (RED) for the
+  review prepare plan step. `test_review_agent.py` pins `render_review_prompt`
+  injecting a `{{PLAN_GUIDANCE}}` body (empty by default), `render_plan_prompt`
+  substituting the plan template tokens, and `plan_guidance_from_return`
+  ordering issues by severity and raising on invalid JSON, an unknown severity,
+  a missing `issues` key, or an issue without guidance. `test_review_live.py`
+  pins `--prepare --plan` writing a plan prompt only for a unit at or over
+  `PLAN_LINE_THRESHOLD`, a recorded plan return injecting its guidance into the
+  review prompt, and an invalid plan return failing open (review prompt renders
+  without guidance, `plan_skips.json` records the skip). Review-mode only, so
+  `bench.run` is unchanged.
+
 - Commit and workspace-dirty review scopes (REQ-P5, Task 13): failing tests
   first (RED in 1.96.1) for `diffscope.dirty_file_records` (a real-repo check
   that it lists staged, unstaged, and untracked working-tree changes) and three

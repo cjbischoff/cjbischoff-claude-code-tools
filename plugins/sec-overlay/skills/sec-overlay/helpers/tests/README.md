@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-115 pytest files, 1558 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+115 pytest files, 1569 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -135,6 +135,15 @@ and commit SHAs), `--commit` with `--base` exiting 2 (mutual exclusion), and
 `--workspace-dirty` listing staged, unstaged, and untracked changes.
 `test_validate_ref_accepts_allowlisted_refs` gains a `HEAD^` case, pinning the GREEN allowlist
 change that lets `--commit`'s `sha^` parent ref validate.
+
+`test_review_agent.py` and `test_review_live.py` (REQ-P3, Task 14) cover the per-file plan phase.
+The agent-seam tests check `render_review_prompt` injecting a `{{PLAN_GUIDANCE}}` body (empty by
+default), `render_plan_prompt` substituting the plan template's tokens, and
+`plan_guidance_from_return` ordering issues by severity and raising on invalid JSON, an unknown
+severity, a missing `issues` key, or an issue without guidance. The CLI tests check `--prepare
+--plan` writing a plan prompt only for a unit at or over `PLAN_LINE_THRESHOLD`, a recorded plan
+return injecting its guidance into the review prompt, and an invalid plan return failing open —
+the review prompt renders without guidance and a `plan_skips.json` entry records the skip.
 
 `test_review_agent.py` (12 tests, Phase 3 Plan 06 Task 1) covers `review_agent.py`'s prompt
 render and response parse, monkeypatching `_review_file_template_path` to a `tmp_path` fixture
