@@ -73,6 +73,28 @@ def test_render_review_prompt_raises_on_missing_substitution(tmp_path, monkeypat
         render_review_prompt("app.py", _PY_RULE, _DIFF, [])
 
 
+_TEMPLATE_WITH_BACKGROUND = _TEMPLATE + "background:\n{{BACKGROUND}}\n"
+
+
+def test_render_review_prompt_wraps_background_in_envelope(tmp_path, monkeypatch):
+    tp = tmp_path / "rf.md"
+    tp.write_text(_TEMPLATE_WITH_BACKGROUND)
+    monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: tp)
+    rendered = render_review_prompt(
+        "app.py", _PY_RULE, _DIFF, [], background="service reads config from S3"
+    )
+    assert "service reads config from S3" in rendered
+    assert '<untrusted kind="background-context"' in rendered
+
+
+def test_render_review_prompt_empty_background_leaves_no_envelope(tmp_path, monkeypatch):
+    tp = tmp_path / "rf.md"
+    tp.write_text(_TEMPLATE_WITH_BACKGROUND)
+    monkeypatch.setattr(review_agent, "_review_file_template_path", lambda: tp)
+    rendered = render_review_prompt("app.py", _PY_RULE, _DIFF, [])
+    assert "<untrusted" not in rendered
+
+
 # --- render_review_prompt sibling diffs (REQ-P1) ------------------------------
 
 _TEMPLATE_WITH_SIBLINGS = _TEMPLATE + "siblings:\n{{SIBLING_DIFFS}}\n"

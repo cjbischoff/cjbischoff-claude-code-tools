@@ -56,6 +56,47 @@ def test_review_rejects_empty_base_ref_with_exit_2(tmp_path, capsys):
     assert rc == 2
 
 
+def test_review_rejects_oversized_background_with_exit_2(tmp_path, capsys):
+    from sec_overlay import cli
+    from sec_overlay.background import BACKGROUND_MAX_BYTES
+
+    rc = cli.main(
+        [
+            "review",
+            "--base",
+            "main",
+            "--head",
+            "HEAD",
+            "--root",
+            str(tmp_path),
+            "--background",
+            "a" * (BACKGROUND_MAX_BYTES + 1),
+        ]
+    )
+    assert rc == 2
+    assert "background" in capsys.readouterr().err
+
+
+def test_review_rejects_secret_in_background_with_exit_2(tmp_path, capsys):
+    from sec_overlay import cli
+
+    rc = cli.main(
+        [
+            "review",
+            "--base",
+            "main",
+            "--head",
+            "HEAD",
+            "--root",
+            str(tmp_path),
+            "--background",
+            "token = ghp_" + "A" * 36,
+        ]
+    )
+    assert rc == 2
+    assert "background" in capsys.readouterr().err
+
+
 def test_memory_command_status_and_learn(tmp_path, monkeypatch, capsys):
     from sec_overlay import cli
     monkeypatch.setenv("SEC_OVERLAY_HOME", str(tmp_path / "mem"))

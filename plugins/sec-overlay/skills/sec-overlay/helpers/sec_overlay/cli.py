@@ -11,6 +11,7 @@ from dataclasses import replace
 from functools import partial
 from pathlib import Path
 
+from sec_overlay.background import load_background
 from sec_overlay.bundle import group_bundles
 from sec_overlay.campaign import record_stage
 from sec_overlay.diffhunks import parse_hunks
@@ -27,6 +28,7 @@ from sec_overlay.file_select import ExcludedFile, partition
 from sec_overlay.models import Finding
 from sec_overlay.normalize import normalize
 from sec_overlay.phase_gate import review_position_gate
+from sec_overlay.redactor import SecretsPresent
 from sec_overlay.reflection import (
     SKIPPED_REASON,
     ReflectionSkip,
@@ -320,6 +322,7 @@ def run_review(
     model: str | None = None,
     workspace: str | None = None,
     token_budget: int = 0,
+    background: str = "",
 ) -> int:
     """Run one review pass end to end: resolve refs, select files, position, seal.
 
@@ -727,6 +730,7 @@ def run_review(
                 repo_root=root,
                 overlay_root=overlay_root,
                 plan_guidance=plan_guidance,
+                background=background,
             )
             prompt_path = prompts_dir / f"{label}.md"
             _atomic_write(prompt_path, prompt)
@@ -987,6 +991,18 @@ def main(argv: list[str] | None = None) -> int:
         help="Hard review token budget; 0 (default) means unlimited. A file whose projected "
         "cost exceeds the budget latches the gate: later files seal 'partial' and exit 0.",
     )
+    background = review.add_mutually_exclusive_group()
+    background.add_argument(
+        "--background",
+        default=None,
+        help="Developer-supplied background context (inline). Sanitized (1 MB cap, control-char "
+        "strip, delimiter guard, secret abort, redaction) and wrapped in the trust envelope.",
+    )
+    background.add_argument(
+        "--background-file",
+        default=None,
+        help="Read background context from a file; same sanitization as --background.",
+    )
     args = parser.parse_args(argv)
 
     if args.cmd == "scan":
@@ -1046,6 +1062,17 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "review":
+        try:
+            background_text = (
+                load_background(args.background)
+                if args.background is not None
+                else load_background(path=args.background_file)
+                if args.background_file is not None
+                else ""
+            )
+        except (ValueError, SecretsPresent) as exc:
+            print(f"background: {exc}", file=sys.stderr)
+            return 2
         return run_review(
             args.base,
             args.head,
@@ -1064,6 +1091,7 @@ def main(argv: list[str] | None = None) -> int:
             model=args.model,
             workspace=args.workspace,
             token_budget=args.token_budget,
+            background=background_text,
         )
     return 1
 

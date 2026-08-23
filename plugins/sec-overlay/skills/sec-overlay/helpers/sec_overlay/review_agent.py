@@ -21,6 +21,7 @@ from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from sec_overlay.envelope import wrap_untrusted
 from sec_overlay.evidence import as_llm_claim
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.prompts import render_prompt
@@ -128,6 +129,7 @@ def render_review_prompt(
     sibling_diffs: dict[str, str] | None = None,
     cap_tokens: int = DEFAULT_SIBLING_CAP_TOKENS,
     plan_guidance: str = "",
+    background: str = "",
 ) -> str:
     """Render the `agents/review-file.md` prompt for one file's review pass.
 
@@ -155,6 +157,10 @@ def render_review_prompt(
         plan_guidance: Optional severity-ordered guidance text from a prior
             plan pass, substituted into `{{PLAN_GUIDANCE}}`. Advisory only —
             never a tool receipt, never a finding. Empty by default.
+        background: Optional developer-supplied background context (already
+            sanitized by `sec_overlay.background.load_background`), wrapped in
+            the untrusted-content envelope and substituted into `{{BACKGROUND}}`.
+            Advisory only — never a finding. Empty by default.
 
     Returns:
         The fully rendered prompt text.
@@ -174,6 +180,7 @@ def render_review_prompt(
         "OVERLAY_ROOT": overlay_root,
         "SIBLING_DIFFS": _render_sibling_diffs_block(siblings, cap_tokens),
         "PLAN_GUIDANCE": plan_guidance,
+        "BACKGROUND": wrap_untrusted(background, kind="background-context") if background else "",
     }
     return render_prompt(template, subs)
 

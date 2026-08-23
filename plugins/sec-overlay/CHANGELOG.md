@@ -12,6 +12,17 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Background-context ingestion (REQ-P8, Task 16 GREEN): new
+  `sec_overlay/background.py` with `load_background`, sanitizing
+  developer-supplied context in order — a 1 MB `BACKGROUND_MAX_BYTES` cap
+  raising `ValueError`, control-character strip (newline and tab kept),
+  envelope-delimiter neutralization, a hard `verify_no_secrets` abort on any
+  detected secret (run before `safe_for_prompt` so a maskable token still
+  aborts), then `redactor.safe_for_prompt`. `review_agent.render_review_prompt`
+  gains a `background` kwarg wrapping the text in a `background-context`
+  untrusted envelope; `agents/review-file.md` renders `{{BACKGROUND}}`; the
+  `review` CLI gains mutually-exclusive `--background`/`--background-file`
+  flags that exit 2 on an oversized or secret-bearing payload.
 - Background-context ingestion (REQ-P8, Task 16 RED): RED tests in
   `tests/test_background.py` pin the `load_background` contract — a 1 MB cap
   raising `ValueError`, control-character strip, envelope-delimiter guard, a
