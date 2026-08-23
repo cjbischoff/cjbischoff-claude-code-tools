@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-120 pytest files, 1617 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+120 pytest files, 1619 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -1235,4 +1235,7 @@ label miss. It now enforces the row's position right after `Recon`.
   `source="aacr"` corpus entries that validate and never move the real-confirmed
   headline; `ocr_findings` parses `ocr review --format json` into benchmark-only
   CONFIRMED findings tagged `llm-claimed:ocr`; and `Scorecard.to_markdown` carries
-  the same-judge caveat block for cross-tool comparisons.
+  the same-judge caveat block for cross-tool comparisons. REQ-T3e: a
+  security-category row is tagged `source="aacr-security"` (a distinct slice that
+  `tally` emits in `by_source`), and that slice never moves the real-confirmed
+  headline.

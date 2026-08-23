@@ -69,6 +69,37 @@ def test_aacr_entries_tagged_aacr_and_valid():
     assert Corpus(entries=entries).validate() == []
 
 
+def test_aacr_security_category_tagged_as_security_slice():
+    """REQ-T3e: a security-category row is tagged source='aacr-security'."""
+    rows = [
+        {**AACR_ROWS[0], "category": "Security Vulnerability"},
+        {**AACR_ROWS[1], "category": "Security"},
+        AACR_ROWS[0],  # "Code Defect" stays plain aacr
+    ]
+    entries = aacr_entries(rows)
+    assert entries[0].source == "aacr-security"
+    assert entries[1].source == "aacr-security"
+    assert entries[2].source == "aacr"
+    assert entries[0].cls == "security-vulnerability"
+    assert Corpus(entries=entries).validate() == []
+
+
+def test_aacr_security_slice_appears_in_tally_but_not_headline():
+    """REQ-T3e: tally emits an 'aacr-security' by_source slice, excluded from headline."""
+    def jr(fid, source, detected, kind="positive", cls="xss"):
+        return JudgeResult(finding_id=fid, kind=kind, source=source, cls=cls,
+                           detected=detected, method="deterministic", matched_id=None,
+                           reasoning="")
+
+    real = [jr("R1", "real-confirmed", True)]
+    sec = [jr("S1", "aacr-security", True), jr("S2", "aacr-security", False, kind="negative")]
+    corpus = Corpus(entries=[])
+    sc = tally(real + sec, corpus)
+    assert "aacr-security" in sc.by_source
+    assert sc.by_source["aacr-security"]["tp"] == 1
+    assert sc._real == tally(real, corpus)._real  # security slice never moves headline
+
+
 def test_aacr_never_moves_real_headline():
     def jr(fid, source, detected, kind="positive", cls="xss"):
         return JudgeResult(finding_id=fid, kind=kind, source=source, cls=cls,

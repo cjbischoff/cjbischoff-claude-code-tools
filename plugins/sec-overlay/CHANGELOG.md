@@ -12,6 +12,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Security slice (REQ-T3e, Task 24 RED): RED tests in `tests/test_aacr_adapter.py`
+  pin that `aacr_entries` tags a security-category row as `source="aacr-security"`
+  (a distinct slice `tally` emits in `by_source`, kept out of the real-confirmed
+  headline).
 - Coverage honesty (REQ-T3d, Task 23 GREEN): `bench/tally.py` gains a
   `coverage_ledgers` argument and a `coverage_honesty` scorecard block —
   `rate` = honest runs / total runs, where a run is unsupported when its ledger
