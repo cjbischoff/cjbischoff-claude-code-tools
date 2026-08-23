@@ -12,6 +12,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- GitHub PR review poster (REQ-S1, Task 18 GREEN): new
+  `sec_overlay/pr_poster.py`, a stdlib-only (`urllib`) poster — `route_findings`
+  splits critical/high (inline comments) from the rest (summary body),
+  `build_review_payload` builds a `COMMENT` review, and `post_review` POSTs it to
+  the pulls reviews endpoint with bearer auth (injectable transport for tests).
+  A composite `action.yml` at the plugin root runs review mode, uploads the
+  SARIF to code scanning, and invokes the poster.
 - GitHub PR review poster (REQ-S1, Task 18 RED): RED tests in
   `tests/test_pr_poster.py` pin the poster contract — severity routing
   (critical/high inline, medium/low/info summary), a `COMMENT` review payload,

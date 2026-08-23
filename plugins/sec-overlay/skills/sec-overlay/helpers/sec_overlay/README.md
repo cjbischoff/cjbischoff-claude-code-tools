@@ -41,6 +41,11 @@ module map entry in [`../README.md`](../README.md) for the full contract; `cli.p
 `artifacts/review_result.json` writer — `cli.py`'s `run_review` calls it last on both consume
 exits. See the module map entry in [`../README.md`](../README.md) for the full key contract.
 
+`pr_poster.py` (new, REQ-S1) is the stdlib GitHub pull-request review poster — `route_findings`
+splits critical/high (inline) from the rest (summary), `build_review_payload` builds a `COMMENT`
+review, and `post_review` POSTs it with an injectable transport. The composite `action.yml` at
+the plugin root invokes it. See the module map entry in [`../README.md`](../README.md).
+
 `background.py` (new, REQ-P8) adds `load_background`, sanitizing developer-supplied background
 context before it enters a review prompt — a 1 MB `BACKGROUND_MAX_BYTES` cap, control-character
 strip, envelope-delimiter neutralization, a hard secret abort, then `redactor.safe_for_prompt`.

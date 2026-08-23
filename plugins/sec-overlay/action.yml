@@ -1,0 +1,74 @@
+name: sec-overlay review
+description: >-
+  Run sec-overlay review mode on a pull request, upload the SARIF to code
+  scanning, and post findings as a pull-request review (critical/high inline,
+  the rest in the summary). The review event is COMMENT, so it never blocks a
+  merge on its own.
+author: Christopher Bischoff
+
+inputs:
+  base:
+    description: Base ref for the diff (base..head). Defaults to the PR base.
+    required: false
+    default: ${{ github.event.pull_request.base.sha }}
+  head:
+    description: Head ref for the diff. Defaults to the PR head.
+    required: false
+    default: ${{ github.event.pull_request.head.sha }}
+  pull-number:
+    description: Pull-request number to post the review to.
+    required: false
+    default: ${{ github.event.pull_request.number }}
+  profile:
+    description: Rule profile (security or general).
+    required: false
+    default: security
+  github-token:
+    description: Token with pull-requests write for posting the review.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
+
+    - name: Run sec-overlay review
+      shell: bash
+      working-directory: ${{ github.action_path }}/skills/sec-overlay/helpers
+      env:
+        SEC_OVERLAY_WS: ${{ runner.temp }}/sec-overlay-ws
+      run: |
+        uv run python -m sec_overlay.cli review \
+          --base "${{ inputs.base }}" \
+          --head "${{ inputs.head }}" \
+          --profile "${{ inputs.profile }}" \
+          --workspace "$SEC_OVERLAY_WS"
+
+    - name: Check for SARIF
+      id: sarif
+      shell: bash
+      run: |
+        if [ -f "${{ runner.temp }}/sec-overlay-ws/report.sarif" ]; then
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "exists=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Upload SARIF
+      if: steps.sarif.outputs.exists == 'true'
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ runner.temp }}/sec-overlay-ws/report.sarif
+
+    - name: Post pull-request review
+      shell: bash
+      working-directory: ${{ github.action_path }}/skills/sec-overlay/helpers
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        SEC_OVERLAY_WS: ${{ runner.temp }}/sec-overlay-ws
+      run: |
+        uv run python -m sec_overlay.pr_poster \
+          "$SEC_OVERLAY_WS/artifacts/review_result.json" \
+          "${{ inputs.pull-number }}"

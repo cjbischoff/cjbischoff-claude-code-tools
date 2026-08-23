@@ -121,7 +121,7 @@
 
 ### Task 18: REQ-S1 — GitHub Action + poster
 **Files:** Create `plugins/sec-overlay/action.yml`, `helpers/sec_overlay/pr_poster.py` (stdlib `urllib` GitHub API client; severity routing critical/high → inline, medium/low → summary; `event: COMMENT`); Test `test_pr_poster.py` (fake transport).
-- [ ] RED: routing + payload tests. Commit. GREEN: implement; actionlint the yml. Commit.
+- [x] RED: routing + payload tests. Commit. GREEN: implement; actionlint the yml. Commit.
 
 ### Task 19: REQ-S2 — sessions list/show
 **Files:** Modify `cli.py` (subcommands over sidecar `state.json` + review ledger; `show` takes `latest` or slug, `--severity` filter); Test append `test_cli_review.py` or new `test_sessions.py`.

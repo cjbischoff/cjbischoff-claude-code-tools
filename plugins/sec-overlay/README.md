@@ -58,6 +58,11 @@ The dev benchmark ships a committed seed corpus (`skills/sec-overlay/helpers/ben
 public entries only), and `.github/workflows/sec-overlay-tests.yml` gates every pull request on
 the two `locked` fixtures staying detected by a deterministic scan.
 
+The composite [`action.yml`](action.yml) runs review mode on a pull request, uploads the SARIF to
+code scanning, and posts findings as a pull-request review — critical and high inline, the rest in
+the summary. The review event is `COMMENT`, so it never blocks a merge on its own. The poster is a
+stdlib Python script (`sec_overlay.pr_poster`), no Node dependency.
+
 ## More
 
 | To understand… | Read |

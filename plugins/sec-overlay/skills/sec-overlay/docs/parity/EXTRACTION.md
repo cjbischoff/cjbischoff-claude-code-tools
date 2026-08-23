@@ -235,3 +235,13 @@ All other analysis file:line cites for sec-overlay re-resolved at current source
      head_sha == HEAD`, diffs run `git diff HEAD` (head omitted), and untracked
      files get a synthetic all-add hunk read from disk. Bench: no-op — review
      mode only.
+
+5. REQ-S1 (action.yml acceptance), tool substitution: the plan and SPEC say
+   "action.yml lints (actionlint)". actionlint validates GitHub *workflow*
+   files (jobs/on), not composite-action metadata files (runs.using: composite);
+   it rejects `action.yml` with "jobs section is missing". The acceptance intent
+   — the yml is well-formed and its steps are sound — was met instead by a Ruby
+   YAML parse (valid mapping, `runs.using: composite`, five steps, five inputs).
+   No workflow file was added under `.github/` to satisfy a linter, since that is
+   repo-level tooling outside the plugin payload. The poster's routing/payload
+   unit tests (the other half of the acceptance) pass.
