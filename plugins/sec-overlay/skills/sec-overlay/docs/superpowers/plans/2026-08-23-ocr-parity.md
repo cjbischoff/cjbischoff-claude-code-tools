@@ -147,7 +147,7 @@
 
 ### Task 24: REQ-T3e — security slice
 **Files:** Modify `helpers/bench/aacr_adapter.py` (security-category tag → `cls` mapping; slice label `aacr-security` in tally by_source seg); Test append.
-- [ ] RED/GREEN. Commits.
+- [x] RED/GREEN. Commits.
 
 ### Task 25: Final — PARITY-AUDIT.md + smoke benchmark + completion report
 - [ ] Run full test suite, ruff, ty; run `python -m bench.run` over internal corpus (deterministic adapter) for the final scorecard.
