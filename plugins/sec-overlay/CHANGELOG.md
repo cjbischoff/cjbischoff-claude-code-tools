@@ -12,6 +12,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Sessions list/show (REQ-S2, Task 19 RED): RED tests in `tests/test_sessions.py`
+  pin the read-only renderer contract over sidecar `state.json` and review
+  ledgers — one row per sidecar slug (pass, sha, finding counts), `latest`
+  resolution by mtime, a detail view with stages plus a ledger summary, and a
+  `--severity` finding filter (X3 scope).
 - GitHub PR review poster (REQ-S1, Task 18 GREEN): new
   `sec_overlay/pr_poster.py`, a stdlib-only (`urllib`) poster — `route_findings`
   splits critical/high (inline comments) from the rest (summary body),
