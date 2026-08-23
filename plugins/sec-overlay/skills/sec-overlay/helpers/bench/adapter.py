@@ -65,16 +65,23 @@ class BinaryAdapter:
 
 
 class CCSkillAdapter:
-    """Placeholder for driving the current Claude-Code skill end to end.
+    """Drive the Claude-Code skill headlessly, then grade the workspace (REQ-M2).
 
-    The skill's agentic phases run inside a Claude-Code/agent session, not a plain
-    subprocess, so this adapter is a documented seam rather than a runnable driver in
-    this dev-only harness: the operator (or a future Agent-SDK driver) runs the skill
-    into ``workspace``; then grade with :class:`WorkspaceAdapter`. Kept so the corpus
-    schema and downstream code already speak "adapter".
+    Wraps a :class:`bench.driver.HeadlessDriver` (``claude -p`` shelled like a SAST
+    binary). A driver failure yields ``[]`` for that target — recorded on
+    ``driver.failures``, never fabricated. ``bench.run``'s findings cache makes runs
+    resumable per target.
     """
 
-    def scan(self, repo_path: str, workspace: Workspace) -> list[Finding]:  # pragma: no cover
-        raise NotImplementedError(
-            "Drive the CC skill into the workspace (operator or Agent-SDK), then grade "
-            "with WorkspaceAdapter. A native SDK driver is the next increment.")
+    def __init__(self, driver=None):
+        if driver is None:
+            from bench.driver import HeadlessDriver
+
+            driver = HeadlessDriver()
+        self.driver = driver
+
+    def scan(self, repo_path: str, workspace: Workspace) -> list[Finding]:
+        workspace.ensure()
+        if not self.driver.run(repo_path, workspace.root):
+            return []
+        return reportable(workspace)

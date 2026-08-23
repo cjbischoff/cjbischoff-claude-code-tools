@@ -54,3 +54,12 @@ run `semgrep scan --config rules/absence fixtures/absence_repo` from `helpers/`.
 
 Scorecard metrics include F1 (`2PR/(P+R)`, `None` when precision or recall is
 undefined or both are zero) in `overall`, per-source, and headline rows (REQ-M1).
+
+## Headless driver (REQ-M2)
+
+`driver.py` shells a headless agent run per corpus target (`DEFAULT_ARGV_TEMPLATE`:
+`claude -p <instruction> --permission-mode acceptEdits`, `{target}`/`{workspace}`
+substituted). `CCSkillAdapter` wraps it: drive, then grade the workspace with
+`reportable`. A failed run records `{target, error}` on `driver.failures` and yields
+zero findings for that target — never fabricated results. `bench.run`'s per-target
+findings cache makes interrupted benchmark runs resumable.

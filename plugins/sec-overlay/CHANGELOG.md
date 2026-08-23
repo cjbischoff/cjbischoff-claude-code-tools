@@ -12,6 +12,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Headless skill driver (REQ-M2): `bench/driver.py` + a runnable
+  `CCSkillAdapter` — unattended benchmark runs over the corpus.
+
 - Tests first (REQ-M2): `tests/test_bench_driver.py` locks the headless
   driver contract for `CCSkillAdapter`.
 
