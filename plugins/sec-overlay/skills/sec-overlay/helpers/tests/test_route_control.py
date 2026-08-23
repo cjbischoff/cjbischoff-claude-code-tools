@@ -96,6 +96,7 @@ def test_route_control_table_prefers_the_census_over_the_scan_profile(tmp_path):
     table = build_route_control_table(ws, census=sites)
     assert table["source"] == "route-census"
     assert any("/policy/evaluate" in str(r) for r in table["routes"])
+    assert table["routes"][0]["evidence"] == "app.py:9"
 
 
 def test_route_control_table_falls_back_to_the_profile_without_a_census(tmp_path):
@@ -125,3 +126,28 @@ def test_check_census_routes_is_silent_when_the_profile_mentions_the_route(tmp_p
     sites = [RouteSite("route:app.py:9:/policy/evaluate", "app.py", 9, "POST",
                        "/policy/evaluate", "flask")]
     assert check_census_routes(sites, {"entrypoints": ["POST /policy/evaluate"]}) == []
+
+
+def test_check_recon_routes_is_silent_for_a_census_sourced_table():
+    """check_census_routes owns recon comparison for a census table; this must not double-gap."""
+    from sec_overlay.route_control import check_recon_routes
+
+    table = {
+        "routes": [{"route": "POST /policy/evaluate", "entrypoint": "/policy/evaluate",
+                     "evidence": "app.py:9"}],
+        "source": "route-census",
+    }
+    profile = {"route_summary": ["/policy/evaluate"]}
+    assert check_recon_routes(table, profile) == []
+
+
+def test_check_recon_routes_still_gaps_for_a_scan_profile_table():
+    from sec_overlay.route_control import check_recon_routes
+
+    table = {
+        "routes": [{"route": "/admin", "entrypoint": "/admin", "evidence": ""}],
+        "source": "scan-profile",
+    }
+    profile = {"route_summary": ["/health"]}
+    gaps = check_recon_routes(table, profile)
+    assert [g["id"] for g in gaps] == ["/admin"]

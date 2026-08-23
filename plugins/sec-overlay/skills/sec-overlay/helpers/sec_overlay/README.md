@@ -356,18 +356,20 @@ A missing route, control, or entrypoint is never dropped: each check returns a `
 gap dict with `reason`/`next_step`, and `record_route_gaps` appends those gaps into
 `kb/coverage-ledger.json`'s `surfaces`, demoting `completeness` to `partial` so the ledger's own
 "complete forbids needs_follow_up" invariant still holds after the append.
+
 `check_architecture_controls`/`check_threat_entrypoints` match a control or entrypoint via
-`_mentions`, a word-bounded (alphanumeric-neighbor guard) check, not substring — so a token that is
-part of a longer word (`auth` inside `authorization`) is still flagged as a gap. `check_census_routes`
-runs the same `_mentions` guard against the recon profile's whole JSON blob, so a route named in
-`entrypoints`, `subsystems`, or any free-text field counts as covered; this is the check that closes
-the circularity — a route the code registers but recon never named now surfaces as a gap.
+`_mentions`, a word-bounded (alphanumeric-neighbor guard) check, not substring. A token that is part
+of a longer word (`auth` inside `authorization`) is still flagged as a gap for those two checks.
+`check_census_routes` also calls `_mentions`, but against the recon profile's whole JSON blob rather
+than one field. A profile field carrying the route path as a prefix, such as a filename in free
+text, suppresses the gap. This is the check that closes the circularity. A route the code registers
+but recon never named now surfaces as a gap.
 
 `route_census.py` (new) derives a route inventory straight from source, via ripgrep over
 `references/route-frameworks.json`'s framework patterns, so `route_control.py`'s table can read
 something recon did not produce. `census()` returns `[]` when ripgrep exits nonzero or matches
 nothing. A missing ripgrep binary raises `FileNotFoundError`, because preflight owns binary
-availability. `write_census(ws, sites)` persists the result to `kb/route-census.json`;
+availability. `write_census(ws, sites)` persists the result to `kb/route-census.json`, and
 `load_census(ws)` reads it back as `RouteSite` records, returning `[]` when the file is absent or
 holds invalid JSON. The module map entry in [`../README.md`](../README.md) has the full contract.
 CLI-callable.

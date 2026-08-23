@@ -86,6 +86,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - The two module-map entries for `route_census.census()` no longer claim an
   empty return on any ripgrep failure. A missing ripgrep binary raises
   `FileNotFoundError`, because preflight owns binary availability.
+- `check_recon_routes` now returns no gaps for a census-sourced table. A
+  census route carries a method prefix `route_summary` can never contain,
+  so it turned every census route into a permanent `needs_follow_up` gap.
+  `check_census_routes` already owns that comparison for a census table.
+- `sec_overlay/README.md` no longer implies `check_census_routes` still
+  flags a route that appears only as a prefix inside a longer profile path.
+  A profile field carrying the route path as a prefix suppresses the gap.
 
 ## 1.69.15 - 2026-08-22
 

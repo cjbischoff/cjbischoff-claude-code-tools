@@ -41,7 +41,11 @@ def build_route_control_table(ws: Workspace, *, census: list[RouteSite] | None =
 
     if sites:
         routes = [
-            {"route": f"{s.method} {s.path}", "entrypoint": s.path, "evidence": f"{s.file}:{s.line}"}
+            {
+                "route": f"{s.method} {s.path}",
+                "entrypoint": s.path,
+                "evidence": f"{s.file}:{s.line}",
+            }
             for s in sites
         ]
         return {
@@ -74,7 +78,12 @@ def check_recon_routes(table: dict, profile: dict) -> list[dict]:
 
     ``route_summary`` is an optional recon-emitted field; when absent every table
     route is conservatively flagged as a logged gap (never-drop invariant).
+    A census-sourced table returns no gaps here: ``check_census_routes`` owns
+    that comparison, since a census route carries a method prefix
+    ``route_summary`` can never contain.
     """
+    if table.get("source") == "route-census":
+        return []
     summarised = {str(r) for r in profile.get("route_summary", [])}
     return [
         _gap(r["route"], "route") for r in table.get("routes", []) if r["route"] not in summarised

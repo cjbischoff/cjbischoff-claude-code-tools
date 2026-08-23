@@ -447,8 +447,8 @@ control as a standalone token is covered, and an entrypoint carrying path punctu
 still matches as a standalone mention. Four more guards pin the census-first table. It stamps
 `source: "route-census"` and includes the census route when a `census=` list is passed. It falls
 back to `source: "scan-profile"` when no census exists. `check_census_routes` reports a
-code-registered route the profile never mentions as a `needs_follow_up` gap, and stays silent
-when the profile names the route anywhere in its JSON.
+code-registered route the profile never mentions, staying silent when the profile names the route
+anywhere in its JSON.
 
 `test_route_census.py` (new) covers `route_census.py` with eight guards: every framework entry
 carries a pattern and globs, framework names are unique, `FRAMEWORKS_PATH` resolves to the
