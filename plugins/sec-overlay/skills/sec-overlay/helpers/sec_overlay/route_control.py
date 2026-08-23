@@ -130,6 +130,31 @@ def check_threat_entrypoints(table: dict, threat_model_md: str) -> list[dict]:
     return [_gap(e, "entrypoint") for e in table.get("entrypoints", []) if not _mentions(e, text)]
 
 
+def check_catalog_classes(entries, profile: dict) -> list[dict]:
+    """Report every catalog-matched class the recon profile never named.
+
+    A declared dependency that contains its own sink is invisible to a first-party
+    scan, so recon can omit its class with no signal. Each row names the catalog
+    entry so the reviewer can read why the class applies.
+
+    Args:
+        entries: SinkEntry records from dependency_sinks.match_manifests.
+        profile: The recon scan profile.
+
+    Returns:
+        One gap row per omitted class.
+    """
+    surface = profile.get("attack_surface") or []
+    seen: set[str] = set()
+    gaps = []
+    for e in entries:
+        if e.cls in surface or e.cls in seen:
+            continue
+        seen.add(e.cls)
+        gaps.append(_gap(f"{e.cls} (dependency-catalog:{e.id}, sink {e.sink})", "class"))
+    return gaps
+
+
 def record_route_gaps(ws: Workspace, gaps: list[dict]) -> None:
     """Append route/control/entrypoint gaps into ``kb/coverage-ledger.json``.
 

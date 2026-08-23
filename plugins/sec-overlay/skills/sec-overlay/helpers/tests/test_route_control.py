@@ -151,3 +151,23 @@ def test_check_recon_routes_still_gaps_for_a_scan_profile_table():
     profile = {"route_summary": ["/health"]}
     gaps = check_recon_routes(table, profile)
     assert [g["id"] for g in gaps] == ["/admin"]
+
+
+def test_check_catalog_classes_reports_a_matched_class_recon_omitted():
+    """The OPA case: go.mod declares OPA, so ssrf must be in attack_surface."""
+    from sec_overlay.dependency_sinks import load_catalog
+    from sec_overlay.route_control import check_catalog_classes
+
+    entry = next(e for e in load_catalog() if e.id == "opa-rego-http-send")
+    gaps = check_catalog_classes([entry], {"attack_surface": ["authz"]})
+    assert len(gaps) == 1
+    assert "ssrf" in gaps[0]["id"]
+    assert gaps[0]["disposition"] == "needs_follow_up"
+
+
+def test_check_catalog_classes_is_silent_when_recon_named_the_class():
+    from sec_overlay.dependency_sinks import load_catalog
+    from sec_overlay.route_control import check_catalog_classes
+
+    entry = next(e for e in load_catalog() if e.id == "opa-rego-http-send")
+    assert check_catalog_classes([entry], {"attack_surface": ["ssrf"]}) == []

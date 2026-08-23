@@ -72,6 +72,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   `recon`. `_act_route_census` writes `kb/route-census.json` from the
   target's source, so the file exists for the recon gate, `check_census_routes`,
   and the recall adversary before recon ever runs.
+- `route_control.check_catalog_classes` flags a dependency-catalog class the
+  recon profile's `attack_surface` never named. A dependency such as OPA
+  hides its sink inside its own Rego policy, so recon can miss the class
+  with no first-party signal.
 
 ### Fixed
 

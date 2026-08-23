@@ -351,7 +351,8 @@ already used; `validate_coverage_ledger` rejects a `needs_follow_up` surface mis
 `route_control.py` (new, ISSUE-027/029/036) derives one route-to-control table
 (`build_route_control_table`) and checks recon, architecture, and threat-model output against it
 (`check_recon_routes`, `check_census_routes`, `check_architecture_controls`,
-`check_threat_entrypoints`). The table prefers the code-derived census: it calls
+`check_threat_entrypoints`, `check_catalog_classes`). The table prefers the code-derived census:
+it calls
 `route_census.load_census(ws)` by default, or takes a `census=` list of `RouteSite` directly, and
 stamps `"source": "route-census"` on the table. Without a census, it falls back to
 `kb/scan-profile.json`'s `entrypoints`, stamping `"source": "scan-profile"`. The fallback path is
@@ -360,6 +361,13 @@ A missing route, control, or entrypoint is never dropped: each check returns a `
 gap dict with `reason`/`next_step`, and `record_route_gaps` appends those gaps into
 `kb/coverage-ledger.json`'s `surfaces`, demoting `completeness` to `partial` so the ledger's own
 "complete forbids needs_follow_up" invariant still holds after the append.
+
+`check_catalog_classes(entries, profile)` reports every `dependency_sinks.SinkEntry` class the
+recon profile's `attack_surface` never named. A matched dependency, such as OPA, hides its sink
+inside its own Rego policy calling `http.send`. A first-party scan misses it, so recon can omit
+the whole class with no signal. Each gap row names the catalog entry and sink so a reviewer can
+read why the class applies. Not wired into `record_route_gaps` or any driver phase yet — a later
+task dispatches it.
 
 `check_architecture_controls`/`check_threat_entrypoints` match a control or entrypoint via
 `_mentions`, a word-bounded (alphanumeric-neighbor guard) check, not substring. A token that is part
