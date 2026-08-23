@@ -48,6 +48,9 @@ The architecture and threat-model phases produce standards-based artifact trees 
 STRIDE + a derived data-flow diagram), each checked by a deterministic gate before the pipeline
 continues.
 
+A code-derived route census (`route_census.py`) now reads route registrations straight from
+source, instead of only from recon's own output.
+
 ## More
 
 | To understand… | Read |

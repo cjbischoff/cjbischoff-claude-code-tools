@@ -55,6 +55,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   safe option. Its id then sits under `sec-overlay.absence.`.
   `corpus_seed/absence.json` pins the rego.Capabilities and jinja2-sandbox
   pair as locked bench positives, plus a negative that must stay silent.
+- `route_census.py` and `references/route-frameworks.json`: a route
+  inventory derived from source via ripgrep, for Flask, FastAPI, Django
+  urls, Go net/http, Go chi/gin/echo, Express, and Spring. Reads code
+  instead of recon's own output, so an omitted route can appear as a gap.
 
 ### Fixed
 

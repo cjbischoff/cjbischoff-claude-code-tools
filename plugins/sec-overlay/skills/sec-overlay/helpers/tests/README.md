@@ -446,6 +446,13 @@ that is a substring of a longer word (`auth` inside `authorization`) is still a 
 control as a standalone token is covered, and an entrypoint carrying path punctuation (`/login`)
 still matches as a standalone mention.
 
+`test_route_census.py` (new) covers `route_census.py` with six guards: every framework entry
+carries a pattern and globs, framework names are unique, `FRAMEWORKS_PATH` resolves to the
+tracked reference file, `census()` finds every route in the `fixtures/route_repo` fixture
+(Flask and Go net/http), site ids are stable and unique across two runs, and a failing ripgrep
+runner returns an empty list rather than raising. The two fixture-reading tests skip when `rg`
+is not installed.
+
 `test_class_ext.py` (new) covers `class_ext.py`: an alias map (sqli/cmdi/xss → injection.md)
 counts coarse extension files, direct files count by name, and uncovered classes log gaps so
 coverage is never silent.

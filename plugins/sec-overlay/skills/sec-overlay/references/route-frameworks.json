@@ -1,0 +1,60 @@
+{
+  "frameworks": [
+    {
+      "name": "flask",
+      "language": "python",
+      "globs": ["*.py"],
+      "pattern": "@(?:[A-Za-z_][A-Za-z0-9_]*)\\.(?:route|get|post|put|patch|delete)\\(\\s*[\"']([^\"']+)[\"']",
+      "method_group": null,
+      "path_group": 1
+    },
+    {
+      "name": "fastapi",
+      "language": "python",
+      "globs": ["*.py"],
+      "pattern": "@(?:[A-Za-z_][A-Za-z0-9_]*)\\.(get|post|put|patch|delete)\\(\\s*[\"']([^\"']+)[\"']",
+      "method_group": 1,
+      "path_group": 2
+    },
+    {
+      "name": "django-urls",
+      "language": "python",
+      "globs": ["urls.py"],
+      "pattern": "(?:path|re_path|url)\\(\\s*[\"']([^\"']*)[\"']",
+      "method_group": null,
+      "path_group": 1
+    },
+    {
+      "name": "go-nethttp",
+      "language": "go",
+      "globs": ["*.go"],
+      "pattern": "\\.(?:HandleFunc|Handle)\\(\\s*[\"']([^\"']+)[\"']",
+      "method_group": null,
+      "path_group": 1
+    },
+    {
+      "name": "go-chi-gin-echo",
+      "language": "go",
+      "globs": ["*.go"],
+      "pattern": "\\.(GET|POST|PUT|PATCH|DELETE)\\(\\s*\"([^\"]+)\"",
+      "method_group": 1,
+      "path_group": 2
+    },
+    {
+      "name": "express",
+      "language": "javascript",
+      "globs": ["*.js", "*.ts", "*.mjs"],
+      "pattern": "\\.(get|post|put|patch|delete|all)\\(\\s*[\"'`]([^\"'`]+)[\"'`]",
+      "method_group": 1,
+      "path_group": 2
+    },
+    {
+      "name": "spring",
+      "language": "java",
+      "globs": ["*.java", "*.kt"],
+      "pattern": "@(?:Request|Get|Post|Put|Patch|Delete)Mapping\\(\\s*(?:value\\s*=\\s*)?[\"']([^\"']+)[\"']",
+      "method_group": null,
+      "path_group": 1
+    }
+  ]
+}

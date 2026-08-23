@@ -199,6 +199,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `coverage_guide.py` | Auto-stop condition for multi-pass campaigns (coverage-complete AND yield-below-threshold). |
 | `discovery_ledger.py` | Loop-until-dry saturation state: stop after K consecutive waves add no new fingerprints. |
 | `route_control.py` | One route-to-control table from `kb/scan-profile.json`; checks recon/architecture/threat-model output against it, logging a `needs_follow_up` gap (never dropping) via `record_route_gaps` into `coverage-ledger.json`. |
+| `route_census.py` | Derives a route inventory from source code via `references/route-frameworks.json` + ripgrep, never from recon's own output. `census()` returns empty on a ripgrep failure; a phase never halts on it. CLI-callable. |
 
 ### Diff-scoped review (`sec-overlay review` — tracer path)
 | Module | Purpose |
@@ -288,6 +289,7 @@ steps the orchestrator calls between agent phases:
 | `redactor` | Mask/verify secrets in a text blob. |
 | `postflight` | Write durable `kb/prior_context.json`. |
 | `dependency_sinks` | `list` prints the catalog, one `id`/`cls`/`package` line per entry; `match --root <dir>` prints the entries a target repo declares. |
+| `route_census` | `--root <dir>` prints one `file:line`/method/path/framework row per route site found in source. |
 
 ---
 

@@ -235,6 +235,7 @@ they never confirm a finding.
 | `approved-key-sources.yaml` | `crypto_policy.py` | Approved key sources (kms, vault, chamber, gcp-secret-manager, azure-keyvault, env); denied (literal, hardcoded, filesystem, source). |
 | `asvs/asvs_5.0.0.json` | `asvs.py` | A curated 12-item OWASP ASVS 5.0 seed, indexed by id/chapter/CWE; `citations.py` attaches ASVS IDs (advisory). |
 | `dependency-sinks.json` | `dependency_sinks.py` | Dependencies whose own code holds the sink; consumed by `sec_overlay.dependency_sinks` and by recon routing. |
+| `route-frameworks.json` | `route_census.py` | Route-registration regex per web framework (name, language, globs, pattern, method/path capture groups); `route_census.py` is its only consumer. |
 
 `crypto_policy.check(algo, params, key_source)` turns "is this weak crypto?" from an LLM
 opinion into a deterministic lookup — that is the whole point of the two YAML files.
