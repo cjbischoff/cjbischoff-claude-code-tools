@@ -1,8 +1,14 @@
 # `tests/` — the deterministic test suite
 
-120 pytest files, 1619 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+121 pytest files, 1623 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_contract_lint.py` (REQ-32, Task 1) checks that `finding.schema.json`'s `verification`
+and `runtime_disposition` enums equal `sec_overlay.evidence`'s `VERIFICATION_VALUES` and
+`RUNTIME_DISPOSITIONS`, plus `None`. `test_models.py` gained four tests for the same closed
+enums: `Finding.from_dict` rejects a prose `verification` value and an unknown
+`runtime_disposition`, and accepts a documented value or `null` for either field.
 
 `test_detection_coverage.py` guards the coverage document: `generate()`'s output must name the
 dependency-internal sink limit and cite `dependency-sinks.json`, so the doc cannot silently
@@ -390,6 +396,7 @@ the regression guard for the CLI no longer calling `state.begin_pass` on every i
 |------|--------|
 | `test_contracts.py` | Prompt↔schema drift: a `Finding` JSON example in an agent prompt must parse against the real `models.py`. Two guards pin the always-run absence pack: `recon.md` must mention `rules/absence` right after the word "always", and `golden_scan_profile.json` must carry `rules/absence` in `sast_plan.semgrep.rulesets`. |
 | `test_finding_schema.py` | The `Finding` record stays consistent with `references/finding.schema.json`. |
+| `test_contract_lint.py` | REQ-32: a closed vocabulary's code constant matches its schema `enum`, verbatim. |
 | `test_wiring.py` | Silent-backend / clsmap / dead-link regressions and attack-class routing. |
 | `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules, the `EVIDENCE_VOCABULARY` block listing every `sec_overlay.evidence` tier/status/disposition value verbatim, the `CLAUDE.md` phase-order block tracking `PHASE_TABLE`'s relative order, (06-06, WR-01) that no live doc wrongly denies review's --workspace support — premise pinned against `run_review`'s real signature; the matcher covers three denial wordings, with pattern tests pinning both denial and corrected phrasing — and that every `dependency-sinks.json` catalog entry's `sink`/`indicators` tokens appear inside the specific table row named by its `cls` value in `attack-classes.md` — not merely anywhere in the file — so recon's class table never drifts from the catalog, in the row `reconcile_plan` actually routes by. Two more guards pin the class-file side of that routing: every catalogued `cls` value (`ssrf`, `expr-eval-rce`, `ssti`) has a matching `agents/classes/<cls>.md` file, and `expr-eval-rce.md` carries all five required section headings — so `reconcile_plan` can never select a class with no class prompt behind it. |
 | `test_frozen_contract.py` | Byte-identity: `models.py`/`evidence.py` are frozen mirrors of a separate Go port (D-15) — a sha256 pin fails loudly on any edit. `fingerprint()` golden-value pins (fully-populated, minimally-populated, field-order-permuted) prove its behavior independent of that byte check. REL-03: `pyproject.toml`'s `[project] dependencies` stays `[]`. |

@@ -23,6 +23,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Contract layer (REQ-02, Task 1 RED): failing tests pin the closed enums for
+  `Finding.verification` and `Finding.runtime_disposition`. `test_models.py`
+  gains four cases: a prose `verification` value and an unknown
+  `runtime_disposition` must raise `ValueError`; a documented value or `null`
+  must load. `test_contract_lint.py` (new) asserts `finding.schema.json`'s
+  enums match `sec_overlay.evidence`'s constants; it fails to import until
+  `VERIFICATION_VALUES` exists.
 - Parity audit (Task 25): `docs/parity/PARITY-AUDIT.md` walks `EXTRACTION.md`
   row by row and gives every item (M/P/S/T3/R/W/G/D/X/V/HR — 87 rows) a final
   disposition with `file:line` evidence, `rejected:<reason>`, or
