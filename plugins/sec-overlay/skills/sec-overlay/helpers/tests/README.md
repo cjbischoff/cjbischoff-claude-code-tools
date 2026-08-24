@@ -1,8 +1,13 @@
 # `tests/` — the deterministic test suite
 
-131 pytest files, 1692 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+132 pytest files, 1694 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_patch_status_real_git.py` (REQ-01) drives real `git apply --check` against a repo
+fixture, locking both outcomes: an additive patch whose added line is absent is `NOT_APPLIED`,
+and the same patch is `APPLIED` once the added line is present. `test_patch_status.py`'s two
+order-pinning tests were rewritten to pin the new forward-then-reverse call order.
 
 `test_calibrate_evidence.py` pins REQ-20: receipt tier, verification strength, and assessed
 reachability each move `calibrate_score` upward, and an unassessed finding scores unchanged.

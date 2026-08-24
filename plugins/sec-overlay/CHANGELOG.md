@@ -6,6 +6,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Failing patch-order tests for REQ-01: `tests/test_patch_status_real_git.py` drives real
+  `git apply --check` against an additive-patch fixture, and `tests/test_patch_status.py`'s
+  two order-pinning tests were rewritten to expect a forward-then-reverse call order instead
+  of reverse-then-forward.
 - Typed the REQ-20 evidence-score test fixture: `test_calibrate_evidence.py`'s `_f` builder
   now builds a base `Finding(...)` and layers overrides with `dataclasses.replace`, instead
   of a `dict()`-splat construction. This clears a ruff `C408` finding and 34 `ty`
