@@ -4,6 +4,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- Repo-root-relative candidate paths (REQ-15, RED): `test_prefilter_paths.py`
+  gains three failing tests pinning that `run_prefilter` rewrites an absolute
+  backend path to a `target`-relative one, leaves an already-relative path
+  alone, and leaves a path outside `target` verbatim.
+
 ### Changed
 
 - Parity plan tracking: marked Task 22 (REQ-T3c/T3h), Task 23 (REQ-T3d), and

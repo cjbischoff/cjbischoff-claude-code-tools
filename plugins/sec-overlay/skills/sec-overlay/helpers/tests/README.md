@@ -1,8 +1,13 @@
 # `tests/` — the deterministic test suite
 
-122 pytest files, 1636 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+123 pytest files, 1639 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_prefilter_paths.py` (REQ-15) covers the path-relativization boundary in `run_prefilter`:
+an absolute backend path under `target` becomes repo-root-relative, an already-relative path is
+left alone, and a path outside `target` stays verbatim rather than being rewritten into something
+that does not resolve.
 
 New `test_receipt_counts.py` (REQ-13, folds in REQ-23) covers `workspace.finding_counts`: it
 partitions a workspace's findings into `findings_in` (every finding file) and `findings_out`
