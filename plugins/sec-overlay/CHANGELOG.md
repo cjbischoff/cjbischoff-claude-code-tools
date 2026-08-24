@@ -6,6 +6,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Evidence-adjust score tests (REQ-20, RED): `test_calibrate_evidence.py` pins
+  that `calibrate_score` ranks a stronger tool receipt above a weaker one,
+  `verified-static` above `static-only`, and an assessed-reachable finding
+  above an assessed-unreachable one, while an unassessed finding scores the
+  same as before the change (reward-only, no penalty).
 - The trace prompt widens its scope and names its channels (REQ-06, REQ-19):
   `agents/trace.md` now traces findings with `status` in `{"confirmed",
   "needs-deployment-testing"}`, not `confirmed` alone, so a real-but-unproven

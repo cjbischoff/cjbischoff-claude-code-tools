@@ -4,6 +4,10 @@
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+`test_calibrate_evidence.py` is new (RED): it pins REQ-20's expectation that receipt tier,
+verification strength, and reachability move `calibrate_score`, and currently fails against
+the unmodified `calibrate.py`.
+
 New `test_trace_prompt.py` (REQ-06, REQ-19) pins that `trace.md` covers `needs-deployment-testing`
 findings and names the in-band channel first.
 
