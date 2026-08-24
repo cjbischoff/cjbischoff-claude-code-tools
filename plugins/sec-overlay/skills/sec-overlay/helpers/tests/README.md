@@ -1,8 +1,11 @@
 # `tests/` — the deterministic test suite
 
-123 pytest files, 1639 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+124 pytest files, 1641 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_prefilter_receipt.py` (REQ-16) pins that `run_prefilter` writes its receipt to disk
+before recording the `prefilter` stage, so a fence abort never leaves a done stage with no receipt.
 
 New `test_prefilter_paths.py` (REQ-15) covers the path-relativization boundary in `run_prefilter`:
 an absolute backend path under `target` becomes repo-root-relative, an already-relative path is

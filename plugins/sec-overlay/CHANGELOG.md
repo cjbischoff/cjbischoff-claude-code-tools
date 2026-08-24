@@ -6,6 +6,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Prefilter receipt survives a fence abort (REQ-16, RED): `test_prefilter_receipt.py`
+  gains two tests — one failing, pinning that `run_prefilter` writes its receipt
+  to disk, and one already passing, pinning that a backend abort leaves the
+  `prefilter` stage unrecorded.
 - Repo-root-relative candidate paths (REQ-15, RED): `test_prefilter_paths.py`
   gains three failing tests pinning that `run_prefilter` rewrites an absolute
   backend path to a `target`-relative one, leaves an already-relative path
