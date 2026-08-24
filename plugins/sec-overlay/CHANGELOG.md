@@ -34,6 +34,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Data integrity (REQ-13, folds in REQ-23, Task 1 RED): `test_receipt_counts.py`
+  gains three failing tests for a phase receipt's finding counts. They fail to
+  import: `workspace.finding_counts` does not exist yet.
 - Contract layer (REQ-32, Task 5 GREEN): `calibrate.py` exports
   `PRECONDITION_CAPS` and `PRECONDITION_CAP_FLOOR`; `_precondition_cap` now
   reads the ceiling from that table instead of four hardcoded branches.

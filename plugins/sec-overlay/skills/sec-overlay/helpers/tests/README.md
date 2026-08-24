@@ -1,8 +1,15 @@
 # `tests/` — the deterministic test suite
 
-121 pytest files, 1633 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+122 pytest files, 1636 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_receipt_counts.py` (REQ-13, folds in REQ-23) covers `workspace.finding_counts`: it
+partitions a workspace's findings into `findings_in` (every finding file) and `findings_out`
+(the `evidence.SHIPPING_STATUSES` subset), with `findings` kept equal to `findings_in` for the
+pre-REQ-13 consumer. `run.advance`'s receipt now carries these three counts instead of a
+`F-*.json` glob that matched no real finding id. `driver._write_gate` gains the same two keys,
+so a gate receipt (e.g. `findings-gate.json`) records finding counts, not only `passed`.
 
 New `test_contract_lint.py` (REQ-32, Task 1) checks that `finding.schema.json`'s `verification`
 and `runtime_disposition` enums equal `sec_overlay.evidence`'s `VERIFICATION_VALUES` and
