@@ -457,6 +457,11 @@ and an unmapped cause degrades to `static-only` rather than laundering an unknow
 `test_verify.py`'s `test_verify_patch_static_only_when_class_not_detectable` was renamed to
 `test_verify_patch_rule_no_match_when_class_not_detectable` and now expects `"rule-no-match"`.
 
+New `test_verify_configs.py` (REQ-22) covers a `resolve_configs(ws, fallback)` helper: it reads
+the semgrep rulesets `recon` already planned in `kb/scan-profile.json` and falls back to the
+caller's scalar only when the profile is missing, unreadable, or plans no rulesets — so a finding
+is re-verified against the ruleset that actually flagged it, not an unrelated caller-supplied one.
+
 `test_evidence.py` gained coverage for the shared tier/status vocab: `TIER1_RECEIPTS |
 TIER2_RECEIPTS` partitions `_MECHANICAL` exactly, `receipt_tier()` grades colon-form sources,
 `confirms_alone()` requires a Tier-1 receipt, and `SHIPPING_STATUSES`/`RUNTIME_DISPOSITIONS` match

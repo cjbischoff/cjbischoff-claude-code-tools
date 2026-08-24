@@ -6,6 +6,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Verify-config resolver tests (REQ-22, RED): `test_verify_configs.py` pins a
+  `resolve_configs(ws, fallback)` helper that reads the semgrep rulesets the
+  scan profile planned, falling back to the caller's scalar only when the
+  profile is missing, unreadable, or plans no rulesets, and pins that
+  `verify_findings` passes the resolved list to the verifier instead of its
+  own scalar.
 - Named verify-cause tests (REQ-21, RED): `test_verify_causes.py` pins that
   `verify_patch` returns one of five named causes instead of overloading
   `"static-only"`, and that `verify_findings` maps each cause to a legal
