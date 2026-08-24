@@ -17,6 +17,21 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+# The cause of a verify verdict. ``Finding.verification`` is a closed enum owned by the
+# frozen ``evidence.py``, so the cause cannot become a verification value — it is returned
+# by ``verify_patch``, mapped below, and recorded in the finding's history.
+VERIFY_CAUSES = frozenset({
+    "verified-static", "not-fixed", "patch-not-applied", "rule-no-match", "unconfirmed",
+})
+
+_CAUSE_TO_VERIFICATION = {
+    "verified-static": "verified-static",
+    "not-fixed": "not-fixed",
+    "patch-not-applied": "static-only",
+    "rule-no-match": "static-only",
+    "unconfirmed": "static-only",
+}
+
 
 def _copy_ignore(directory: str, names: list[str]) -> set[str]:
     """copytree ignore: skip ``.git`` and any non-regular entry (socket/fifo).
@@ -243,9 +258,12 @@ def verify_patch(
         db_dir: CodeQL database directory, if the backend is codeql.
 
     Returns:
-        ``"verified-static"`` (was flagged, now gone), ``"not-fixed"`` (still
-        flagged after a clean apply), or ``"static-only"`` (not detectable
-        pre-patch, the backend is unavailable, or the patch failed to apply).
+        A member of :data:`VERIFY_CAUSES`. ``"verified-static"`` (was flagged, now
+        gone), ``"not-fixed"`` (still flagged after a clean apply),
+        ``"rule-no-match"`` (not detectable pre-patch), ``"patch-not-applied"``
+        (the patch failed to apply to the copy), or ``"unconfirmed"`` (the
+        post-patch re-scan could not run). :func:`verify_findings` maps each
+        cause to a legal ``Finding.verification`` value.
     """
     # Cheap string check first: a placeholder-version deps bump can never be a real fix, so
     # short-circuit before the pre-scan, the repo copy, and the patch apply.
@@ -259,17 +277,17 @@ def verify_patch(
     # same-named files in different dirs could alias — revisit with full paths then.
     pre = _check(target, config, basename, cls, rules, backend, language, db_dir)
     if not pre:
-        return "static-only"
+        return "rule-no-match"
 
     tmp = tempfile.mkdtemp(prefix="sec-overlay-verify-")
     try:
         repo = Path(tmp) / "repo"
         shutil.copytree(target, repo, ignore=_copy_ignore)
         if not apply_patch(repo, patch_diff):
-            return "static-only"
+            return "patch-not-applied"
         post = _check(str(repo), config, basename, cls, rules, backend, language, db_dir)
         if post is None:
-            return "static-only"
+            return "unconfirmed"
         return "not-fixed" if post else "verified-static"
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -312,11 +330,13 @@ def verify_findings(
             last_validate_fix is not None
             and last_validate_fix.get("event") != "validate-fix:fixed"
         )
-        result = verifier(
+        cause = verifier(
             target, f.patch_diff, config, f.file, f.cls, f.evidence_sources,
             language=language, db_dir=db_dir,
         )
-        if result == "verified-static" and validate_fix_said_not_fixed:
+        # An unmapped cause degrades to static-only: never launder an unknown verdict clean.
+        verification = _CAUSE_TO_VERIFICATION.get(cause, "static-only")
+        if verification == "verified-static" and validate_fix_said_not_fixed:
             # Idempotent: re-running verify on the same finding must not pile up duplicates.
             if f.history and f.history[-1].get("event") == "verify:conflict":
                 continue
@@ -328,13 +348,14 @@ def verify_findings(
             })
             changed = True
             continue
-        f.verification = result
+        f.history.append({"event": f"verify:cause:{cause}"})
+        f.verification = verification
         changed = True
-        if result == "verified-static":
+        if verification == "verified-static":
             f.status = FindingStatus.FIXED
             f.history.append({"event": "verify:fixed"})
             fixed += 1
-        elif result == "static-only":
+        elif verification == "static-only":
             f.status = FindingStatus.NEEDS_DEPLOYMENT_TESTING
             f.history.append({"event": "verify:needs-deployment-testing"})
     if changed:

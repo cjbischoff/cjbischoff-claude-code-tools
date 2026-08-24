@@ -304,7 +304,10 @@ reconciled class list passed to `render_dispatch(classes=...)` (no triage block,
 `findings-gate` → `findings_gate.validate_findings`, `dedupe` → `dedupe.dedupe_findings`,
 `calibrate` → `calibrate.calibrate_findings`, `verify` → `verify.verify_findings`
 (a `static-only` re-verify routes the finding to `needs-deployment-testing`, never leaves it
-`confirmed` implying a dynamic check passed; only `verified-static` promotes to `fixed`),
+`confirmed` implying a dynamic check passed; only `verified-static` promotes to `fixed`;
+`verify_patch` returns a named cause from `VERIFY_CAUSES` — not a verification value —
+which `verify_findings` maps to a legal `Finding.verification` value through
+`_CAUSE_TO_VERIFICATION`, recording `verify:cause:<cause>` in the finding's history),
 `demote-noise` → `partition.demote_noise`, `report` → `report.write_report`, `selfscore` →
 `selfscore.write_self_score`, `artifact-gate` → `_act_artifact_gate` (calls
 `artifact_gate.run_artifact_gate`, raising `PhaseHalt` naming every error when the gate rejects the
