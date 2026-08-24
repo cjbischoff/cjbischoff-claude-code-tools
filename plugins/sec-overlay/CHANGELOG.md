@@ -23,6 +23,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Contract layer (REQ-32, Task 5 RED): `test_contract_lint.py` gains three
+  failing tests for the last open lint property. They check that
+  `prompt-constants.md` states the precondition cap table by weight, that
+  `_precondition_cap` reads that table from a single constant, and that
+  `driver.py` exposes a `DISPATCH_TOKENS` tuple naming `TARGET`, `WORKSPACE`,
+  `SHA`, and `ATTACK_CLASS`. All three fail to import: none of
+  `PRECONDITION_CAPS`, `PRECONDITION_CAP_FLOOR`, or `DISPATCH_TOKENS` exist yet.
 - Contract layer (REQ-10, Task 4 GREEN): `agents/threat-model.md`'s `## Imports`
   section now names `QUALIFIER_PROOF`. The prompt grades severity, so a blanket
   mitigation claim must name the reachable paths checked, not just assert

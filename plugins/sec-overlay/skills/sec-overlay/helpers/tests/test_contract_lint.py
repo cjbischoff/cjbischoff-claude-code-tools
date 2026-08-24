@@ -2,13 +2,20 @@
 
 Each test reads a code constant and asserts the document or the schema agrees.
 A failure here is drift, not a flaky test. Fix the document, not the assertion.
+
+Property (c) of REQ-32 — every ``{{TOKEN}}`` in a prompt is in the dispatch
+substitution map — lands with REQ-08, which adds the three unmapped tokens.
+``DISPATCH_TOKENS`` below is the constant that test will read.
 """
 
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
+from sec_overlay.calibrate import PRECONDITION_CAP_FLOOR, PRECONDITION_CAPS, _precondition_cap
+from sec_overlay.driver import DISPATCH_TOKENS
 from sec_overlay.evidence import RUNTIME_DISPOSITIONS, TIER1_RECEIPTS, VERIFICATION_VALUES
 from sec_overlay.models import AFFECTED_SITE_KEYS, OPEN_QUESTION_KEYS, RUNTIME_TEST_KEYS
 
@@ -85,3 +92,29 @@ def test_threat_model_prompt_imports_qualifier_proof():
     assert "QUALIFIER_PROOF" in imports, (
         "threat-model.md's ## Imports section does not name QUALIFIER_PROOF"
     )
+
+
+def test_precondition_cap_thresholds_are_published():
+    """The document must state the cap table the harness actually applies."""
+    block = _block("SEVERITY_PRECONDITION")
+    for _threshold, cap in PRECONDITION_CAPS:
+        assert str(cap) in block, f"cap {cap} missing from SEVERITY_PRECONDITION"
+    assert str(PRECONDITION_CAP_FLOOR) in block, "cap floor missing"
+    assert "weight" in block.lower(), "the block still describes a count, not a weight"
+
+
+def test_precondition_cap_reads_the_published_table():
+    """_precondition_cap must derive from PRECONDITION_CAPS, not a second copy."""
+    assert _precondition_cap([]) == PRECONDITION_CAPS[0][1]
+    # one strong precondition weighs 1.0, so it lands in the second band
+    assert _precondition_cap(["non-default config"]) == PRECONDITION_CAPS[1][1]
+
+
+def test_dispatch_tokens_are_a_single_source():
+    """render_dispatch must build its substitute line from DISPATCH_TOKENS."""
+    for token in DISPATCH_TOKENS:
+        assert re.fullmatch(r"[A-Z0-9_]+", token), f"{token} is not a token name"
+    assert "TARGET" in DISPATCH_TOKENS
+    assert "WORKSPACE" in DISPATCH_TOKENS
+    assert "SHA" in DISPATCH_TOKENS
+    assert "ATTACK_CLASS" in DISPATCH_TOKENS

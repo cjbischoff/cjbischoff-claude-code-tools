@@ -1283,3 +1283,15 @@ label miss. It now enforces the row's position right after `Recon`.
 real `run_review` signature after the `--commit`/`--workspace-dirty` review scopes
 (4918b39) added those keyword arguments to `main()`'s `review` dispatch — the same
 stub-drift `TypeError` class the `model`/`workspace` fixes closed before.
+
+`test_contract_lint.py` (REQ-32, Task 5 RED) adds three failing tests for the last
+open contract-lint property. `test_precondition_cap_thresholds_are_published` checks
+`prompt-constants.md`'s `SEVERITY_PRECONDITION` block states every cap in
+`calibrate.PRECONDITION_CAPS` plus `PRECONDITION_CAP_FLOOR`, and calls out "weight"
+so the block cannot silently drift back to a count-based claim.
+`test_precondition_cap_reads_the_published_table` checks `_precondition_cap` derives
+its ceiling from `PRECONDITION_CAPS` instead of a second hardcoded copy.
+`test_dispatch_tokens_are_a_single_source` checks `driver.DISPATCH_TOKENS` holds
+`TARGET`, `WORKSPACE`, `SHA`, and `ATTACK_CLASS` as valid token names. All three
+fail to import: `PRECONDITION_CAPS`, `PRECONDITION_CAP_FLOOR`, and `DISPATCH_TOKENS`
+do not exist yet on `calibrate.py` and `driver.py`.
