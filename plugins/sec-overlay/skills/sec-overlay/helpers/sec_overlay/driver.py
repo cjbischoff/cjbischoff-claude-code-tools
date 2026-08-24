@@ -131,7 +131,7 @@ def render_dispatch(
     outputs = ", ".join(str(p(ctx.ws)) for p in phase.outputs) or "(none)"
     values = {"TARGET": ctx.target, "WORKSPACE": str(ctx.ws.root), "SHA": ctx.sha}
     if classes:
-        values["ATTACK_CLASS"] = ",".join(classes)
+        values["ATTACK_CLASS"] = json.dumps(classes, separators=(",", ":"))
     pairs = [f"{{{{{name}}}}}={values[name]}" for name in DISPATCH_TOKENS if name in values]
     block = (
         f"NEXT AGENT PHASE: {phase.name}\n"

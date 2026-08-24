@@ -5,6 +5,11 @@ or refute potential vulnerabilities of this class by tracing untrusted input fro
 source to sink, using READ-ONLY static analysis. You NEVER build, run, or modify
 the target.
 
+The dispatch block's `{{ATTACK_CLASS}}=` value is a compact JSON array of class
+keys. The orchestrator spawns one investigate agent per element and substitutes
+that single element into `{{ATTACK_CLASS}}`. Your `{{ATTACK_CLASS}}` is one key,
+never a list.
+
 ## Imports
 Include the ANTI_MANIPULATION, EXCLUSION_RULES, SEVERITY_GUIDANCE,
 SEVERITY_PRECONDITION, SHAPE_HUNTING, EXHAUSTIVENESS, TOOL_TRUST,

@@ -222,7 +222,7 @@ Each is **appended** to `investigate.md` / `patch.md` for that class and supplie
 | `{{OVERLAY_ROOT}}` | absolute path to `skills/sec-overlay/` (so agents find `references/`) |
 | `{{HELPERS_DIR}}` | absolute path to `helpers/` (for `python -m sec_overlay.*` calls) |
 | `{{REPO_ROOT}}` / `{{SCAN_SCOPE}}` | git top-level of the target + scan sub-path (from `kb/scan-scope.json`) |
-| `{{ATTACK_CLASS}}` | one class key (investigate agents) |
+| `{{ATTACK_CLASS}}` | one class key (investigate agents); the dispatch block carries the fan-out list as compact JSON |
 | `{{PHASE}}` | `recon` / `architecture` / `threat-model` / `context` (phase-adversary) |
 | `{{FP_FEEDBACK}}` | prior-pass rejected findings, as negative examples |
 | `{{ROUND}}` | tuning iteration number (tune-config) |

@@ -286,8 +286,9 @@ printer. `run_deterministic_phase` checks a `PhaseSpec`'s inputs, runs its regis
 carries the workspace,
 target, config, pinned SHA, and lazily-loaded `ScanProfile` an action needs. `render_dispatch`
 returns the printable block for an agent phase — prompt file plus `{{TARGET}}`/`{{WORKSPACE}}`/
-`{{SHA}}` substitutions, plus an optional `{{ATTACK_CLASS}}` line when called with `classes=` —
-with no side effects; the orchestrator runs the model. It raises if called on a deterministic
+`{{SHA}}` substitutions, plus an optional `{{ATTACK_CLASS}}` line — a compact JSON array of
+class keys — when called with `classes=` — with no side effects; the orchestrator runs the
+model. It raises if called on a deterministic
 phase (`prompt is None`). `_act_route_census` calls `route_census.census(ctx.target)` and
 `write_census` to persist `kb/route-census.json`. This action registers under `"route-census"`
 in `DETERMINISTIC_ACTIONS` and runs before the `recon` dispatch. At the `investigate` phase, `run_audit` reads `agents_to_spawn` from
@@ -1214,7 +1215,9 @@ hardcoded branches. `../references/prompt-constants.md`'s `SEVERITY_PRECONDITION
 the same cap-by-weight table. `driver.py` gained `DISPATCH_TOKENS`; `render_dispatch` builds its
 `substitute:` line from that tuple, so `{{ATTACK_CLASS}}` now sits on the same line as the other
 three tokens instead of its own trailing line. `../tests/test_contract_lint.py` checks both
-constants agree with the document.
+constants agree with the document. `render_dispatch` now renders `{{ATTACK_CLASS}}` as a compact
+JSON array of class keys (REQ-17). The value is no longer a comma-joined string. The dispatch
+fan-out list and `investigate.md`'s single-key `{{ATTACK_CLASS}}` never collide on format.
 
 `prefilter.py` gained `_relativize_paths` (REQ-15), called from `run_prefilter` right before
 `normalize`: an absolute `Finding.file` under the scanned `target` becomes repo-root-relative, an

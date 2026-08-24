@@ -39,6 +39,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   under `target` to a repo-root-relative one. A path outside `target` stays
   verbatim so a vendored or out-of-tree hit stays visible instead of being
   rewritten into something that does not resolve.
+- Attack-class fan-out as JSON (REQ-17): the dispatch block's `{{ATTACK_CLASS}}`
+  value is now a compact JSON array, not a comma-joined string. The old format
+  clashed with `investigate.md`'s single-key use of the same token.
+  `agents/investigate.md` and `agents/README.md` now state the array shape.
 - Data integrity (REQ-13, folds in REQ-23): every phase receipt and gate
   receipt now records true finding counts. `run.py` counted
   `findings/F-*.json`, but every real finding id starts `C-` or `<CLASS>-`,
