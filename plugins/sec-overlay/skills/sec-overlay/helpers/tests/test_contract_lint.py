@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sec_overlay.evidence import RUNTIME_DISPOSITIONS, VERIFICATION_VALUES
+from sec_overlay.evidence import RUNTIME_DISPOSITIONS, TIER1_RECEIPTS, VERIFICATION_VALUES
 from sec_overlay.models import AFFECTED_SITE_KEYS, OPEN_QUESTION_KEYS, RUNTIME_TEST_KEYS
 
 SKILL = Path(__file__).resolve().parents[2]
@@ -52,3 +52,20 @@ def test_published_finding_shapes_match_the_model():
 def test_investigate_prompt_imports_the_published_shapes():
     text = (AGENTS / "investigate.md").read_text()
     assert "FINDING_SHAPES" in text, "investigate.md does not import FINDING_SHAPES"
+
+
+def test_validate_prompt_states_the_tier1_confirmation_rule():
+    text = (AGENTS / "validate.md").read_text()
+    for receipt in sorted(TIER1_RECEIPTS):
+        assert receipt in text, f"validate.md never names the Tier-1 receipt {receipt}"
+    assert "Tier-1" in text, "validate.md does not name the Tier-1 requirement"
+    assert "needs-deployment-testing" in text, (
+        "validate.md does not route a Tier-2-only finding to needs-deployment-testing"
+    )
+
+
+def test_validate_prompt_does_not_imply_tier2_confirms():
+    """A Tier-2 receipt must never appear as sufficient for ``confirmed``."""
+    text = (AGENTS / "validate.md").read_text()
+    confirmed = text.split("**Confirmed**", 1)[1].split("- **Rejected**", 1)[0]
+    assert "Tier-1" in confirmed, "the Confirmed verdict does not require a Tier-1 receipt"

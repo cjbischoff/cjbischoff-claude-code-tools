@@ -319,6 +319,13 @@ appear inside that slice, not just somewhere in the file.
 `test_investigate_tool_grounding_names_the_two_new_receipts` checks `investigate.md` names
 `dependency-catalog` and states it never confirms a gate alone.
 
+`test_contract_lint.py` (REQ-07) gains two tests checking `agents/validate.md` matches the
+`findings_gate.py` confirmation rule. `test_validate_prompt_states_the_tier1_confirmation_rule`
+checks the prompt names every `evidence.TIER1_RECEIPTS` value, the word `Tier-1`, and
+`needs-deployment-testing`. `test_validate_prompt_does_not_imply_tier2_confirms` checks the
+`**Confirmed**` verdict section names `Tier-1`, so a Tier-2-only receipt never reads as
+sufficient for `confirmed`.
+
 `test_context.py` gained three tests for `doc_coverage()`: `test_doc_coverage_warns_when_few_docs_read`, `test_doc_coverage_warns_below_ratio`, and `test_doc_coverage_no_docs_no_warning` (ISSUE-016) — validate doc coverage ratio computation and warning thresholds.
 
 `test_stage_validate.py` gained `test_context_validator_flags_cited_doc_missing_from_docs_read` and `test_context_validator_ok_when_cited_doc_present` (ISSUE-021) — the `context` stage-validator rejects a `source_doc` citation absent from `provenance.docs_read`.

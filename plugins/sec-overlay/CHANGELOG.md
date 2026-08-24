@@ -23,6 +23,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Contract layer (REQ-07, Task 3 RED): `test_contract_lint.py` gains two failing
+  tests. One checks `agents/validate.md` names every `evidence.TIER1_RECEIPTS`
+  value and the word `Tier-1`. The other checks the prompt's `**Confirmed**`
+  verdict section names `Tier-1`, so a Tier-2 receipt never reads as sufficient.
+  Both fail: the prompt today tells the agent to record `ast-grep:`/
+  `structural-index:`/`ripgrep:` receipts for `confirmed`, all Tier-2, with no
+  `Tier-1` string anywhere in the file.
 - Contract layer (REQ-02, Task 1 RED): failing tests pin the closed enums for
   `Finding.verification` and `Finding.runtime_disposition`. `test_models.py`
   gains four cases: a prose `verification` value and an unknown
