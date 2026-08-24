@@ -15,6 +15,17 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- Contract layer (REQ-32): `test_contract_lint.py`'s lint let four kinds of
+  drift pass undetected — a `PRECONDITION_CAPS` threshold, a `PRECONDITION_CAPS`
+  cap, a dropped `RUNTIME_TEST_KEYS` key, and a bogus `FINDING_SHAPES` key.
+  Two tests now parse the exact published numbers and key sets, instead of
+  only checking that a substring is present, and a new test checks that
+  `FINDING_SHAPES` names no key or field the model does not declare. Also
+  corrected four stale documentation counts the lint's own gaps had let
+  drift: the pytest test count (1623 → 1633), `helpers/README.md`'s
+  `_MECHANICAL` list (missing `dependency-catalog`), and the
+  `prompt-constants.md` block count in two `CLAUDE.md` files (twelve → sixteen,
+  naming the four missing blocks).
 - `test_rule_glob.py`'s `fake_run_review` spy accepts the `commit`,
   `workspace_dirty`, `plan`, `token_budget`, `background`, and `tier` keyword
   arguments the real `run_review` now takes; the stale stub raised

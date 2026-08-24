@@ -55,7 +55,7 @@ for a person (not just an LLM) trying to understand this codebase — keep them 
 | [`skills/sec-overlay/README.md`](skills/sec-overlay/README.md) | the map: invariants, architecture, the pipeline, and a full end-to-end **worked example** (one SQLi finding from candidate → confirmed → fixed → redteam-plan). Points at the three folder READMEs and `SKILL.md`. |
 | [`skills/sec-overlay/agents/README.md`](skills/sec-overlay/agents/README.md) | every LLM prompt: role, model tier (sonnet producer / opus adversary), inputs/outputs, the producer→adversary rule, the investigate gate ladder, and the `classes/` extensions. |
 | [`skills/sec-overlay/helpers/README.md`](skills/sec-overlay/helpers/README.md) | the ~70 Python modules grouped by job, the CLI-callable list, the deterministic pipeline diagram, the finding serialization/schema contract, and the two in-code invariants. |
-| [`skills/sec-overlay/references/README.md`](skills/sec-overlay/references/README.md) | the rule book: the 12 `prompt-constants.md` blocks, `attack-classes.md`, the schemas, the crypto-policy YAMLs, and which module/agent consumes each file. |
+| [`skills/sec-overlay/references/README.md`](skills/sec-overlay/references/README.md) | the rule book: the 16 `prompt-constants.md` blocks, `attack-classes.md`, the schemas, the crypto-policy YAMLs, and which module/agent consumes each file. |
 
 **Hard rule — docs track code in the same commit.** When you change anything under `agents/`,
 `helpers/`, or `references/` (or any folder that has a `README.md`), update that folder's

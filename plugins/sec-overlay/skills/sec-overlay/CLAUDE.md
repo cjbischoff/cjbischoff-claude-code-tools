@@ -194,9 +194,10 @@ Resume an interrupted campaign: `python -m sec_overlay.cli memory --target <T>`.
 
 Under `references/`. Agents load these by target type; know when each applies:
 
-- **`prompt-constants.md`** — twelve verbatim blocks (`ANTI_MANIPULATION`, `EXCLUSION_RULES`,
-  `SEVERITY_GUIDANCE`, `SEVERITY_PRECONDITION`, `SHAPE_HUNTING`, `EXHAUSTIVENESS`, `TOOL_TRUST`,
-  `PATH_BASE`, `OUTPUT_WRITE_FALLBACK`, `DIAGRAM_STYLE`, `FIELD_OWNERSHIP`, `QUALIFIER_PROOF`)
+- **`prompt-constants.md`** — sixteen verbatim blocks (`ANTI_MANIPULATION`, `EXCLUSION_RULES`,
+  `GENERAL_PROFILE_EXCLUSION_RULES`, `SEVERITY_GUIDANCE`, `SEVERITY_PRECONDITION`, `SHAPE_HUNTING`,
+  `EXHAUSTIVENESS`, `TOOL_TRUST`, `PATH_BASE`, `OUTPUT_WRITE_FALLBACK`, `DIAGRAM_STYLE`,
+  `FIELD_OWNERSHIP`, `FINDING_SHAPES`, `QUALIFIER_PROOF`, `EVIDENCE_VOCABULARY`, `STE_PROSE`)
   injected into **every** agent so these rules never drift; all agents wrap untrusted repo text in
   the trust envelope and import these.
 - **`attack-classes.md`** — attack-class keys + ripgrep indicators; recon fills `agents_to_spawn`.

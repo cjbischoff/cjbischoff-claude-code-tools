@@ -16,8 +16,13 @@ from pathlib import Path
 
 from sec_overlay.calibrate import PRECONDITION_CAP_FLOOR, PRECONDITION_CAPS, _precondition_cap
 from sec_overlay.driver import DISPATCH_TOKENS
-from sec_overlay.evidence import RUNTIME_DISPOSITIONS, TIER1_RECEIPTS, VERIFICATION_VALUES
-from sec_overlay.models import AFFECTED_SITE_KEYS, OPEN_QUESTION_KEYS, RUNTIME_TEST_KEYS
+from sec_overlay.evidence import (
+    RUNTIME_DISPOSITIONS,
+    TIER1_RECEIPTS,
+    TIER2_RECEIPTS,
+    VERIFICATION_VALUES,
+)
+from sec_overlay.models import AFFECTED_SITE_KEYS, OPEN_QUESTION_KEYS, RUNTIME_TEST_KEYS, Finding
 
 SKILL = Path(__file__).resolve().parents[2]
 CONSTS = SKILL / "references" / "prompt-constants.md"
@@ -44,16 +49,47 @@ def _block(name: str) -> str:
     return text.split(marker, 1)[1].split("\n## ", 1)[0]
 
 
+def _doc_key_set(field: str) -> set[str]:
+    """Return the key names the ``Finding`` docstring publishes for one nested field."""
+    doc = Finding.__doc__ or ""
+    header = re.search(rf"^ {{4}}{field}: ", doc, re.MULTILINE)
+    assert header, f"{field} has no Attributes entry in the Finding docstring"
+    rest = doc[header.end() :]
+    nxt = re.search(r"^ {4}\w+: ", rest, re.MULTILINE)
+    para = rest[: nxt.start()] if nxt else rest
+    group = re.search(r"\{[^{}]*\}|\([^()]*\)", para)
+    assert group, f"{field}'s docstring paragraph names no key group"
+    return set(re.findall(r'(?:``|")([a-z_]+)(?:``|")', group.group(0)))
+
+
+def _prose_bullet_keys(block: str, field: str) -> set[str]:
+    """Return the key set one ``FINDING_SHAPES`` bullet publishes for a field."""
+    marker = f"- **`{field}`**"
+    assert marker in block, f"{field} shape not published"
+    bullet = block.split(marker, 1)[1].split("\n- ", 1)[0]
+    flat = " ".join(bullet.split())
+    keys = re.search(r"Keys[^:]*:\s*(.*?)\.", flat)
+    assert keys, f"{field}'s bullet names no key list"
+    return set(re.findall(r"`([a-z_]+)`", keys.group(1)))
+
+
 def test_published_finding_shapes_match_the_model():
+    """The docstring, the key tuples, and the prose must state one key set each."""
     block = _block("FINDING_SHAPES")
+    published = set()
     for field, keys in (
         ("runtime_test", RUNTIME_TEST_KEYS),
         ("open_questions", OPEN_QUESTION_KEYS),
         ("affected_sites", AFFECTED_SITE_KEYS),
     ):
-        assert field in block, f"{field} shape not published"
-        for key in keys:
-            assert f"`{key}`" in block, f"{field}.{key} missing from FINDING_SHAPES"
+        assert _doc_key_set(field) == set(keys), f"{field}: the docstring drifted from the tuple"
+        assert _prose_bullet_keys(block, field) == set(keys), (
+            f"{field}: FINDING_SHAPES drifted from the tuple"
+        )
+        published |= set(keys) | {field}
+    assert set(re.findall(r"`([a-z_]+)`", block)) == published, (
+        "FINDING_SHAPES names a key or field the model does not declare"
+    )
 
 
 def test_investigate_prompt_imports_the_published_shapes():
@@ -78,6 +114,18 @@ def test_validate_prompt_does_not_imply_tier2_confirms():
     assert "Tier-1" in confirmed, "the Confirmed verdict does not require a Tier-1 receipt"
 
 
+def test_validate_prompt_lists_every_tier2_receipt():
+    """REQ-07: the prompt's Tier-2 list is a copy of the code's, so it must match it."""
+    text = (AGENTS / "validate.md").read_text()
+    listed = set(re.findall(r"`([a-z-]+):`", text))
+    assert TIER2_RECEIPTS <= listed, f"validate.md omits the Tier-2 receipts {TIER2_RECEIPTS - listed}"
+    # llm-claimed is a real backtick-colon token in validate.md but is not a mechanical
+    # receipt (evidence.py:50) — it corroborates, never confirms, so it never appears in
+    # TIER1_RECEIPTS or TIER2_RECEIPTS. Subtract it by name rather than loosen the check.
+    extra = listed - TIER1_RECEIPTS - TIER2_RECEIPTS - {"llm-claimed"}
+    assert not extra, f"validate.md names receipts the code does not grade: {extra}"
+
+
 def _imports_line(prompt: Path) -> str:
     """Return the ``## Imports`` section of an agent prompt, or an empty string."""
     text = prompt.read_text()
@@ -97,10 +145,16 @@ def test_threat_model_prompt_imports_qualifier_proof():
 def test_precondition_cap_thresholds_are_published():
     """The document must state the cap table the harness actually applies."""
     block = _block("SEVERITY_PRECONDITION")
-    for _threshold, cap in PRECONDITION_CAPS:
-        assert str(cap) in block, f"cap {cap} missing from SEVERITY_PRECONDITION"
-    assert str(PRECONDITION_CAP_FLOOR) in block, "cap floor missing"
     assert "weight" in block.lower(), "the block still describes a count, not a weight"
+    bands = tuple(
+        (float(t), int(cap))
+        for t, cap in re.findall(r"below (\d+(?:\.\d+)?) caps at\s+(\d+)", block)
+    )
+    assert bands == PRECONDITION_CAPS, f"the published cap bands {bands} drifted from the code"
+    floor = re.search(r"(\d+(?:\.\d+)?) or more caps at\s+(\d+)", block)
+    assert floor, "the block never states the cap floor"
+    assert float(floor.group(1)) == PRECONDITION_CAPS[-1][0], "the floor threshold drifted"
+    assert int(floor.group(2)) == PRECONDITION_CAP_FLOOR, "the floor cap drifted"
 
 
 def test_precondition_cap_reads_the_published_table():
