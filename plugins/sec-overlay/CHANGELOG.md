@@ -6,6 +6,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- An unknown finding key now survives a load-and-save round trip (REQ-27):
+  `workspace.read_findings` stashes any key not in `Finding.__dataclass_fields__` on the
+  returned instance, in sorted order, and `workspace.write_findings` merges it back before
+  writing. Previously the round trip silently dropped it. `models.py` (`models.py:177` drops
+  unknown keys on `from_dict`; the requirement cited `models.py:154`, since moved) is
+  untouched — it is a byte-identical mirror of a separate Go port (D-15) with a pinned sha256.
+  `findings_gate.py:100` and `bench/run.py:101` still drop unknown keys; both are terminal
+  consumers, not round-trippers, so no rewrite loses data there.
 - `check_patch_applied` now runs the forward `git apply --check` before the reverse one
   (REQ-01): a patch is `APPLIED` only when it does NOT apply forward AND does apply
   reversed. The prior reverse-first order could call an unapplied additive patch

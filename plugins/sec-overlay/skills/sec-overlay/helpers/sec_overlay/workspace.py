@@ -12,6 +12,11 @@ from pathlib import Path
 from sec_overlay.evidence import SHIPPING_STATUSES
 from sec_overlay.models import Finding
 
+# Unknown keys ride on the instance, not on ``Finding``: ``models.py`` is a byte-identical
+# mirror of the Go port (D-15) and its sha256 is pinned. ``Finding`` is a plain dataclass with
+# no ``slots``, so an instance attribute is legal and ``to_dict`` ignores it.
+_OVERFLOW_ATTR = "_unknown_keys"
+
 
 @dataclass
 class Workspace:
@@ -135,14 +140,18 @@ def write_findings(ws: Workspace, findings: list[Finding]) -> None:
     truncates an existing file. Each write is a temp-file + ``os.replace`` (see
     :func:`_atomic_write`), safe against a concurrent reader in another phase.
 
+    Unknown keys stashed by :func:`read_findings` are merged back in sorted order, so a
+    load-and-save round trip never drops data.
+
     Args:
         ws: Target workspace.
         findings: Findings to persist.
     """
     ws.findings_dir.mkdir(parents=True, exist_ok=True)
     for f in findings:
-        payload = json.dumps(f.to_dict(), indent=2)
-        _atomic_write(ws.findings_dir / f"{f.id}.json", payload)
+        record = f.to_dict()
+        record.update(getattr(f, _OVERFLOW_ATTR, {}))
+        _atomic_write(ws.findings_dir / f"{f.id}.json", json.dumps(record, indent=2))
 
 
 def record_agent_return(ws: Workspace, agent: str, text: str) -> None:
@@ -181,6 +190,9 @@ def read_findings(ws: Workspace) -> list[Finding]:
     halt every downstream phase (dogfood ISSUE-015). ``findings_gate`` remains the
     authority that fails the pass on any unparseable finding.
 
+    Unknown keys are preserved on the returned instance so :func:`write_findings` can
+    merge them back.
+
     Args:
         ws: Source workspace.
 
@@ -190,9 +202,19 @@ def read_findings(ws: Workspace) -> list[Finding]:
     findings: list[Finding] = []
     for p in sorted(ws.findings_dir.glob("*.json")):
         try:
-            findings.append(Finding.from_dict(json.loads(p.read_text())))
+            raw = json.loads(p.read_text())
+            finding = Finding.from_dict(raw)
+            extra = {k: raw[k] for k in sorted(raw) if k not in Finding.__dataclass_fields__}
         except (ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
             print(f"warning: skipping unparseable finding {p.name}: {exc}", file=sys.stderr)
+            continue
+        if extra:
+            setattr(finding, _OVERFLOW_ATTR, extra)
+            print(
+                f"warning: preserving unknown keys on {p.name}: {', '.join(extra)}",
+                file=sys.stderr,
+            )
+        findings.append(finding)
     return findings
 
 

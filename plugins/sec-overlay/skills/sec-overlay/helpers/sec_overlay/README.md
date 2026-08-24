@@ -16,6 +16,12 @@ entry point; read the parent map for the full inventory.
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
 
+`workspace.py`'s `read_findings`/`write_findings` now round-trip a finding's unknown JSON keys
+(REQ-27): `read_findings` stashes any key absent from `Finding.__dataclass_fields__` on the
+returned instance (in sorted order, for a deterministic merge) and warns on stderr naming the
+preserved keys; `write_findings` merges them back into the dumped record before writing. This
+never touches `models.py`, so the frozen Go-port mirror (D-15) and its sha256 pin are unaffected.
+
 `workspace.py` gains `finding_counts(ws)` (REQ-13, folds in REQ-23), returning
 `{"findings", "findings_in", "findings_out"}` — `findings_in` is every finding file,
 `findings_out` is the `evidence.SHIPPING_STATUSES` subset, and `findings` repeats
