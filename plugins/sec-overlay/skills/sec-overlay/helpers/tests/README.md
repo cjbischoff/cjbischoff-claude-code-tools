@@ -1339,3 +1339,12 @@ a change.
 New `test_canonical_classes.py` (REQ-09, RED) covers a finding's `cls` against
 a canonical attack-class key set. It fails to import: `clsmap.canonical_classes`
 does not exist yet.
+
+`test_canonical_classes.py` (REQ-09, GREEN): all five tests pass now that
+`clsmap.canonical_classes()` exists. `test_contracts.py`'s
+`test_investigate_example_passes_the_gate` gained one normalization —
+`investigate.md`'s documented example carries the `{{ATTACK_CLASS}}` token as
+its `cls`, so the test rewrites it to `"sqli"` before writing the finding,
+matching the two normalizations already there for `file`/`line`. No other
+pre-existing test needed a change: a census of every `cls=`/`"cls":` literal
+under `helpers/` found no other value outside the derived 51-key set.

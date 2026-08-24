@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from sec_overlay.campaign import record_stage
+from sec_overlay.clsmap import canonical_classes
 from sec_overlay.dependency_sinks import catalog_ids
 from sec_overlay.evidence import (
     RUNTIME_DISPOSITIONS,
@@ -148,6 +149,12 @@ def validate_findings(ws: Workspace) -> list[str]:
             errors.append(
                 f"{f.id}: runtime_disposition {f.runtime_disposition!r} is not one of "
                 f"{sorted(RUNTIME_DISPOSITIONS)}"
+            )
+
+        if f.cls not in canonical_classes():
+            errors.append(
+                f"{f.id}: cls {f.cls!r} is not a canonical attack class "
+                f"(see references/attack-classes.md)"
             )
 
         if f.status.value in SHIPPING_STATUSES and not (f.impact or "").strip():

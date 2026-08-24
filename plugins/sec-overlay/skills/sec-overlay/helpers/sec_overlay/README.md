@@ -1240,3 +1240,12 @@ guarantee, so the fix normalizes once at the `run_prefilter` boundary instead of
 `record_stage` ran with no receipt on disk, so a fence abort in the driver's `on_complete` — which
 runs after `record_stage` for every other phase — could leave `state.json` saying `prefilter` is
 done with nothing to show for it.
+
+`clsmap.py` gained `canonical_classes()` (REQ-09), an `lru_cache`d function unioning every
+publisher of an attack-class key: the universal and F2-companion tables in
+`../references/attack-classes.md`, `CWE_CLS` and `_RULE_ID_CLS`, the two literal fall-backs
+(`security-other`, `unknown`), `review_findings.GENERAL_DEFECT_CLASSES` (a local import, so
+`clsmap` stays a leaf at import time), every `../agents/classes/*.md` stem except `README.md`,
+and `context.py`'s own `manual-review` pseudo-class. 51 keys observed. `findings_gate.py` now
+rejects any finding whose `cls` is not in that set; a missing `agents/classes/*.md` file stays a
+`class_ext.py` gap (`needs_follow_up`), never a rejection — REQ-09 is validity, not coverage.

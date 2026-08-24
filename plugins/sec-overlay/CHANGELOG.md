@@ -23,22 +23,16 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   `HELPERS_DIR` (5 files), `FP_FEEDBACK` (2 files). The other calls
   `render_dispatch` and fails because `{{FP_FEEDBACK}}` is absent from the
   substitute line.
-- Every dispatch token is fillable (REQ-08): `DISPATCH_TOKENS` grows from four
-  names to seven — `OVERLAY_ROOT`, `HELPERS_DIR`, and `FP_FEEDBACK` join
-  `TARGET`, `WORKSPACE`, `SHA`, `ATTACK_CLASS`. `render_dispatch` now writes
-  the prior-rejection feedback block to `<ws.kb>/fp-feedback.md` (it is a
-  multi-line `<untrusted>` envelope, so it cannot ride the space-joined
-  `substitute:` line) and substitutes the file path instead. The file is
-  always written, even with no prior rejections, so the token always
-  resolves. `agents/critic.md` and `agents/investigate.md` each gain one
-  sentence telling the agent to read the file. This closes REQ-32's
-  deferred property (c): `test_dispatch_tokens_are_a_single_source` in
-  `test_contract_lint.py` now calls `render_dispatch` and asserts its
-  `substitute:` line's token set against `DISPATCH_TOKENS`, so it fails if
-  the two ever disagree again.
 - A finding's class must be a canonical key (REQ-09, RED): `test_canonical_classes.py`
   gains five tests (one parametrized over 14 keys). All fail to import:
   `clsmap.canonical_classes` does not exist yet.
+- A finding's class must be a canonical key (REQ-09): `clsmap.canonical_classes()`
+  unions every publisher of an attack-class key — the two tables in
+  `attack-classes.md`, `CWE_CLS`/`_RULE_ID_CLS`, `review_findings.GENERAL_DEFECT_CLASSES`,
+  every `agents/classes/*.md` stem, and `context.py`'s `manual-review` — into one
+  51-key set. `findings_gate.validate_findings` now rejects a finding whose `cls`
+  is outside that set. A missing `agents/classes/*.md` file still ships as a
+  `class_ext.py` gap, never a rejection: validity and coverage stay separate.
 
 ### Changed
 

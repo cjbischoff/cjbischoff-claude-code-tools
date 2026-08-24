@@ -56,6 +56,8 @@ def test_investigate_example_passes_the_gate(tmp_path):
         if not f.file:
             f.file = "x.py"
         f.line = max(f.line, 1)
+        if "{{" in f.cls:
+            f.cls = "sqli"  # the documented example carries the {{ATTACK_CLASS}} token
         findings.append(f)
     write_findings(ws, findings)
     # the documented example must be gate-clean (no raw+duplicate_of, valid shape)
