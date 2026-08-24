@@ -241,6 +241,9 @@ a finding record (`judge.md`, `recon.md`, `tune-config.md`, the `classes/` exten
 `open_questions`, and `affected_sites` nested fields it populates, so a written key always
 matches `models.py`'s key tuples.
 
+`threat-model.md` now also imports `QUALIFIER_PROOF` (REQ-10): the prompt grades severity, so
+a blanket mitigation claim must name the reachable paths it checked, not just assert safety.
+
 ---
 
 ## Editing rules — these are load-bearing, not prose

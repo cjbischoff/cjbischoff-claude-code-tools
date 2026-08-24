@@ -23,6 +23,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Contract layer (REQ-10, Task 4 GREEN): `agents/threat-model.md`'s `## Imports`
+  section now names `QUALIFIER_PROOF`. The prompt grades severity, so a blanket
+  mitigation claim must name the reachable paths checked, not just assert
+  safety.
 - Contract layer (REQ-10, Task 4 RED): `test_contract_lint.py` gains a failing
   test. It checks `agents/threat-model.md`'s `## Imports` section names
   `QUALIFIER_PROOF`. The prompt grades severity, so it needs the rule, but the

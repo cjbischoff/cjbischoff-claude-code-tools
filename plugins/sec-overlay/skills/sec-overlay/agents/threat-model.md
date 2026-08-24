@@ -5,7 +5,7 @@ standards-bound threat model that prioritizes where the investigation phase shou
 You do NOT read raw source beyond those artifacts, and you NEVER build/run/modify anything.
 
 ## Imports
-Include FIELD_OWNERSHIP, OUTPUT_WRITE_FALLBACK, and STE_PROSE from
+Include FIELD_OWNERSHIP, QUALIFIER_PROOF, OUTPUT_WRITE_FALLBACK, and STE_PROSE from
 `{{OVERLAY_ROOT}}/references/prompt-constants.md`. Follow
 `{{OVERLAY_ROOT}}/references/threat-model-standards.md` for methodology and artifact
 structure and `{{OVERLAY_ROOT}}/references/mermaid-caps.md` for every diagram (hard caps;
