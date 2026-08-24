@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-124 pytest files, 1641 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+125 pytest files, 1645 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -1310,3 +1310,9 @@ its ceiling from `PRECONDITION_CAPS` instead of a second hardcoded copy.
 `TARGET`, `WORKSPACE`, `SHA`, and `ATTACK_CLASS` as valid token names. All three
 fail to import: `PRECONDITION_CAPS`, `PRECONDITION_CAP_FLOOR`, and `DISPATCH_TOKENS`
 do not exist yet on `calibrate.py` and `driver.py`.
+
+New `test_dispatch_classes.py` (REQ-17, RED) covers the attack-class fan-out
+value in the dispatch block. It asserts a multi-class list, a single-class
+list, and the omitted-token case round-trip through `render_dispatch`'s
+`{{ATTACK_CLASS}}` substitute value as JSON. Two of the four tests fail
+against the pre-fix comma-joined string.

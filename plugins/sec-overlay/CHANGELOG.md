@@ -14,6 +14,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   gains three failing tests pinning that `run_prefilter` rewrites an absolute
   backend path to a `target`-relative one, leaves an already-relative path
   alone, and leaves a path outside `target` verbatim.
+- Attack-class fan-out as JSON (REQ-17, RED): `test_dispatch_classes.py` gains
+  four tests pinning that the dispatch block's `{{ATTACK_CLASS}}` value is a
+  compact JSON array. Two fail against the pre-fix comma-joined string.
 
 ### Changed
 
