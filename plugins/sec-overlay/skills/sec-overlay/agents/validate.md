@@ -79,9 +79,14 @@ substitute for reading the control; only the threat model's declared trust bound
 4. Verdict, one of:
    - **Confirmed** (you tried and could not refute it; the source→sink path
      holds, at confidence 8–10 per the anchor above): set `status: "confirmed"`,
-     record `evidence_sources` (the tool receipts you personally confirmed —
-     `ast-grep:`/`structural-index:`/`ripgrep:` entries, not just `llm-claimed:`),
-     propose a `cvss_vector`, append `history` `{"event": "validate:confirmed"}`.
+     record `evidence_sources` (the tool receipts you personally confirmed).
+     `confirmed` requires at least one Tier-1 receipt — `codeql:`, `semgrep:`,
+     `sca:`, or `secrets:`. A finding whose only receipts are Tier-2
+     (`ast-grep:`, `structural-index:`, `ripgrep:`, `tree-sitter:`,
+     `dependency-catalog:`) is real but unproven from source: set
+     `status: "needs-deployment-testing"`, not `confirmed`. An `llm-claimed:`
+     entry corroborates and never confirms. Propose a `cvss_vector`, append
+     `history` `{"event": "validate:confirmed"}`.
      If your independent trace differs from the recorded `dataflow`, correct it.
      Never confirm a finding whose `reachability.blocker == "external-boundary"` —
      it stays a lead (`status: "raw"`); the calibrate cap and the report's external

@@ -23,6 +23,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Contract layer (REQ-07, Task 3 GREEN): `agents/validate.md`'s `**Confirmed**`
+  verdict now names the Tier-1 receipts (`codeql:`, `semgrep:`, `sca:`,
+  `secrets:`) and requires at least one of them. A finding whose only receipts
+  are Tier-2 (`ast-grep:`, `structural-index:`, `ripgrep:`, `tree-sitter:`,
+  `dependency-catalog:`) routes to `needs-deployment-testing`, not `confirmed`,
+  matching `findings_gate.py`'s `confirms_alone` gate. An `llm-claimed:` entry
+  is stated to corroborate and never confirm.
 - Contract layer (REQ-07, Task 3 RED): `test_contract_lint.py` gains two failing
   tests. One checks `agents/validate.md` names every `evidence.TIER1_RECEIPTS`
   value and the word `Tier-1`. The other checks the prompt's `**Confirmed**`
