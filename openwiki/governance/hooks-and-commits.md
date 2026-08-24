@@ -49,36 +49,53 @@ unconventional header is rejected, and — the exact 50-character boundary —
 ## The doc-update guard (`pre-commit-check.sh`)
 
 `scripts/hooks/pre-commit-check.sh` is the single script that enforces the rest of commit
-governance. It runs on every `pre-commit` and does four things, in order:
+governance. It runs on every `pre-commit` and does the following, in order:
 
 1. **Blocks direct commits to `main`.** `git rev-parse --abbrev-ref HEAD` is checked first;
    if the current branch is `main`, the hook exits 1 immediately with a message to branch
    instead. This is the local backstop for the rule; the
    [GitHub ruleset on `main`](#the-github-ruleset-on-main) below is the server-side one.
-2. **Requires `README.md` and `CHANGELOG.md` on any non-doc change.** If the staged file set
-   contains anything other than `README.md`/`CHANGELOG.md`, both of those files must also be
-   staged, or the commit is rejected. This mirrors root `README.md`'s Governance rule: "Every
-   commit that changes tracked files updates `README.md` and `CHANGELOG.md` (Common Changelog
-   format) in the same commit."
-3. **A hard-coded check for the three Directory Guide folders** (`plugins`, `scripts`, `docs`):
-   if a staged file lives under one of these and that folder's own `README.md` is not also
-   staged, the commit is rejected naming the folder. This is a "stricter, redundant-but-harmless
-   special case" per `scripts/README.md` — it duplicates the general rule below for exactly the
-   three folders listed in the root README's Directory Guide table.
+2. **Routes the README/CHANGELOG requirement by scope, not one blanket rule.** The staged file
+   set (`git diff --cached --name-only`) is split, through a `safe_grep` helper that fails the
+   hook closed on a real `grep` error rather than treating it as an empty no-match, into files
+   under `plugins/<name>/` versus everything else (`repo_level`):
+   - Any **repo-level** staged file (including `plugins/README.md` itself — the plugins
+     *directory* README is not plugin-internal) requires both root `README.md` and root
+     `CHANGELOG.md` to be staged, or the commit is rejected naming whichever is missing.
+   - Every distinct **plugin name** found among the staged `plugins/<name>/...` paths (read via
+     a quoted `while read` loop so a name with whitespace/glob characters can't split or
+     expand) requires that plugin's own `plugins/<name>/CHANGELOG.md` to be staged, or the
+     commit is rejected naming that path. A commit that touches only `plugins/<name>/` files
+     needs **no** root README/CHANGELOG edit — this is the exemption from the old blanket rule.
+   - A commit that mixes plugin-internal and repo-level files satisfies both requirements
+     independently.
+3. **A hard-coded check for two Directory Guide folders** (`scripts`, `docs` only — `plugins`
+   is no longer in this list): if a staged file lives under one of these and that folder's own
+   `README.md` is not also staged, the commit is rejected naming the folder. This is a
+   "stricter, redundant-but-harmless special case" per `scripts/README.md`; `plugins` was
+   removed from it because the per-plugin changelog routing above and the generalized
+   per-folder rule below already cover every change under `plugins/` without a single
+   root-`plugins/README.md` trigger firing for every change anywhere in that tree.
 4. **The generalized per-folder rule.** For every staged file, the hook resolves its immediate
    directory and checks whether that directory has a *tracked* `README.md` (via
    `git ls-files --error-unmatch`). If it does, that `README.md` must also be staged, or the
    commit is rejected naming the specific file and folder. A folder with no tracked `README.md`
-   is simply not gated. This generalized rule is what actually enforces the "docs track code"
-   requirement for every nested folder inside the sec-overlay skill — see
+   is simply not gated. **One exemption:** a staged `plugins/<name>/CHANGELOG.md` is skipped by
+   this loop (it is already gated by step 2's per-plugin routing), so a commit that stages only
+   a plugin's changelog edit never has to also restage that plugin's `README.md`. This
+   generalized rule is what actually enforces the "docs track code" requirement for every
+   nested folder inside the sec-overlay skill — see
    [developing the skill](../plugins/sec-overlay/developing-the-skill.md) for the full list of
    folder READMEs this reaches.
 
-`scripts/hooks/test-pre-commit-check.sh` proves this behavior with three cases, each run inside
-a disposable temporary git repository (cleaned up via an `EXIT` trap): a change to a folder's
-file without restaging that folder's `README.md` blocks (exit 1); the same change with the
-`README.md` restaged passes (exit 0); and a change inside a folder that has no tracked
-`README.md` is not gated at all (exit 0).
+`scripts/hooks/test-pre-commit-check.sh` proves this behavior with ten cases (A through J) in
+disposable temporary git repositories (cleaned up via an `EXIT` trap), covering: a folder
+change blocked/passed by restaging its README, a folder with no tracked README not gated at
+all, a plugin-only change blocked without its own `CHANGELOG.md` and passing with it staged, a
+repo-level change blocked/passed on root README+CHANGELOG, a file directly in a plugin
+subfolder still blocked without that subfolder's own README, and the changelog-only exemption
+holding when a real `plugins/<name>/README.md` exists but is not staged (while a sibling
+non-changelog file in the same commit still requires it).
 
 ## Wiring: prek
 
@@ -110,10 +127,10 @@ git config core.hooksPath skills/sec-overlay/.githooks
 
 Two details mark it as a legacy artifact rather than a second required gate. First, its
 comments describe scope in terms of "a go/ commit from the parallel workstream" — there is no
-`go/` directory or Go-language workstream anywhere in the current repository; the root
-`README.md`'s Status log records a change that "removed stale Go-rewrite prose... from the
-live docs," consistent with this hook predating a since-completed migration off a parallel
-Go-based layout. Second, running `core.hooksPath` to `skills/sec-overlay/.githooks` would
+`go/` directory or Go-language workstream anywhere in the current repository; `plugins/README.md`'s
+own change log records "stale Go-rewrite prose removed from the live docs," consistent with
+this hook predating a since-completed migration off a parallel Go-based layout. Second, running
+`core.hooksPath` to `skills/sec-overlay/.githooks` would
 **replace**, not add to, the hooks path prek manages at the repository root — installing it as
 documented would silently disable the `doc-update-guard`'s `main`-branch block and its
 `CHANGELOG.md`/`README.md` requirement for every commit, not just ones touching the skill.
@@ -125,27 +142,29 @@ this repository, including inside the skill** — its rule (§4 above) already c
 skill-local script. Treat `.githooks/pre-commit` as documentation of intent from an earlier
 layout rather than an active second gate to install.
 
-**Concretely:** a commit that touches only `skills/sec-overlay/helpers/some_module.py` — with
-neither the skill-local `.githooks/pre-commit` installed nor the root `README.md`/`CHANGELOG.md`
-staged — is rejected by prek's `doc-update-guard` (§2 above: any non-doc change requires both
-files) before the skill-local hook would ever be consulted. If someone *did* install the
-skill-local hook via `core.hooksPath`, the same commit would instead be checked only against
-that hook's narrower `agents`/`helpers`/`references` rule and would pass or fail solely on
-whether `helpers/README.md` was staged — it would never check `README.md`/`CHANGELOG.md` or the
-`main`-branch block at all, since installing it replaces prek's hooks path rather than adding to
-it. `git commit --no-verify` skips whichever hook is currently installed at `core.hooksPath` for
-that commit (prek's, if the documented, standard install was followed); it does not skip "the
-other" hook, because only one hooksPath is active at a time.
+**Concretely:** a commit that touches only `skills/sec-overlay/helpers/some_module.py` — a
+plugin-internal path under `plugins/sec-overlay/` — is rejected by prek's `doc-update-guard`
+unless it also stages `plugins/sec-overlay/CHANGELOG.md` (§2's plugin-routing rule) *and*
+`helpers/README.md` (§4's generalized per-folder rule); it needs no root `README.md`/
+`CHANGELOG.md` edit at all, since plugin-internal changes are exempt from the repo-level
+requirement. If someone *did* install the skill-local hook via `core.hooksPath`, the same
+commit would instead be checked only against that hook's narrower `agents`/`helpers`/
+`references` rule and would pass or fail solely on whether `helpers/README.md` was staged — it
+would never check the plugin `CHANGELOG.md` routing or the `main`-branch block at all, since
+installing it replaces prek's hooks path rather than adding to it. `git commit --no-verify`
+skips whichever hook is currently installed at `core.hooksPath` for that commit (prek's, if the
+documented, standard install was followed); it does not skip "the other" hook, because only one
+hooksPath is active at a time.
 
 ## The GitHub ruleset on `main`
 
 Independent of any local hook, a GitHub repository ruleset on `main` requires a pull request
 before merging and blocks force-pushes and branch deletion. This is the non-bypassable
 backstop: even a contributor who skips `prek install` or bypasses hooks locally still cannot
-push directly to `main`. The root `README.md` states: "Direct commits to `main` are blocked by
-a pre-commit hook and by a GitHub ruleset (pull requests required; force-push and deletion
-blocked)." There is no ruleset configuration file in the repository to cite beyond this
-documentation — GitHub rulesets are a server-side setting, not a checked-in file.
+push directly to `main`. The root [`CLAUDE.md`](/CLAUDE.md) states: "Direct pushes to `main`
+are also blocked on GitHub by a repository ruleset (pull request required; force-push and
+deletion blocked)." There is no ruleset configuration file in the repository to cite beyond
+this documentation — GitHub rulesets are a server-side setting, not a checked-in file.
 
 ## Related pages
 

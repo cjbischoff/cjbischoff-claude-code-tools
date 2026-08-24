@@ -20,8 +20,8 @@ from the repository root. This is the Claude Code CLI's own manifest validator �
 correctness (valid JSON, required fields present, a marketplace entry existing for each plugin
 directory). The root [`README.md`](/README.md) lists this as the first Development command,
 and the root [`CLAUDE.md`](/CLAUDE.md) Desired outcome states plainly: "Each plugin passes
-`claude plugin validate .` before release." As of this writing the repository's Status section
-records that "plugin and marketplace manifests validate."
+`claude plugin validate .` before release." The root README no longer carries a status log —
+`CHANGELOG.md` and each plugin's own `version`/`CHANGELOG.md` are the record of what shipped.
 
 CodeRabbit's `**/.claude-plugin/*.json` path instruction (see
 [code review](../governance/code-review.md)) performs a lighter-weight version of the same
@@ -55,11 +55,11 @@ commit as the shipping-file change. `marketplace.json` never needs an edit for t
 not pin plugin versions.
 
 As a concrete example of the rule being applied: the plugin's `plugin.json` currently reads
-`"version": "0.2.0"`. The root README's Status section explains the jump from the prior
-`0.1.1` governance release: "Plugin versions bump automatically on shipping-file changes
-(Conventional-Commits semver); this review-improvements release ships sec-overlay as 0.2.0,
-above the 0.1.1 governance release on `main`" — a `feat`-driven minor bump accumulated across
-that branch's shipping-file changes.
+`"version": "1.107.3"`. That number is the accumulated result of hundreds of shipping-file
+commits, each bumping major/minor/patch per its own Conventional Commit type — there is no
+single release note that explains the jump; `plugins/sec-overlay/CHANGELOG.md` is the
+authoritative per-release history. Do not treat a specific version number in this wiki as
+current for longer than it takes to check `plugin.json` directly.
 
 ## Where this rule is (and is not) enforced — important nuance
 
@@ -70,9 +70,9 @@ reference to `plugin.json` or `version` at all — a commit that changes a sec-o
 file without touching `plugin.json`'s `version` will pass both hooks and the GitHub ruleset on
 `main` without complaint.
 
-The rule is instead declared as **policy** in the root README's Governance section and root
-`CLAUDE.md`'s Conventions section, and checked only by CodeRabbit's `plugin-version-bump`
-pre-merge check, which runs in `warning` mode (`.coderabbit.yaml`):
+The rule is instead declared as **policy** in the root [`CLAUDE.md`](/CLAUDE.md)'s Governance
+section, and checked only by CodeRabbit's `plugin-version-bump` pre-merge check, which runs in
+`warning` mode (`.coderabbit.yaml`):
 
 > FAIL if a shipping file changed under `plugins/<name>/` and the `version` field in
 > `plugins/<name>/.claude-plugin/plugin.json` is unchanged. FAIL if the version increment does
@@ -82,11 +82,12 @@ pre-merge check, which runs in `warning` mode (`.coderabbit.yaml`):
 Because CodeRabbit's pre-merge checks are advisory (`request_changes_workflow: false` —
 see [code review](../governance/code-review.md)), the GitHub ruleset requiring a pull request
 is the only *required* gate on `main`; a missed version bump surfaces as a CodeRabbit warning
-comment, not a blocked merge. Treat that warning as a real finding — the root `README.md`
-states explicitly that "Pre-merge checks mirror the governance rules above in `warning` mode,
-so a violation shows up in the review as well as in the hooks" for the *other* governance
-rules, but the version-bump rule specifically has no hook counterpart at all; CodeRabbit is its
-only automated check.
+comment, not a blocked merge. Treat that warning as a real finding — root `CLAUDE.md` says
+plainly of CodeRabbit's pre-merge checks in general: "Treat a warning as a real finding: it
+means a hook would have caught the same thing." The other governance rules those checks
+restate (README/CHANGELOG updated, folder README updated, no paths outside a plugin) *do* have
+a hook counterpart; the version-bump rule specifically does not — CodeRabbit is its only
+automated check.
 
 ## Related pages
 

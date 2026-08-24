@@ -10,7 +10,11 @@ tags: [operations, security-automation, dependency-review, dependabot, codeql, g
 This repository layers several GitHub-native and workflow-based controls on top of
 [commit governance](../governance/hooks-and-commits.md) and
 [CodeRabbit review](../governance/code-review.md). This page describes what each control does
-and why; it does not reproduce the YAML.
+and why; it does not reproduce the YAML. It covers this **repository's own** workflows only —
+the sec-overlay plugin also ships [`action.yml`](/plugins/sec-overlay/action.yml), a composite
+GitHub Action a *target* repository's own workflow consumes to run
+[review mode](../plugins/sec-overlay/review-mode.md#the-github-action) on its pull requests;
+that is plugin payload, not part of this marketplace's own CI.
 
 ## Dependency review
 
@@ -80,24 +84,30 @@ SHA with the human-readable version in a trailing comment, e.g.:
 uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 ```
 
-This appears in both `dependency-review.yml` and `.github/workflows/openwiki-update.yml` (see
-[OpenWiki refresh](openwiki-refresh.md)). Pinning to a SHA rather than a mutable tag (`@v7`)
-means a compromised or force-pushed tag on the upstream Action cannot silently change what runs
-in this repository's CI — the only way to update is a new commit that changes the SHA, which
-Dependabot's `github-actions` stream (above) proposes automatically. CodeRabbit's
-`.github/workflows/**` path instruction (see [code review](../governance/code-review.md)) also
-checks this on every PR that touches a workflow file.
+This appears in `dependency-review.yml`, `.github/workflows/openwiki-update.yml` (see
+[OpenWiki refresh](openwiki-refresh.md)), and `.github/workflows/sec-overlay-tests.yml` (see
+[developing the skill](../plugins/sec-overlay/developing-the-skill.md#ci-the-detection-regression-gate)) —
+the last of these installs `uv` and `semgrep` from their own official installers rather than a
+third-party Action, specifically to avoid adding a fourth Action reference to pin. Pinning to a
+SHA rather than a mutable tag (`@v7`) means a compromised or force-pushed tag on the upstream
+Action cannot silently change what runs in this repository's CI — the only way to update is a
+new commit that changes the SHA, which Dependabot's `github-actions` stream (above) proposes
+automatically. CodeRabbit's `.github/workflows/**` path instruction (see
+[code review](../governance/code-review.md)) also checks this on every PR that touches a
+workflow file.
 
 ## The default read-only workflow token
 
-Both workflows declare `permissions` explicitly rather than relying on the default:
-`dependency-review.yml` uses `permissions: contents: read` — it only needs to check out code
-and read manifests. `openwiki-update.yml` needs to open a pull request, so it declares the
-narrower elevated grant its job actually needs (`contents: write`, `pull-requests: write`) at
-the job level rather than repository-wide, and otherwise defaults to `permissions: {}` at the
-workflow level. This least-privilege pattern — read-only unless a job specifically needs to
-write — limits what a compromised or buggy workflow step could do even if it were tricked into
-running attacker-controlled code.
+Every workflow declares `permissions` explicitly rather than relying on the default:
+`dependency-review.yml` and `sec-overlay-tests.yml` both use `permissions: contents: read` —
+they only need to check out code (and, for the latter, read manifests/fixtures) — with
+`sec-overlay-tests.yml` additionally scoping a `concurrency` group per ref so a superseded push
+cancels its in-flight run rather than piling up. `openwiki-update.yml` needs to open a pull
+request, so it declares the narrower elevated grant its job actually needs (`contents: write`,
+`pull-requests: write`) at the job level rather than repository-wide, and otherwise defaults to
+`permissions: {}` at the workflow level. This least-privilege pattern — read-only unless a job
+specifically needs to write — limits what a compromised or buggy workflow step could do even if
+it were tricked into running attacker-controlled code.
 
 ## Related pages
 

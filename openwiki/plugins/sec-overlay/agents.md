@@ -51,18 +51,20 @@ Read top to bottom — this is the order the orchestrator spawns them (see
 | C1 context | `context-ingest.md` | sonnet | discovers repo docs/prior scans, verifies claimed controls against code |
 | C1 context | `context-adversary.md` | opus | pressure-checks that verification |
 | Analysis | `recon.md` | sonnet | surveys the repo → `kb/scan-profile.json` |
-| Analysis | `architecture.md` | sonnet | components/data-flows/trust-boundaries → `kb/architecture.md` |
-| Analysis | `threat-model.md` | sonnet | attacker profiles + hunt list → `kb/THREAT_MODEL.md` |
-| Analysis (each of the three) | `phase-adversary.md` | opus | re-derives each claim from code; verdicts → `kb/gates/<phase>.json` |
+| Analysis | `recall-adversary.md` | opus, fresh context | judges what recon **left out** (route census + dependency-catalog gaps), never what it claimed — runs only after recon's own phase-adversary pass |
+| Analysis | `architecture.md` | sonnet | C4 diagrams + `arc42.md` (building blocks, sections 1–8, 10–12) |
+| Analysis | `threat-model.md` | sonnet | derived `dfd.mmd` + STRIDE findings (CVSS v4.0) + hunt list |
+| Analysis (recon/architecture/threat-model/context) | `phase-adversary.md` | opus | re-derives each claim from code; verdicts → `kb/gates/<phase>.json` |
 | Investigate | `investigate.md` + `classes/<cls>.md` | sonnet, parallel per class | walks the [gate ladder](#the-investigate-gate-ladder) → `raw`/`rejected` |
 | FP ladder | `critic.md` | sonnet | production-viability filter (reject debug-only/dead/test-fixture code); demotes on doubt, never hard-rejects |
 | FP ladder | `judge.md` | cheap, no tools | severity-inflation adjudicator; uphold / downgrade / flag |
-| FP ladder | `validate.md` | opus, different family | assumes every finding is wrong and tries to refute it; survival = `confirmed` |
+| FP ladder | `validate.md` | opus, different family | assumes every finding is wrong and tries to refute it; survival = `confirmed`; requires a real CVSS v4.0 vector and non-empty preconditions or routes to `needs-deployment-testing` |
 | Patch | `patch.md` | opus | proposes a minimal diff into `patch_diff`, applied only to a throwaway copy |
 | Patch | `validate-fix.md` | opus, two personas | security-architect + penetration-tester independently check the patch; `no_new_vulnerabilities` regression is non-waivable |
-| Red team | `trace.md` | opus | backward-traces each confirmed sink to an entry point; sets `reachability` |
-| Red team | `redteam.md` | sonnet | splits confirmed findings into `static-settled` vs `needs-runtime`; writes `runtime_test` |
+| Red team | `trace.md` | opus | backward-traces each confirmed sink to an entry point; sets `reachability` and, on a static-settled reachable verdict, `preconditions` |
+| Red team | `redteam.md` | sonnet | splits confirmed findings into `static-settled` vs `needs-runtime`; writes `runtime_test`; traces each payload source→sink through input validation before shipping it as a live directive |
 | Red team | `redteam-adversary.md` | opus | strips settleable-from-source or payload-mismatched items |
+| Artifact review | `artifact-review.md` | opus, different family | claim↔evidence check over the **rendered** `report.md`/`report.sarif`/`redteam-plan.md` — the final adversary, after the deterministic `artifact_gate.py` self-check |
 | Postflight | `postflight.md` | sonnet | durable security-profile notes to `kb/prior_context.json` |
 
 **`judge` and `validate` must never run concurrently against the same finding file** — the last
@@ -106,11 +108,11 @@ the agent does not re-raise a known false positive.
 
 ## `classes/` — CWE-class extension prompts
 
-Eleven small prompts under
+Thirteen small prompts under
 [`agents/classes/`](/plugins/sec-overlay/skills/sec-overlay/agents/classes/) — `injection`,
-`ssrf`, `authz`, `authn`, `crypto`, `config`, `business-logic`, `prompt-injection`,
-`context-bleed`, `excessive-agency`, `resource` — each appended to `investigate.md` /
-`patch.md` for that class, supplying:
+`ssrf`, `ssti`, `authz`, `authn`, `crypto`, `config`, `business-logic`, `prompt-injection`,
+`context-bleed`, `excessive-agency`, `resource`, `expr-eval-rce` — each appended to
+`investigate.md` / `patch.md` for that class, supplying:
 
 1. **Canonical fix shape** (e.g. injection → parameterized query; crypto → AEAD or slow KDF).
 2. **Discrimination boundary** — an explicit IS/IS-NOT so a finding routes to exactly one class
@@ -119,7 +121,19 @@ Eleven small prompts under
 4. **Instance-preservation rule** — do not collapse sibling instances into one finding.
 
 `test_wiring.py` checks that every class prompt carries the proof tuple and the anti-collapse
-rule.
+rule. The `expr-eval-rce` class covers server-side policy/rule engines (CEL, Starlark, goja,
+gopher-lua, Spring SpEL); OPA/Rego's tokens stay in the `ssrf` row instead, since its builtin
+performs an outbound request — every class row's ripgrep tokens are pinned to match
+`dependency-sinks.json`'s `sink`/`indicators` fields for the same entry, regression-tested by
+`test_docs_invariants.py`.
+
+## Diff-review pipeline is a separate, lighter track
+
+`review-file.md`, `review-plan.md`, and `review-filter.md` are **not** part of the audit
+pipeline above — they belong to `sec_overlay.cli review`'s diff-scoped review track, dispatched
+directly by the main agent in a prepare→dispatch→consume loop rather than by a phase driver.
+See [review mode](review-mode.md) for that track's own prompt table and safety mechanism (a
+mechanical, code-level retraction veto rather than a second adversary pass).
 
 ## Template tokens the orchestrator substitutes
 
@@ -161,8 +175,9 @@ repo's [doc-update-guard hook](../../governance/hooks-and-commits.md).
 ## Related pages
 
 - [Pipeline](pipeline.md) — where each phase above fits in the full audit sequence.
+- [Review mode](review-mode.md) — the diff-scoped review-file/review-plan/review-filter prompts.
 - [Helpers](helpers.md) — the deterministic modules that enforce the tool-receipt gate these
   prompts cannot bypass.
-- [References](references.md) — `prompt-constants.md`'s twelve blocks every prompt imports.
+- [References](references.md) — `prompt-constants.md`'s fifteen blocks every prompt imports.
 - [Cross-repo correlation](cross-repo-correlation.md) — `correlate-combiner.md` and
   `cross-repo-adversary.md` in detail.

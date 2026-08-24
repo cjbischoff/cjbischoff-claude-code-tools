@@ -51,6 +51,9 @@ entry: "one directory per distributed plugin"). For `sec-overlay`:
 ```
 plugins/sec-overlay/
   .claude-plugin/plugin.json      # plugin manifest
+  README.md, CLAUDE.md, CHANGELOG.md   # plugin-root doc trio (user-facing / maintainer / history)
+  action.yml                      # composite GitHub Action: review mode + SARIF upload + PR poster
+  commands/audit.md               # /sec-overlay:audit slash command (install payload)
   skills/sec-overlay/             # the skill Claude Code discovers and loads
     SKILL.md
     CLAUDE.md
@@ -66,7 +69,7 @@ plugins/sec-overlay/
 {
   "name": "sec-overlay",
   "description": "Agentic security-audit harness: runs SAST, investigates candidates with multi-agent gates, and emits SARIF + Markdown reports.",
-  "version": "0.2.0",
+  "version": "1.107.3",
   "author": { "name": "Christopher Bischoff" }
 }
 ```
@@ -75,11 +78,19 @@ plugins/sec-overlay/
 - `version` is a plain semver string. It is bumped automatically on shipping-file changes — see
   [validation and versioning](validation-and-versioning.md) for the exact rule and where it is
   (and is not) enforced.
-- The manifest declares **no `components` field**. Per the root README's Decisions section,
-  this is intentional: Claude Code's default behavior is to scan the plugin's `skills/`
-  directory for skills automatically ("the default `skills/` directory scan handles
-  discovery, strict mode stays at its default (`true`)"). There is nothing else to wire up —
-  every subdirectory under `skills/` that contains a `SKILL.md` is a discoverable skill.
+- The manifest declares **no `components` field**. Per the root [`CLAUDE.md`](/CLAUDE.md)'s
+  Decisions section, this is intentional: Claude Code's default behavior is to scan the
+  plugin's `skills/` directory for skills automatically ("the default `skills/` directory scan
+  handles discovery, strict mode stays at its default (true)"). There is nothing else to wire
+  up — every subdirectory under `skills/` that contains a `SKILL.md` is a discoverable skill.
+
+The plugin root's `commands/` directory is install payload — a plugin-root `commands/` change
+bumps the plugin's version like any other shipping file (see
+[validation and versioning](validation-and-versioning.md)). `action.yml` is a **composite
+GitHub Action**, not something Claude Code installs into a session; it is consumed by a
+*target* repository's own workflow to run [review mode](../plugins/sec-overlay/review-mode.md)
+on a pull request. See [sec-overlay overview](../plugins/sec-overlay/overview.md) for what each
+plugin-root file covers.
 
 ## `${CLAUDE_PLUGIN_ROOT}` and the plugin-directory boundary
 
@@ -105,6 +116,19 @@ Put together: everything a plugin needs at runtime — its skill definition, age
 Python helpers, and reference data — must live inside `plugins/<name>/`, and every reference
 to those files inside the plugin's own instructions must be relative to the plugin root (or to
 `${CLAUDE_PLUGIN_ROOT}` once installed), never to the surrounding marketplace repository.
+
+## Adding a new plugin from the template
+
+[`docs/templates/plugin/`](/docs/templates/plugin/) is a tracked skeleton for a new plugin:
+`.claude-plugin/plugin.json`, `README.md`, `CLAUDE.md`, `CHANGELOG.md`, and a sample
+`skills/skill-name/SKILL.md`, every file carrying `{{PLACEHOLDER}}` markers. Root
+[`CLAUDE.md`](/CLAUDE.md)'s "New plugin" checklist is the authoritative process: copy the
+template to `plugins/<name>/`, replace every placeholder, register the plugin in
+`.claude-plugin/marketplace.json`, run `claude plugin validate .`, and write the first
+`CHANGELOG.md` entry at version `0.1.0`. The template's `CHANGELOG.md` skeleton uses an
+imperative first entry ("Add {{summary}}."), and its `README.md` skeleton's install fence is
+tagged `text` rather than a shell language, since `/plugin marketplace add ...` /
+`/plugin install ...` are Claude Code slash commands, not shell commands.
 
 ## Related pages
 

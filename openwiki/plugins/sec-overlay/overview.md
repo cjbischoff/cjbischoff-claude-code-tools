@@ -87,6 +87,17 @@ orchestrator: it calls a Python step, spawns an agent, records the phase, calls 
 step. See [pipeline](pipeline.md) for the full phase-by-phase flow, and
 [running an audit](running-an-audit.md) for the exact commands.
 
+Two independent tracks share this machinery: the full **audit** pipeline below (a deep,
+multi-phase campaign over a whole repo) and a separate, lighter **diff-scoped review** track
+(`sec_overlay.cli review`) that reviews one diff — the mode a pull-request CI job actually
+runs. See [review mode](review-mode.md) for that track in full.
+
+The plugin root (`plugins/sec-overlay/`) also carries a user-facing `README.md`, a maintainer
+`CLAUDE.md`, a `CHANGELOG.md`, a `commands/audit.md` slash command
+(`/sec-overlay:audit`, see [running an audit](running-an-audit.md#the-sec-overlay-audit-command)),
+and `action.yml`, a composite GitHub Action a *target* repository's own workflow can consume to
+run review mode on its pull requests (see [review mode](review-mode.md#the-github-action)).
+
 ## The four invariants
 
 These hold everywhere and are enforced in code where possible, in prompts otherwise:
@@ -116,28 +127,33 @@ Everything a security engineer receives lands in `<target>/.sec-overlay/<slug>/`
 
 | Path | Contents |
 |---|---|
-| `kb/scan-profile.json` | recon output: languages, frameworks, `attack_surface`, `sast_plan`, `subsystems` |
-| `kb/architecture.md` + `kb/entities/*.md` | components, data flows, trust boundaries |
-| `kb/THREAT_MODEL.md` | attacker profiles + the prioritized hunt list |
+| `kb/scan-profile.json` | recon output: languages, frameworks, `attack_surface`, `sast_plan`, `subsystems`, `dependency_sinks` |
+| `kb/route-census.json` | code-derived route inventory (`route_census.py`), read before recon runs |
+| `architecture/` | C4 diagrams + `runtime-view/` sequences + `arc42.md` (building blocks, sections 1–8, 10–12) |
+| `threat-model/` | `dfd.mmd` (derived from the container diagram) + `attack-sequences/` + `threat-model.md` (STRIDE findings, CVSS v4.0 table, hunt list) |
 | `kb/context.json` | the repo's own docs distilled, trust-tagged (`untrusted-doc` / `prior-scan`) |
 | `kb/graph.json` | the Tier-1/Tier-2 code graph (reachability substrate) |
-| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase |
-| `kb/coverage-ledger.json` | surface-completeness ledger; blocks `complete` while gaps remain |
+| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase (recon/architecture/threat-model/context) |
+| `kb/gates/arch-gate.json`, `tm-gate.json` | deterministic diagram-cap + STE-prose + duplication gates over architecture/threat-model |
+| `kb/gates/artifact-gate.json`, `artifact-review.json` | deterministic report self-check, then the opus artifact-review adversary verdict |
+| `kb/coverage-ledger.json` | surface-completeness ledger; blocks `complete` while gaps remain (including recall-gate omissions) |
 | `kb/discovery-ledger.json` | investigate saturation state (waves, `terminal_reason`) |
-| `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS, patch diff |
-| `report.sarif` | SARIF 2.1.0 (confirmed/fixed) |
+| `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS v4.0, patch diff |
+| `report.sarif` | SARIF 2.1.0 (confirmed/fixed, plus suppressed needs-deployment-testing by default) |
 | `report.md` | human report, built from `finding-template.md`; links `redteam-plan.md` |
 | `redteam-plan.md` | manual runtime test plan — the engineer's follow-up |
-| `state.json` | campaign state (pass number, pinned SHA, stages) |
+| `state.json` | campaign state (pass number, pinned SHA, stages, self-score, cost/timing) |
 | `MEMORY.md`, `learnings/` | durable per-repo memory across runs |
+| `artifacts/` | diff-review-mode run state only (`coverage_manifest.json`, `review_result.json`, …) — see [review mode](review-mode.md) |
 
 This layout is the `Workspace` dataclass's contract (`helpers/sec_overlay/workspace.py`,
-described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §5.
+described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §4.
 
 ## Related pages
 
 - [Pipeline](pipeline.md) — the full phase order with a grounded flowchart.
 - [Agents](agents.md) — every LLM prompt, its model tier, and the investigate gate ladder.
+- [Review mode](review-mode.md) — the diff-scoped CI/PR review track, separate from the pipeline.
 - [Helpers](helpers.md) — the Python core, module map, and CLI-callable list.
 - [References](references.md) — the rule book: prompt constants, schemas, crypto policy.
 - [Running an audit](running-an-audit.md) — the smoke scan vs. the full agentic audit.

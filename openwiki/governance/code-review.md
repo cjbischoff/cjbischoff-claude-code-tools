@@ -29,8 +29,7 @@ rule could gate on it even if one were configured to look. Combined with `abort_
 false` (below — a late merge still gets a review, it just can't stop anything), CodeRabbit has
 no mechanism in this repository capable of blocking a merge. The
 [GitHub ruleset on `main`](hooks-and-commits.md#the-github-ruleset-on-main) — pull request
-required, no force-push/deletion — is the *only* required gate. Root `README.md`: "The review
-comments but never blocks: the GitHub ruleset is the only required gate on `main`."
+required, no force-push/deletion — is the *only* required gate.
 
 ## Timing matters
 
@@ -65,6 +64,15 @@ review comment:
 The PR title check (also `warning` mode) requires the same Conventional Commit format as the
 `commit-msg-check.sh` hook. `issue_assessment` is explicitly turned `off`: "This repo does not
 track work in issues."
+
+**A known drift, not a bug:** `readme-and-changelog-updated`'s instructions still describe the
+*old* blanket rule — fail unless a non-doc PR touches both root `README.md` and `CHANGELOG.md`.
+The doc-update-guard hook (see [commit governance](hooks-and-commits.md)) no longer enforces
+that for a plugin-internal-only change; it now accepts that plugin's own `CHANGELOG.md`
+instead. A pull request that only touches `plugins/<name>/` and correctly skips
+the root docs will therefore pass the pre-commit hook but can still draw a
+`readme-and-changelog-updated` warning comment — expected under this configuration's advisory,
+non-blocking posture, but worth knowing before treating every such warning as a real gap.
 
 ## Path filters and per-area review instructions
 

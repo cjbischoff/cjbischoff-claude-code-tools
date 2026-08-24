@@ -69,6 +69,14 @@ to this repository's governance:
   declares only `contents: write` and `pull-requests: write`, the minimum needed to open the
   update PR (see [security automation](security-automation.md#the-default-read-only-workflow-token)).
 
+## `AGENTS.md` and `CLAUDE.md`'s OpenWiki pointer blocks
+
+OpenWiki also maintains a generated `<!-- OPENWIKI:START -->`/`<!-- OPENWIKI:END -->` pointer
+block in both the root [`AGENTS.md`](/AGENTS.md) and the root [`CLAUDE.md`](/CLAUDE.md) — a
+short note telling a coding agent that this generated wiki exists, is optional context, and
+should not be hand-edited. Only that fenced region is generated; the rest of each file is
+authored content this process does not touch.
+
 ## `openwiki/INSTRUCTIONS.md` and `.openwikiignore`
 
 `openwiki/INSTRUCTIONS.md` is the **user-authored wiki brief** this page's sibling pages were

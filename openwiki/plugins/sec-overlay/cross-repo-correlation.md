@@ -21,6 +21,12 @@ real four-repo campaign (`docs/plans/2026-08-07-cross-repo-correlation-design.md
 motivating case: control→enforcement handoffs and shared-dependency CVEs that were, before this
 capability existed, correlated by hand).
 
+The [`/sec-overlay:audit`](running-an-audit.md#the-sec-overlay-audit-command) slash command is
+now the recommended front door for a multi-repo campaign: given two or more repo arguments, it
+drives each repo's own audit, infers each one's role from its `kb/scan-profile.json`, confirms
+with the operator, then synthesizes the manifest below and runs the same core described here —
+a human no longer has to hand-author the manifest for the common case.
+
 ## The correlation workspace and CLI
 
 ```bash
@@ -123,6 +129,8 @@ member repo plus one correlation run).
 
 - [Pipeline](pipeline.md) — the single-repo audit each member repo runs independently before
   correlation begins.
+- [Running an audit](running-an-audit.md#the-sec-overlay-audit-command) — the `/sec-overlay:audit`
+  command that now drives the common multi-repo case.
 - [Agents](agents.md) — the producer-vs-adversary pattern this subsystem reuses.
 - [Helpers](helpers.md) — where `correlate/` sits in the module map alongside the single-repo
   core.
