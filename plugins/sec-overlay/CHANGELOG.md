@@ -14,6 +14,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Failing finding-overflow tests for REQ-27: `tests/test_findings_overflow.py` pins that an
+  unknown finding key must survive a `read_findings`/`write_findings` round trip, that known
+  fields stay unchanged, and that `read_findings` warns on stderr naming each preserved key.
 - Failing patch-order tests for REQ-01: `tests/test_patch_status_real_git.py` drives real
   `git apply --check` against an additive-patch fixture, and `tests/test_patch_status.py`'s
   two order-pinning tests were rewritten to expect a forward-then-reverse call order instead

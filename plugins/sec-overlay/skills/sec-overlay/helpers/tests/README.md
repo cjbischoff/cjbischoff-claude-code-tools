@@ -1,8 +1,14 @@
 # `tests/` — the deterministic test suite
 
-132 pytest files, 1694 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+133 pytest files, 1699 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_findings_overflow.py` (REQ-27, 5 tests) covers the load-and-save round trip through
+`read_findings`/`write_findings`: an unknown finding key survives the round trip, known fields
+stay unchanged, two insertion orders of the same unknown keys produce byte-identical output, a
+finding with no unknown key is unchanged, and `read_findings` warns on stderr naming each
+preserved key.
 
 New `test_patch_status_real_git.py` (REQ-01) drives real `git apply --check` against a repo
 fixture, locking both outcomes: an additive patch whose added line is absent is `NOT_APPLIED`,
