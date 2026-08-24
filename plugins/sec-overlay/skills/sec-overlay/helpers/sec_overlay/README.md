@@ -16,6 +16,15 @@ entry point; read the parent map for the full inventory.
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
 
+`workspace.py` gains `finding_counts(ws)` (REQ-13, folds in REQ-23), returning
+`{"findings", "findings_in", "findings_out"}` — `findings_in` is every finding file,
+`findings_out` is the `evidence.SHIPPING_STATUSES` subset, and `findings` repeats
+`findings_in` for the pre-REQ-13 consumer. `run.py`'s two receipt writers (`drive`'s
+`on_complete`, `advance`) call it instead of glob-counting `findings/F-*.json` — no real
+finding id starts `F-`, so every receipt recorded zero. `driver._write_gate` and
+`artifact_gate.run_artifact_gate` merge the same two keys into their gate JSON payload, so a
+gate receipt records counts, not only `passed`.
+
 `detection_coverage.py`'s `generate()` now emits a dependency-internal sink row in the
 rule-sources table — see the module map entry in [`../README.md`](../README.md) for the
 full contract.

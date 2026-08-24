@@ -9,6 +9,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from sec_overlay.evidence import SHIPPING_STATUSES
 from sec_overlay.models import Finding
 
 
@@ -193,6 +194,29 @@ def read_findings(ws: Workspace) -> list[Finding]:
         except (ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
             print(f"warning: skipping unparseable finding {p.name}: {exc}", file=sys.stderr)
     return findings
+
+
+def finding_counts(ws: Workspace) -> dict[str, int]:
+    """Return the finding counts a phase receipt records.
+
+    ``findings_in`` is every parseable finding in the workspace at the moment the
+    receipt is written. ``findings_out`` is the subset whose status ships (see
+    :data:`sec_overlay.evidence.SHIPPING_STATUSES`). ``findings`` repeats
+    ``findings_in`` so a consumer of the pre-REQ-13 key keeps working.
+
+    Args:
+        ws: Source workspace.
+
+    Returns:
+        ``{"findings": n, "findings_in": n, "findings_out": m}``.
+
+    Example:
+        >>> finding_counts(ws)["findings_out"]
+        2
+    """
+    findings = read_findings(ws)
+    shipping = sum(1 for f in findings if f.status.value in SHIPPING_STATUSES)
+    return {"findings": len(findings), "findings_in": len(findings), "findings_out": shipping}
 
 
 def load_paths(

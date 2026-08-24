@@ -15,6 +15,15 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- Data integrity (REQ-13, folds in REQ-23): every phase receipt and gate
+  receipt now records true finding counts. `run.py` counted
+  `findings/F-*.json`, but every real finding id starts `C-` or `<CLASS>-`,
+  so every receipt recorded zero findings. `workspace.finding_counts(ws)`
+  now returns `findings_in` (every finding file) and `findings_out` (the
+  `evidence.SHIPPING_STATUSES` subset); `findings` stays equal to
+  `findings_in`. `driver._write_gate` and `artifact_gate.run_artifact_gate`
+  add the same two keys to their gate JSON, so a gate receipt records counts,
+  not only `passed`.
 - Contract layer (REQ-32): `test_contract_lint.py`'s lint let four kinds of
   drift pass undetected — a `PRECONDITION_CAPS` threshold, a `PRECONDITION_CAPS`
   cap, a dropped `RUNTIME_TEST_KEYS` key, and a bogus `FINDING_SHAPES` key.

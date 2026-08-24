@@ -33,7 +33,7 @@ from sec_overlay.route_census import census, write_census
 from sec_overlay.selfscore import write_self_score
 from sec_overlay.state import load_state, save_state
 from sec_overlay.verify import verify_findings
-from sec_overlay.workspace import Workspace, read_findings, write_findings
+from sec_overlay.workspace import Workspace, finding_counts, read_findings, write_findings
 
 
 @dataclass
@@ -248,9 +248,9 @@ def _act_artifact_gate(ctx: AuditContext) -> None:
 
 def _write_gate(ws: Workspace, name: str, errors: list[str], warnings: list[str]) -> None:
     (ws.kb / "gates").mkdir(parents=True, exist_ok=True)
-    (ws.kb / "gates" / f"{name}.json").write_text(
-        json.dumps({"passed": not errors, "errors": errors, "warnings": warnings}, indent=2)
-    )
+    payload = {"passed": not errors, "errors": errors, "warnings": warnings}
+    payload.update(finding_counts(ws))
+    (ws.kb / "gates" / f"{name}.json").write_text(json.dumps(payload, indent=2))
 
 
 def _act_arch_gate(ctx: AuditContext) -> None:
