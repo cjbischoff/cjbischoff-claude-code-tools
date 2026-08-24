@@ -6,6 +6,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Trace prompt scope and channel tests (REQ-06, REQ-19, RED):
+  `test_trace_prompt.py` pins that `agents/trace.md` traces
+  `needs-deployment-testing` findings, not only `confirmed` ones, and names an
+  in-band channel — a sink reply observable to the caller — before any
+  out-of-band channel.
 - Verify-config resolver tests (REQ-22, RED): `test_verify_configs.py` pins a
   `resolve_configs(ws, fallback)` helper that reads the semgrep rulesets the
   scan profile planned, falling back to the caller's scalar only when the

@@ -4,6 +4,9 @@
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+New `test_trace_prompt.py` (REQ-06, REQ-19) pins that `trace.md` covers `needs-deployment-testing`
+findings and names the in-band channel first.
+
 New `test_prefilter_receipt.py` (REQ-16) pins that `run_prefilter` writes its receipt to disk
 before recording the `prefilter` stage, so a fence abort never leaves a done stage with no receipt.
 
