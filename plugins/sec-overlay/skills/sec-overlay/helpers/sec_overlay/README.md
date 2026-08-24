@@ -1262,3 +1262,7 @@ rejects any finding whose `cls` is not in that set; a missing `agents/classes/*.
 precondition cap: a stronger tool-receipt `receipt_tier`, a `verified-static` `verification`, and
 an assessed-reachable `reachability` each add to the score, reward-only, so a finding with none of
 these set scores exactly as it did before.
+
+`patch_status.check_patch_applied` (REQ-01) now runs the forward `git apply --check` before the
+reverse one: a patch counts as `APPLIED` only when it does NOT apply forward AND does apply
+reversed, so an additive patch that has not landed can never read as live.

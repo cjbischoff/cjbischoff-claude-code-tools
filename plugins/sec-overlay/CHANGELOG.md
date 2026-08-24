@@ -4,6 +4,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Fixed
+
+- `check_patch_applied` now runs the forward `git apply --check` before the reverse one
+  (REQ-01): a patch is `APPLIED` only when it does NOT apply forward AND does apply
+  reversed. The prior reverse-first order could call an unapplied additive patch
+  `APPLIED` and suppress the deployment caution. `tests/test_patch_status.py`'s two
+  order-pinning tests were re-pinned to the new call order.
+
 ### Added
 
 - Failing patch-order tests for REQ-01: `tests/test_patch_status_real_git.py` drives real
