@@ -103,6 +103,12 @@ def _precondition_weight(preconditions: list[str]) -> float:
     return total
 
 
+# The risk_score ceiling by precondition WEIGHT, not count. Published in
+# prompt-constants.md SEVERITY_PRECONDITION; the contract lint binds the two.
+PRECONDITION_CAPS: tuple[tuple[float, int], ...] = ((1.0, 10), (2.0, 8), (3.0, 7))
+PRECONDITION_CAP_FLOOR = 5
+
+
 def _precondition_cap(preconditions: list[str]) -> int:
     """Risk ceiling from precondition DIFFICULTY (weight), not count.
 
@@ -110,16 +116,14 @@ def _precondition_cap(preconditions: list[str]) -> int:
         preconditions: The finding's precondition strings.
 
     Returns:
-        Ceiling in ``[5, 10]``: ``w<1 -> 10``, ``1<=w<2 -> 8``, ``2<=w<3 -> 7``, ``w>=3 -> 5``.
+        The first cap in ``PRECONDITION_CAPS`` whose threshold the summed
+        weight falls below, or ``PRECONDITION_CAP_FLOOR`` when no cap matches.
     """
     w = _precondition_weight(preconditions)
-    if w < 1:
-        return 10
-    if w < 2:
-        return 8
-    if w < 3:
-        return 7
-    return 5
+    for threshold, cap in PRECONDITION_CAPS:
+        if w < threshold:
+            return cap
+    return PRECONDITION_CAP_FLOOR
 
 
 def _severity_floor(severity: Severity) -> int:

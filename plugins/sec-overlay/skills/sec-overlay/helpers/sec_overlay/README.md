@@ -1198,3 +1198,11 @@ named key tuples for the `runtime_test`, `open_questions`, and `affected_sites` 
 fields. `../references/prompt-constants.md`'s new `FINDING_SHAPES` block publishes the same keys,
 and `../agents/investigate.md` imports it. `../tests/test_contract_lint.py` checks all three
 surfaces agree.
+
+`calibrate.py` gained `PRECONDITION_CAPS` (a `(threshold, cap)` tuple) and
+`PRECONDITION_CAP_FLOOR` (REQ-32): `_precondition_cap` now loops over the table instead of four
+hardcoded branches. `../references/prompt-constants.md`'s `SEVERITY_PRECONDITION` block states
+the same cap-by-weight table. `driver.py` gained `DISPATCH_TOKENS`; `render_dispatch` builds its
+`substitute:` line from that tuple, so `{{ATTACK_CLASS}}` now sits on the same line as the other
+three tokens instead of its own trailing line. `../tests/test_contract_lint.py` checks both
+constants agree with the document.

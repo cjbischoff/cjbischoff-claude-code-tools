@@ -23,6 +23,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Contract layer (REQ-32, Task 5 GREEN): `calibrate.py` exports
+  `PRECONDITION_CAPS` and `PRECONDITION_CAP_FLOOR`; `_precondition_cap` now
+  reads the ceiling from that table instead of four hardcoded branches.
+  `prompt-constants.md`'s `SEVERITY_PRECONDITION` block states the same
+  weight-based cap table. `driver.py` exports `DISPATCH_TOKENS`, and
+  `render_dispatch` builds its `substitute:` line from that tuple instead of
+  a hand-written string, so the class token now sits on the same line as the
+  other three. This closes REQ-32 property (b); property (c) is REQ-08's work.
 - Contract layer (REQ-32, Task 5 RED): `test_contract_lint.py` gains three
   failing tests for the last open lint property. They check that
   `prompt-constants.md` states the precondition cap table by weight, that

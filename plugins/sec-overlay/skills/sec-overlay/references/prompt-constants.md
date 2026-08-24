@@ -56,8 +56,10 @@ of two bands: (a) precondition COUNT — 0 → high band, 1–2 → medium band,
 (b) ACCESS level — unauthenticated+remote → high, authenticated OR one hop → medium,
 local-only → low. A threat-model consideration may raise the result by at most ONE step.
 This stops "SQL injection, therefore critical" anchoring: go through the evidence first,
-label last. The harness caps `risk_score` by the precondition count deterministically and
-flags any claimed severity that sits well above the derived score as inflation.
+label last. The harness then caps `risk_score` by precondition WEIGHT, not count. A free
+precondition weighs 0, a weak one 0.5, and a strong one 1.0. Summed weight below 1 caps at
+10, below 2 caps at 8, below 3 caps at 7, and 3 or more caps at 5. The harness flags any
+claimed severity that sits well above the derived score as inflation.
 
 ## SHAPE_HUNTING
 Hunt by vulnerability SHAPE, not by an API checklist. The dangerous property is structural:

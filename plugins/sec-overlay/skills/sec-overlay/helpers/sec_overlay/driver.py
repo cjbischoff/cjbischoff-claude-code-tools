@@ -101,6 +101,12 @@ def run_deterministic_phase(
     record_stage(ctx.ws, phase.name)
 
 
+# Tokens render_dispatch tells the orchestrator to substitute. A prompt using a
+# token absent from this tuple ships a literal {{TOKEN}} to the model; the
+# contract lint checks the two agree (REQ-08 closes the current three gaps).
+DISPATCH_TOKENS: tuple[str, ...] = ("TARGET", "WORKSPACE", "SHA", "ATTACK_CLASS")
+
+
 def render_dispatch(
     phase: PhaseSpec, ctx: AuditContext, *, classes: list[str] | None = None
 ) -> str:
@@ -123,15 +129,14 @@ def render_dispatch(
     if phase.prompt is None:
         raise ValueError(f"render_dispatch requires an agent phase; {phase.name!r} has no prompt")
     outputs = ", ".join(str(p(ctx.ws)) for p in phase.outputs) or "(none)"
-    class_line = ""
+    values = {"TARGET": ctx.target, "WORKSPACE": str(ctx.ws.root), "SHA": ctx.sha}
     if classes:
-        class_line = "\n  {{ATTACK_CLASS}}=" + ",".join(classes)
+        values["ATTACK_CLASS"] = ",".join(classes)
+    pairs = [f"{{{{{name}}}}}={values[name]}" for name in DISPATCH_TOKENS if name in values]
     block = (
         f"NEXT AGENT PHASE: {phase.name}\n"
         f"  prompt: agents/{phase.prompt}\n"
-        f"  substitute: {{{{TARGET}}}}={ctx.target} "
-        f"{{{{WORKSPACE}}}}={ctx.ws.root} {{{{SHA}}}}={ctx.sha}"
-        f"{class_line}\n"
+        f"  substitute: {' '.join(pairs)}\n"
         f"  required outputs before advancing: {outputs}"
     )
     return safe_for_prompt(block)
