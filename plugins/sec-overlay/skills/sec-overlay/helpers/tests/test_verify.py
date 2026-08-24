@@ -45,9 +45,9 @@ def test_verify_patch_reports_not_fixed_for_untouched_class():
 
 
 @needs_semgrep
-def test_verify_patch_static_only_when_class_not_detectable():
-    # no ssrf rule fires in the fixture -> cannot auto-verify
-    assert verify_patch(str(FIXTURE), GOLDEN, CONFIG, "app.py", "ssrf") == "static-only"
+def test_verify_patch_rule_no_match_when_class_not_detectable():
+    # no ssrf rule fires in the fixture -> the cause is that no rule matched pre-patch
+    assert verify_patch(str(FIXTURE), GOLDEN, CONFIG, "app.py", "ssrf") == "rule-no-match"
 
 
 def _confirmed(id_, cls, patch="--- a/x\n+++ b/x\n"):

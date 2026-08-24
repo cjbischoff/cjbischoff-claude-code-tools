@@ -449,6 +449,14 @@ bench/citation tests (`test_bench.py`, `test_citations.py`) that need local seed
 ISSUE-053: a `static-only` re-verify routes the finding to `needs-deployment-testing`, not
 `confirmed` — only `verified-static` promotes to `fixed`.
 
+New `test_verify_causes.py` (REQ-21) covers `verify.VERIFY_CAUSES`: `verify_patch` now returns one
+of five named causes (`verified-static`, `not-fixed`, `patch-not-applied`, `rule-no-match`,
+`unconfirmed`) instead of overloading `static-only`, `_CAUSE_TO_VERIFICATION` maps every cause to
+a legal `Finding.verification` value, `verify_findings` records `verify:cause:<cause>` in history,
+and an unmapped cause degrades to `static-only` rather than laundering an unknown verdict clean.
+`test_verify.py`'s `test_verify_patch_static_only_when_class_not_detectable` was renamed to
+`test_verify_patch_rule_no_match_when_class_not_detectable` and now expects `"rule-no-match"`.
+
 `test_evidence.py` gained coverage for the shared tier/status vocab: `TIER1_RECEIPTS |
 TIER2_RECEIPTS` partitions `_MECHANICAL` exactly, `receipt_tier()` grades colon-form sources,
 `confirms_alone()` requires a Tier-1 receipt, and `SHIPPING_STATUSES`/`RUNTIME_DISPOSITIONS` match

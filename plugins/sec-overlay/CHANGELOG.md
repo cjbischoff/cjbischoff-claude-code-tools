@@ -6,6 +6,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Named verify-cause tests (REQ-21, RED): `test_verify_causes.py` pins that
+  `verify_patch` returns one of five named causes instead of overloading
+  `"static-only"`, and that `verify_findings` maps each cause to a legal
+  verification value and records it in history. `test_verify.py` renames the
+  test that pinned the old `"static-only"` overload to expect `"rule-no-match"`.
+
 - Prefilter receipt survives a fence abort (REQ-16, RED): `test_prefilter_receipt.py`
   gains two tests — one failing, pinning that `run_prefilter` writes its receipt
   to disk, and one already passing, pinning that a backend abort leaves the
