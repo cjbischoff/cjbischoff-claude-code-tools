@@ -6,6 +6,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Evidence strength and reachability move the derived score (REQ-20):
+  `calibrate.py` gained `_evidence_adjust`, called from `_derived_score`
+  before the precondition cap. A stronger tool-receipt tier, a
+  `verified-static` verification, and an assessed-reachable finding each add
+  to the score. The adjustment is reward-only, so a finding with none of
+  these fields set scores exactly as it did before. REQ-20's other half — the
+  `_precondition_weight`/`prompt-constants.md` regeneration — was already
+  closed in group 1; this change is the scoring half only.
 - Evidence-adjust score tests (REQ-20, RED): `test_calibrate_evidence.py` pins
   that `calibrate_score` ranks a stronger tool receipt above a weaker one,
   `verified-static` above `static-only`, and an assessed-reachable finding

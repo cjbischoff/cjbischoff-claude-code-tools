@@ -8,6 +8,7 @@ from pathlib import Path
 from sec_overlay.campaign import record_stage
 from sec_overlay.cvss import cvss40_base, offensive_priority
 from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.reachability import is_reachable
 from sec_overlay.workspace import Workspace, read_findings, write_findings
 
 _BASE = {"critical": 9, "high": 7, "medium": 5, "low": 3, "info": 1}
@@ -83,6 +84,20 @@ _INFLATION_THRESHOLD = 3
 # inflation flag, not averaged.
 _SEVERITY_FLOOR = {"critical": 8, "high": 6, "medium": 4, "low": 2, "info": 1}
 
+# Reward-only, by design. A missing receipt or an unassessed reachability must not cost a
+# point: a penalty would re-score every finding the requirement never named.
+_RECEIPT_TERM = {1: 2, 2: 1}
+_VERIFICATION_TERM = {"verified-static": 1}
+
+
+def _evidence_adjust(finding: Finding) -> int:
+    """Score delta from receipt tier, verification strength, and assessed reachability."""
+    delta = _RECEIPT_TERM.get(finding.receipt_tier or 0, 0)
+    delta += _VERIFICATION_TERM.get(finding.verification or "", 0)
+    if finding.reachability is not None and is_reachable(finding):
+        delta += 1
+    return delta
+
 
 def _is_baseline_standard(finding: Finding) -> bool:
     return any(h.get("event") == "baseline:industry-standard" for h in finding.history)
@@ -150,7 +165,7 @@ def _heuristic_score(finding: Finding) -> int:
 
 
 def _derived_score(finding: Finding) -> int:
-    """Pre-floor score: CVSS/heuristic then precondition cap (NO severity floor)."""
+    """Pre-floor score: CVSS/heuristic, evidence adjustment, then precondition cap."""
     raw = None
     if finding.cvss_vector:
         try:
@@ -162,7 +177,8 @@ def _derived_score(finding: Finding) -> int:
             raw = None  # malformed -> heuristic
     if raw is None:
         raw = _heuristic_score(finding)
-    return min(raw, _precondition_cap(finding.preconditions))
+    adjusted = max(1, min(10, raw + _evidence_adjust(finding)))
+    return min(adjusted, _precondition_cap(finding.preconditions))
 
 
 def calibrate_score(finding: Finding) -> int:

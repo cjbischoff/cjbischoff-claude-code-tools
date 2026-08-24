@@ -1,12 +1,11 @@
 # `tests/` — the deterministic test suite
 
-129 pytest files, 1683 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+131 pytest files, 1692 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
-`test_calibrate_evidence.py` is new (RED): it pins REQ-20's expectation that receipt tier,
-verification strength, and reachability move `calibrate_score`, and currently fails against
-the unmodified `calibrate.py`.
+`test_calibrate_evidence.py` pins REQ-20: receipt tier, verification strength, and assessed
+reachability each move `calibrate_score` upward, and an unassessed finding scores unchanged.
 
 New `test_trace_prompt.py` (REQ-06, REQ-19) pins that `trace.md` covers `needs-deployment-testing`
 findings and names the in-band channel first.

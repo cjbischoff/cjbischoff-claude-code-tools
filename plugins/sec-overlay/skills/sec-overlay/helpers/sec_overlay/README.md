@@ -1257,3 +1257,8 @@ publisher of an attack-class key: the universal and F2-companion tables in
 and `context.py`'s own `manual-review` pseudo-class. 51 keys observed. `findings_gate.py` now
 rejects any finding whose `cls` is not in that set; a missing `agents/classes/*.md` file stays a
 `class_ext.py` gap (`needs_follow_up`), never a rejection — REQ-09 is validity, not coverage.
+
+`calibrate.py` gained `_evidence_adjust` (REQ-20), called from `_derived_score` before the
+precondition cap: a stronger tool-receipt `receipt_tier`, a `verified-static` `verification`, and
+an assessed-reachable `reachability` each add to the score, reward-only, so a finding with none of
+these set scores exactly as it did before.
