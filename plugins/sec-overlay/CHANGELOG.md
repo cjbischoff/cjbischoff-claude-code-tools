@@ -26,6 +26,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- Prefilter receipt survives a fence abort (REQ-16): `run_prefilter` now writes
+  its `prefilter` receipt before calling `record_stage`, so the receipt and the
+  state transition land in the same order the driver's other phases use. Before
+  this, a fence abort in the driver's `on_complete` could leave `state.json`
+  saying `prefilter` is done with no receipt on disk.
 - Repo-root-relative candidate paths (REQ-15): `run_prefilter` now calls a new
   `_relativize_paths` before `normalize`, rewriting an absolute `Finding.file`
   under `target` to a repo-root-relative one. A path outside `target` stays

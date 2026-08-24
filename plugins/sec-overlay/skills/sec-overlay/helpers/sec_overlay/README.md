@@ -1223,3 +1223,9 @@ rewritten into something that does not resolve. `PATH_BASE` in `../references/pr
 requires every cited path to resolve from the repo root; the four backends (`sast.py`,
 `secrets.py`, `sca.py`, `codeql.py`) each set `Finding.file` from raw tool output with no such
 guarantee, so the fix normalizes once at the `run_prefilter` boundary instead of in all four.
+
+`run_prefilter` now writes its `prefilter` receipt (REQ-16) before calling `record_stage`, using
+`run.receipt` (a local import to avoid an import cycle) and `workspace.finding_counts`. Previously
+`record_stage` ran with no receipt on disk, so a fence abort in the driver's `on_complete` — which
+runs after `record_stage` for every other phase — could leave `state.json` saying `prefilter` is
+done with nothing to show for it.

@@ -20,7 +20,7 @@ from sec_overlay.profile import ScanProfile
 from sec_overlay.sast import run_semgrep
 from sec_overlay.sca import ScaError, run_sca
 from sec_overlay.secrets import scan_secrets
-from sec_overlay.workspace import Workspace, write_findings
+from sec_overlay.workspace import Workspace, finding_counts, write_findings
 
 
 def _assign_candidate_ids(kept: list[Finding]) -> None:
@@ -309,6 +309,11 @@ def run_prefilter(
     ws.kb.mkdir(parents=True, exist_ok=True)
     (ws.kb / "coverage.json").write_text(json.dumps(coverage, indent=2))
     _raise_on_incomplete_backends(skipped_reasons=skipped_reasons, failed=failed, strict=strict)
+    from sec_overlay.run import receipt  # local: avoid import cycle
+
+    # REQ-16: the receipt must exist before state says the phase is done, or a
+    # fence abort in the driver's on_complete leaves a done stage with no receipt.
+    receipt(ws, "prefilter", counts=finding_counts(ws), artifacts=[str(ws.kb / "coverage.json")])
     record_stage(ws, "prefilter")
     return {
         "candidates": len(kept),
