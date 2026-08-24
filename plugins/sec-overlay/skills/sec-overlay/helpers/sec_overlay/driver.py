@@ -10,6 +10,7 @@ import json
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 from sec_overlay import cost
 from sec_overlay.calibrate import calibrate_findings
@@ -17,6 +18,7 @@ from sec_overlay.campaign import record_stage
 from sec_overlay.dedupe import dedupe_findings
 from sec_overlay.factcheck import apply_verdict, validate_verdict
 from sec_overlay.findings_gate import validate_citations, validate_findings
+from sec_overlay.fp_feedback import render_fp_feedback
 from sec_overlay.partition import demote_noise, reconcile_plan, unrouted_candidate_classes
 from sec_overlay.phases import (
     PHASE_TABLE,
@@ -103,8 +105,41 @@ def run_deterministic_phase(
 
 # Tokens render_dispatch tells the orchestrator to substitute. A prompt using a
 # token absent from this tuple ships a literal {{TOKEN}} to the model; the
-# contract lint checks the two agree (REQ-08 closes the current three gaps).
-DISPATCH_TOKENS: tuple[str, ...] = ("TARGET", "WORKSPACE", "SHA", "ATTACK_CLASS")
+# contract lint checks the two agree.
+DISPATCH_TOKENS: tuple[str, ...] = (
+    "TARGET",
+    "WORKSPACE",
+    "SHA",
+    "ATTACK_CLASS",
+    "OVERLAY_ROOT",
+    "HELPERS_DIR",
+    "FP_FEEDBACK",
+)
+
+
+def _overlay_root() -> Path:
+    """Return the skill root — the directory holding ``agents/`` and ``helpers/``."""
+    return Path(__file__).resolve().parents[2]
+
+
+def _write_fp_feedback(ws: Workspace) -> Path:
+    """Persist the prior-rejection block and return its path.
+
+    ``render_fp_feedback`` returns a multi-line ``<untrusted>`` envelope, which
+    cannot ride the space-joined ``substitute:`` line. The prompt reads the file
+    instead. The file is always written, so ``{{FP_FEEDBACK}}`` always resolves.
+
+    Args:
+        ws: The audit workspace.
+
+    Returns:
+        The path written: ``<ws.kb>/fp-feedback.md``.
+    """
+    block = render_fp_feedback(ws) or "No prior rejections. This is the first pass."
+    ws.kb.mkdir(parents=True, exist_ok=True)
+    path = ws.kb / "fp-feedback.md"
+    path.write_text(block)
+    return path
 
 
 def render_dispatch(
@@ -114,7 +149,8 @@ def render_dispatch(
 
     The orchestrator runs the model; this only tells it which prompt to run and
     what to substitute. Advancement happens later, when the phase's declared
-    outputs exist.
+    outputs exist. As a side effect, this writes the prior-rejection feedback
+    block to ``<ctx.ws.kb>/fp-feedback.md``.
 
     Args:
         phase: The agent phase to dispatch.
@@ -129,7 +165,15 @@ def render_dispatch(
     if phase.prompt is None:
         raise ValueError(f"render_dispatch requires an agent phase; {phase.name!r} has no prompt")
     outputs = ", ".join(str(p(ctx.ws)) for p in phase.outputs) or "(none)"
-    values = {"TARGET": ctx.target, "WORKSPACE": str(ctx.ws.root), "SHA": ctx.sha}
+    root = _overlay_root()
+    values = {
+        "TARGET": ctx.target,
+        "WORKSPACE": str(ctx.ws.root),
+        "SHA": ctx.sha,
+        "OVERLAY_ROOT": str(root),
+        "HELPERS_DIR": str(root / "helpers"),
+        "FP_FEEDBACK": str(_write_fp_feedback(ctx.ws)),
+    }
     if classes:
         values["ATTACK_CLASS"] = json.dumps(classes, separators=(",", ":"))
     pairs = [f"{{{{{name}}}}}={values[name]}" for name in DISPATCH_TOKENS if name in values]

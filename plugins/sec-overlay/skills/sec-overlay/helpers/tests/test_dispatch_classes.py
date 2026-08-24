@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 
-from sec_overlay.driver import render_dispatch
+from sec_overlay.driver import DISPATCH_TOKENS, render_dispatch
 
 
 def _substitute_line(block: str) -> str:
@@ -45,7 +45,7 @@ def test_attack_class_value_carries_no_space(tmp_path):
     block = render_dispatch(_agent_phase(), _ctx(tmp_path), classes=["ssrf", "cmdi"])
     value = _attack_class_value(block)
     assert " " not in value
-    assert _substitute_line(block).count("{{") == 4
+    assert _substitute_line(block).count("{{") == len(DISPATCH_TOKENS)
 
 
 def test_a_single_class_still_renders_a_list(tmp_path):

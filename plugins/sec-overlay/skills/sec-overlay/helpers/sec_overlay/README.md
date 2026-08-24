@@ -1219,6 +1219,14 @@ constants agree with the document. `render_dispatch` now renders `{{ATTACK_CLASS
 JSON array of class keys (REQ-17). The value is no longer a comma-joined string. The dispatch
 fan-out list and `investigate.md`'s single-key `{{ATTACK_CLASS}}` never collide on format.
 
+`driver.py`'s `DISPATCH_TOKENS` gained three tokens (REQ-08): `OVERLAY_ROOT`, `HELPERS_DIR`, and
+`FP_FEEDBACK`. `_overlay_root` returns the skill root, the directory holding `agents/` and
+`helpers/`. `_write_fp_feedback` writes the prior-rejection block to `<workspace>/kb/fp-feedback.md`
+and returns that path, because the block's `<untrusted>` envelope cannot ride the space-joined
+`substitute:` line. `{{FP_FEEDBACK}}` now names a file path; `critic.md` and `investigate.md` read
+it instead of inlining it. `../tests/test_prompt_tokens.py` scans every `PHASE_TABLE` prompt and
+fails if a token has no entry in `DISPATCH_TOKENS`.
+
 `prefilter.py` gained `_relativize_paths` (REQ-15), called from `run_prefilter` right before
 `normalize`: an absolute `Finding.file` under the scanned `target` becomes repo-root-relative, an
 already-relative path is left alone, and a path outside `target` stays verbatim instead of being

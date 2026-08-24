@@ -4,8 +4,8 @@ Each test reads a code constant and asserts the document or the schema agrees.
 A failure here is drift, not a flaky test. Fix the document, not the assertion.
 
 Property (c) of REQ-32 — every ``{{TOKEN}}`` in a prompt is in the dispatch
-substitution map — lands with REQ-08, which adds the three unmapped tokens.
-``DISPATCH_TOKENS`` below is the constant that test will read.
+substitution map, and ``render_dispatch`` builds its ``substitute:`` line from
+that same map — closed by REQ-08, which also added the three unmapped tokens.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 
 from sec_overlay.calibrate import PRECONDITION_CAP_FLOOR, PRECONDITION_CAPS, _precondition_cap
-from sec_overlay.driver import DISPATCH_TOKENS
+from sec_overlay.driver import DISPATCH_TOKENS, render_dispatch
 from sec_overlay.evidence import (
     RUNTIME_DISPOSITIONS,
     TIER1_RECEIPTS,
@@ -164,11 +164,20 @@ def test_precondition_cap_reads_the_published_table():
     assert _precondition_cap(["non-default config"]) == PRECONDITION_CAPS[1][1]
 
 
-def test_dispatch_tokens_are_a_single_source():
+def test_dispatch_tokens_are_a_single_source(tmp_path):
     """render_dispatch must build its substitute line from DISPATCH_TOKENS."""
-    for token in DISPATCH_TOKENS:
-        assert re.fullmatch(r"[A-Z0-9_]+", token), f"{token} is not a token name"
-    assert "TARGET" in DISPATCH_TOKENS
-    assert "WORKSPACE" in DISPATCH_TOKENS
-    assert "SHA" in DISPATCH_TOKENS
-    assert "ATTACK_CLASS" in DISPATCH_TOKENS
+    from sec_overlay.driver import AuditContext
+    from sec_overlay.phases import PHASE_TABLE
+    from sec_overlay.workspace import Workspace
+
+    ws = Workspace(root=tmp_path / "ws")
+    ws.ensure()
+    ctx = AuditContext(target=str(tmp_path / "repo"), ws=ws, config="", sha="deadbeef")
+    phase = next(p for p in PHASE_TABLE if p.prompt == "investigate.md")
+    block = render_dispatch(phase, ctx, classes=["ssrf"])
+    line = next(ln for ln in block.splitlines() if ln.strip().startswith("substitute:"))
+    rendered = set(re.findall(r"\{\{([A-Z0-9_]+)\}\}=", line))
+    assert rendered == set(DISPATCH_TOKENS), (
+        f"the substitute line and DISPATCH_TOKENS disagree: {rendered ^ set(DISPATCH_TOKENS)}"
+    )
+    assert all(re.fullmatch(r"[A-Z][A-Z0-9_]*", t) for t in DISPATCH_TOKENS)

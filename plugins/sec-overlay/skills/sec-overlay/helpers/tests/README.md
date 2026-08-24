@@ -1309,7 +1309,10 @@ its ceiling from `PRECONDITION_CAPS` instead of a second hardcoded copy.
 `test_dispatch_tokens_are_a_single_source` checks `driver.DISPATCH_TOKENS` holds
 `TARGET`, `WORKSPACE`, `SHA`, and `ATTACK_CLASS` as valid token names. All three
 fail to import: `PRECONDITION_CAPS`, `PRECONDITION_CAP_FLOOR`, and `DISPATCH_TOKENS`
-do not exist yet on `calibrate.py` and `driver.py`.
+do not exist yet on `calibrate.py` and `driver.py`. (REQ-08, Task 5 GREEN gave this
+test teeth: it now calls `render_dispatch` and asserts the rendered `substitute:`
+line's token set equals `DISPATCH_TOKENS`, so it fails if `render_dispatch` ever
+stops reading that constant — see the REQ-08 entry below.)
 
 New `test_dispatch_classes.py` (REQ-17, RED) covers the attack-class fan-out
 value in the dispatch block. It asserts a multi-class list, a single-class
@@ -1323,3 +1326,12 @@ scans the 11 `PHASE_TABLE` prompts and fails naming three gap tokens:
 `OVERLAY_ROOT` (11 files), `HELPERS_DIR` (5 files), `FP_FEEDBACK` (2 files).
 `test_fp_feedback_token_names_a_written_file` calls `render_dispatch` and
 fails because `{{FP_FEEDBACK}}` is not in the substitute line yet.
+
+`test_prompt_tokens.py` (REQ-08, GREEN): both tests pass now that
+`DISPATCH_TOKENS` carries `OVERLAY_ROOT`, `HELPERS_DIR`, and `FP_FEEDBACK`.
+`render_dispatch` writes the prior-rejection block to `<ws.kb>/fp-feedback.md`
+and substitutes that path — a multi-line `<untrusted>` envelope cannot ride
+the space-joined `substitute:` line. `test_dispatch_classes.py`'s
+`test_attack_class_value_carries_no_space` hardcoded the old token count (`4`)
+and needed a fix to `len(DISPATCH_TOKENS)`; no other pre-existing test needed
+a change.
