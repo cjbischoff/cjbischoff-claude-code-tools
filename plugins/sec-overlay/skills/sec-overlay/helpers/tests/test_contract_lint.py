@@ -69,3 +69,19 @@ def test_validate_prompt_does_not_imply_tier2_confirms():
     text = (AGENTS / "validate.md").read_text()
     confirmed = text.split("**Confirmed**", 1)[1].split("- **Rejected**", 1)[0]
     assert "Tier-1" in confirmed, "the Confirmed verdict does not require a Tier-1 receipt"
+
+
+def _imports_line(prompt: Path) -> str:
+    """Return the ``## Imports`` section of an agent prompt, or an empty string."""
+    text = prompt.read_text()
+    if "## Imports" not in text:
+        return ""
+    return text.split("## Imports", 1)[1].split("\n## ", 1)[0]
+
+
+def test_threat_model_prompt_imports_qualifier_proof():
+    """REQ-10: the threat-model prompt grades severity, so it needs the qualifier rule."""
+    imports = _imports_line(AGENTS / "threat-model.md")
+    assert "QUALIFIER_PROOF" in imports, (
+        "threat-model.md's ## Imports section does not name QUALIFIER_PROOF"
+    )

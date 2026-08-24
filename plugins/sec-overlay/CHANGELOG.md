@@ -23,6 +23,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Contract layer (REQ-10, Task 4 RED): `test_contract_lint.py` gains a failing
+  test. It checks `agents/threat-model.md`'s `## Imports` section names
+  `QUALIFIER_PROOF`. The prompt grades severity, so it needs the rule, but the
+  section today names only `FIELD_OWNERSHIP`, `OUTPUT_WRITE_FALLBACK`, and
+  `STE_PROSE`.
 - Contract layer (REQ-07, Task 3 GREEN): `agents/validate.md`'s `**Confirmed**`
   verdict now names the Tier-1 receipts (`codeql:`, `semgrep:`, `sca:`,
   `secrets:`) and requires at least one of them. A finding whose only receipts
