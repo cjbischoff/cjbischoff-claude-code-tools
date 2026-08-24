@@ -59,6 +59,19 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   value is now a compact JSON array, not a comma-joined string. The old format
   clashed with `investigate.md`'s single-key use of the same token.
   `agents/investigate.md` and `agents/README.md` now state the array shape.
+- Every dispatch token is fillable (REQ-08): `DISPATCH_TOKENS` grows from four
+  names to seven — `OVERLAY_ROOT`, `HELPERS_DIR`, and `FP_FEEDBACK` join
+  `TARGET`, `WORKSPACE`, `SHA`, `ATTACK_CLASS`. `render_dispatch` now writes
+  the prior-rejection feedback block to `<ws.kb>/fp-feedback.md` (it is a
+  multi-line `<untrusted>` envelope, so it cannot ride the space-joined
+  `substitute:` line) and substitutes the file path instead. The file is
+  always written, even with no prior rejections, so the token always
+  resolves. `agents/critic.md` and `agents/investigate.md` each gain one
+  sentence telling the agent to read the file. This closes REQ-32's
+  deferred property (c): `test_dispatch_tokens_are_a_single_source` in
+  `test_contract_lint.py` now calls `render_dispatch` and asserts its
+  `substitute:` line's token set against `DISPATCH_TOKENS`, so it fails if
+  the two ever disagree again.
 - `test_dispatch_classes.py`'s token-count assertion hardcoded `4`, the old
   `DISPATCH_TOKENS` length. Adding three tokens (REQ-08) broke it. It now
   reads `len(DISPATCH_TOKENS)` so a future token count change cannot make it
