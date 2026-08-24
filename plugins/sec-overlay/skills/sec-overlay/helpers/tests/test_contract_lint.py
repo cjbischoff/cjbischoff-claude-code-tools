@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 
 from sec_overlay.evidence import RUNTIME_DISPOSITIONS, VERIFICATION_VALUES
+from sec_overlay.models import AFFECTED_SITE_KEYS, OPEN_QUESTION_KEYS, RUNTIME_TEST_KEYS
 
 SKILL = Path(__file__).resolve().parents[2]
 CONSTS = SKILL / "references" / "prompt-constants.md"
@@ -26,3 +27,28 @@ def test_every_closed_vocabulary_matches_its_schema_enum():
     ):
         assert "enum" in props[field], f"{field} has no schema enum"
         assert set(props[field]["enum"]) == allowed | {None}, f"{field} drifted"
+
+
+def _block(name: str) -> str:
+    """Return the body of a single ``## NAME`` block in prompt-constants.md."""
+    text = CONSTS.read_text()
+    marker = f"## {name}"
+    assert marker in text, f"{name} block missing from prompt-constants.md"
+    return text.split(marker, 1)[1].split("\n## ", 1)[0]
+
+
+def test_published_finding_shapes_match_the_model():
+    block = _block("FINDING_SHAPES")
+    for field, keys in (
+        ("runtime_test", RUNTIME_TEST_KEYS),
+        ("open_questions", OPEN_QUESTION_KEYS),
+        ("affected_sites", AFFECTED_SITE_KEYS),
+    ):
+        assert field in block, f"{field} shape not published"
+        for key in keys:
+            assert f"`{key}`" in block, f"{field}.{key} missing from FINDING_SHAPES"
+
+
+def test_investigate_prompt_imports_the_published_shapes():
+    text = (AGENTS / "investigate.md").read_text()
+    assert "FINDING_SHAPES" in text, "investigate.md does not import FINDING_SHAPES"

@@ -10,6 +10,11 @@ and `runtime_disposition` enums equal `sec_overlay.evidence`'s `VERIFICATION_VAL
 enums: `Finding.from_dict` rejects a prose `verification` value and an unknown
 `runtime_disposition`, and accepts a documented value or `null` for either field.
 
+`test_contract_lint.py` (REQ-18, Task 2 RED) adds two failing tests: the `FINDING_SHAPES` block
+in `prompt-constants.md` must name every key in `models.RUNTIME_TEST_KEYS`,
+`OPEN_QUESTION_KEYS`, and `AFFECTED_SITE_KEYS`, and `agents/investigate.md` must reference
+`FINDING_SHAPES`. Both fail to import until the three key tuples exist on `models.py`.
+
 `test_detection_coverage.py` guards the coverage document: `generate()`'s output must name the
 dependency-internal sink limit and cite `dependency-sinks.json`, so the doc cannot silently
 drop the routing-versus-proof distinction. A second test asserts `generate()`'s output equals

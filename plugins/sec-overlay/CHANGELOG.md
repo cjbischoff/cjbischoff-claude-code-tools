@@ -40,6 +40,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   shipped code writes, not the verify-stage vocabulary alone. The two
   `test_frozen_contract.py` byte-identity pins moved to the new digests in
   this commit — no Go port is reachable from this repository to sync by hand.
+- Contract layer (REQ-18, Task 2 RED): `test_contract_lint.py` gains two failing
+  tests. One checks the `FINDING_SHAPES` block in `prompt-constants.md` names
+  every key of `models.RUNTIME_TEST_KEYS`, `OPEN_QUESTION_KEYS`, and
+  `AFFECTED_SITE_KEYS`. The other checks `agents/investigate.md` references
+  `FINDING_SHAPES`. Both fail to import until the three key tuples exist.
 - Parity audit (Task 25): `docs/parity/PARITY-AUDIT.md` walks `EXTRACTION.md`
   row by row and gives every item (M/P/S/T3/R/W/G/D/X/V/HR — 87 rows) a final
   disposition with `file:line` evidence, `rejected:<reason>`, or
