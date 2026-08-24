@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-126 pytest files, 1647 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+127 pytest files, 1665 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -1335,3 +1335,7 @@ the space-joined `substitute:` line. `test_dispatch_classes.py`'s
 `test_attack_class_value_carries_no_space` hardcoded the old token count (`4`)
 and needed a fix to `len(DISPATCH_TOKENS)`; no other pre-existing test needed
 a change.
+
+New `test_canonical_classes.py` (REQ-09, RED) covers a finding's `cls` against
+a canonical attack-class key set. It fails to import: `clsmap.canonical_classes`
+does not exist yet.

@@ -36,6 +36,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   `test_contract_lint.py` now calls `render_dispatch` and asserts its
   `substitute:` line's token set against `DISPATCH_TOKENS`, so it fails if
   the two ever disagree again.
+- A finding's class must be a canonical key (REQ-09, RED): `test_canonical_classes.py`
+  gains five tests (one parametrized over 14 keys). All fail to import:
+  `clsmap.canonical_classes` does not exist yet.
 
 ### Changed
 
