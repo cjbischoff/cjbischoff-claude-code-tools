@@ -27,8 +27,8 @@ _HELPERS_ROOT = Path(__file__).parent.parent
 # bytes changed. If the edit is intentional: apply the identical change to the
 # Go port by hand, get sign-off, then update the constant below to the new digest
 # (`python3 -c "import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" <path>`).
-_MODELS_SHA256 = "7aefd93957d2a2d91731c5a0120cbbab1efa5e0623e0623674ed2bd44212ad6f"
-_EVIDENCE_SHA256 = "2cd1c2fa6b4074a6cfc6a7116728cc334fb5fa0226ce460cb0567ab634e651dd"
+_MODELS_SHA256 = "9763e371ff584ba0058ca92969789216f502bd0ea34c0df15bd3480a057663a0"
+_EVIDENCE_SHA256 = "870ab9d3348195f8fdbbcf67d09aa5ea22c5f31b75d85b677d5a027d4b3519c7"
 
 
 def _sha256_of(relative_path: str) -> str:

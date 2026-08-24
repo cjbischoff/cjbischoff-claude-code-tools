@@ -1183,3 +1183,12 @@ its `plan_guidance` into the review prompt, and fails open — a missing or inva
 empty guidance and a `runs/plan_skips.json` entry (D-15: a plan failure never becomes a coverage
 failure). Plan guidance is advisory: never a tool receipt, never a finding, and deliberately not
 subject to the base/head staleness envelope that review returns carry.
+
+`evidence.py` gained `VERIFICATION_VALUES` (REQ-02): the closed set for `Finding.verification`
+— `verified-static`, `static-only`, `not-fixed`, `verify-error`, `fact-checked`. `models.py`'s
+`Finding.from_dict` now rejects a `verification` or `runtime_disposition` outside its closed set
+via a module-level `_CLOSED_ENUMS` table, unless the value is `null`. `../references/finding.schema.json`
+mirrors both enums, checked verbatim by `../tests/test_contract_lint.py`.
+
+`models.py`'s module docstring now lists all five `verification` values, including `fact-checked`,
+matching `VERIFICATION_VALUES`.

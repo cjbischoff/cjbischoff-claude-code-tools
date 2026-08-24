@@ -1096,6 +1096,16 @@ reads the real `pyproject.toml` via stdlib `tomllib` and asserts `[project]
 dependencies == []` (REL-03), closing the requirement with a running check instead
 of a one-time manual read.
 
+REQ-02 (Task 1 GREEN) changed both mirrored files, so `_MODELS_SHA256` and
+`_EVIDENCE_SHA256` moved to the new digests in the same commit. No Go port is
+reachable from this repository (`git ls-files "*.go"` returns only fixture
+files), so the sign-off step named in the pin's failure message is the plan
+author's ruling on this repository's copy, not a Go-port sync.
+
+A follow-up fix to `models.py`'s module docstring (fix round 1, same GREEN
+commit) moved `_MODELS_SHA256` again; `_EVIDENCE_SHA256` was untouched since
+`evidence.py` did not change.
+
 Phase 7 (v5.1 tech-debt cleanup, PR #23 nitpicks) tightens two existing suites without
 adding tests. `test_rule_glob.py`'s CLI-forwarding test now passes `--workspace` and
 asserts the value reaches `run_review` (TEST-01). `test_review_live.py`'s three WR-01

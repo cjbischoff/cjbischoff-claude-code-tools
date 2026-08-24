@@ -30,6 +30,16 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   must load. `test_contract_lint.py` (new) asserts `finding.schema.json`'s
   enums match `sec_overlay.evidence`'s constants; it fails to import until
   `VERIFICATION_VALUES` exists.
+- Contract layer (REQ-02, Task 1 GREEN): `evidence.VERIFICATION_VALUES` closes
+  the `verification` enum to five values — `verified-static`, `static-only`,
+  `not-fixed`, `verify-error`, `fact-checked`; `finding.schema.json`'s `verification` and
+  `runtime_disposition` enums mirror `evidence.py`'s constants; `Finding.from_dict`
+  raises `ValueError` when either field holds a value outside its closed set
+  and is not `null`. `fact-checked` is in the enum because `factcheck.py`'s
+  F8 stage writes it to real findings; the set is the union of every value
+  shipped code writes, not the verify-stage vocabulary alone. The two
+  `test_frozen_contract.py` byte-identity pins moved to the new digests in
+  this commit — no Go port is reachable from this repository to sync by hand.
 - Parity audit (Task 25): `docs/parity/PARITY-AUDIT.md` walks `EXTRACTION.md`
   row by row and gives every item (M/P/S/T3/R/W/G/D/X/V/HR — 87 rows) a final
   disposition with `file:line` evidence, `rejected:<reason>`, or

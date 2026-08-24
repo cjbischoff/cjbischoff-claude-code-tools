@@ -24,7 +24,9 @@
     "evidence": {"type": "string"},
     "evidence_sources": {"type": "array", "items": {"type": "string"}},
     "risk_score": {"type": ["integer", "number", "null"]},
-    "verification": {"type": ["string", "null"]},
+    "verification": {
+      "enum": ["verified-static", "static-only", "not-fixed", "verify-error", "fact-checked", null]
+    },
     "patch_diff": {"type": ["string", "null"]},
     "discovery_sha": {"type": ["string", "null"]},
     "duplicate_of": {"type": ["string", "null"]},
@@ -35,7 +37,9 @@
     "asvs_ids": {"type": "array", "items": {"type": "string"}},
     "codeguard_ids": {"type": "array", "items": {"type": "string"}},
     "completeness_tier": {"type": ["string", "null"]},
-    "runtime_disposition": {"type": ["string", "null"]},
+    "runtime_disposition": {
+      "enum": ["needs-runtime", "static-settled", "unassessed", null]
+    },
     "runtime_test": {
       "type": ["object", "null"],
       "properties": {
