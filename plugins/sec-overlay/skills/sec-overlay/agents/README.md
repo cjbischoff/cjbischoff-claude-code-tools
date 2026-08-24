@@ -237,6 +237,10 @@ phase field-ownership boundaries: `investigate.md`, `critic.md`, `validate.md`, 
 fields, but consume the same ownership table when citing findings). Agents that never touch
 a finding record (`judge.md`, `recon.md`, `tune-config.md`, the `classes/` extensions) do not.
 
+`investigate.md` also imports `FINDING_SHAPES` (REQ-18): the exact keys of the `runtime_test`,
+`open_questions`, and `affected_sites` nested fields it populates, so a written key always
+matches `models.py`'s key tuples.
+
 ---
 
 ## Editing rules — these are load-bearing, not prose

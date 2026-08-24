@@ -1192,3 +1192,9 @@ mirrors both enums, checked verbatim by `../tests/test_contract_lint.py`.
 
 `models.py`'s module docstring now lists all five `verification` values, including `fact-checked`,
 matching `VERIFICATION_VALUES`.
+
+`models.py` gained `RUNTIME_TEST_KEYS`, `OPEN_QUESTION_KEYS`, and `AFFECTED_SITE_KEYS` (REQ-18):
+named key tuples for the `runtime_test`, `open_questions`, and `affected_sites` nested `Finding`
+fields. `../references/prompt-constants.md`'s new `FINDING_SHAPES` block publishes the same keys,
+and `../agents/investigate.md` imports it. `../tests/test_contract_lint.py` checks all three
+surfaces agree.

@@ -40,6 +40,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   shipped code writes, not the verify-stage vocabulary alone. The two
   `test_frozen_contract.py` byte-identity pins moved to the new digests in
   this commit — no Go port is reachable from this repository to sync by hand.
+- Contract layer (REQ-18, Task 2 GREEN): `models.py` gains `RUNTIME_TEST_KEYS`,
+  `OPEN_QUESTION_KEYS`, and `AFFECTED_SITE_KEYS`, naming the exact keys of the
+  `runtime_test`, `open_questions`, and `affected_sites` nested `Finding` fields.
+  `prompt-constants.md` publishes them in a new `FINDING_SHAPES` block, and
+  `agents/investigate.md` imports it alongside `FIELD_OWNERSHIP`. The
+  `test_frozen_contract.py` `_MODELS_SHA256` pin moved to the new digest in this
+  commit, since `models.py` gained the three constants.
 - Contract layer (REQ-18, Task 2 RED): `test_contract_lint.py` gains two failing
   tests. One checks the `FINDING_SHAPES` block in `prompt-constants.md` names
   every key of `models.RUNTIME_TEST_KEYS`, `OPEN_QUESTION_KEYS`, and

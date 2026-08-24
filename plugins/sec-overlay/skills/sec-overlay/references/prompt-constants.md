@@ -140,6 +140,18 @@ better. That field's owning phase will set or correct it. Writing outside your
 remit has repeatedly produced lower-quality values that a downstream phase then
 has to detect and redo.
 
+## FINDING_SHAPES
+
+Three `Finding` fields hold nested objects. Use exactly these keys. A different key
+is dropped when the finding loads.
+
+- **`runtime_test`** — one object, or null. Keys: `objective`, `preconditions`,
+  `payloads`, `expected_signal`, `telemetry`. The red-team phase owns this field.
+- **`open_questions`** — a list of objects. Keys per object: `question`,
+  `why_it_matters`, `who_to_ask_or_check`. Trace and red-team own this field.
+- **`affected_sites`** — a list of objects, on a cluster primary only. Keys per
+  object: `id`, `file`, `line`. The cluster pass owns this field.
+
 ## QUALIFIER_PROOF
 A blanket security qualifier — "mitigated", "allowlisted", "sanitized",
 "single chokepoint", "authorized by X", "handled elsewhere" — is a claim about

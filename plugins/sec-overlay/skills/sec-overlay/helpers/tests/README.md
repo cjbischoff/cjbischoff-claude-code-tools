@@ -15,6 +15,11 @@ in `prompt-constants.md` must name every key in `models.RUNTIME_TEST_KEYS`,
 `OPEN_QUESTION_KEYS`, and `AFFECTED_SITE_KEYS`, and `agents/investigate.md` must reference
 `FINDING_SHAPES`. Both fail to import until the three key tuples exist on `models.py`.
 
+`test_contract_lint.py` (REQ-18, Task 2 GREEN) passes once `models.py` exports the three key
+tuples and `prompt-constants.md`/`investigate.md` publish and import the `FINDING_SHAPES` block.
+`test_frozen_contract.py`'s `_MODELS_SHA256` moved to the new digest in the same commit, since
+`models.py` gained the three constants.
+
 `test_detection_coverage.py` guards the coverage document: `generate()`'s output must name the
 dependency-internal sink limit and cite `dependency-sinks.json`, so the doc cannot silently
 drop the routing-versus-proof distinction. A second test asserts `generate()`'s output equals

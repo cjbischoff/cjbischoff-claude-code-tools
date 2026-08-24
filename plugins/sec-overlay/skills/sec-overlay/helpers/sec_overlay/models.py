@@ -48,6 +48,16 @@ _CLOSED_ENUMS: dict[str, frozenset[str]] = {
     "runtime_disposition": RUNTIME_DISPOSITIONS,
 }
 
+RUNTIME_TEST_KEYS = (
+    "objective",
+    "preconditions",
+    "payloads",
+    "expected_signal",
+    "telemetry",
+)
+OPEN_QUESTION_KEYS = ("question", "why_it_matters", "who_to_ask_or_check")
+AFFECTED_SITE_KEYS = ("id", "file", "line")
+
 
 @dataclass
 class Finding:
