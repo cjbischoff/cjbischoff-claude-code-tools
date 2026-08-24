@@ -31,7 +31,7 @@
 
 Three conflicts between the requirements document and the current code. Each has a resolution below. Do not resolve one a different way without saying so.
 
-1. **REQ-32 lint property (c) cannot pass in this group.** Property (c) asserts every `{{TOKEN}}` in a prompt is in the substitution map. `driver.py:132-133` names only `{{TARGET}}`, `{{WORKSPACE}}`, and `{{SHA}}`; `:128` adds `{{ATTACK_CLASS}}`. Prompts also use `{{OVERLAY_ROOT}}`, `{{HELPERS_DIR}}`, and `{{FP_FEEDBACK}}`. Adding those three is REQ-08, which the Part E sequencing places in group 2. **Resolution:** Task 5 lands lint properties (a), (b), (d), (e), and (f) and exports `DISPATCH_TOKENS` from `driver.py`. Property (c) lands in REQ-08's commit in group 2, as the requirements document itself directs ("Test: covered by REQ-32 (N-5)"). Task 5 leaves a named gap, not a silent one.
+1. **REQ-32 lint property (c) cannot pass in this group.** Property (c) asserts every `{{TOKEN}}` in a prompt is in the substitution map. `driver.py:132-133` names only `{{TARGET}}`, `{{WORKSPACE}}`, and `{{SHA}}`; `:128` adds `{{ATTACK_CLASS}}`. Prompts also use `{{OVERLAY_ROOT}}`, `{{HELPERS_DIR}}`, and `{{FP_FEEDBACK}}`. Adding those three is REQ-08, which the Part E sequencing places in group 2. **Resolution:** this group lands lint properties (a), (b), (d), (e), and (f), spread across the tasks that create the contracts they check, and Task 5 exports `DISPATCH_TOKENS` from `driver.py`. Property (c) lands in REQ-08's commit in group 2, as the requirements document itself directs ("Test: covered by REQ-32 (N-5)"). The lint module docstring names the gap, so it is not silent.
 
 2. **REQ-10's stated test is not implementable.** The requirements document says REQ-10's test is "covered by REQ-32 (required-block list matches the class-gate requirement)". No class gate requires `QUALIFIER_PROOF`. A search of `helpers/` for `QUALIFIER_PROOF` returns zero hits; the string appears only in `agents/architecture.md`, `agents/recon.md`, `agents/context-ingest.md`, `references/README.md`, and `references/prompt-constants.md`. **Resolution:** REQ-10 gets a direct test. Lint property (f) asserts that every prompt which imports `SEVERITY_PRECONDITION` also imports `QUALIFIER_PROOF`. `agents/threat-model.md` imports `SEVERITY_PRECONDITION` today, so the property fails red and REQ-10's one-line edit turns it green.
 
@@ -41,13 +41,13 @@ Three conflicts between the requirements document and the current code. Each has
 
 REQ-02 at requirements-document line 222-224 says: "Enforce at finding load in `models.py`, not only at the gate. No `jsonschema` dependency exists; do not add one. Hand-roll the enum check by reading the allowed values from the schema JSON, so the schema stays the single source. (Assumption, reversible.)"
 
-This plan reverses that assumption. The allowed values live in `evidence.py` as code constants; the schema restates them; the Task 5 lint binds the two. Three reasons:
+This plan reverses that assumption. The allowed values live in `evidence.py` as code constants; the schema restates them; the contract lint that Task 1 creates binds the two. Three reasons:
 
 1. `evidence.py:23` already holds `RUNTIME_DISPOSITIONS` as a code constant. The schema is not the single source today, so the stated assumption does not describe the tree.
 2. `models.py` imports only `dataclasses` and `enum`. Reading the schema JSON there adds file input/output to the frozen contract core and costs one read per finding load.
 3. REQ-32 exists to bind code, schema, and document together. With the lint in place, a code constant and a schema enum cannot drift.
 
-Trade-off accepted: a value now appears in three places instead of two. The lint is what makes that safe, so Task 5 is not optional.
+Trade-off accepted: a value now appears in three places instead of two — the `evidence.py` constant, the `finding.schema.json` enum, and the `prompt-constants.md` prose. The lint is what makes that safe. Task 1 therefore lands both bindings in the same commit as the third copy: `test_contract_lint.py` binds the schema to the constant, and `test_docs_invariants.py` binds the prose to it. Neither binding is optional.
 
 ## File Structure
 
@@ -64,7 +64,7 @@ Trade-off accepted: a value now appears in three places instead of two. The lint
 | `helpers/sec_overlay/driver.py` | Export `DISPATCH_TOKENS` and build the dispatch block from it. | 5 |
 | `helpers/tests/test_models.py` | REQ-02 load-enforcement tests. | 1 |
 | `helpers/tests/test_finding_schema.py` | REQ-02 schema-enum tests. | 1 |
-| `helpers/tests/test_contract_lint.py` | NEW. The REQ-32 lint. Five properties in this plan; property (c) arrives with REQ-08. | 2, 3, 4, 5 |
+| `helpers/tests/test_contract_lint.py` | NEW in Task 1. The REQ-32 lint, and the ONLY place that binds a code constant to its schema enum. Five properties in this plan; property (c) arrives with REQ-08. | 1, 2, 3, 4, 5 |
 | `helpers/tests/test_docs_invariants.py` | Extend the existing vocabulary test with `VERIFICATION_VALUES`. | 1 |
 
 `helpers/tests/test_contracts.py` stays as it is. It checks that a prompt's JSON example validates against the model. The new module checks that a document, a schema, and a code constant agree. Two different jobs.
@@ -84,7 +84,9 @@ Trade-off accepted: a value now appears in three places instead of two. The lint
 
 **Interfaces:**
 - Consumes: `evidence.RUNTIME_DISPOSITIONS` (exists at `evidence.py:23`).
-- Produces: `evidence.VERIFICATION_VALUES: frozenset[str]`. `models.Finding.from_dict` raises `ValueError` on an out-of-enum `verification` or `runtime_disposition`. Task 5's lint reads both constants.
+- Produces: `evidence.VERIFICATION_VALUES: frozenset[str]`. `models.Finding.from_dict` raises `ValueError` on an out-of-enum `verification` or `runtime_disposition`. `helpers/tests/test_contract_lint.py` with its `SKILL`, `CONSTS`, `SCHEMA`, and `AGENTS` paths — Tasks 2 to 5 extend that module and reuse those four names.
+
+Three surfaces now hold each closed vocabulary: the `evidence.py` constant, the `finding.schema.json` enum, and the `prompt-constants.md` prose. The constant is the source. `test_contract_lint.py` binds the schema to it in this task, and `test_docs_invariants.py` binds the prose to it in Step 8. Neither binding is optional; without both, the third copy drifts in silence.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -136,28 +138,42 @@ def _minimal_finding_dict() -> dict:
     }
 ```
 
-Append to `helpers/tests/test_finding_schema.py`:
+The code-to-schema binding is the REQ-32 lint's job, so it is born in the lint module, not in `test_finding_schema.py`. One copy only. A second copy of a binding assertion is the same drift risk the lint exists to remove.
+
+Create `helpers/tests/test_contract_lint.py`:
 
 ```python
-def test_schema_pins_the_verification_enum():
-    schema = json.loads(_SCHEMA_PATH.read_text())
-    enum = schema["properties"]["verification"]["enum"]
-    assert set(enum) == VERIFICATION_VALUES | {None}
+"""REQ-32 contract lint: code, schema, and prompt-constants must state one contract.
 
+Each test reads a code constant and asserts the document or the schema agrees.
+A failure here is drift, not a flaky test. Fix the document, not the assertion.
+"""
 
-def test_schema_pins_the_runtime_disposition_enum():
-    schema = json.loads(_SCHEMA_PATH.read_text())
-    enum = schema["properties"]["runtime_disposition"]["enum"]
-    assert set(enum) == RUNTIME_DISPOSITIONS | {None}
-```
+from __future__ import annotations
 
-Read `test_finding_schema.py` first and reuse its existing schema-path constant. If it names the path differently, use that name instead of `_SCHEMA_PATH`. Add the two constants to its imports:
+import json
+from pathlib import Path
 
-```python
 from sec_overlay.evidence import RUNTIME_DISPOSITIONS, VERIFICATION_VALUES
+
+SKILL = Path(__file__).resolve().parents[2]
+CONSTS = SKILL / "references" / "prompt-constants.md"
+SCHEMA = SKILL / "references" / "finding.schema.json"
+AGENTS = SKILL / "agents"
+
+
+def test_every_closed_vocabulary_matches_its_schema_enum():
+    """Each code constant with a schema counterpart must equal that enum."""
+    props = json.loads(SCHEMA.read_text())["properties"]
+    for field, allowed in (
+        ("verification", VERIFICATION_VALUES),
+        ("runtime_disposition", RUNTIME_DISPOSITIONS),
+    ):
+        assert "enum" in props[field], f"{field} has no schema enum"
+        assert set(props[field]["enum"]) == allowed | {None}, f"{field} drifted"
 ```
 
-`json` is already imported there; check before adding it again.
+Do not add a schema test to `test_finding_schema.py`. That module checks a finding against the schema; this one checks the schema against the code.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -165,10 +181,10 @@ Run from `plugins/sec-overlay/skills/sec-overlay/helpers/`:
 
 ```bash
 uv run pytest tests/test_models.py -k verification -v
-uv run pytest tests/test_finding_schema.py -k enum -v
+uv run pytest tests/test_contract_lint.py -v
 ```
 
-Expected: the `test_models.py` cases fail because `from_dict` accepts any string. The `test_finding_schema.py` cases fail with `ImportError` on `VERIFICATION_VALUES` and then `KeyError: 'enum'`.
+Expected: the `test_models.py` cases fail because `from_dict` accepts any string. `test_contract_lint.py` fails at collection with `ImportError: cannot import name 'VERIFICATION_VALUES'`.
 
 - [ ] **Step 3: Commit the red tests**
 
@@ -177,7 +193,7 @@ cd /Users/christopher/Documents/Development/_me/cjbischoff-claude-code-tools
 # bump version to 1.107.4 in plugins/sec-overlay/.claude-plugin/plugin.json first
 prek run
 git add plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_models.py \
-        plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_finding_schema.py \
+        plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_contract_lint.py \
         plugins/sec-overlay/skills/sec-overlay/helpers/tests/README.md \
         plugins/sec-overlay/.claude-plugin/plugin.json
 git commit -m "test(sec-overlay): add failing REQ-02 enum tests"
@@ -270,10 +286,10 @@ In `helpers/tests/test_docs_invariants.py`, add `VERIFICATION_VALUES` to the imp
 - [ ] **Step 9: Run the tests to verify they pass**
 
 ```bash
-uv run pytest tests/test_models.py tests/test_finding_schema.py tests/test_docs_invariants.py -q
+uv run pytest tests/test_models.py tests/test_contract_lint.py tests/test_docs_invariants.py tests/test_finding_schema.py -q
 ```
 
-Expected: PASS.
+Expected: PASS. `test_finding_schema.py` is in the list because the two new schema enums narrow what that module's fixtures may hold.
 
 - [ ] **Step 10: Run the full suite**
 
@@ -314,36 +330,25 @@ git commit -m "feat(sec-overlay): REQ-02 close finding contract enums"
 - Modify: `plugins/sec-overlay/skills/sec-overlay/helpers/sec_overlay/models.py` (add the shape constants)
 - Modify: `plugins/sec-overlay/skills/sec-overlay/references/prompt-constants.md` (new `FINDING_SHAPES` block)
 - Modify: `plugins/sec-overlay/skills/sec-overlay/agents/investigate.md:8-13`
-- Test: `plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_contract_lint.py` (NEW)
+- Modify: `plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_contract_lint.py` (created in Task 1)
 
 **Interfaces:**
-- Consumes: nothing from Task 1.
-- Produces: `models.RUNTIME_TEST_KEYS`, `models.OPEN_QUESTION_KEYS`, `models.AFFECTED_SITE_KEYS`, each a `tuple[str, ...]`. Task 5 reuses the same lint module.
+- Consumes: the `CONSTS` and `AGENTS` paths from Task 1's lint module.
+- Produces: `models.RUNTIME_TEST_KEYS`, `models.OPEN_QUESTION_KEYS`, `models.AFFECTED_SITE_KEYS`, each a `tuple[str, ...]`. The `_block(name)` helper, which Task 5 reuses.
 
 The source of truth is the `Finding` docstring. `runtime_test` at `models.py:74-75` names `objective`, `preconditions`, `payloads`, `expected_signal`, and `telemetry`. `open_questions` at `:87-93` names `question`, `why_it_matters`, and `who_to_ask_or_check`. `affected_sites` at `:96-97` names `id`, `file`, and `line`. The requirements document cites `models.py:79-98`; that cite drifted, and the spec's cite-verification record already holds the correction.
 
 - [ ] **Step 1: Write the failing test**
 
-Create `helpers/tests/test_contract_lint.py`:
+Task 1 created `helpers/tests/test_contract_lint.py` with its four path constants. Extend that module; do not recreate it. Add one import line:
 
 ```python
-"""REQ-32 contract lint: code, schema, and prompt-constants must state one contract.
-
-Each test reads a code constant and asserts the document or the schema agrees.
-A failure here is drift, not a flaky test. Fix the document, not the assertion.
-"""
-
-from __future__ import annotations
-
-from pathlib import Path
-
 from sec_overlay.models import AFFECTED_SITE_KEYS, OPEN_QUESTION_KEYS, RUNTIME_TEST_KEYS
+```
 
-SKILL = Path(__file__).resolve().parents[2]
-CONSTS = SKILL / "references" / "prompt-constants.md"
-AGENTS = SKILL / "agents"
+Then append the `_block` helper and the two tests:
 
-
+```python
 def _block(name: str) -> str:
     """Return the body of a single ``## NAME`` block in prompt-constants.md."""
     text = CONSTS.read_text()
@@ -589,8 +594,8 @@ git commit -m "fix(sec-overlay): REQ-07 match validate to the gate"
 - Test: `plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_contract_lint.py`
 
 **Interfaces:**
-- Consumes: the `_block` helper and the `AGENTS` path from Task 2.
-- Produces: nothing new.
+- Consumes: the `AGENTS` path from Task 1.
+- Produces: the `_imports_line(prompt)` helper, which returns the `## Imports` section of an agent prompt as a string.
 
 This is lint property (f). See Conflict 2 above for why the requirements document's stated test is not implementable and what replaces it.
 
@@ -689,10 +694,12 @@ git commit -m "fix(sec-overlay): REQ-10 add QUALIFIER_PROOF to TM"
 - Test: `plugins/sec-overlay/skills/sec-overlay/helpers/tests/test_contract_lint.py`
 
 **Interfaces:**
-- Consumes: `_block`, `AGENTS`, and `CONSTS` from Task 2.
+- Consumes: `_block` from Task 2; `SCHEMA`, `CONSTS`, and `AGENTS` from Task 1.
 - Produces: `calibrate.PRECONDITION_CAPS: tuple[tuple[float, int], ...]`, `calibrate.PRECONDITION_CAP_FLOOR: int`, and `driver.DISPATCH_TOKENS: tuple[str, ...]`. REQ-08 in group 2 reads `DISPATCH_TOKENS` for lint property (c).
 
-Properties (a) and (e) already landed: (a) as the extended `test_evidence_vocabulary_block_lists_all_values` in Task 1 plus the two schema-enum tests, and (e) as Task 3's two validate tests. Property (d) landed as Task 2. Property (f) landed as Task 4. This task lands (b) and the schema-versus-code binding for every closed vocabulary, and it exports `DISPATCH_TOKENS` so REQ-08 has something to assert against.
+Four of the six properties already landed. Property (a) is the code-to-schema binding from Task 1 plus the extended `test_evidence_vocabulary_block_lists_all_values` for the code-to-prose side. Property (d) landed as Task 2, (e) as Task 3, and (f) as Task 4. This task lands (b), the one property with no earlier home, and exports `DISPATCH_TOKENS` so REQ-08 has a constant to assert against.
+
+Do not re-add a schema-enum test here. Task 1 owns that assertion, and a second copy is the drift this lint exists to prevent. When a later requirement adds a closed vocabulary with a schema counterpart, extend Task 1's `test_every_closed_vocabulary_matches_its_schema_enum` tuple — do not write a new test.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -715,17 +722,6 @@ def test_precondition_cap_reads_the_published_table():
     assert _precondition_cap(["non-default config"]) == PRECONDITION_CAPS[1][1]
 
 
-def test_every_closed_vocabulary_matches_its_schema_enum():
-    """Each code constant with a schema counterpart must equal that enum."""
-    schema = json.loads(SCHEMA.read_text())
-    props = schema["properties"]
-    for field, allowed in (
-        ("verification", VERIFICATION_VALUES),
-        ("runtime_disposition", RUNTIME_DISPOSITIONS),
-    ):
-        assert set(props[field]["enum"]) == allowed | {None}, f"{field} drifted"
-
-
 def test_dispatch_tokens_are_a_single_source():
     """render_dispatch must build its substitute line from DISPATCH_TOKENS."""
     for token in DISPATCH_TOKENS:
@@ -736,10 +732,9 @@ def test_dispatch_tokens_are_a_single_source():
     assert "ATTACK_CLASS" in DISPATCH_TOKENS
 ```
 
-Extend the module imports. `re` and `json` are new here; Task 2 left them out so the module stayed clean of an unused import.
+Extend the module imports. `re` is new here; `json` and the `SCHEMA` path already arrived with Task 1.
 
 ```python
-import json
 import re
 
 from sec_overlay.calibrate import (
@@ -748,13 +743,6 @@ from sec_overlay.calibrate import (
     _precondition_cap,
 )
 from sec_overlay.driver import DISPATCH_TOKENS
-from sec_overlay.evidence import RUNTIME_DISPOSITIONS, TIER1_RECEIPTS, VERIFICATION_VALUES
-```
-
-and add the schema path beside `CONSTS`:
-
-```python
-SCHEMA = SKILL / "references" / "finding.schema.json"
 ```
 
 Record the deferred property in the module docstring so the gap is named, not silent. Replace the docstring's closing line with:
