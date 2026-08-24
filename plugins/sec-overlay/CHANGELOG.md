@@ -17,6 +17,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - Attack-class fan-out as JSON (REQ-17, RED): `test_dispatch_classes.py` gains
   four tests pinning that the dispatch block's `{{ATTACK_CLASS}}` value is a
   compact JSON array. Two fail against the pre-fix comma-joined string.
+- Every dispatch token is fillable (REQ-08, RED): `test_prompt_tokens.py`
+  gains two failing tests. One scans the 11 `PHASE_TABLE` prompts and finds
+  three tokens the dispatch map cannot fill: `OVERLAY_ROOT` (11 files),
+  `HELPERS_DIR` (5 files), `FP_FEEDBACK` (2 files). The other calls
+  `render_dispatch` and fails because `{{FP_FEEDBACK}}` is absent from the
+  substitute line.
 
 ### Changed
 

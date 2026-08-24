@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-125 pytest files, 1645 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+126 pytest files, 1647 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -1316,3 +1316,10 @@ value in the dispatch block. It asserts a multi-class list, a single-class
 list, and the omitted-token case round-trip through `render_dispatch`'s
 `{{ATTACK_CLASS}}` substitute value as JSON. Two of the four tests fail
 against the pre-fix comma-joined string.
+
+New `test_prompt_tokens.py` (REQ-08, RED) checks every token an audit-lane
+prompt uses is in `driver.DISPATCH_TOKENS`. `test_every_dispatched_prompt_token_is_substitutable`
+scans the 11 `PHASE_TABLE` prompts and fails naming three gap tokens:
+`OVERLAY_ROOT` (11 files), `HELPERS_DIR` (5 files), `FP_FEEDBACK` (2 files).
+`test_fp_feedback_token_names_a_written_file` calls `render_dispatch` and
+fails because `{{FP_FEEDBACK}}` is not in the substitute line yet.
