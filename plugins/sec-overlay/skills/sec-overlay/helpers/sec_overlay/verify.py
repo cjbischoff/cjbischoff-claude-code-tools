@@ -64,6 +64,7 @@ def _copy_ignore(directory: str, names: list[str]) -> set[str]:
 
 from sec_overlay.campaign import record_stage
 from sec_overlay.codeql import CodeQLError, run_codeql
+from sec_overlay.kb import read_profile
 from sec_overlay.models import FindingStatus
 from sec_overlay.sast import run_semgrep
 from sec_overlay.sca import ScaError, run_sca
@@ -187,21 +188,29 @@ def _file_has_hit(
 
 
 def _check(
-    target: str, config: str, basename: str, cls: str, rules: set[str],
+    target: str, configs: list[str], basename: str, cls: str, rules: set[str],
     backend: str, language: str | None, db_dir: str | None,
 ) -> bool | None:
-    """Call ``_file_has_hit`` with the minimal args ``backend`` needs.
+    """Call ``_file_has_hit`` once per config, OR-combining the tri-state result.
 
     ``semgrep`` uses the original 5-positional-arg call (kept exact for
     backward compatibility with existing monkeypatches of ``_file_has_hit``);
-    ``codeql``/``sca`` pass the extended keyword-only args.
+    ``codeql``/``sca`` ignore ``configs`` entirely and run once, so a
+    multi-ruleset plan never re-runs a database build per ruleset.
     """
-    if backend == "semgrep":
-        return _file_has_hit(target, config, basename, cls, rules)
-    return _file_has_hit(
-        target, config, basename, cls, rules,
-        backend=backend, language=language, db_dir=db_dir,
-    )
+    if backend != "semgrep":
+        return _file_has_hit(
+            target, configs[0], basename, cls, rules,
+            backend=backend, language=language, db_dir=db_dir,
+        )
+    saw_none = False
+    for config in configs:
+        hit = _file_has_hit(target, config, basename, cls, rules)
+        if hit:
+            return True
+        if hit is None:
+            saw_none = True
+    return None if saw_none else False
 
 
 # Case-sensitive on purpose: the placeholder convention is uppercase ``X.Y.Z``. Matching
@@ -237,7 +246,7 @@ def _placeholder_version_bump(patch_diff: str) -> bool:
 
 
 def verify_patch(
-    target: str, patch_diff: str, config: str, file: str, cls: str,
+    target: str, patch_diff: str, config: str | list[str], file: str, cls: str,
     evidence_sources: list[str] | None = None,
     *, language: str | None = None, db_dir: str | None = None,
 ) -> str:
@@ -250,7 +259,7 @@ def verify_patch(
     Args:
         target: Path to the (unmodified) target repo.
         patch_diff: Unified diff proposed for the finding.
-        config: SAST rules config path (semgrep only).
+        config: SAST rules config path, or a list of them (semgrep only).
         file: Finding's file path (only the basename is matched).
         cls: Finding's attack class.
         evidence_sources: The finding's evidence sources — picks the re-run backend.
@@ -270,12 +279,13 @@ def verify_patch(
     if cls == "deps" and _placeholder_version_bump(patch_diff):
         return "not-fixed"
 
+    configs = [config] if isinstance(config, str) else list(config) or [""]
     basename = os.path.basename(file)
     backend = _pick_backend(evidence_sources)
     rules = _source_rules(f"{backend}:", evidence_sources)
     # ponytail: basename match is fine for distinct filenames; a repo with two
     # same-named files in different dirs could alias — revisit with full paths then.
-    pre = _check(target, config, basename, cls, rules, backend, language, db_dir)
+    pre = _check(target, configs, basename, cls, rules, backend, language, db_dir)
     if not pre:
         return "rule-no-match"
 
@@ -285,12 +295,34 @@ def verify_patch(
         shutil.copytree(target, repo, ignore=_copy_ignore)
         if not apply_patch(repo, patch_diff):
             return "patch-not-applied"
-        post = _check(str(repo), config, basename, cls, rules, backend, language, db_dir)
+        post = _check(str(repo), configs, basename, cls, rules, backend, language, db_dir)
         if post is None:
             return "unconfirmed"
         return "not-fixed" if post else "verified-static"
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+
+
+def resolve_configs(ws: Workspace, fallback: str) -> list[str]:
+    """Return the semgrep rulesets the scan profile planned, or the caller's fallback.
+
+    Args:
+        ws: The campaign workspace.
+        fallback: The caller-supplied config path, used when the profile is absent,
+            unreadable, or plans no rulesets.
+
+    Returns:
+        A non-empty list of ruleset paths.
+    """
+    try:
+        profile = read_profile(ws)
+    except (OSError, ValueError):
+        return [fallback]
+    semgrep = profile.sast_plan.get("semgrep")
+    rulesets = semgrep.get("rulesets") if isinstance(semgrep, dict) else None
+    if not isinstance(rulesets, list):
+        rulesets = []
+    return [str(r) for r in rulesets] or [fallback]
 
 
 def verify_findings(
@@ -314,6 +346,7 @@ def verify_findings(
         The number of findings promoted to ``fixed``.
     """
     findings = read_findings(ws)
+    configs = resolve_configs(ws, config)
     fixed = 0
     changed = False
     for f in findings:
@@ -331,7 +364,7 @@ def verify_findings(
             and last_validate_fix.get("event") != "validate-fix:fixed"
         )
         cause = verifier(
-            target, f.patch_diff, config, f.file, f.cls, f.evidence_sources,
+            target, f.patch_diff, configs, f.file, f.cls, f.evidence_sources,
             language=language, db_dir=db_dir,
         )
         # An unmapped cause degrades to static-only: never launder an unknown verdict clean.

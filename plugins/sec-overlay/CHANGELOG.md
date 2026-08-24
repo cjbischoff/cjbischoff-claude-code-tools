@@ -12,6 +12,18 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   profile is missing, unreadable, or plans no rulesets, and pins that
   `verify_findings` passes the resolved list to the verifier instead of its
   own scalar.
+- The verify verdict reads the planned rulesets (REQ-22): `resolve_configs(ws,
+  fallback)` reads `profile.sast_plan["semgrep"]["rulesets"]` from the scan
+  profile and falls back to the caller's scalar only when the profile is
+  missing, unreadable, or plans no rulesets. `verify_findings` resolves this
+  list once and passes it to the verifier instead of its own scalar, so a
+  finding is re-scanned with the ruleset that actually flagged it.
+  `verify_patch`'s `config` parameter now accepts `str | list[str]`, and
+  `_check` calls `_file_has_hit` once per config for the semgrep backend,
+  OR-combining the tri-state result: `True` if any config flags the file,
+  `None` if none flags it and at least one could not run, `False` only when
+  every config ran and none flagged the file; codeql/sca ignore the list
+  and run once.
 - Named verify-cause tests (REQ-21, RED): `test_verify_causes.py` pins that
   `verify_patch` returns one of five named causes instead of overloading
   `"static-only"`, and that `verify_findings` maps each cause to a legal
