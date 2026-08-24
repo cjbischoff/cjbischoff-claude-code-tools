@@ -6,6 +6,15 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- The trace prompt widens its scope and names its channels (REQ-06, REQ-19):
+  `agents/trace.md` now traces findings with `status` in `{"confirmed",
+  "needs-deployment-testing"}`, not `confirmed` alone, so a real-but-unproven
+  finding gets a reachability verdict before a human tests it. The procedure
+  gained a step that enumerates every source-to-sink path and records an
+  in-band channel — a sink reply the caller can observe, such as a response
+  body, an error, or a log line — before any out-of-band channel. Both
+  requirements edit the same two lines of `agents/trace.md`, so they ship in
+  one commit.
 - Trace prompt scope and channel tests (REQ-06, REQ-19, RED):
   `test_trace_prompt.py` pins that `agents/trace.md` traces
   `needs-deployment-testing` findings, not only `confirmed` ones, and names an
