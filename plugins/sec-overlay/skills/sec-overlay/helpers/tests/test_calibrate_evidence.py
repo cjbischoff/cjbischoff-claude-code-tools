@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from sec_overlay.calibrate import calibrate_score
 from sec_overlay.models import Finding, FindingStatus, Severity
 
 
 def _f(**kwargs):
-    base = dict(
+    base = Finding(
         id="F-1", rule_id="r", cls="xss", status=FindingStatus.CONFIRMED,
         severity=Severity.MEDIUM, file="app.py", line=1, message="m", dataflow=[],
     )
-    base.update(kwargs)
-    return Finding(**base)
+    return replace(base, **kwargs)
 
 
 def test_tier_one_receipt_outranks_tier_two():

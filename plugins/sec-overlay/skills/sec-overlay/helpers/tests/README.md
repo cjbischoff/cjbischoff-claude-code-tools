@@ -246,6 +246,11 @@ per-field argument checking that `replace`'s `**changes: Any` typing bypasses. C
 of the VAL-02 ty ledger (`invalid-argument-type` diagnostics across all three files); no
 behavior change — `Finding` is not frozen, so post-construction mutation still works.
 
+`test_calibrate_evidence.py`'s `_f` builder took the same `dataclasses.replace` fix (REQ-20
+fix round 1), clearing the one ruff `C408` finding and 34 `ty` `invalid-argument-type`
+diagnostics its prior `dict()`-splat construction carried; all six REQ-20 assertions are
+unchanged.
+
 `test_postflight.py` and `test_structural_index.py` clear the last two VAL-02 ruff findings:
 a single-element list-slice becomes `next(...)` (`RUF015`), and a `"\n".join([...])` becomes
 adjacent string-literal concatenation (`FLY002`) — both no-op on behavior.

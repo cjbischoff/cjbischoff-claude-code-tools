@@ -6,6 +6,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Typed the REQ-20 evidence-score test fixture: `test_calibrate_evidence.py`'s `_f` builder
+  now builds a base `Finding(...)` and layers overrides with `dataclasses.replace`, instead
+  of a `dict()`-splat construction. This clears a ruff `C408` finding and 34 `ty`
+  `invalid-argument-type` diagnostics the brief's original fixture carried; it changes no
+  assertion — all six REQ-20 tests still pin the same comparisons.
 - Evidence strength and reachability move the derived score (REQ-20):
   `calibrate.py` gained `_evidence_adjust`, called from `_derived_score`
   before the precondition cap. A stronger tool-receipt tier, a
