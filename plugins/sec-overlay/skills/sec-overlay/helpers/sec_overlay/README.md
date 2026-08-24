@@ -1215,3 +1215,11 @@ the same cap-by-weight table. `driver.py` gained `DISPATCH_TOKENS`; `render_disp
 `substitute:` line from that tuple, so `{{ATTACK_CLASS}}` now sits on the same line as the other
 three tokens instead of its own trailing line. `../tests/test_contract_lint.py` checks both
 constants agree with the document.
+
+`prefilter.py` gained `_relativize_paths` (REQ-15), called from `run_prefilter` right before
+`normalize`: an absolute `Finding.file` under the scanned `target` becomes repo-root-relative, an
+already-relative path is left alone, and a path outside `target` stays verbatim instead of being
+rewritten into something that does not resolve. `PATH_BASE` in `../references/prompt-constants.md`
+requires every cited path to resolve from the repo root; the four backends (`sast.py`,
+`secrets.py`, `sca.py`, `codeql.py`) each set `Finding.file` from raw tool output with no such
+guarantee, so the fix normalizes once at the `run_prefilter` boundary instead of in all four.

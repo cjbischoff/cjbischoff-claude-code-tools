@@ -22,6 +22,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- Repo-root-relative candidate paths (REQ-15): `run_prefilter` now calls a new
+  `_relativize_paths` before `normalize`, rewriting an absolute `Finding.file`
+  under `target` to a repo-root-relative one. A path outside `target` stays
+  verbatim so a vendored or out-of-tree hit stays visible instead of being
+  rewritten into something that does not resolve.
 - Data integrity (REQ-13, folds in REQ-23): every phase receipt and gate
   receipt now records true finding counts. `run.py` counted
   `findings/F-*.json`, but every real finding id starts `C-` or `<CLASS>-`,

@@ -70,6 +70,31 @@ def _raise_on_incomplete_backends(
         )
 
 
+def _relativize_paths(findings: list[Finding], target: str) -> None:
+    """Rewrite each finding's ``file`` repo-root-relative, in place.
+
+    PATH_BASE requires every cited path to resolve from the repo root. Backends
+    disagree: semgrep echoes the path it was given, CodeQL emits a SARIF URI. A
+    path outside ``target`` is left verbatim so a vendored or out-of-tree hit stays
+    visible instead of being rewritten into a path that does not resolve.
+
+    Args:
+        findings: Candidates to rewrite.
+        target: The scanned source root.
+    """
+    root = Path(target).resolve()
+    for f in findings:
+        if not f.file:
+            continue
+        p = Path(f.file)
+        if not p.is_absolute():
+            continue
+        try:
+            f.file = p.resolve().relative_to(root).as_posix()
+        except ValueError:
+            continue
+
+
 def run_prefilter(
     ws: Workspace,
     target: str,
@@ -267,6 +292,7 @@ def run_prefilter(
         raw = [f for f in raw if not (_is_semgrep(f) and f.cls == "unknown")]
         dropped_nonsecurity = before - len(raw)
 
+    _relativize_paths(raw, target)
     findings = normalize(raw)
     kept, dropped = apply_exclusions(findings, exclusions_fn(ws))
 
