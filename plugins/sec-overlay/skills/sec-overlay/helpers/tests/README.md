@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-133 pytest files, 1699 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+133 pytest files, 1702 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -1383,3 +1383,11 @@ its `cls`, so the test rewrites it to `"sqli"` before writing the finding,
 matching the two normalizations already there for `file`/`line`. No other
 pre-existing test needed a change: a census of every `cls=`/`"cls":` literal
 under `helpers/` found no other value outside the derived 51-key set.
+
+New `test_report.py::test_report_renders_no_dataflow_percentage_line` and
+`test_prefilter.py::test_run_prefilter_writes_no_coverage_artifact` (REQ-04,
+RED) fail against the still-live file-based coverage percentage:
+`to_markdown` still prints "Dataflow coverage" and `run_prefilter` still
+returns a `"coverage"` key and writes `kb/coverage.json`.
+`test_a_partial_ledger_claims_no_full_coverage` (REQ-04) passes already — a
+pre-existing regression guard, not a new red test.

@@ -329,3 +329,14 @@ def test_run_prefilter_raises_strict_by_default_on_skipped_backend(tmp_path):
     with pytest.raises(RuntimeError):
         run_prefilter(ws, "tgt", _profile(), semgrep=sem, codeql=cql,
                       has_tool=lambda n: None if n == "codeql" else "/x")
+
+
+def test_run_prefilter_writes_no_coverage_artifact(tmp_path):
+    """kb/coverage.json contradicted the per-sink ledger and is gone (REQ-04)."""
+    ws = Workspace(tmp_path / "ws"); ws.ensure()
+    sem = lambda target, config, **k: [_cand("sqli", "a.go", 1)]
+    cql = lambda target, language, db_dir, **k: [_cand("ssrf", "b.go", 2)]
+    res = run_prefilter(ws, str(tmp_path), _profile(), semgrep=sem, codeql=cql,
+                        has_tool=lambda n: "/x", qlpack_fn=lambda lang: True)
+    assert "coverage" not in res
+    assert not (ws.kb / "coverage.json").exists()

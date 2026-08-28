@@ -22,6 +22,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Failing report/prefilter coverage-absence tests for REQ-04: `test_report.py`'s
+  `test_report_renders_no_dataflow_percentage_line` pins that a stale `kb/coverage.json` no
+  longer prints a "Dataflow coverage" line, and `test_prefilter.py`'s
+  `test_run_prefilter_writes_no_coverage_artifact` pins that `run_prefilter` returns no
+  `"coverage"` key and writes no `coverage.json`. `test_a_partial_ledger_claims_no_full_coverage`
+  already passes — a pre-existing ledger regression guard, not a new red test.
 - Failing finding-overflow tests for REQ-27: `tests/test_findings_overflow.py` pins that an
   unknown finding key must survive a `read_findings`/`write_findings` round trip, that known
   fields stay unchanged, and that `read_findings` warns on stderr naming each preserved key.

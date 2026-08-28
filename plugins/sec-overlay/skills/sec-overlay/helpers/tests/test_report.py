@@ -1149,3 +1149,62 @@ def test_ledger_dropped_count_matches_markdown_row_count(tmp_path: Path):
         1 for line in section.splitlines() if line.startswith("|") and "---" not in line and "Path" not in line
     )
     assert row_count == len(ledger["dropped"]) == 3
+
+
+def test_report_renders_no_dataflow_percentage_line(tmp_path):
+    """A stale coverage.json must not resurrect the file-based percentage (REQ-04).
+
+    The per-sink ledger is the single coverage source. A second percentage beside
+    it contradicted the ledger whenever the two disagreed.
+    """
+    import json
+
+    from sec_overlay.workspace import Workspace
+
+    ws = Workspace(tmp_path / "ws")
+    ws.ensure()
+    (ws.kb / "coverage.json").write_text(
+        json.dumps(
+            {
+                "languages": [{"language": "liquid", "files": 194, "tier": "none"}],
+                "dataflow_pct": 17,
+                "uncovered": ["liquid"],
+            }
+        )
+    )
+    write_report(ws)
+    md = ws.report_path.read_text()
+    assert "Dataflow coverage" not in md
+    assert "of counted source" not in md
+
+
+def test_a_partial_ledger_claims_no_full_coverage(tmp_path):
+    """A partial ledger must not print a full-coverage claim anywhere (REQ-04)."""
+    import json
+
+    from sec_overlay.workspace import Workspace
+
+    ws = Workspace(tmp_path / "ws")
+    ws.ensure()
+    (ws.kb / "coverage-ledger.json").write_text(
+        json.dumps(
+            {
+                "completeness": "partial",
+                "surfaces": [
+                    {
+                        "id": "http-api",
+                        "disposition": "needs_follow_up",
+                        "reason": "no investigator ran",
+                        "next_step": "route an investigator",
+                    }
+                ],
+                "deferred": [],
+                "open_questions": [],
+            }
+        )
+    )
+    write_report(ws)
+    md = ws.report_path.read_text()
+    assert "partial" in md
+    assert "100%" not in md
+    assert "Dataflow coverage" not in md
