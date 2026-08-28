@@ -1407,3 +1407,12 @@ The three tests pass at GREEN. `test_profile.py`'s `_valid_dict()` gained a
 `from_dict(d).to_dict() == d`, and `to_dict` now emits the new field.
 `test_run.py`'s `_profile()` builder gained the same entry so both canonical
 profile fixtures carry the full field set.
+
+Three more tests land RED for REQ-25:
+`test_dependency_sinks.py::test_indicator_classes_routes_without_a_manifest`,
+`::test_indicator_classes_is_empty_without_an_indicator`, and
+`test_partition.py::test_reconcile_plan_routes_a_class_on_an_indicator_hit`.
+A Bazel or vendored target declares no manifest, so manifest matching alone
+leaves its whole attack surface unrouted. The first two fail today with
+`ImportError: cannot import name 'indicator_classes'`; the third fails because
+`reconcile_plan` returns `['authz']` with no `ssrf`.

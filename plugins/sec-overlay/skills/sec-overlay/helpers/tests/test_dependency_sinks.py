@@ -94,3 +94,22 @@ def test_match_manifests_skips_vendor_and_node_modules(tmp_path):
     vendored.mkdir(parents=True)
     (vendored / "go.mod").write_text("require github.com/open-policy-agent/opa v0.68.0\n")
     assert match_manifests(tmp_path) == []
+
+
+def test_indicator_classes_routes_without_a_manifest(tmp_path):
+    """A Bazel or vendored target has no manifest but still calls the sink (REQ-25)."""
+    from sec_overlay.dependency_sinks import indicator_classes, match_manifests
+
+    (tmp_path / "policy.go").write_text(
+        "package main\n\nfunc run() { r := rego.New(rego.Query(\"x\")) ; _ = r }\n"
+    )
+    assert match_manifests(tmp_path) == []
+    assert "ssrf" in indicator_classes(tmp_path)
+
+
+def test_indicator_classes_is_empty_without_an_indicator(tmp_path):
+    """No indicator in source means no extra routing (REQ-25)."""
+    from sec_overlay.dependency_sinks import indicator_classes
+
+    (tmp_path / "main.go").write_text("package main\n\nfunc main() {}\n")
+    assert indicator_classes(tmp_path) == []

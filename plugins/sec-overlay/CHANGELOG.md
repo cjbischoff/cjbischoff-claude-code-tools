@@ -17,6 +17,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- Failing indicator-routing tests for REQ-25: `test_dependency_sinks.py`'s
+  `test_indicator_classes_routes_without_a_manifest` and
+  `test_indicator_classes_is_empty_without_an_indicator` pin a new `indicator_classes`
+  matcher, and `test_partition.py`'s `test_reconcile_plan_routes_a_class_on_an_indicator_hit`
+  pins that an indicator hit routes the entry's class with no manifest present.
 - Failing route-summary tests for REQ-11: `test_profile.py`'s
   `test_from_dict_accepts_a_route_summary_key` and
   `test_validate_profile_rejects_a_non_object_route_summary` pin the new field and its shape
