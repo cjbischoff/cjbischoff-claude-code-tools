@@ -1401,3 +1401,9 @@ New `test_profile.py::test_from_dict_accepts_a_route_summary_key` and
 derived census-coverage object; the three tests fail today because
 `ScanProfile` has no such field, `validate_profile` names no such error, and
 the recall gate writes no such key back into the profile.
+
+The three tests pass at GREEN. `test_profile.py`'s `_valid_dict()` gained a
+`"route_summary": {}` entry because `test_scanprofile_roundtrip` asserts
+`from_dict(d).to_dict() == d`, and `to_dict` now emits the new field.
+`test_run.py`'s `_profile()` builder gained the same entry so both canonical
+profile fixtures carry the full field set.

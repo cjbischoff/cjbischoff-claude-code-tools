@@ -4,6 +4,17 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- `route_summary` is a derived field on `ScanProfile` (REQ-11). `driver._act_recall_gate`
+  computes it from the route census after recon — `total` census sites, `covered` sites the
+  profile mentions, and `uncovered` ids it never mentions — then writes the profile back.
+  `validate_profile` rejects a non-object value, so the legacy list of route strings no longer
+  validates. `route_control.check_recon_routes` still reads the legacy list form for a
+  non-census table and treats any other shape as "nothing summarised", so every table route
+  stays a logged gap. `agents/recon.md` no longer instructs recon to emit the field, and
+  `references/scan-profile.schema.json` documents it as derived.
+
 ### Fixed
 
 - Failing route-summary tests for REQ-11: `test_profile.py`'s

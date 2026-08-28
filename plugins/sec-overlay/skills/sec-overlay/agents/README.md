@@ -268,5 +268,7 @@ repo pre-commit hook (plugin [`CLAUDE.md`](../../../CLAUDE.md), "Documentation" 
 
 `recon.md`, `architecture.md`, and `threat-model.md` each gained one additive instruction so
 their output matches `sec_overlay.route_control`'s checks (ISSUE-027, ISSUE-029, ISSUE-036):
-recon emits a `route_summary` field, architecture names every control by key, and threat-model
-keeps every entrypoint listed before its hunt-list prioritization.
+recon names every route it investigates in `entrypoints`/`attack_surface`, architecture names
+every control by key, and threat-model keeps every entrypoint listed before its hunt-list
+prioritization. The recall gate derives `route_summary` (`total`/`covered`/`uncovered`) from
+the route census after recon finishes; recon must never emit that field itself (REQ-11).

@@ -30,6 +30,7 @@ def _profile(**kw) -> ScanProfile:
         "subsystems": [],
         "attack_surface_evidence": {},
         "scan_options": {},
+        "route_summary": {},
     }
     base.update(kw)
     return ScanProfile(**base)

@@ -29,6 +29,7 @@ def _valid_dict():
         "subsystems": [],
         "attack_surface_evidence": {},
         "scan_options": {},
+        "route_summary": {},
     }
 
 

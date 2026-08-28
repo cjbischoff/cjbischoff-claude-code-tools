@@ -350,6 +350,10 @@ def _act_recall_gate(ctx: AuditContext) -> None:
     (``disposition``/``reason``/``next_step``) ``record_route_gaps`` needs to
     demote ``completeness`` — a route-census phase action cannot do this because
     it runs before recon, when no profile exists yet to compare against.
+
+    Also derives ``route_summary`` from the census and writes it back into the
+    profile: total census routes, routes the profile mentions, and routes it does
+    not. The field reports coverage of the census, never a copy of it (REQ-11).
     """
     from sec_overlay.dependency_sinks import match_manifests
     from sec_overlay.route_census import load_census
@@ -361,9 +365,16 @@ def _act_recall_gate(ctx: AuditContext) -> None:
 
     profile_dict = json.loads((ctx.ws.kb / "scan-profile.json").read_text())
     sites = load_census(ctx.ws)
-    gaps = check_census_routes(sites, profile_dict)
+    route_gaps = check_census_routes(sites, profile_dict)
+    gaps = list(route_gaps)
     gaps += check_catalog_classes(match_manifests(ctx.target), profile_dict)
     record_route_gaps(ctx.ws, gaps)
+    profile_dict["route_summary"] = {
+        "total": len(sites),
+        "covered": len(sites) - len(route_gaps),
+        "uncovered": [g["id"] for g in route_gaps],
+    }
+    (ctx.ws.kb / "scan-profile.json").write_text(json.dumps(profile_dict, indent=2))
     _write_gate(ctx.ws, "recall-gate", [], [])
 
 

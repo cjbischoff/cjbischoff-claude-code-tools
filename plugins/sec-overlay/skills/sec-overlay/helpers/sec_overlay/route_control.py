@@ -76,15 +76,18 @@ def _gap(item: str, kind: str) -> dict:
 def check_recon_routes(table: dict, profile: dict) -> list[dict]:
     """Gap for any table route the recon profile does not summarise.
 
-    ``route_summary`` is an optional recon-emitted field; when absent every table
-    route is conservatively flagged as a logged gap (never-drop invariant).
+    ``route_summary`` is now a derived object the recall gate writes
+    (``total``/``covered``/``uncovered``), not the legacy list of route strings.
+    Only the legacy list form is read here; any other shape leaves every table
+    route flagged as a logged gap (never-drop invariant).
     A census-sourced table returns no gaps here: ``check_census_routes`` owns
     that comparison, since a census route carries a method prefix
     ``route_summary`` can never contain.
     """
     if table.get("source") == "route-census":
         return []
-    summarised = {str(r) for r in profile.get("route_summary", [])}
+    raw = profile.get("route_summary")
+    summarised = {str(r) for r in raw} if isinstance(raw, list) else set()
     return [
         _gap(r["route"], "route") for r in table.get("routes", []) if r["route"] not in summarised
     ]

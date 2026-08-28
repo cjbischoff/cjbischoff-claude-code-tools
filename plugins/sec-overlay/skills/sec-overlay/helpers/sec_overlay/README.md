@@ -1279,3 +1279,12 @@ a "Coverage & limitations" section from it. `kb/coverage-ledger.json` is now the
 source; `report.py` renders it through `coverage_ledger.render_markdown` unchanged.
 `review_coverage.py`'s and `coverage_ledger.py`'s module docstrings no longer name the deleted
 module; `test_frozen_contract.py` pins only `models.py` and `evidence.py`.
+
+`route_summary` is a derived field, not a recon output (REQ-11). `profile.py` carries it as an
+optional object on `ScanProfile`, and `validate_profile` rejects any non-object value, so the
+legacy list of route strings no longer validates. `driver._act_recall_gate` computes it from the
+route census after recon: `total` census sites, `covered` sites the profile mentions, and
+`uncovered` ids it never mentions, then writes the profile back. The gate holds
+`covered == total - len(uncovered)`. `route_control.check_recon_routes` still reads the legacy
+list form for the non-census table, and treats any other shape as "nothing summarised" so every
+table route stays a logged gap. `agents/recon.md` no longer claims the field.

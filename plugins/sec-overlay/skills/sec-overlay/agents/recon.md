@@ -115,10 +115,10 @@ matching the schema exactly (all 8 required fields present, correct types). Then
 return a 3–5 line summary: languages, top frameworks, chosen attack classes, and
 anything notable (e.g. "no network calls found → ssrf omitted").
 
-Also emit a `route_summary` field: the list of `entrypoints` strings you already recorded in
-step 3, restated verbatim as your external route table. This lets the architecture and
-threat-model phases confirm every route you found downstream got covered — do not summarise
-a subset, and do not invent routes beyond what `entrypoints` already lists.
+Do not emit a `route_summary` field. The recall gate derives it from the route census after
+you finish, by checking which census routes your `entrypoints` and `attack_surface` mention.
+Name every route you investigate in those two fields — the derivation counts a route as
+covered only when the profile mentions it, never by any field you write yourself.
 
 ## Rules
 - Evidence-based only: never list an attack class, framework, or entrypoint you
