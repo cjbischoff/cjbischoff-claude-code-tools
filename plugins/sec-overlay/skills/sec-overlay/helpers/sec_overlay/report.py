@@ -259,7 +259,6 @@ def to_markdown(
     findings: list[Finding],
     token_spend: dict[str, int] | None = None,
     needs_deployment: list[Finding] | None = None,
-    coverage: dict | None = None,
     coverage_ledger: dict | None = None,
     has_redteam_plan: bool = False,
     patch_statuses: dict[str, PatchStatus] | None = None,
@@ -283,9 +282,6 @@ def to_markdown(
         token_spend: Optional per-phase token totals.
         needs_deployment: Findings real-but-unprovable from source alone. Reported
             separately, never counted as confirmed.
-        coverage: Optional ``compute_coverage`` output (``kb/coverage.json``); when given,
-            appends a "Coverage & limitations" section so a clean scan carries its
-            denominator (O-007/O-033). Omitted entirely when ``None``.
         coverage_ledger: Optional coverage-completeness ledger (``kb/coverage-ledger.json``);
             when given, appends a "Coverage completeness" section. Omitted when ``None``.
         has_redteam_plan: True when ``redteam-plan.md`` exists in the reports dir; adds a
@@ -404,29 +400,6 @@ def to_markdown(
         for f in external:
             lines += ["", render_ndt(f)]
 
-    if coverage:
-        lines += [
-            "",
-            "## Coverage & limitations",
-            "",
-            (
-                "_SAST coverage by language. `none` = no mechanical dataflow OR pattern "
-                "analysis (LLM shape-hunting only)._"
-            ),
-            "",
-            "| Language | Files | Tier |",
-            "|----------|-------|------|",
-        ]
-        for lang in coverage.get("languages", []):
-            lines.append(f"| {lang['language']} | {lang['files']} | {lang['tier']} |")
-        uncovered = ", ".join(coverage.get("uncovered", [])) or "none"
-        lines += [
-            "",
-            (
-                f"Dataflow coverage: {coverage.get('dataflow_pct', 0)}% of counted "
-                f"source. Uncovered (LLM-only): {uncovered}."
-            ),
-        ]
     if has_redteam_plan:
         lines += [
             "",
@@ -587,8 +560,6 @@ def write_report(
     ndt = [f for f in all_findings if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING]
     reportable = collapse_clusters(reportable)
     ndt = collapse_clusters(ndt)
-    coverage_path = ws.kb / "coverage.json"
-    coverage = json.loads(coverage_path.read_text()) if coverage_path.exists() else None
     cl_path = ws.kb / "coverage-ledger.json"
     if not cl_path.exists():
         from sec_overlay.coverage_ledger import build_coverage_ledger  # local: avoid cycle
@@ -625,7 +596,6 @@ def write_report(
         to_markdown(
             reportable,
             needs_deployment=ndt,
-            coverage=coverage,
             coverage_ledger=coverage_ledger,
             has_redteam_plan=has_redteam_plan,
             patch_statuses=patch_statuses,

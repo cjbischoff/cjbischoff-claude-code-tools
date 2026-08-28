@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import shutil
@@ -12,7 +11,6 @@ from pathlib import Path
 
 from sec_overlay.campaign import record_stage
 from sec_overlay.codeql import CodeQLError, codeql_config_trusted, qlpack_installed, run_codeql
-from sec_overlay.coverage import compute_coverage
 from sec_overlay.exclusions import apply_exclusions, load_exclusions
 from sec_overlay.models import Finding
 from sec_overlay.normalize import normalize
@@ -150,12 +148,10 @@ def run_prefilter(
 
     Returns:
         ``{"candidates", "backends_run", "skipped", "failed", "excluded", "dropped_nonsecurity",
-        "skipped_reasons", "coverage"}`` where ``failed`` is a list of ``{"backend", "error"}``,
+        "skipped_reasons"}`` where ``failed`` is a list of ``{"backend", "error"}``,
         ``excluded`` is the count of suppressed findings, ``dropped_nonsecurity`` is the count of
-        unknown-class semgrep findings dropped when security_only is enabled, ``skipped_reasons``
-        records why each backend was not run, and ``coverage`` is the per-language dataflow/
-        pattern-only/none breakdown from :func:`sec_overlay.coverage.compute_coverage` (also
-        persisted to ``kb/coverage.json``).
+        unknown-class semgrep findings dropped when security_only is enabled, and
+        ``skipped_reasons`` records why each backend was not run.
 
     Raises:
         RuntimeError: ``strict`` (the default) and a planned backend is skipped or failed.
@@ -305,15 +301,12 @@ def run_prefilter(
     _assign_candidate_ids(kept)
 
     write_findings(ws, kept)
-    coverage = compute_coverage(profile, ran, target)
-    ws.kb.mkdir(parents=True, exist_ok=True)
-    (ws.kb / "coverage.json").write_text(json.dumps(coverage, indent=2))
     _raise_on_incomplete_backends(skipped_reasons=skipped_reasons, failed=failed, strict=strict)
     from sec_overlay.run import receipt  # local: avoid import cycle
 
     # REQ-16: the receipt must exist before state says the phase is done, or a
     # fence abort in the driver's on_complete leaves a done stage with no receipt.
-    receipt(ws, "prefilter", counts=finding_counts(ws), artifacts=[str(ws.kb / "coverage.json")])
+    receipt(ws, "prefilter", counts=finding_counts(ws))
     record_stage(ws, "prefilter")
     return {
         "candidates": len(kept),
@@ -323,5 +316,4 @@ def run_prefilter(
         "excluded": len(dropped),
         "dropped_nonsecurity": dropped_nonsecurity,
         "skipped_reasons": skipped_reasons,
-        "coverage": coverage,
     }

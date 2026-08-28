@@ -6,6 +6,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- `kb/coverage-ledger.json` is now the single coverage source (REQ-04): `coverage.py` is
+  deleted, `prefilter.py` no longer computes a per-language dataflow percentage or writes
+  `kb/coverage.json`, and `report.py` no longer reads that file or renders a second, competing
+  "Coverage & limitations" section from it. `kb/coverage.json` was the transcript's last
+  surviving backend-provenance trace before REQ-16 made the `prefilter` receipt survive a
+  fence abort; the receipt call now drops its `artifacts=` argument along with the file.
 - An unknown finding key now survives a load-and-save round trip (REQ-27):
   `workspace.read_findings` stashes any key not in `Finding.__dataclass_fields__` on the
   returned instance, in sorted order, and `workspace.write_findings` merges it back before

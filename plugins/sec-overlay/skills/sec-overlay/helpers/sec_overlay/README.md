@@ -577,8 +577,8 @@ rather than sealing over a `pending`/`in_review` entry). `diffscope.py` (additiv
 pre-existing symbol in both is unchanged. `cli.py` gained the `review` subparser and
 `run_review`, matching the existing `scan`/`memory`/`audit` structure. Tracer scope only:
 batching, exit codes 2/3, the full extension allowlist, and the diff-line size cap land in a
-later plan. `coverage.py`, `models.py`, and `evidence.py` — the frozen milestone contracts —
-are untouched; no new runtime dependency. See the module map entries.
+later plan. `models.py` and `evidence.py` — the frozen milestone contracts — are untouched; no
+new runtime dependency. See the module map entries.
 
 `diffscope.py` and `cli.py` reached full ref-validation behavior: the allowlist pattern now
 also permits `~` (so `HEAD~1`-style ancestor refs validate), `changed_file_records` parses the
@@ -1272,3 +1272,8 @@ these set scores exactly as it did before.
 `patch_status.check_patch_applied` (REQ-01) now runs the forward `git apply --check` before the
 reverse one: a patch counts as `APPLIED` only when it does NOT apply forward AND does apply
 reversed, so an additive patch that has not landed can never read as live.
+
+`coverage.py` is gone (REQ-04). `prefilter.py` no longer computes a per-language dataflow
+percentage or writes `kb/coverage.json`, and `report.py` no longer reads that file or renders
+a "Coverage & limitations" section from it. `kb/coverage-ledger.json` is now the single coverage
+source; `report.py` renders it through `coverage_ledger.render_markdown` unchanged.
