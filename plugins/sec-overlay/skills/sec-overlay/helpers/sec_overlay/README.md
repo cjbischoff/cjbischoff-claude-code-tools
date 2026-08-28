@@ -1288,3 +1288,15 @@ route census after recon: `total` census sites, `covered` sites the profile ment
 `covered == total - len(uncovered)`. `route_control.check_recon_routes` still reads the legacy
 list form for the non-census table, and treats any other shape as "nothing summarised" so every
 table route stays a logged gap. `agents/recon.md` no longer claims the field.
+
+`dependency_sinks.indicator_classes(root)` routes a class on a source indicator, not only on a
+manifest (REQ-25). A Bazel or vendored build declares no `go.mod`, so `match_manifests` returns
+nothing and the target's whole dependency-sink surface stays unrouted. The new matcher walks the
+same skip-list `match_manifests` uses, reads every file whose suffix is in `_SOURCE_SUFFIXES`,
+and returns the sorted classes of each catalog entry with at least one indicator token present.
+One hit is enough: an entry's `indicators` list holds alternative call shapes, not a conjunction.
+`partition.reconcile_plan` unions the two matchers under its existing `target_root` keyword, so a
+class already planned is still never duplicated and a planned class is still never removed. The
+matcher is deliberately substring-based and therefore over-inclusive — an unrelated file holding
+`Template(` routes `ssti`. That is the recall-biased side of the trade: a spurious investigate
+agent costs one wave, an unrouted class costs the whole class.

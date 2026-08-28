@@ -220,6 +220,59 @@ def matched_classes(root: str | Path, *, path: Path = CATALOG_PATH) -> list[str]
     return sorted({e.cls for e in match_manifests(root, path=path)})
 
 
+_SOURCE_SUFFIXES = {".go", ".py", ".js", ".ts", ".rb", ".java", ".rs", ".php", ".cs", ".rego"}
+
+
+def _source_files(root: Path) -> list[Path]:
+    """Collect source files under ``root``, skipping vendored and cache trees."""
+    found: list[Path] = []
+    stack = [root]
+    while stack:
+        current = stack.pop()
+        try:
+            children = list(current.iterdir())
+        except OSError:
+            continue
+        for child in children:
+            if child.is_dir():
+                if child.name not in _SKIP_DIRS:
+                    stack.append(child)
+            elif child.suffix in _SOURCE_SUFFIXES:
+                found.append(child)
+    return found
+
+
+def indicator_classes(root: str | Path, *, path: Path = CATALOG_PATH) -> list[str]:
+    """Return the attack classes of every catalog entry an indicator API reaches.
+
+    A manifest match is not the only evidence a target uses a dependency sink. A
+    Bazel or vendored build declares no manifest, so routing on manifests alone
+    leaves the whole attack surface unrouted (R-34).
+
+    Args:
+        root: Target repository root.
+        path: Catalog path; defaults to the shipped reference file.
+
+    Returns:
+        The sorted, deduplicated classes of every entry with at least one
+        indicator hit. One hit is enough: an entry lists alternative call shapes,
+        not a conjunction.
+
+    Example:
+        >>> indicator_classes("/repo/with/rego/New/call")  # doctest: +SKIP
+        ['ssrf']
+    """
+    entries = load_catalog(path)
+    found: set[str] = set()
+    for source in _source_files(Path(root)):
+        try:
+            text = source.read_text(errors="replace")
+        except OSError:
+            continue
+        found.update(e.cls for e in entries if any(ind in text for ind in e.indicators))
+    return sorted(found)
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI: list the catalog, or the entries a target repo matches."""
     parser = argparse.ArgumentParser(prog="sec-overlay-dependency-sinks")

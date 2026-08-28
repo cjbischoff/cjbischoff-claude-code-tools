@@ -6,6 +6,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- `dependency_sinks.indicator_classes(root)` routes a dependency-sink class on a source
+  indicator, not only on a manifest declaration (REQ-25). A Bazel or vendored build declares
+  no manifest, so `match_manifests` alone left its whole dependency-sink surface unrouted. The
+  matcher reads target source files under the existing vendored-tree skip list and returns the
+  sorted classes of every catalog entry with at least one indicator token present.
+  `partition.reconcile_plan` unions it with `matched_classes` under the existing `target_root`
+  keyword; a planned class is still never removed and never duplicated.
 - `route_summary` is a derived field on `ScanProfile` (REQ-11). `driver._act_recall_gate`
   computes it from the route census after recon — `total` census sites, `covered` sites the
   profile mentions, and `uncovered` ids it never mentions — then writes the profile back.
