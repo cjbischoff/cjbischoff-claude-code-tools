@@ -1,8 +1,7 @@
-"""Per-file review-coverage tracking and the terminal manifest seal (D-01, D-03, D-04).
+"""Per-file review-coverage tracking and the terminal manifest seal (D-03, D-04).
 
-Never touches the shipped `coverage.py` — that module is a separate, frozen milestone
-contract (D-01). Only `CoverageManifest` edits the coverage-manifest JSON (D-03); the seal
-is a 2-state terminal (`complete`/`partial`), not the 4-state enum an earlier tool used (D-04).
+Only `CoverageManifest` edits the coverage-manifest JSON (D-03). The seal is a 2-state
+terminal (`complete`/`partial`), not the 4-state enum an earlier tool used (D-04).
 """
 
 from __future__ import annotations

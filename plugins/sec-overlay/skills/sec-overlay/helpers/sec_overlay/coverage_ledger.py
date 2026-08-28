@@ -1,10 +1,9 @@
 """Machine-checked coverage-completeness ledger (kb/coverage-ledger.json).
 
-Complements coverage.py's per-language tool-tier accounting with a surface-level
-completeness ledger whose central invariant is enforced in code: a scan may not claim
-``completeness == "complete"`` while any surface is ``needs_follow_up``, any item is
-deferred, or any question is still open. Keeps "gaps logged, never silently dropped" a
-machine fact, not a promise.
+The single coverage source (REQ-04). Its central invariant is enforced in code: a scan
+may not claim ``completeness == "complete"`` while any surface is ``needs_follow_up``,
+any item is deferred, or any question is still open. Keeps "gaps logged, never silently
+dropped" a machine fact, not a promise.
 """
 
 from __future__ import annotations

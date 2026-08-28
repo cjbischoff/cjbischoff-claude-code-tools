@@ -6,6 +6,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- Two module docstrings still named the deleted `coverage.py` (REQ-04):
+  `review_coverage.py`'s docstring called it "shipped" and a "frozen milestone contract" — it
+  was never one of the two files `test_frozen_contract.py` pins (`models.py`, `evidence.py`
+  only) — and `coverage_ledger.py`'s docstring claimed to complement its per-language
+  accounting. Both now describe the code as it stands: `coverage_ledger.py` is the single
+  coverage source.
 - `kb/coverage-ledger.json` is now the single coverage source (REQ-04): `coverage.py` is
   deleted, `prefilter.py` no longer computes a per-language dataflow percentage or writes
   `kb/coverage.json`, and `report.py` no longer reads that file or renders a second, competing
