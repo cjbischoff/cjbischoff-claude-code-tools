@@ -1393,3 +1393,11 @@ and writes no `kb/coverage.json`. `test_report_renders_coverage_section` and
 deleted behaviour — are deleted with it, and so is `test_coverage.py` (its
 whole module is gone). `test_a_partial_ledger_claims_no_full_coverage`
 (REQ-04) already passed — a pre-existing regression guard, not a red test.
+
+New `test_profile.py::test_from_dict_accepts_a_route_summary_key` and
+`::test_validate_profile_rejects_a_non_object_route_summary`, plus
+`test_driver.py::test_recall_gate_derives_route_summary_from_the_census`
+(REQ-11, RED). `route_summary` moves from a hand-authored recon field to a
+derived census-coverage object; the three tests fail today because
+`ScanProfile` has no such field, `validate_profile` names no such error, and
+the recall gate writes no such key back into the profile.

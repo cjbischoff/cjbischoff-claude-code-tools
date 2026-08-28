@@ -487,3 +487,23 @@ def test_recall_gate_phase_records_an_unmentioned_census_route_as_a_ledger_gap(t
     ledger = json.loads((ctx.ws.kb / "coverage-ledger.json").read_text())
     assert any(s["disposition"] == "needs_follow_up" for s in ledger["surfaces"])
     assert ledger["completeness"] == "partial"
+
+
+def test_recall_gate_derives_route_summary_from_the_census(tmp_path):
+    """route_summary must report census coverage, not restate entrypoints (REQ-11).
+
+    A census route the profile never names is uncovered; a route it names is not.
+    """
+    from sec_overlay.driver import DETERMINISTIC_ACTIONS
+
+    ctx = _ctx(tmp_path, target=str(_ROUTE_FIXTURE))
+    DETERMINISTIC_ACTIONS["route-census"](ctx)
+    (ctx.ws.kb / "scan-profile.json").write_text(
+        json.dumps({"entrypoints": ["/policy/evaluate"], "attack_surface": []})
+    )
+    DETERMINISTIC_ACTIONS["recall-gate"](ctx)
+    summary = json.loads((ctx.ws.kb / "scan-profile.json").read_text())["route_summary"]
+    assert summary["total"] >= 2
+    assert any("/health" in u for u in summary["uncovered"])
+    assert not any("/policy/evaluate" in u for u in summary["uncovered"])
+    assert summary["covered"] == summary["total"] - len(summary["uncovered"])

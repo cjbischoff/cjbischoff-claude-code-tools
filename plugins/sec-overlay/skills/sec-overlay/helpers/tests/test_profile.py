@@ -134,3 +134,21 @@ def test_profile_required_includes_attack_surface_evidence():
     from sec_overlay.profile import _REQUIRED
     assert "attack_surface_evidence" in _REQUIRED
     assert "subsystems" not in _REQUIRED
+
+
+def test_from_dict_accepts_a_route_summary_key():
+    """A recon payload carrying route_summary must not crash from_dict (REQ-11)."""
+    from sec_overlay.profile import ScanProfile
+
+    p = ScanProfile.from_dict(
+        {"route_summary": {"total": 2, "covered": 1, "uncovered": ["GET /health"]}}
+    )
+    assert p.route_summary["uncovered"] == ["GET /health"]
+
+
+def test_validate_profile_rejects_a_non_object_route_summary():
+    """route_summary is a derived object, not the old list of route strings (REQ-11)."""
+    from sec_overlay.profile import validate_profile
+
+    errors = validate_profile({"route_summary": ["/health"]})
+    assert any("route_summary" in e for e in errors)

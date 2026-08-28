@@ -6,6 +6,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- Failing route-summary tests for REQ-11: `test_profile.py`'s
+  `test_from_dict_accepts_a_route_summary_key` and
+  `test_validate_profile_rejects_a_non_object_route_summary` pin the new field and its shape
+  guard, and `test_driver.py`'s `test_recall_gate_derives_route_summary_from_the_census` pins
+  that the recall gate writes a derived coverage summary back into the profile.
 - `sec_overlay/README.md` carried two paragraphs stating the post-REQ-04 module map: one on
   `coverage.py`'s removal, a second repeating that `coverage_ledger.py` is the single coverage
   source and adding process notes on the docstring fix. Folded into one paragraph that states
