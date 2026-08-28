@@ -24,6 +24,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- Failing saturation-loop tests for REQ-24: `test_driver.py`'s
+  `test_findings_gate_records_a_discovery_wave`,
+  `test_repeated_findings_gate_runs_reach_a_terminal_reason`, and
+  `test_a_saturated_ledger_stops_re_dispatching_investigate` pin that the findings gate folds a
+  discovery wave and that a terminal ledger stops another investigate dispatch.
+  `test_contracts.py::test_investigate_prompt_carries_wave_language` pins that the prompt names
+  the bounded loop it runs inside.
 - Failing indicator-routing tests for REQ-25: `test_dependency_sinks.py`'s
   `test_indicator_classes_routes_without_a_manifest` and
   `test_indicator_classes_is_empty_without_an_indicator` pin a new `indicator_classes`

@@ -1416,3 +1416,14 @@ A Bazel or vendored target declares no manifest, so manifest matching alone
 leaves its whole attack surface unrouted. The first two fail today with
 `ImportError: cannot import name 'indicator_classes'`; the third fails because
 `reconcile_plan` returns `['authz']` with no `ssrf`.
+
+Four more tests land RED for REQ-24: `test_driver.py`'s
+`test_findings_gate_records_a_discovery_wave`,
+`::test_repeated_findings_gate_runs_reach_a_terminal_reason`,
+`::test_a_saturated_ledger_stops_re_dispatching_investigate`, and
+`test_contracts.py::test_investigate_prompt_carries_wave_language`. The
+discovery ledger exists as a library but nothing calls it, so the
+loop-until-dry bound is prose in a manual, not a mechanism. The first two fail
+with `FileNotFoundError` on `kb/discovery-ledger.json`, the third with
+`ImportError: cannot import name '_investigate_is_saturated'`, and the fourth
+because `agents/investigate.md` names neither a wave nor saturation.
