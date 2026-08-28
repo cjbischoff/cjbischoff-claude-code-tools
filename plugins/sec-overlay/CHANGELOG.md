@@ -6,6 +6,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- `sec_overlay/README.md` carried two paragraphs stating the post-REQ-04 module map: one on
+  `coverage.py`'s removal, a second repeating that `coverage_ledger.py` is the single coverage
+  source and adding process notes on the docstring fix. Folded into one paragraph that states
+  the module map once, keeping the fact only the second paragraph carried: the two docstrings no
+  longer name the deleted module, and `test_frozen_contract.py` pins only `models.py` and
+  `evidence.py`.
 - Two module docstrings still named the deleted `coverage.py` (REQ-04):
   `review_coverage.py`'s docstring called it "shipped" and a "frozen milestone contract" — it
   was never one of the two files `test_frozen_contract.py` pins (`models.py`, `evidence.py`

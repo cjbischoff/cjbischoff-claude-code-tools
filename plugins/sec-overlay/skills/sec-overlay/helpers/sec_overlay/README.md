@@ -1277,9 +1277,5 @@ reversed, so an additive patch that has not landed can never read as live.
 percentage or writes `kb/coverage.json`, and `report.py` no longer reads that file or renders
 a "Coverage & limitations" section from it. `kb/coverage-ledger.json` is now the single coverage
 source; `report.py` renders it through `coverage_ledger.render_markdown` unchanged.
-
-Fix round 1 (REQ-04): `review_coverage.py`'s module docstring no longer calls `coverage.py`
-"shipped" or a "frozen milestone contract" — that module is deleted, and it was never one of
-the two files `test_frozen_contract.py` pins (`models.py`, `evidence.py` only).
-`coverage_ledger.py`'s module docstring no longer claims to complement `coverage.py`'s
-accounting; it now states plainly that it is the single coverage source.
+`review_coverage.py`'s and `coverage_ledger.py`'s module docstrings no longer name the deleted
+module; `test_frozen_contract.py` pins only `models.py` and `evidence.py`.
