@@ -4,6 +4,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- Failing tests pin the opt-in proof-by-execution lane (REQ-30). `helpers/tests/test_prove.py` asserts the `scan_options.prove_findings` flag gate, the `reproduction` receipt vocabulary, the scope soundness guard (an `entrypoint` proof promotes an auto-confirmable class, a `slice` proof never does, `sqli` never does), the two degradation strings, the phase-table position, `Workspace.repro`, the schema object, the driver skip, and the preflight toolchain report. All nineteen fail: `sec_overlay.prove` does not exist.
+
 ### Fixed
 
 - A Go CodeQL database no longer builds inside the target tree (REQ-14). `codeql.run_codeql` appends `--build-mode=none` to `codeql database create` for Go only, because the default Go extractor autobuilds and writes into the reviewed source. `prefilter.run_prefilter` tags each CodeQL work unit `codeql:<lang>` so its result fold can record `skipped_reasons["codeql-go"] = "build-unfenceable"` when a Go unit fails; the `failed` entry keeps the bare backend name `codeql`, and `codeql-go` never joins `backends_run`. Trade-off: `--build-mode=none` resolves fewer cross-package references, so a Go target loses some dataflow an autobuilt database would find.
