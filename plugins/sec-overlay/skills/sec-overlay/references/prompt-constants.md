@@ -200,8 +200,8 @@ sentences on one topic; numbered/bulleted list for any 3+ step sequence. Lexical
 are directional: one word per meaning (pick one verb per action and reuse it), verb over
 noun form, define kept domain terms once in the glossary. Preserve every hedge and scope
 qualifier — "may have failed" never becomes "failed"; when the tense rule and a hedge
-conflict, the hedge wins. Put the one-time statement "Prose follows an ASD-STE100-inspired
-clarity standard (structural rules enforced; lexical dictionary not verified)." in the
-document front matter. A deterministic linter rejects sentence/semicolon/paragraph
+conflict, the hedge wins. Put this one-time statement in the document front matter:
+"Prose follows an ASD-STE100-inspired clarity standard.
+A linter enforces the structural rules. The lexical dictionary stays unverified." A deterministic linter rejects sentence/semicolon/paragraph
 violations, so write compliant the first time. Diagram labels are governed by
 mermaid-caps.md, not this block.

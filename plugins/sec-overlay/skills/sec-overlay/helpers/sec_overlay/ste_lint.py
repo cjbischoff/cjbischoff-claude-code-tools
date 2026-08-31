@@ -42,6 +42,10 @@ def _split_sentences(cleaned: str) -> list[str]:
 def _prose_blocks(text: str) -> tuple[list[str], list[str]]:
     """Split markdown into linted prose blocks, dropping exempt regions.
 
+    A list item that wraps onto an indented continuation line is one block, not
+    two — a hard-wrapped sentence must count its words once. An unindented line
+    after a list item starts a new paragraph instead.
+
     Returns:
         ``(blocks, errors)`` — an unterminated code fence yields no blocks for
         the remainder of the file and reports an error instead of linting
@@ -51,32 +55,47 @@ def _prose_blocks(text: str) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     in_fence = False
     current: list[str] = []
+    item: list[str] = []
+
+    def _flush() -> None:
+        if item:
+            blocks.append(" ".join(item))
+            item.clear()
+        if current:
+            blocks.append(" ".join(current))
+            current.clear()
+
     for ln in text.splitlines():
         stripped = ln.strip()
         if stripped.startswith("```"):
+            _flush()
             in_fence = not in_fence
             continue
         if in_fence:
             continue
         if not stripped:
-            if current:
-                blocks.append(" ".join(current))
-                current = []
+            _flush()
             continue
         if stripped.startswith(("#", "%%")):
+            _flush()
             continue
         if stripped.startswith("|"):
+            _flush()
             if set(stripped) <= set("|-: "):
                 continue  # separator row
             cells = [c.strip() for c in stripped.strip("|").split("|")]
             blocks.extend(c for c in cells if c and len(c.split()) > 1)
             continue
         if stripped.startswith(("-", "*", "+")) or re.match(r"^\d+[.)]\s", stripped):
-            blocks.append(stripped.lstrip("-*+ ").lstrip("0123456789.) "))
+            _flush()
+            item.append(stripped.lstrip("-*+ ").lstrip("0123456789.) "))
             continue
+        if item and ln[:1].isspace():
+            item.append(stripped)
+            continue
+        _flush()
         current.append(stripped)
-    if current:
-        blocks.append(" ".join(current))
+    _flush()
     if in_fence:
         errors.append(_UNBALANCED_FENCE)
     return blocks, errors

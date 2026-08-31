@@ -1416,3 +1416,13 @@ Both existing callers — `redteam._signal` and `report.render_ndt` — already 
 `signal_lines`, so neither changed. Trade-off: a channel object is validated by
 `references/finding.schema.json` only. A malformed entry that is not a dict is skipped in silence
 rather than reported.
+
+### The STE linter no longer splits a wrapped list item (REQ-12)
+
+`ste_lint._prose_blocks` folded every list item into its own block and then let an indented continuation line fall through to the paragraph buffer. A hard-wrapped bullet therefore became two blocks, and a sentence spread across the wrap had its words counted twice — once per half. Neither half could exceed the 25-word cap on its own, so the linter passed prose it should reject.
+
+The splitter now keeps a separate `item` buffer. A list marker starts it, an indented continuation line appends to it, and a shared `_flush()` closes it on a blank line, a heading, a table row, a code fence, a new list item, or the end of the text. An unindented line after a list item flushes the item and starts a paragraph, so a paragraph that follows a list stays its own block.
+
+`_flush()` also runs on a heading, a table row, and a fence line, which the old loop did not do. Those lines used to leave the paragraph buffer open, so prose before and after a heading merged into one block and could exceed the six-sentence paragraph cap without a report. The full suite stays green, so no existing document changes its verdict.
+
+`references/prompt-constants.md` also carried a sentence its own linter rejects: the mandated front-matter statement used a semicolon, which the `STE_PROSE` block forbids. It now reads as three sentences. Trade-off: the rest of `prompt-constants.md` still carries pre-existing violations that no gate checks — the file is a rule book, not a generated run artifact, and REQ-12 does not ask for a full-file cleanup.

@@ -288,3 +288,5 @@ field (`models.py` is byte-pinned by the D-15 frozen-contract test). The schema 
 `finding.schema.json`'s `expected_signal` now also accepts an array (REQ-34), alongside the
 object, the string, and null. The array holds observation-channel objects that `agents/redteam.md`
 writes and `helpers/sec_overlay/render_util.py` renders.
+
+The `STE_PROSE` block's mandated front-matter statement is now three sentences: "Prose follows an ASD-STE100-inspired clarity standard. A linter enforces the structural rules. The lexical dictionary stays unverified." The prior single sentence used a semicolon, which the same block forbids and `ste_lint.lint_prose` reports as an error (REQ-12).

@@ -4,6 +4,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Fixed
+
+- The STE rule no longer breaks its own linter (REQ-12). `references/prompt-constants.md` mandated a front-matter sentence that used a semicolon, which the same block forbids; it now reads as three sentences. `ste_lint._prose_blocks` folds a wrapped list item into one block instead of two, so a sentence spread across a hard wrap has its words counted once. The splitter also closes an open paragraph on a heading, a table row, and a code fence, which it did not do before, so prose on either side of a heading is no longer merged into one block. Trade-off: the rest of `prompt-constants.md` still carries pre-existing lint violations that no gate checks.
+
 ### Added
 
 - `tests/test_ste_lint_wrapped.py` pins the STE self-consistency rule (REQ-12). Five tests assert that the sentence `prompt-constants.md` mandates lints clean, that the file publishes the reworded three-sentence form, and that `_prose_blocks` folds a wrapped list item into one block while keeping an unindented paragraph separate. Two fail: the file still carries the semicolon form, and a continuation line still becomes its own block.
