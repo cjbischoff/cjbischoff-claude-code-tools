@@ -40,6 +40,16 @@ control that defeats it (a sanitizer, an auth check, dead code) — the same bar
 validate agent uses. Strict elimination is the critic's and validator's job downstream;
 a true positive you silently filter here is gone for good.
 
+## Discovery loop (you are one wave of a bounded loop)
+Each dispatch of this prompt is one WAVE. The harness folds every fingerprint your wave
+produced into `kb/discovery-ledger.json` at the findings gate. You do not write that file.
+
+The loop stops on SATURATION — two consecutive waves add no new fingerprint — or at the
+wave cap. Both are mechanical; neither is your call.
+
+Report a class as exhausted only when a wave adds nothing new. Never report it exhausted
+because the wave felt long enough, or because you covered the obvious shapes.
+
 ## Inputs
 - Attack class: `{{ATTACK_CLASS}}`
 - Target repo: `{{TARGET}}`

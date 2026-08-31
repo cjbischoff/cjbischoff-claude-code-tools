@@ -16,8 +16,16 @@ from sec_overlay import cost
 from sec_overlay.calibrate import calibrate_findings
 from sec_overlay.campaign import record_stage
 from sec_overlay.dedupe import dedupe_findings
+from sec_overlay.discovery_ledger import (
+    is_terminal,
+    load_ledger,
+    new_ledger,
+    record_wave,
+    save_ledger,
+)
 from sec_overlay.factcheck import apply_verdict, validate_verdict
 from sec_overlay.findings_gate import validate_citations, validate_findings
+from sec_overlay.fingerprint import fingerprint
 from sec_overlay.fp_feedback import render_fp_feedback
 from sec_overlay.partition import demote_noise, reconcile_plan, unrouted_candidate_classes
 from sec_overlay.phases import (
@@ -222,7 +230,43 @@ def _act_prefilter(ctx: AuditContext) -> None:
     run_prefilter(ctx.ws, ctx.target, _load_profile(ctx))
 
 
+def _record_discovery_wave(ctx: AuditContext) -> None:
+    """Fold this pass's finding fingerprints into the discovery ledger (REQ-24).
+
+    ``findings-gate`` is the first deterministic phase after ``investigate``, so it
+    is the only mechanical hook the bounded discovery loop has. One gate run is one
+    wave. Runs before the gate's own validation, so a rejected wave still counts.
+
+    Args:
+        ctx: The audit context whose workspace holds the findings and the ledger.
+    """
+    try:
+        ledger = load_ledger(ctx.ws)
+    except (FileNotFoundError, json.JSONDecodeError):
+        ledger = new_ledger()
+    record_wave(ledger, [f.fingerprint or fingerprint(f) for f in read_findings(ctx.ws)])
+    save_ledger(ctx.ws, ledger)
+
+
+def _investigate_is_saturated(ws: Workspace) -> bool:
+    """True once the discovery ledger reached a terminal_reason (REQ-24).
+
+    Args:
+        ws: The campaign workspace.
+
+    Returns:
+        ``True`` when the ledger exists and carries a ``terminal_reason``;
+        ``False`` when it is absent or unreadable, so a missing ledger never
+        stops a wave that has not run yet.
+    """
+    try:
+        return is_terminal(load_ledger(ws))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return False
+
+
 def _act_findings_gate(ctx: AuditContext) -> None:
+    _record_discovery_wave(ctx)
     errors = validate_findings(ctx.ws)  # records its own stage too
     errors += validate_citations(ctx.ws, ctx.target)
     if errors:
@@ -448,6 +492,11 @@ def run_audit(
             continue
         distinct_outputs = tuple(p for p in phase.outputs if p not in phase.inputs)
         if distinct_outputs and all(p(ctx.ws).exists() for p in distinct_outputs):
+            if on_complete is not None:
+                on_complete(phase.name)
+            record_stage(ctx.ws, phase.name)
+            continue
+        if phase.name == "investigate" and _investigate_is_saturated(ctx.ws):
             if on_complete is not None:
                 on_complete(phase.name)
             record_stage(ctx.ws, phase.name)

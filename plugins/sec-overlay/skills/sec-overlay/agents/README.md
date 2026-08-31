@@ -111,6 +111,15 @@ flowchart TD
 On pass N>1, prior `rejected` findings are injected as `{{FP_FEEDBACK}}` negative examples so
 the agent doesn't re-raise known false positives.
 
+**The discovery loop is now mechanical (REQ-24).** `investigate.md`'s "Discovery loop" section
+tells the agent it is one **wave** of a bounded loop. The bound itself lives in the driver, not
+in the prompt: `driver._record_discovery_wave` folds the pass's finding fingerprints into
+`kb/discovery-ledger.json` on every `findings-gate` run, and `_investigate_is_saturated` reads
+that ledger back. Once `terminal_reason` is `saturated` (two consecutive waves add no new
+fingerprint) or `capped` (the wave cap), the driver records the `investigate` stage and advances
+instead of printing another dispatch block. The agent therefore cannot end the loop early by
+declaring a class exhausted, and cannot extend it past the cap.
+
 `investigate.md`'s allowed-tools list also documents an ast-grep absence check: `astgrep run
 --not <safe-pattern>` for a construction that omits its safe option, and `astgrep rule --file
 <path>` for a hand-written rule when Go's `kind`/`has` anchoring is needed (a bare selector-call

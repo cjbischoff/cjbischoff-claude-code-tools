@@ -1300,3 +1300,25 @@ class already planned is still never duplicated and a planned class is still nev
 matcher is deliberately substring-based and therefore over-inclusive — an unrelated file holding
 `Template(` routes `ssti`. That is the recall-biased side of the trade: a spurious investigate
 agent costs one wave, an unrouted class costs the whole class.
+
+The investigate saturation loop is now enforced by the driver, not by prose (REQ-24).
+`discovery_ledger` shipped as a complete library — `new_ledger`, `record_wave`, `is_terminal`,
+`save_ledger`, `load_ledger` — with no production caller, so the loop-until-dry bound existed
+only as an instruction in the operating manual. `driver._record_discovery_wave` folds one wave
+per `findings-gate` run: it loads the ledger (or starts a fresh one), records every current
+finding's fingerprint, and saves it back. It runs before the gate's own validation, so a wave
+whose findings the gate then rejects still counts as a wave — otherwise a repeatedly-rejected
+wave would loop forever. `driver._investigate_is_saturated` reads the ledger back in the dispatch
+loop; once `terminal_reason` is set, the driver records the `investigate` stage and continues
+instead of printing another dispatch block, so `next_actionable_phase` cannot return the phase
+again. A missing or unreadable ledger reads as not-saturated, so a wave that has not run yet is
+never skipped.
+
+The granularity is one wave per `findings-gate` run, not one per investigate agent. The gate is
+the first deterministic phase after `investigate`, so it is the only mechanical hook the loop
+has; a per-agent wave would need the agents to report back through a channel that does not exist.
+The cost is a coarser ledger: a fan-out of six classes that adds one new fingerprint counts as
+one productive wave, the same as a fan-out of one. `new_ledger()`'s defaults (`k=2`,
+`max_waves=5`) are used as-is — `profile.py:42` documents `scan_options.wave_k` and
+`scan_options.max_waves` as the knobs, but nothing reads them, and wiring them is a separate
+requirement.

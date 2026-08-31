@@ -6,6 +6,17 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- The investigate saturation loop is enforced by the driver (REQ-24). `discovery_ledger`
+  shipped as a complete library with no production caller, so the loop-until-dry bound was an
+  instruction in the operating manual rather than a mechanism.
+  `driver._record_discovery_wave` folds one wave per `findings-gate` run — it records every
+  current finding's fingerprint into `kb/discovery-ledger.json` before the gate validates, so a
+  rejected wave still counts. `driver._investigate_is_saturated` reads the ledger back in the
+  dispatch loop; once `terminal_reason` is `saturated` or `capped`, the driver records the
+  `investigate` stage and advances instead of printing another dispatch block. A missing or
+  unreadable ledger reads as not-saturated. `agents/investigate.md` gains a "Discovery loop"
+  section telling the agent it is one wave of a bounded loop, and that a class counts as
+  exhausted only when a wave adds nothing new.
 - `dependency_sinks.indicator_classes(root)` routes a dependency-sink class on a source
   indicator, not only on a manifest declaration (REQ-25). A Bazel or vendored build declares
   no manifest, so `match_manifests` alone left its whole dependency-sink surface unrouted. The
