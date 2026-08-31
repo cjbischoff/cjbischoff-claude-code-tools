@@ -1459,3 +1459,5 @@ mid-word — plus its `kb/gates/artifact-consistency.json` audit trail, its
 `scan_options.consistency_gate` opt-out, its degrade-to-no-op path on a workspace with no report,
 and its position between `artifact-review` and `postflight` in `PHASE_TABLE`. All twelve fail at
 collection with `ModuleNotFoundError: No module named 'sec_overlay.artifact_consistency'`.
+
+`test_report_optional_sections.py` pins REQ-33: the eight Part D elements a finding page must carry. It builds one `Finding`, stashes the eight keys on the finding overflow attribute that `workspace.read_findings` uses, and renders it. Five tests assert that every label appears, that a list value renders as bullets, that `exact_request` renders inside an ```` ```http ```` fence, that an absent key renders nothing, and that the condensed medium tier still carries the sections. Four of the five fail against `report.render_finding`, which has no reader for the overflow.

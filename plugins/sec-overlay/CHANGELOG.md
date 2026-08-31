@@ -6,6 +6,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Failing tests for REQ-33 in `helpers/tests/test_report_optional_sections.py`. They pin the eight Part D elements a finding page must carry: `attacker`, `privilege`, `exact_request`, `exfil_channels`, `library_version`, `refutation`, `negative_results`, and `baseline`. The fields ride the finding overflow rather than a `Finding` field, because `models.py` is byte-pinned by the D-15 frozen-contract test. Four of the five tests fail against the current `report.render_finding`.
+
 - A terminal artifact-consistency gate (REQ-31). The new `artifact-consistency` phase runs between
   `artifact-review` and `postflight`. It reconciles a finished run's own artifacts against each
   other: report cross-references resolve to files, every triage next-action names a `redteam-plan.md`
