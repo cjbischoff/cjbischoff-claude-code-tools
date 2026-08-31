@@ -25,12 +25,12 @@ Two facts are true of every module here:
 ```
 helpers/
 ├── pyproject.toml       stdlib-only; dev deps pytest/ruff/ty; line-length 100
-├── sec_overlay/         ~70 modules — the pipeline (this page's main subject)
+├── sec_overlay/         ~75 modules — the pipeline (this page's main subject)
 │   └── correlate/       cross-repo correlation subpackage — see cross-repo-correlation.md
 ├── bench/               dev-only detection benchmark
-├── tests/               81 pytest files, 595 tests
+├── tests/               120 pytest files, 1619 tests
 ├── fixtures/            golden JSON + a deliberately vulnerable test repo (excluded from this wiki)
-└── rules/               vendored semgrep rules (git submodule) + smoke.yaml
+└── rules/               vendored semgrep rules (gitignored shallow clone, NOT a git submodule) + smoke.yaml + the first-party rules/absence/ pack
 ```
 
 ## The pipeline these modules implement
@@ -46,21 +46,26 @@ flowchart TD
     NORM --> PART["partition.py<br/>group candidates by attack class"]
     PART --> INV(("investigate agents"))
     INV --> DED["dedupe.py<br/>refactor-resistant fingerprint"]
-    DED --> CLUS["cluster.py<br/>systemic clustering"]
+    DED --> CLUS["cluster.py<br/>systemic clustering (>=3 same-class/sink)"]
     CLUS --> GATE1["findings_gate.py<br/>schema + tool-receipt gate"]
     GATE1 --> LADDER(("critic / judge / validate agents"))
-    LADDER --> CAL["calibrate.py<br/>risk_score 1-10"]
+    LADDER --> CAL["calibrate.py<br/>risk_score 1-10, CVSS v4.0"]
     CAL --> CIT["citations.py<br/>attach ASVS/CodeGuard"]
     CIT --> PATCHV(("patch / validate-fix agents"))
     PATCHV --> VER["verify.py<br/>apply patch to COPY, re-scan"]
     VER --> GATE2["findings_gate.py"]
-    GATE2 --> RT(("redteam agents")) --> RTR["redteam.py<br/>render redteam-plan.md"]
-    RTR --> REP["report.py<br/>report.sarif + report.md"]
-    REP --> POST["postflight.py<br/>prior_context.json, durable"]
+    GATE2 --> REP["report.py<br/>report.sarif + report.md"]
+    REP --> SCORE["selfscore.py<br/>post-gate counts back to state"]
+    SCORE --> RT(("redteam agents")) --> RTR["redteam.py<br/>render redteam-plan.md"]
+    RTR --> AGATE["artifact_gate.py<br/>deterministic report self-check<br/>(requires redteam-plan.md)"]
+    AGATE --> AREV(("artifact-review agent, opus<br/>claim<->evidence over the report"))
+    AREV --> POST["postflight.py<br/>prior_context.json, durable, final phase"]
 ```
 *The deterministic spine of the pipeline in [pipeline.md](pipeline.md); the LLM agents plug in
 between the rectangles. Every step here records completion with
-`campaign.record_stage(ws, "<phase>")`.*
+`campaign.record_stage(ws, "<phase>")`. `sec_overlay.driver`/`sec_overlay.phases.PHASE_TABLE`
+now auto-walk most of this spine — see [the audit driver and PHASE_TABLE](#the-audit-driver-and-phase_table)
+below.*
 
 ## The tool-receipt gate
 
@@ -116,22 +121,47 @@ drift: a `Finding` JSON example inside an agent prompt must parse against real `
 
 ## Module map, grouped by job
 
-~70 modules under `sec_overlay/`. Selected groups (see the module's own docstring for detail
-not summarized here):
+~75 modules under `sec_overlay/` (the authoritative, grouped map lives in
+`helpers/README.md`; this table mirrors its structure). Selected groups (see the module's own
+docstring for detail not summarized here):
 
 | Group | Modules | Job |
 |---|---|---|
 | Data model & serialization | `models.py`, `evidence.py`, `schema.py` | the Finding contract, the tool-receipt gate, a stdlib-only JSON-Schema validator |
 | SAST backends & prefilter | `sast.py`, `codeql.py`, `sca.py`, `secrets.py`, `prefilter.py`, `exclusions.py` | run semgrep/CodeQL/osv-scanner/secrets concurrently; merge deterministically; never-silent backend accounting |
-| Attack-class routing | `clsmap.py`, `detection_coverage.py`, `rule_matcher.py`, `asvs.py`/`codeguard.py`, `citations.py`, `custom_checks.py` | CWE→class mapping, ASVS/CodeGuard citation attachment, in-repo custom-check discovery |
+| Attack-class routing & compliance | `clsmap.py`, `detection_coverage.py`, `rule_matcher.py`, `asvs.py`/`codeguard.py`, `citations.py`, `custom_checks.py`, `dependency_sinks.py` | CWE→class mapping, ASVS/CodeGuard citation attachment, in-repo custom-check discovery, and the dependency-sink catalog (§ below) |
 | Graph & structural substrate | `graph.py`, `structural_index.py`, `entrypoints.py`, `astgrep.py`, `reachability.py` | the two-tier code graph answering reachability/attacker-control; ripgrep symbol index |
 | FP reduction & finding identity | `normalize.py`, `dedupe.py`, `fingerprint.py`, `cluster.py`, `findings_gate.py`, `partition.py`, `fp_feedback.py`, `factcheck.py`, `phase_gate.py`, `stage_validate.py` | dedup, fingerprinting, systemic clustering, the tool-receipt gate, phase-adversary pre-checks |
-| Scoring & prioritization | `calibrate.py`, `cvss.py`, `scoring.py`, `fix_disposition.py`, `crypto_policy.py`, `selfscore.py` | deterministic `risk_score`, CVSS 3.1 by formula (never LLM arithmetic), the per-run self-score |
+| Scoring & prioritization | `calibrate.py`, `cvss.py`, `cvss4_data.py`, `scoring.py`, `fix_disposition.py`, `crypto_policy.py`, `selfscore.py` | deterministic `risk_score`; `cvss.py` computes **CVSS v4.0** base scores from `cvss4_data.py`'s vendored MacroVector tables (never LLM arithmetic — `CVSS:3.x` input now raises `ValueError`); the per-run self-score |
 | Reporting | `report.py`, `sarif.py`, `render_util.py` | assemble `report.sarif` + `report.md`; shared rendering helpers for `expected_signal` (object/string/null) |
-| Campaign, state & memory | `campaign.py`, `state.py`, `repo_memory.py`, `workspace.py`, `scanscope.py`, `scope.py`, `kb.py`, `context.py`, `profile.py`, `diffscope.py`, `githist.py`, `postflight.py` | multi-pass supervision, the on-disk workspace layout, per-repo memory sidecar, context ingestion |
-| Coverage & completeness | `coverage.py`, `coverage_ledger.py`, `coverage_guide.py`, `discovery_ledger.py` | per-language SAST coverage accounting, the completeness ledger, saturation state |
+| Diagram generation & gate | `mermaid_index.py`, `diagram_gate.py`, `ste_lint.py` | line-oriented Mermaid structure extraction, the deterministic diagram cap/provenance/orphan-node gate behind arch-gate/tm-gate, and the ASD-STE100 structural prose linter |
+| Campaign, state, driver & memory | `campaign.py`, `state.py`, `phases.py`, `driver.py`, `run.py`, `repo_memory.py`, `workspace.py`, `scanscope.py`, `scope.py`, `kb.py`, `context.py`, `profile.py`, `diffscope.py`, `githist.py`, `postflight.py` | multi-pass supervision, the on-disk workspace layout, per-repo memory sidecar, context ingestion, and the newer `phases.PHASE_TABLE` + `driver.run_audit` auto-sequencer behind `/sec-overlay:audit` (§ below) |
+| Coverage & completeness | `coverage.py`, `coverage_ledger.py`, `coverage_guide.py`, `discovery_ledger.py`, `route_control.py`, `route_census.py` | per-language SAST coverage accounting, the completeness ledger, saturation state, and the code-derived route census/control table behind the recall-gate |
 | Hunting aids & tuning | `variant.py`, `bugchain.py`, `novelty.py`, `rule_gaps.py`, `tuning.py` | sibling-search seeds, finding chains, upstream-fix checks, adaptive-tuning scoreboard |
-| Verification, safety & plumbing | `verify.py`, `patch_status.py`, `preflight.py`, `redactor.py`, `envelope.py`, `redteam.py`, `parse.py`, `gates.py`, `cost.py` | apply a patch to a temp copy and re-scan, secret redaction, the untrusted-text envelope, fail-open JSON parsing |
+| Verification, safety & plumbing | `verify.py`, `patch_status.py`, `preflight.py`, `redactor.py`, `envelope.py`, `redteam.py`, `parse.py`, `gates.py`, `cost.py`, `artifact_gate.py` | apply a patch to a temp copy and re-scan, secret redaction, the untrusted-text envelope, fail-open JSON parsing, and the deterministic report self-check (§4.8) that gates `artifact-review.md` |
+| Diff-scoped review (`sec-overlay review`) | `diffhunks.py`, `file_select.py`, `positioning.py`, `review_coverage.py`, `review_findings.py`, `rule_glob.py`, `reflection.py`, `review_agent.py`, `background.py`, `bundle.py`, `review_comments.py`, `pr_poster.py`, `sessions.py`, `review_result.py` | the whole diff-review track — see [diff-review](diff-review.md) for the full contract; listed here because they live in the same module map |
+
+`dependency_sinks.py` loads and validates `references/dependency-sinks.json` — dependencies
+whose own code holds a sink (e.g. an OPA policy calling `http.send`). `catalog_ids()` names
+every entry for later receipt-id validation; `match_manifests()`/`matched_classes()` check a
+target repo's manifests against the catalog so `partition.reconcile_plan` can restore an
+attack class recon omitted because no first-party pattern existed for it.
+
+## The audit driver and PHASE_TABLE
+
+`phases.py` defines `PhaseSpec`/`PHASE_TABLE` — the ordered table of deterministic and agent
+phases (with declared input/output artifact paths) that `driver.py`'s `run_audit` walks.
+`run.py` wraps this into `drive(target, config)` (opens/resumes the workspace, pins the SHA,
+writes `run.env`, fences the tree, walks the table) and `advance(target, phase)` (closes an
+agent phase the orchestrator just ran: fence, receipt, `record_stage`). This is the mechanism
+behind the [`/sec-overlay:audit`](/plugins/sec-overlay/commands/audit.md) slash command; see
+[pipeline — the driver and PHASE_TABLE](pipeline.md#the-driver-and-phase_table-the-newer-auto-sequencer)
+for exactly which phases it covers today and which three still require manual orchestration.
+`run.py` also has the multi-repo seam: `infer_role(profile)` labels a scanned repo
+`rbac-source`/`service-enforcer`/`infra` from its scan profile (defaulting to `infra` under
+ambiguity — under-correlating is safer than fabricating a `control-enforces` edge), and
+`synthesize_manifest(product, members)` builds a correlation manifest for
+`sec_overlay.correlate` — see [cross-repo correlation](cross-repo-correlation.md).
 
 `partition.py` is also the mechanism behind the "thoroughly review a codebase" principle's
 coverage guarantee: its `unrouted_candidate_classes(ws, agents_to_spawn)` compares the classes
@@ -158,16 +188,20 @@ cross-repo correlation subpackage with its own promote/demote invariant — see
 
 ## CLI-callable modules
 
-Seventeen modules expose `python -m sec_overlay.<module>` (a `__main__`) — the deterministic
-steps the orchestrator calls between agent phases: `cli` (scan/memory), `preflight`, `graph`,
-`structural_index`, `astgrep`, `dedupe`, `cluster`, `findings_gate`, `calibrate`, `citations`,
-`bugchain`, `rule_gaps`, `verify`, `redteam`, `report`, `redactor`, `postflight`. See
-[running an audit](running-an-audit.md) for how the orchestrator sequences these across a full
-pass, and `correlate`'s own dedicated CLI in [cross-repo correlation](cross-repo-correlation.md).
+More than twenty modules expose `python -m sec_overlay.<module>` (a `__main__`) — the
+deterministic steps the orchestrator calls between agent phases: `cli` (`scan`, `memory`,
+`sessions list|show`, `rules check`, and `review` — see [diff-review](diff-review.md)),
+`preflight`, `graph`, `structural_index`, `astgrep`, `dedupe`, `cluster`, `findings_gate`,
+`calibrate`, `citations`, `bugchain`, `rule_gaps`, `verify`, `redteam`, `diagram_gate`,
+`ste_lint`, `report`, `redactor`, `postflight`, `dependency_sinks` (`list` / `match --root`),
+`route_census`. See [running an audit](running-an-audit.md) for how the orchestrator sequences
+these across a full pass, and `correlate`'s own dedicated CLI in
+[cross-repo correlation](cross-repo-correlation.md).
 
 ## Related pages
 
 - [Pipeline](pipeline.md) — the phase-by-phase order these modules implement.
+- [Diff-review](diff-review.md) — the diff-scoped review modules in the table above, in depth.
 - [Agents](agents.md) — the LLM prompts that plug in between the deterministic steps above.
 - [References](references.md) — the schema/policy files these modules read.
 - [Running an audit](running-an-audit.md) — exact commands, preflight checks, environment prerequisites.

@@ -7,8 +7,11 @@ tags: [sec-overlay, running-audit, preflight, smoke-scan]
 
 # Running a sec-overlay audit
 
-There are two ways to run this harness: a fast deterministic **smoke scan** with no agents at
-all, and the **full agentic audit** described in [pipeline](pipeline.md). Both start from
+There are three ways to run this harness, from lightest to heaviest: a fast deterministic
+**smoke scan** with no agents at all; a **diff-scoped review** of one pull request (see
+[diff-review](diff-review.md)); and the **full agentic audit** described in
+[pipeline](pipeline.md), drivable either manually per `SKILL.md` or through the
+[`/sec-overlay:audit`](#the-sec-overlayaudit-command) slash command. All start from
 `skills/sec-overlay/helpers/` — inside an installed plugin, that is
 `${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay/helpers`.
 
@@ -27,16 +30,34 @@ This runs `sec_overlay.cli.run_scan`: semgrep → `normalize()` → stamp `disco
 finding → write `findings/F-*.json` → emit `report.sarif` + `report.md` + `state.json` →
 `record_stage(ws, "prefilter")`. **It runs only the semgrep backend** — CodeQL, SCA
 (`osv-scanner`), and secrets scanning are not invoked, unlike the full pipeline's
-[prefilter phase](pipeline.md#the-full-phase-order), which runs all four concurrently. It also
-never calls `sec_overlay.state.begin_pass`, so it does not pin a SHA or advance the campaign's
-`pass_number` — a smoke scan is a one-shot prefilter run, not a pass in the multi-pass campaign
-model described in [pipeline](pipeline.md#multi-pass-campaigns). It is the fast path to see
-output — **not** a real audit: no agents run, so there is no investigate gate ladder, no
-adversarial validation, and no `risk_score`. The bundled `rules/smoke.yaml` is a minimal
-ruleset; the semgrep-rules submodule (fuller semgrep coverage) is not part of the plugin — for
-a real audit, point `--config` (and the recon agent's `rulesets`) at your own semgrep ruleset.
+[prefilter phase](pipeline.md#the-full-phase-order-manual--skillmd-narrative), which runs all
+four concurrently. It also never calls `sec_overlay.state.begin_pass`, so it does not pin a SHA
+or advance the campaign's `pass_number` — a smoke scan is a one-shot prefilter run, not a pass
+in the multi-pass campaign model described in [pipeline](pipeline.md#multi-pass-campaigns). It
+is the fast path to see output — **not** a real audit: no agents run, so there is no
+investigate gate ladder, no adversarial validation, and no `risk_score`. The bundled
+`rules/smoke.yaml` is a minimal ruleset; the vendored semgrep-rules clone (fuller semgrep
+coverage — a gitignored shallow clone, not part of the plugin's tracked files) is not part of
+the plugin — for a real audit, point `--config` (and the recon agent's `rulesets`) at your own
+semgrep ruleset.
 
-## Full agentic audit
+## The `/sec-overlay:audit` command
+
+[`plugins/sec-overlay/commands/audit.md`](/plugins/sec-overlay/commands/audit.md) —
+`/sec-overlay:audit <repo> [<repo> ...]` — is the packaged entry point for a full audit. With
+one repo argument it drives that repo's audit and stops; with two or more it drives each
+repo's audit, infers each one's correlation role from its scan profile
+(`sec_overlay.run.infer_role`), confirms the inferred roles with the operator, then correlates
+them (`sec_overlay.run.synthesize_manifest` + `python -m sec_overlay.correlate`) — see
+[cross-repo correlation](cross-repo-correlation.md). Internally it calls
+`sec_overlay.run.drive(repo, config=...)`, which walks `sec_overlay.phases.PHASE_TABLE`
+automatically for deterministic phases and prints a "NEXT AGENT PHASE" block for each agent
+phase; the orchestrator runs that agent, then calls `sec_overlay.run.advance(repo, phase)` to
+close it (fence + receipt + `record_stage`) before re-invoking `drive`. See
+[pipeline — the driver and PHASE_TABLE](pipeline.md#the-driver-and-phase_table-the-newer-auto-sequencer)
+for which phases this automates today.
+
+## Full agentic audit (manual, per `SKILL.md`)
 
 The main agent orchestrates the entire phase order in [pipeline](pipeline.md), substituting
 path/scope tokens before spawning each subagent (`{{TARGET}}`, `{{WORKSPACE}}`,
@@ -55,13 +76,13 @@ write never silently loses a finding.
 uv run python -m sec_overlay.preflight
 ```
 
-`helpers/sec_overlay/preflight.py`'s `check_tools()` checks for six binaries: `semgrep`,
-`codeql`, `tree-sitter`, `ast-grep`, `osv-scanner`, and `gitleaks`. Three of them —
-`tree-sitter`, `osv-scanner`, `gitleaks` (the `_OPTIONAL` set) — are **optional**: a scan
-degrades gracefully and logs them as skipped rather than crashing preflight. The other three —
-`semgrep`, `codeql`, `ast-grep` — are required backends the scan depends on. `preflight`
-prints the exact install command for anything missing. **It never installs — the operator runs
-the printed commands.**
+`helpers/sec_overlay/preflight.py`'s `check_tools()` checks for seven binaries: `semgrep`,
+`rg` (ripgrep — route census + call-edge search), `codeql`, `tree-sitter`, `ast-grep`,
+`osv-scanner`, and `gitleaks`. Three of them — `tree-sitter`, `osv-scanner`, `gitleaks` (the
+`_OPTIONAL` set) — are **optional**: a scan degrades gracefully and logs them as skipped
+rather than crashing preflight. The other four — `semgrep`, `rg`, `codeql`, `ast-grep` — are
+required backends the scan depends on. `preflight` prints the exact install command for
+anything missing. **It never installs — the operator runs the printed commands.**
 
 The report it prints also lists which **CodeQL query packs** are installed. This is the sharpest
 edge in the whole setup: **the `codeql` binary being present does not mean the per-language
@@ -79,25 +100,33 @@ stated identically in `SKILL.md` and the skill's own [`CLAUDE.md`](/plugins/sec-
 
 ## Environment prerequisites for a full run
 
-A clean checkout is missing three things a full audit needs:
+A clean checkout is missing one thing a full audit needs, and ships one thing you might
+expect to be missing but is not:
 
-1. **The semgrep rules submodule.** `rules/semgrep/` must be checked out:
-   `git submodule update --init --recursive`. Without it, semgrep has no rules and
+1. **The vendored semgrep ruleset is missing by default.** `rules/semgrep/` is a
+   **gitignored, shallow-cloned directory, not a git submodule** — there is no `.gitmodules`
+   entry. Seed it with `git clone --depth 1 https://github.com/semgrep/semgrep-rules
+   rules/semgrep` (the exact command `preflight.py` prints when the directory is missing).
+   Without it, semgrep has no rules and
    `test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd` fails.
-2. **External tool binaries.** `uv run python -m sec_overlay.preflight` must show semgrep,
-   codeql (+ language packs), ast-grep, osv-scanner present.
-3. **The bench corpus is local-only.** `bench/corpus_seed/*.json` is gitignored (it contains
-   confirmed vulnerabilities from private code). Its absence fails
-   `test_bench.py::test_seed_corpus_is_valid` and
-   `test_citations.py::test_all_mapped_ids_exist_in_seed` — both dev/bench tests, not part of an
-   audit. See [developing the skill](developing-the-skill.md#the-bench-harness-dev-only-not-part-of-an-audit)
-   to seed it locally.
+   `helpers/rules/absence/` is a separate, **tracked, first-party** rule pack that ships with
+   the plugin — never write a first-party rule under `helpers/rules/semgrep/`, since
+   `preflight.py` recreates that directory from the clone and deletes anything else there.
+2. **External tool binaries.** `uv run python -m sec_overlay.preflight` must show `semgrep`,
+   `rg`, `codeql` (+ language packs), and `ast-grep` present (the four required backends).
+3. **The bench corpus ships committed, not gitignored.** `bench/corpus_seed/*.json` holds
+   only public entries (synthetic fixtures, dep-CVE lockfiles, pinned public-app advisories —
+   see [developing the skill](developing-the-skill.md#the-bench-harness-dev-only-not-part-of-an-audit)),
+   so `test_bench.py::test_seed_corpus_is_valid`/`test_seed_corpus_has_min_entries` and
+   `test_citations.py::test_all_mapped_ids_exist_in_seed` run in CI, not just on a
+   developer's own private-corpus checkout.
 
-**The two env-only failures on a clean checkout are environmental, not code defects** — do not
-"fix" them by committing the submodule contents or fabricating seed data:
-`tests/test_bench.py::test_seed_corpus_is_valid` (gitignored bench corpus) and
-`tests/test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd` (excluded semgrep
-submodule). The skill `CLAUDE.md` §2 states this explicitly.
+**The one env-only failure on a clean checkout is environmental, not a code defect** — do not
+"fix" it by committing the vendored clone's contents into the repo:
+`tests/test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd` (excluded
+vendored semgrep clone). The skill `CLAUDE.md` §1 states this explicitly. Older wiki/plan
+notes referring to a *second* environmental failure from a gitignored bench corpus predate the
+corpus becoming committed — see item 3 above.
 
 ## The do-not-execute-the-target invariant
 
@@ -127,8 +156,11 @@ that touches code:
 ## Related pages
 
 - [Pipeline](pipeline.md) — the full phase order this audit runs.
+- [Diff-review](diff-review.md) — the lighter, PR-scoped `sec-overlay review` alternative.
 - [Agents](agents.md) — the prompts spawned at each phase.
 - [Helpers](helpers.md) — `preflight.py`, `verify.py`, and the other deterministic modules
   invoked above.
-- [Developing the skill](developing-the-skill.md) — the test suite, including the two env-only
-  failures in more detail.
+- [Developing the skill](developing-the-skill.md) — the test suite, including the env-only
+  failure in more detail.
+- [Cross-repo correlation](cross-repo-correlation.md) — what the `/sec-overlay:audit` command
+  does with two or more repo arguments.

@@ -54,6 +54,7 @@ Read top to bottom — this is the order the orchestrator spawns them (see
 | Analysis | `architecture.md` | sonnet | components/data-flows/trust-boundaries → `kb/architecture.md` |
 | Analysis | `threat-model.md` | sonnet | attacker profiles + hunt list → `kb/THREAT_MODEL.md` |
 | Analysis (each of the three) | `phase-adversary.md` | opus | re-derives each claim from code; verdicts → `kb/gates/<phase>.json` |
+| Recon only | `recall-adversary.md` | opus, fresh context | judges what recon **left out** (never what it claimed) against `kb/route-census.json` + the dependency-sink catalog; rows have no matching claim by construction, so they never appear in `phase-adversary.md`'s count-invariant tables |
 | Investigate | `investigate.md` + `classes/<cls>.md` | sonnet, parallel per class | walks the [gate ladder](#the-investigate-gate-ladder) → `raw`/`rejected` |
 | FP ladder | `critic.md` | sonnet | production-viability filter (reject debug-only/dead/test-fixture code); demotes on doubt, never hard-rejects |
 | FP ladder | `judge.md` | cheap, no tools | severity-inflation adjudicator; uphold / downgrade / flag |
@@ -63,7 +64,8 @@ Read top to bottom — this is the order the orchestrator spawns them (see
 | Red team | `trace.md` | opus | backward-traces each confirmed sink to an entry point; sets `reachability` |
 | Red team | `redteam.md` | sonnet | splits confirmed findings into `static-settled` vs `needs-runtime`; writes `runtime_test` |
 | Red team | `redteam-adversary.md` | opus | strips settleable-from-source or payload-mismatched items |
-| Postflight | `postflight.md` | sonnet | durable security-profile notes to `kb/prior_context.json` |
+| Artifact review | `artifact-review.md` | opus, different family | reads the *rendered* `report.md`/`report.sarif`/`redteam-plan.md` plus the deterministic `kb/gates/artifact-gate.json`; checks claim↔evidence, impact honesty, and red-team coverage — can demote severity or flag `render_stale: true`, never delete a receipt-backed finding; verdict → `kb/gates/artifact-review.json` |
+| Postflight | `postflight.md` | sonnet | durable security-profile notes to `kb/prior_context.json` (the pipeline's final phase, after artifact-review) |
 
 **`judge` and `validate` must never run concurrently against the same finding file** — the last
 writer silently drops the other's field. This is enforced by orchestration order (dispatch
@@ -106,11 +108,11 @@ the agent does not re-raise a known false positive.
 
 ## `classes/` — CWE-class extension prompts
 
-Eleven small prompts under
+Thirteen small prompts under
 [`agents/classes/`](/plugins/sec-overlay/skills/sec-overlay/agents/classes/) — `injection`,
-`ssrf`, `authz`, `authn`, `crypto`, `config`, `business-logic`, `prompt-injection`,
-`context-bleed`, `excessive-agency`, `resource` — each appended to `investigate.md` /
-`patch.md` for that class, supplying:
+`ssrf`, `ssti`, `authz`, `authn`, `crypto`, `config`, `business-logic`, `prompt-injection`,
+`context-bleed`, `excessive-agency`, `resource`, `expr-eval-rce` — each appended to
+`investigate.md` / `patch.md` for that class, supplying:
 
 1. **Canonical fix shape** (e.g. injection → parameterized query; crypto → AEAD or slow KDF).
 2. **Discrimination boundary** — an explicit IS/IS-NOT so a finding routes to exactly one class
@@ -119,7 +121,25 @@ Eleven small prompts under
 4. **Instance-preservation rule** — do not collapse sibling instances into one finding.
 
 `test_wiring.py` checks that every class prompt carries the proof tuple and the anti-collapse
-rule.
+rule. Two of the newer classes discriminate a specific confusable pair: `ssti.md` separates
+caller text *compiled as template source* from caller text merely passed as template context,
+routing a non-template expression-engine sandbox escape to `expr-eval-rce` instead;
+`expr-eval-rce.md` covers server-side policy/rule engines (CEL, Starlark, goja, gopher-lua,
+Spring SpEL) and routes an engine builtin that performs an outbound request (e.g. OPA/Rego's
+`http.send`) to `ssrf` instead. `ssrf.md`'s proof tuple admits a `dependency-catalog:<entry-id>`
+receipt when the sink lives inside a dependency's own code — see
+[references — machine-checked policy and schemas](references.md#machine-checked-policy-and-schemas).
+
+## Diff-review pipeline — a separate, lighter track
+
+`sec-overlay review` runs three more producer prompts that are **not** part of the phase
+order above: `review-file.md` (sonnet — the producer; one `code_comment` per confirmed issue
+in one changed file), `review-plan.md` (sonnet — an advisory, severity-ordered plan for a
+large diff, injected into `review-file.md` as hints only), and `review-filter.md` (sonnet — a
+**retract-only** fact-checking pass; it does not pair with a separate adversary, because the
+real safety guarantee is a mechanical code-level veto rather than a second model opinion). See
+[diff-review](diff-review.md) for the full contract, including why this track has no
+adversary pair.
 
 ## Template tokens the orchestrator substitutes
 
@@ -163,6 +183,8 @@ repo's [doc-update-guard hook](../../governance/hooks-and-commits.md).
 - [Pipeline](pipeline.md) — where each phase above fits in the full audit sequence.
 - [Helpers](helpers.md) — the deterministic modules that enforce the tool-receipt gate these
   prompts cannot bypass.
-- [References](references.md) — `prompt-constants.md`'s twelve blocks every prompt imports.
+- [References](references.md) — `prompt-constants.md`'s fifteen blocks every prompt imports.
+- [Diff-review](diff-review.md) — `review-file.md`, `review-plan.md`, and `review-filter.md`
+  in detail.
 - [Cross-repo correlation](cross-repo-correlation.md) — `correlate-combiner.md` and
   `cross-repo-adversary.md` in detail.

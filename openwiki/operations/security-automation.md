@@ -62,6 +62,20 @@ as `.openwikiignore`'s rationale) and local caches. If you are looking for "the 
 workflow," there isn't one to find — the exclusion list above is the entire repo-tracked
 configuration surface for it.
 
+## sec-overlay's own pull-request test and detection gate
+
+`.github/workflows/sec-overlay-tests.yml` runs on every pull request touching
+`plugins/sec-overlay/skills/sec-overlay/helpers/**` (or the workflow file itself): the full
+`uv run pytest -q` suite, then an **offline detection-regression gate** — a smoke-scan of the
+committed `fixtures/vulnerable_repo` fixture, then `python -m bench.run --grade-mode detection
+--only-local`, which fails the build if either committed `locked` seed-corpus entry stops
+being detected. It uses only GitHub-owned, SHA-pinned `actions/checkout`; `uv` and `semgrep`
+install via their own official installers rather than a third-party Action, per this
+repository's Action policy. `permissions: contents: read` — it needs no write access. See
+[developing the skill](../plugins/sec-overlay/developing-the-skill.md#the-bench-harness-dev-only-not-part-of-an-audit)
+for what the detection gate actually grades and why it cannot exercise the full confirmation
+gate (`reportable`) in CI.
+
 ## Secret scanning
 
 GitHub secret scanning and push protection are native platform features for public
@@ -104,6 +118,8 @@ running attacker-controlled code.
 - [Commit governance](../governance/hooks-and-commits.md) and
   [Code review](../governance/code-review.md) — the non-GitHub-native controls layered on top
   of these.
+- [Developing the skill](../plugins/sec-overlay/developing-the-skill.md) — what
+  `sec-overlay-tests.yml`'s detection gate grades, and its committed seed corpus.
 - [OpenWiki refresh](openwiki-refresh.md) — the one workflow in this repository that needs
   elevated (write) permissions, and why.
 - [sec-overlay overview](../plugins/sec-overlay/overview.md) — the fixtures CodeQL and

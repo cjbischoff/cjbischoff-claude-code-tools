@@ -51,22 +51,29 @@ entry: "one directory per distributed plugin"). For `sec-overlay`:
 ```
 plugins/sec-overlay/
   .claude-plugin/plugin.json      # plugin manifest
+  README.md / CHANGELOG.md / CLAUDE.md   # the plugin-root doc trio
+  action.yml                      # composite GitHub Action: run review mode on a PR
+  commands/                       # slash-command entry points (/sec-overlay:audit)
+    README.md
+    audit.md
   skills/sec-overlay/             # the skill Claude Code discovers and loads
     SKILL.md
     CLAUDE.md
     README.md
+    ASSURANCE_CASE.md
     agents/
     helpers/
     references/
 ```
 
-`plugins/sec-overlay/.claude-plugin/plugin.json` is the **plugin manifest**:
+`plugins/sec-overlay/.claude-plugin/plugin.json` is the **plugin manifest** (shape shown
+below; see the file itself for the current `version`):
 
 ```json
 {
   "name": "sec-overlay",
   "description": "Agentic security-audit harness: runs SAST, investigates candidates with multi-agent gates, and emits SARIF + Markdown reports.",
-  "version": "0.2.0",
+  "version": "<semver>",
   "author": { "name": "Christopher Bischoff" }
 }
 ```
@@ -80,6 +87,15 @@ plugins/sec-overlay/
   directory for skills automatically ("the default `skills/` directory scan handles
   discovery, strict mode stays at its default (`true`)"). There is nothing else to wire up —
   every subdirectory under `skills/` that contains a `SKILL.md` is a discoverable skill.
+
+## Adding a second plugin from the template
+
+[`docs/templates/plugin/`](/docs/templates/plugin/) is a new-plugin skeleton (`plugin.json`,
+`CHANGELOG.md`, `CLAUDE.md`, `README.md`, `skills/skill-name/SKILL.md`, all with
+`{{PLACEHOLDER}}` markers) — the root [`CLAUDE.md`](/CLAUDE.md) "New plugin" section is the
+step-by-step: copy the template to `plugins/<name>/`, fill in every placeholder, register the
+plugin in `marketplace.json`, run `claude plugin validate .`, and write the first
+`CHANGELOG.md` entry at `0.1.0`.
 
 ## `${CLAUDE_PLUGIN_ROOT}` and the plugin-directory boundary
 

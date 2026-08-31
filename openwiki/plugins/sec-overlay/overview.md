@@ -37,7 +37,7 @@ that govern every phase:
 4. **Thoroughly review a codebase.** Coverage is pursued until a phase can defend it to its
    adversary; gaps are logged, never silently dropped. Two concrete mechanisms back this: the
    investigate saturation loop (waves stop only at `K=2` consecutive no-new-fingerprint rounds
-   or a hard `max_waves=5` cap — see [pipeline](pipeline.md#the-full-phase-order)), and
+   or a hard `max_waves=5` cap — see [pipeline](pipeline.md#the-full-phase-order-manual--skillmd-narrative)), and
    `partition.py`'s `unrouted_candidate_classes` safety net, which catches any attack class
    recon didn't explicitly plan for and routes it to a general-triage agent rather than
    dropping it (see [helpers](helpers.md#module-map-grouped-by-job)).
@@ -117,26 +117,47 @@ Everything a security engineer receives lands in `<target>/.sec-overlay/<slug>/`
 | Path | Contents |
 |---|---|
 | `kb/scan-profile.json` | recon output: languages, frameworks, `attack_surface`, `sast_plan`, `subsystems` |
-| `kb/architecture.md` + `kb/entities/*.md` | components, data flows, trust boundaries |
-| `kb/THREAT_MODEL.md` | attacker profiles + the prioritized hunt list |
+| `kb/route-census.json` | code-derived route inventory (`route_census.py`), never from recon's own output |
+| `architecture/` (`arc42.md`, `container-diagram.mmd`, …) | C4 + arc42 structural artifacts |
+| `threat-model/` (`threat-model.md`, `dfd.mmd`, …) | STRIDE findings, hunt list, derived data-flow diagram |
 | `kb/context.json` | the repo's own docs distilled, trust-tagged (`untrusted-doc` / `prior-scan`) |
 | `kb/graph.json` | the Tier-1/Tier-2 code graph (reachability substrate) |
-| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase |
+| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase, including `arch-gate.json`, `tm-gate.json`, `artifact-gate.json`, `artifact-review.json`, `recall-gate.json` |
 | `kb/coverage-ledger.json` | surface-completeness ledger; blocks `complete` while gaps remain |
 | `kb/discovery-ledger.json` | investigate saturation state (waves, `terminal_reason`) |
-| `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS, patch diff |
+| `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS v4.0, patch diff |
 | `report.sarif` | SARIF 2.1.0 (confirmed/fixed) |
 | `report.md` | human report, built from `finding-template.md`; links `redteam-plan.md` |
 | `redteam-plan.md` | manual runtime test plan — the engineer's follow-up |
-| `state.json` | campaign state (pass number, pinned SHA, stages) |
+| `state.json` | campaign state (pass number, pinned SHA, stages, per-run self-score) |
 | `MEMORY.md`, `learnings/` | durable per-repo memory across runs |
+| `artifacts/` | diff-scoped **review**-mode run state (coverage manifest, ledger, `review_result.json`) — see [diff-review](diff-review.md) |
 
 This layout is the `Workspace` dataclass's contract (`helpers/sec_overlay/workspace.py`,
-described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §5.
+described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §4. A full audit and a
+[diff-scoped review](diff-review.md) share one sidecar per target but write to different
+subtrees, so a repo can run both without conflict.
+
+## A second, lighter pipeline: diff-scoped review
+
+Everything above is the full audit. A separate, lighter track — **`sec-overlay review`** —
+scores only the lines a pull request changed, with its own producer/filter prompts, profiles
+(`security`/`general`), and a GitHub Action that posts the result as a PR review. It shares
+the harness's tool-receipt discipline but not its multi-phase gate ladder. See
+[diff-review](diff-review.md) for the full contract.
+
+## Why the invariants are safe to trust
+
+[`ASSURANCE_CASE.md`](/plugins/sec-overlay/skills/sec-overlay/ASSURANCE_CASE.md) states the
+actors, trust boundaries, threats, and countermeasures behind the four invariants above,
+citing the exact enforcing file and function for each (envelope wrapping, secret-abort,
+copy-only patch verification, the tool-receipt gate). Read it when auditing whether a change
+to one of those modules weakens a stated countermeasure.
 
 ## Related pages
 
 - [Pipeline](pipeline.md) — the full phase order with a grounded flowchart.
+- [Diff-review](diff-review.md) — the lighter PR-scoped pipeline and its GitHub Action.
 - [Agents](agents.md) — every LLM prompt, its model tier, and the investigate gate ladder.
 - [Helpers](helpers.md) — the Python core, module map, and CLI-callable list.
 - [References](references.md) — the rule book: prompt constants, schemas, crypto policy.

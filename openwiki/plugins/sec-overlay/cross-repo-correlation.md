@@ -21,6 +21,19 @@ real four-repo campaign (`docs/plans/2026-08-07-cross-repo-correlation-design.md
 motivating case: control→enforcement handoffs and shared-dependency CVEs that were, before this
 capability existed, correlated by hand).
 
+## Reaching correlation from `/sec-overlay:audit`
+
+[`/sec-overlay:audit <repo> <repo> ...`](/plugins/sec-overlay/commands/audit.md) is now the
+packaged entry point for a multi-repo run: it drives each repo's audit in turn, infers each
+one's role with `sec_overlay.run.infer_role` (reading its `kb/scan-profile.json`'s subsystems/
+frameworks/attack-surface for RBAC/service/infra signals, defaulting to `infra` under
+ambiguity — under-correlating is safer than fabricating a `control-enforces` edge), confirms
+the repo count and inferred roles with the operator, and on confirmation builds the manifest
+with `sec_overlay.run.synthesize_manifest` before running the same deterministic core described
+below. The manual CLI invocation remains the documented, scriptable mechanism underneath —
+see [running an audit](running-an-audit.md#the-sec-overlayaudit-command) for the command's
+full routing.
+
 ## The correlation workspace and CLI
 
 ```bash

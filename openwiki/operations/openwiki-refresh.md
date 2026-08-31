@@ -49,7 +49,10 @@ to this repository's governance:
   error.
 - **Never pushes to `main` directly.** The job opens a **pull request** with its changes,
   consistent with the [GitHub ruleset](../governance/hooks-and-commits.md#the-github-ruleset-on-main)
-  that requires a PR for every change to `main` — even an automated one.
+  that requires a PR for every change to `main` — even an automated one. It stages `openwiki/`
+  and `CLAUDE.md` always, plus the root `AGENTS.md` when that file exists — both carry an
+  `<!-- OPENWIKI:START -->`/`<!-- OPENWIKI:END -->` pointer block OpenWiki may rewrite, so both
+  need to be picked up by the commit even though only `openwiki/` is this run's primary output.
 - **Restores its own hardened workflow file after every run.** `openwiki --update` is documented
   upstream to rewrite the workflow file that invoked it from its own template
   (`langchain-ai/openwiki#423`); this job explicitly runs `git checkout --
