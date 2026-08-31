@@ -15,6 +15,7 @@ from sec_overlay.evidence import is_tool_receipt
 from sec_overlay.models import Finding, FindingStatus
 from sec_overlay.patch_status import PatchStatus, check_patch_applied, not_applied_caution
 from sec_overlay.positioning import PositionResult
+from sec_overlay.redteam import discriminate
 from sec_overlay.render_util import signal_lines
 from sec_overlay.review_findings import ReviewFinding
 from sec_overlay.sarif import to_sarif
@@ -239,6 +240,31 @@ def _short_title(text: str, limit: int = 72) -> str:
     return (cut or text[:limit].rstrip()) + "…"
 
 
+def _ndt_next_actions(ndt: list[Finding]) -> dict[str, str]:
+    """Map each needs-runtime finding id to the ``redteam-plan.md`` section that holds it.
+
+    The plan files a needs-runtime finding into one of three sections, so a single
+    "run redteam-plan test" action sends two readers in three to a section their
+    finding is not in.
+
+    Args:
+        ndt: The needs-deployment-testing findings the report renders.
+
+    Returns:
+        A dict of finding id to next-action phrase. A finding the plan files
+        nowhere is absent from the dict.
+
+    Example:
+        >>> _ndt_next_actions([])
+        {}
+    """
+    disc = discriminate(ndt)
+    actions = {f.id: "see redteam-plan gaps" for f in disc["below_bar"]}
+    actions.update({f.id: "see redteam-plan preconditions" for f in disc["unrunnable"]})
+    actions.update({f.id: "run redteam-plan directive" for f in disc["needs_runtime"]})
+    return actions
+
+
 def _triage_row(f: Finding, status_label: str, action: str) -> str:
     """Render one triage table row: id, risk, one-clause what, location, status, next action.
 
@@ -344,7 +370,10 @@ def to_markdown(
     ]
 
     # Triage table — all findings merged, risk-ordered desc
-    all_triage = [(f, "needs-runtime", "run redteam-plan test") for f in ndt] + [
+    ndt_actions = _ndt_next_actions(ndt)
+    all_triage = [
+        (f, "needs-runtime", ndt_actions.get(f.id, "see redteam-plan gaps")) for f in ndt
+    ] + [
         (f, "confirmed", "bump" if f.cls == "deps" else "apply fix (§ below)") for f in conf
     ]
     all_triage.sort(key=lambda t: _risk_sort_key(t[0]))

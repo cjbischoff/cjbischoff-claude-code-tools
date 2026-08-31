@@ -6,6 +6,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- A needs-runtime triage row names the `redteam-plan.md` section that holds the finding
+  (REQ-03). Every such row carried the same `run redteam-plan test` action, but
+  `redteam.discriminate` files the finding into one of three plan sections, so most rows sent the
+  reader to a section their finding is not in. `report._ndt_next_actions` calls `discriminate` on
+  the needs-runtime list and maps each id to `run redteam-plan directive`, `see redteam-plan
+  preconditions`, or `see redteam-plan gaps`. The map has three entries, not four:
+  `redteam.wants_runtime` returns True for every `needs-deployment-testing` finding, so the
+  `static_settled` bucket is unreachable from this list. Confirmed rows are unchanged.
 - The investigate saturation loop is enforced by the driver (REQ-24). `discovery_ledger`
   shipped as a complete library with no production caller, so the loop-until-dry bound was an
   instruction in the operating manual rather than a mechanism.

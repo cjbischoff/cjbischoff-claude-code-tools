@@ -1322,3 +1322,20 @@ one productive wave, the same as a fan-out of one. `new_ledger()`'s defaults (`k
 `max_waves=5`) are used as-is — `profile.py:42` documents `scan_options.wave_k` and
 `scan_options.max_waves` as the knobs, but nothing reads them, and wiring them is a separate
 requirement.
+
+## The triage next action names the section that holds the finding (REQ-03)
+
+`report.py`'s triage table gave every needs-runtime row the same next action, `run redteam-plan
+test`. `redteam.discriminate` files a needs-runtime finding into one of three plan sections —
+`## Manual test directives`, `## Unrunnable preconditions (payload not traceable)`, and
+`## Runtime-validation gaps` — so the one shared action sent most readers to a section their
+finding is not in. `_ndt_next_actions(ndt)` calls `discriminate` on the needs-runtime list and
+returns a finding-id to action map: `run redteam-plan directive` for the `needs_runtime` bucket,
+`see redteam-plan preconditions` for `unrunnable`, and `see redteam-plan gaps` for `below_bar`.
+`to_markdown` reads the map when it builds the triage rows and falls back to the gaps phrase for
+an id the map omits.
+
+The map has three entries, not four. `discriminate` also returns a `static_settled` bucket, but
+`redteam.wants_runtime` returns True for every `NEEDS_DEPLOYMENT_TESTING` finding, so a list of
+needs-runtime findings can never reach it. A fourth action would be a phrase no report can print.
+Confirmed rows are untouched — `bump` and `apply fix (§ below)` already name real report sections.
