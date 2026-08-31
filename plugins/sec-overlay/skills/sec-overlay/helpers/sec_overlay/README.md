@@ -1353,3 +1353,32 @@ The rest of REQ-05 stays open by decision. Five report sections render when empt
 under D-13, D-14, and D-15, and `tests/test_report.py` pins that behaviour, so R-41, R-42, and
 R-43's "No X" half is not built here. The word-boundary truncation clause needs no change:
 `_short_title` already cuts on a space.
+
+## 2026-08-31 — REQ-31: the artifact-consistency gate
+
+`artifact_consistency.py` is a new terminal gate. `run_artifact_consistency(ws)` reconciles a
+finished run's own artifacts against each other and returns one string per contradiction:
+
+1. every `findings/<id>.md` link in the report resolves to a file on disk;
+2. every triage next-action names a `redteam-plan.md` section that contains its finding;
+3. the report's `Completeness:` claim matches `kb/coverage-ledger.json`;
+4. `state.budget.self_score` exists and does not undercount the report's needs-runtime rows;
+5. no `(measured):` header stands above an empty body;
+6. a truncated triage title matches `report._short_title` of its source message.
+
+The gate writes `kb/gates/artifact-consistency.json` with `passed` and `errors` on every run, so
+the audit trail records a pass as well as a failure. It never judges or deletes a finding. A
+missing artifact is not a contradiction: a workspace with no `report.md` degrades to a silent
+pass, and each check returns `[]` when its own input file is absent. Setting
+`scan_options.consistency_gate` to `false` in `kb/scan-profile.json` disables it — the first
+production reader of any `scan_options` key.
+
+It runs as the `artifact-consistency` phase, between `artifact-review` and `postflight`
+(`phases.py`), and `driver._act_artifact_consistency` raises `PhaseHalt` when the list is not
+empty. It is also callable on its own:
+
+```bash
+uv run python -m sec_overlay.artifact_consistency --workspace <WS>
+```
+
+The CLI prints each contradiction and exits 1 when the artifacts disagree.

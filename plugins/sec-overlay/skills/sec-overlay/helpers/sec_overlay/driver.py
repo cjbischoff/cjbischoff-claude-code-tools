@@ -334,6 +334,16 @@ def _act_artifact_gate(ctx: AuditContext) -> None:
         )
 
 
+def _act_artifact_consistency(ctx: AuditContext) -> None:
+    from sec_overlay.artifact_consistency import run_artifact_consistency  # local: avoid cycle
+
+    errors = run_artifact_consistency(ctx.ws)
+    if errors:
+        raise PhaseHalt(
+            f"artifact-consistency rejected {len(errors)} contradiction(s): " + "; ".join(errors)
+        )
+
+
 def _write_gate(ws: Workspace, name: str, errors: list[str], warnings: list[str]) -> None:
     (ws.kb / "gates").mkdir(parents=True, exist_ok=True)
     payload = {"passed": not errors, "errors": errors, "warnings": warnings}
@@ -440,6 +450,7 @@ DETERMINISTIC_ACTIONS.update(
         "report": _act_report,
         "selfscore": _act_selfscore,
         "artifact-gate": _act_artifact_gate,
+        "artifact-consistency": _act_artifact_consistency,
         "arch-gate": _act_arch_gate,
         "tm-gate": _act_tm_gate,
         "postflight": _act_postflight,

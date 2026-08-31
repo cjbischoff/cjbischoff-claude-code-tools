@@ -6,6 +6,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- A terminal artifact-consistency gate (REQ-31). The new `artifact-consistency` phase runs between
+  `artifact-review` and `postflight`. It reconciles a finished run's own artifacts against each
+  other: report cross-references resolve to files, every triage next-action names a `redteam-plan.md`
+  section that holds its finding, the rendered completeness matches `kb/coverage-ledger.json`, the
+  self-score does not undercount the report, no `(measured):` header stands above an empty body, and
+  a truncated triage title matches its source. The gate halts the run on a contradiction, writes
+  `kb/gates/artifact-consistency.json` on every run, degrades to a silent pass when an artifact is
+  absent, and turns off through `scan_options.consistency_gate`.
 - Failing tests for the terminal artifact-consistency gate (REQ-31). Twelve tests in
   `tests/test_artifact_consistency.py` pin the six terminal checks, the gate's
   `kb/gates/artifact-consistency.json` audit trail, its `scan_options.consistency_gate` opt-out,

@@ -86,6 +86,10 @@ def _artifact_review_json(ws: Workspace) -> Path:
     return ws.kb / "gates" / "artifact-review.json"
 
 
+def _artifact_consistency_json(ws: Workspace) -> Path:
+    return ws.kb / "gates" / "artifact-consistency.json"
+
+
 def _redteam_plan(ws: Workspace) -> Path:
     return ws.reports / "redteam-plan.md"
 
@@ -140,6 +144,7 @@ PHASE_TABLE: tuple[PhaseSpec, ...] = (
         (_artifact_review_json,),
         prompt="artifact-review.md",
     ),
+    PhaseSpec("artifact-consistency", "deterministic", (_report,), (_artifact_consistency_json,)),
     PhaseSpec("postflight", "deterministic", (_artifact_review_json,), (prior_context_path,)),
 )
 
