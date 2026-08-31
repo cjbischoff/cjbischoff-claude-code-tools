@@ -6,6 +6,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- `tests/test_ste_lint_wrapped.py` pins the STE self-consistency rule (REQ-12). Five tests assert that the sentence `prompt-constants.md` mandates lints clean, that the file publishes the reworded three-sentence form, and that `_prose_blocks` folds a wrapped list item into one block while keeping an unindented paragraph separate. Two fail: the file still carries the semicolon form, and a continuation line still becomes its own block.
+
 - A runtime test may now name several observation channels (REQ-34). `render_util.signal_lines` gained a list branch: each entry is `{name, needs_egress, secure, insecure}`, and a new `_channel_lines` helper renders the name and an explicit `no egress` or `needs egress` marker above the two signal lines. The dict and bare-string shapes render exactly as before. `references/finding.schema.json` widens `expected_signal` to accept an array. `agents/redteam.md` requires every no-egress channel first, and requires the in-band channel first whenever the sink reply is caller-observable, so a tester behind a network fence still has a runnable oracle. Trade-off: a channel entry is schema-checked only, and a non-dict entry is skipped without a report.
 
 - `tests/test_signal_channels.py` pins a multi-channel `expected_signal` (REQ-34). Six tests assert that a list of observation-channel objects renders each channel by name, marks each one `no egress` or `needs egress`, and carries a secure and an insecure line per channel. Three more tests hold the existing dict, bare-string, and empty shapes. Three of the six fail against `render_util.signal_lines`, which has no list branch.
