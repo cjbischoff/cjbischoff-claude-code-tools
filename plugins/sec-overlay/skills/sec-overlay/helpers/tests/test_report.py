@@ -1242,3 +1242,17 @@ def test_directive_ndt_next_action_points_at_the_directive_section():
     """REQ-03: an above-bar, traceable finding keeps a directive-shaped action."""
     md = to_markdown([], needs_deployment=[_ndt_med()])
     assert _triage_action(md, "NDT-T4") == "run redteam-plan directive"
+
+
+def test_run_economics_omits_a_measured_header_with_no_body():
+    """REQ-05: a measurement that was not collected prints no header."""
+    md = to_markdown([], economics={"by_phase": {}, "by_phase_seconds": {"report": 1.5}})
+    assert "**Tokens by phase** (measured):" not in md
+    assert "**Tokens by model** (measured):" not in md
+    assert "**Wall-clock by phase, seconds** (measured):" in md
+
+
+def test_run_economics_section_absent_when_nothing_was_measured():
+    """REQ-05: an empty economics payload renders no section at all."""
+    md = to_markdown([], economics={"by_phase": {}, "by_model": {}})
+    assert "## Run economics" not in md

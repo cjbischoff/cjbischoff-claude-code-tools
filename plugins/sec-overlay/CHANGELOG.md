@@ -43,6 +43,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- Failing run-economics tests for REQ-05: `test_report.py`'s
+  `test_run_economics_omits_a_measured_header_with_no_body` and
+  `test_run_economics_section_absent_when_nothing_was_measured` pin that the report prints no
+  `(measured):` header above an empty body and no `## Run economics` heading when nothing was
+  measured. Both fail because the two token headers print unconditionally.
 - Failing next-action tests for REQ-03: `test_report.py`'s
   `test_below_bar_ndt_next_action_points_at_the_gaps_section`,
   `test_unrunnable_ndt_next_action_points_at_the_preconditions_section`, and

@@ -1438,3 +1438,13 @@ needs-runtime finding that `redteam.discriminate` sorts into a different
 bucket. `report.py` hardcodes one action for all three, so every row tells the
 reader to run a directive. Two of the three findings have no directive to run.
 All three fail with `assert 'run redteam-plan test' == '<expected>'`.
+
+## 2026-08-31 — REQ-05 red: an empty measurement still prints its header
+
+`test_report.py` gains two tests on the run-economics section.
+`test_run_economics_omits_a_measured_header_with_no_body` passes an economics payload that holds
+wall-clock data and nothing else, then asserts that the two token headers do not print.
+`test_run_economics_section_absent_when_nothing_was_measured` passes an empty payload and asserts
+the `## Run economics` heading is absent. `report.py` prints both token headers unconditionally
+and the heading whenever the payload is truthy, so a run that measured nothing still claims two
+measurements. Both fail on the header assertion.
