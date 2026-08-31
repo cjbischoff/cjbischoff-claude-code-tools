@@ -204,10 +204,13 @@ def run_prefilter(
                         # is now durable per-repo memory, and the DB is a large (100s of
                         # MB) rebuildable artifact that must not bloat/pollute it.
                         db_dir = str(Path(codeql_db_root) / f"codeql-db-{lang}")
+                        # The result tag carries the language so the fold below can
+                        # record a per-language reason; the recorded backend name
+                        # stays "codeql".
                         try:
-                            return ("codeql", codeql(target, lang, db_dir), None)
+                            return (f"codeql:{lang}", codeql(target, lang, db_dir), None)
                         except CodeQLError as exc:
-                            return ("codeql", [], str(exc))
+                            return (f"codeql:{lang}", [], str(exc))
                     units.append(_codeql_unit)
                     codeql_unit_count += 1
         else:
@@ -254,9 +257,13 @@ def run_prefilter(
         shutil.rmtree(codeql_db_root, ignore_errors=True)  # never keep the CodeQL DB
     for backend, backend_findings, error in results:
         raw.extend(backend_findings)
-        if backend == "codeql":
+        if backend.startswith("codeql"):
             if error is not None:
                 failed.append({"backend": "codeql", "error": error})
+                if backend.partition(":")[2] == "go":
+                    # A Go database needs an extraction that never builds in the
+                    # target tree; a failure here is a coverage hole, not a crash.
+                    skipped_reasons["codeql-go"] = "build-unfenceable"
             else:
                 codeql_completed += 1
         elif backend == "sca":

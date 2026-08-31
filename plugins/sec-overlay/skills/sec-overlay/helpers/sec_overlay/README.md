@@ -1426,3 +1426,11 @@ The splitter now keeps a separate `item` buffer. A list marker starts it, an ind
 `_flush()` also runs on a heading, a table row, and a fence line, which the old loop did not do. Those lines used to leave the paragraph buffer open, so prose before and after a heading merged into one block and could exceed the six-sentence paragraph cap without a report. The full suite stays green, so no existing document changes its verdict.
 
 `references/prompt-constants.md` also carried a sentence its own linter rejects: the mandated front-matter statement used a semicolon, which the `STE_PROSE` block forbids. It now reads as three sentences. Trade-off: the rest of `prompt-constants.md` still carries pre-existing violations that no gate checks — the file is a rule book, not a generated run artifact, and REQ-12 does not ask for a full-file cleanup.
+
+### A Go CodeQL database builds without a build (REQ-14)
+
+`codeql.run_codeql` now appends `--build-mode=none` to the `codeql database create` argv when the language is `go`. CodeQL's default Go extractor runs an autobuild, which compiles the target inside its own source tree. That write breaks the read-only-source invariant the harness holds over a reviewed repository. No other language gets the flag, because their extractors do not build.
+
+Trade-off: `--build-mode=none` extracts without compiling, so CodeQL resolves fewer cross-package references on a Go target. Some dataflow that an autobuilt database would find is lost. A build that writes into the reviewed tree is the worse cost.
+
+`prefilter.run_prefilter` records that cost when it applies. The CodeQL work unit now returns its result tagged `codeql:<lang>` instead of the bare `codeql`, so the result fold can tell a Go failure from any other. The fold branches on `backend.startswith("codeql")`, and a failing Go unit adds `skipped_reasons["codeql-go"] = "build-unfenceable"`. The `failed` entry still carries the bare name `codeql`, so no external consumer sees the tag. `codeql-go` is a reason key, not a backend: it never joins `backends_run`, and the never-silent contract loop still checks the four real backend names only.

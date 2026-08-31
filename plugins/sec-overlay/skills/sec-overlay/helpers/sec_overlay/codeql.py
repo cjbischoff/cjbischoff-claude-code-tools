@@ -208,8 +208,13 @@ def run_codeql(
             mistaken for a clean one.
     """
     sarif_path = Path(db_dir).parent / "codeql.sarif"
+    # Go's default extractor autobuilds the target, which writes into the source
+    # tree and breaks the read-only-source invariant. --build-mode=none extracts
+    # without a build; it costs some cross-package resolution on Go targets.
+    build_mode = ["--build-mode=none"] if language == "go" else []
     create = runner(
-        ["codeql", "database", "create", db_dir, f"--language={language}", f"--source-root={target}", "--overwrite"],
+        ["codeql", "database", "create", db_dir, f"--language={language}",
+         f"--source-root={target}", "--overwrite", *build_mode],
         capture_output=True, text=True, check=False,
     )
     if create.returncode != 0:

@@ -6,6 +6,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- A Go CodeQL database no longer builds inside the target tree (REQ-14). `codeql.run_codeql` appends `--build-mode=none` to `codeql database create` for Go only, because the default Go extractor autobuilds and writes into the reviewed source. `prefilter.run_prefilter` tags each CodeQL work unit `codeql:<lang>` so its result fold can record `skipped_reasons["codeql-go"] = "build-unfenceable"` when a Go unit fails; the `failed` entry keeps the bare backend name `codeql`, and `codeql-go` never joins `backends_run`. Trade-off: `--build-mode=none` resolves fewer cross-package references, so a Go target loses some dataflow an autobuilt database would find.
+
 - The STE rule no longer breaks its own linter (REQ-12). `references/prompt-constants.md` mandated a front-matter sentence that used a semicolon, which the same block forbids; it now reads as three sentences. `ste_lint._prose_blocks` folds a wrapped list item into one block instead of two, so a sentence spread across a hard wrap has its words counted once. The splitter also closes an open paragraph on a heading, a table row, and a code fence, which it did not do before, so prose on either side of a heading is no longer merged into one block. Trade-off: the rest of `prompt-constants.md` still carries pre-existing lint violations that no gate checks.
 
 ### Added

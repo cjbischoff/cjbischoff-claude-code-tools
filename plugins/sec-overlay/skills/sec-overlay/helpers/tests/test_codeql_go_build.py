@@ -5,8 +5,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from sec_overlay.codeql import CodeQLError
-from sec_overlay.codeql import run_codeql
+from sec_overlay.codeql import CodeQLError, run_codeql
 from sec_overlay.prefilter import run_prefilter
 from sec_overlay.profile import ScanProfile
 from sec_overlay.workspace import Workspace
