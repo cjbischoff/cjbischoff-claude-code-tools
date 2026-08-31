@@ -1339,3 +1339,17 @@ The map has three entries, not four. `discriminate` also returns a `static_settl
 `redteam.wants_runtime` returns True for every `NEEDS_DEPLOYMENT_TESTING` finding, so a list of
 needs-runtime findings can never reach it. A fourth action would be a phrase no report can print.
 Confirmed rows are untouched — `bump` and `apply fix (§ below)` already name real report sections.
+
+## Run economics prints only what the run measured (REQ-05)
+
+`to_markdown` printed `**Tokens by phase** (measured):` and `**Tokens by model** (measured):`
+whenever the `economics` payload was truthy, so a run that collected neither still published two
+headers over empty bodies. `_render_economics(economics)` builds the three measurement groups,
+keeps a group only when it holds rows, appends `**Estimated cost:**` only when `usd_estimate` is
+present, and returns `[]` when no group survives — which drops the `## Run economics` heading
+with them. `to_markdown`'s `if economics:` branch is now one line.
+
+The rest of REQ-05 stays open by decision. Five report sections render when empty on purpose
+under D-13, D-14, and D-15, and `tests/test_report.py` pins that behaviour, so R-41, R-42, and
+R-43's "No X" half is not built here. The word-boundary truncation clause needs no change:
+`_short_title` already cuts on a space.

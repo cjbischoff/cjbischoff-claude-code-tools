@@ -6,6 +6,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- The run-economics section prints only what the run measured (REQ-05). Both token headers
+  printed unconditionally, so a run that collected neither published `(measured):` over an empty
+  body. `report._render_economics` keeps a measurement group only when it holds rows, appends the
+  estimated cost only when `usd_estimate` is present, and returns no lines at all when nothing
+  was measured — which drops the `## Run economics` heading with it. REQ-05's other clause is not
+  built: five report sections render when empty by D-13, D-14, and D-15 design, so R-41, R-42,
+  and R-43's "No X" half stays open. The word-boundary truncation clause already holds through
+  `_short_title`.
 - A needs-runtime triage row names the `redteam-plan.md` section that holds the finding
   (REQ-03). Every such row carried the same `run redteam-plan test` action, but
   `redteam.discriminate` files the finding into one of three plan sections, so most rows sent the

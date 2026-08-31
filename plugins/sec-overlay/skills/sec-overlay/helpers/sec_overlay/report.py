@@ -281,6 +281,49 @@ def _triage_row(f: Finding, status_label: str, action: str) -> str:
     return f"| {f.id} | {risk} | {what} | {f.file}:{f.line} | {status_label} | {action} |"
 
 
+def _render_economics(economics: dict) -> list[str]:
+    """Render the run-economics section, omitting every measurement that is absent.
+
+    A "(measured)" header above an empty body claims a measurement the run never
+    took. Each group renders only when it holds data, and the section itself
+    disappears when no group does (REQ-05).
+
+    Args:
+        economics: Cost aggregate with optional ``by_phase``, ``by_model``,
+            ``by_phase_seconds``, and ``usd_estimate`` keys.
+
+    Returns:
+        Markdown lines for the section, or ``[]`` when nothing was measured.
+
+    Example:
+        >>> _render_economics({"by_phase": {}, "by_model": {}})
+        []
+    """
+    groups = (
+        (
+            "**Tokens by phase** (measured):",
+            [f"- **{k}**: {v}" for k, v in (economics.get("by_phase") or {}).items()],
+        ),
+        (
+            "**Tokens by model** (measured):",
+            [f"- **{k}**: {v}" for k, v in (economics.get("by_model") or {}).items()],
+        ),
+        (
+            "**Wall-clock by phase, seconds** (measured):",
+            [f"- **{k}**: {v:.2f}" for k, v in (economics.get("by_phase_seconds") or {}).items()],
+        ),
+    )
+    body: list[str] = []
+    for header, items in groups:
+        if items:
+            body += ([""] if body else []) + [header] + items
+    usd = economics.get("usd_estimate")
+    if usd is not None:
+        cost = f"**Estimated cost:** ${usd:.4f} (estimate, not a billed figure)."
+        body += ([""] if body else []) + [cost]
+    return ["", "## Run economics", ""] + body if body else []
+
+
 def to_markdown(
     findings: list[Finding],
     token_spend: dict[str, int] | None = None,
@@ -439,18 +482,7 @@ def to_markdown(
     if coverage_ledger:
         lines += ["", render_coverage_ledger(coverage_ledger)]
     if economics:
-        lines += ["", "## Run economics", ""]
-        lines += ["**Tokens by phase** (measured):"]
-        lines += [f"- **{phase}**: {n}" for phase, n in economics.get("by_phase", {}).items()]
-        lines += ["", "**Tokens by model** (measured):"]
-        lines += [f"- **{model}**: {n}" for model, n in economics.get("by_model", {}).items()]
-        by_secs = economics.get("by_phase_seconds") or {}
-        if by_secs:
-            lines += ["", "**Wall-clock by phase, seconds** (measured):"]
-            lines += [f"- **{phase}**: {secs:.2f}" for phase, secs in by_secs.items()]
-        usd = economics.get("usd_estimate")
-        if usd is not None:
-            lines += ["", f"**Estimated cost:** ${usd:.4f} (estimate, not a billed figure)."]
+        lines += _render_economics(economics)
     elif token_spend:
         lines += ["", "## Token spend by phase", ""]
         lines += [f"- **{phase}**: {n}" for phase, n in token_spend.items()]
