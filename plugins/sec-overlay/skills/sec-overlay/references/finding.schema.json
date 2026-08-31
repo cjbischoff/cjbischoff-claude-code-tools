@@ -62,6 +62,18 @@
     "cluster_id": {"type": ["string", "null"]},
     "affected_sites": {"type": "array", "items": {"type": "object"}},
     "receipt_tier": {"type": ["integer", "null"]},
+    "reproduction": {
+      "type": "object",
+      "properties": {
+        "command": {"type": "string"},
+        "exit_code": {"type": ["integer", "null"]},
+        "oracle": {"type": "string"},
+        "oracle_result": {"type": "string"},
+        "toolchain": {"type": "string"},
+        "resolved_version": {"type": ["string", "null"]},
+        "scope": {"type": "string", "enum": ["entrypoint", "slice"]}
+      }
+    },
     "impact": {"type": "string"}
   }
 }

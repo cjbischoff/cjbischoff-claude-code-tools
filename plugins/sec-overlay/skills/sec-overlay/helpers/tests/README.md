@@ -1477,3 +1477,12 @@ The REQ-14 import block was reordered by `ruff --fix` after the red commit. The 
 `test_prove.py` pins the opt-in proof-by-execution lane (REQ-30). Nineteen tests cover seven layers. Three assert the flag gate: `prove_enabled` is False without a scan profile, False when `scan_options.prove_findings` is absent, and True only when the key is exactly `true`. One asserts that `run_prove` mutates no finding when the lane is off. Two pin the receipt vocabulary — `prove.is_reproduction_receipt` accepts `reproduction` and rejects `semgrep:x`, while `evidence.is_tool_receipt("reproduction")` stays False, because `evidence.py` is byte-pinned by the D-15 frozen-contract test. Five pin the soundness guard: an `entrypoint` proof promotes an `ssrf` finding to `confirmed`, a `slice` proof leaves it `raw` and `needs-runtime`, a `slice` proof records `prove: slice-unbuildable`, a `sqli` finding never promotes, and a missing toolchain records `prove: toolchain-absent`. One asserts that `findings_gate` accepts a `confirmed` finding whose only evidence source is `reproduction`. One drives the stdlib loopback collector and asserts it reports the observed request path. The last five cover the wiring: the `prove` phase sits between `redteam` and `artifact-gate`, `Workspace.repro` exists after `ensure()`, `finding.schema.json` declares the seven-key `reproduction` object, the driver skips the phase when the lane is off and dispatches it when the lane is on, and `preflight_report` reports the prove-lane toolchains.
 
 All nineteen fail at collection: `sec_overlay.prove` does not exist.
+
+The prove lane is now green: `sec_overlay/prove.py` exists, and the six wiring points it needs are
+in place. One correction to the paragraph above — `test_prove.py` holds twenty tests, not nineteen.
+The twentieth asserts that `sec_overlay.evidence` still imports, which proves the module-level
+partition assert survives the new receipt vocabulary.
+
+One test needed a fixture repair. `test_the_gate_accepts_a_reproduction_only_confirmed_finding`
+failed on an unrelated pre-existing gate rule: a shipping finding must carry a non-empty `impact`.
+The finding now sets `impact`, so the test asserts the one thing it was written to assert.

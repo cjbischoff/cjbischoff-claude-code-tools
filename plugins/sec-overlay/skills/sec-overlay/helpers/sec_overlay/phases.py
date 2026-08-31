@@ -94,6 +94,10 @@ def _redteam_plan(ws: Workspace) -> Path:
     return ws.reports / "redteam-plan.md"
 
 
+def _prove_json(ws: Workspace) -> Path:
+    return ws.kb / "prove.json"
+
+
 def _route_census(ws: Workspace) -> Path:
     return ws.kb / "route-census.json"
 
@@ -136,6 +140,7 @@ PHASE_TABLE: tuple[PhaseSpec, ...] = (
     PhaseSpec("report", "deterministic", (_findings_dir,), (_report, _sarif)),
     PhaseSpec("selfscore", "deterministic", (_report,), (_findings_dir,)),
     PhaseSpec("redteam", "agent", (_findings_dir,), (_redteam_plan,), prompt="redteam.md"),
+    PhaseSpec("prove", "agent", (_findings_dir,), (_prove_json,), prompt="prove.md"),
     PhaseSpec("artifact-gate", "deterministic", (_report, _sarif), (_artifact_gate_json,)),
     PhaseSpec(
         "artifact-review",

@@ -37,6 +37,7 @@ from sec_overlay.phases import (
 )
 from sec_overlay.prefilter import run_prefilter
 from sec_overlay.profile import ScanProfile, load_profile
+from sec_overlay.prove import prove_enabled
 from sec_overlay.redactor import safe_for_prompt
 from sec_overlay.report import write_report
 from sec_overlay.route_census import census, write_census
@@ -503,6 +504,11 @@ def run_audit(
             continue
         distinct_outputs = tuple(p for p in phase.outputs if p not in phase.inputs)
         if distinct_outputs and all(p(ctx.ws).exists() for p in distinct_outputs):
+            if on_complete is not None:
+                on_complete(phase.name)
+            record_stage(ctx.ws, phase.name)
+            continue
+        if phase.name == "prove" and not prove_enabled(ctx.ws):
             if on_complete is not None:
                 on_complete(phase.name)
             record_stage(ctx.ws, phase.name)

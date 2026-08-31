@@ -11,6 +11,8 @@ import argparse
 import shutil
 from pathlib import Path
 
+from sec_overlay.prove import PROVE_TOOLCHAINS
+
 
 def default_rules_dir() -> Path:
     """Vendored semgrep rules dir, resolved relative to this package (not CWD).
@@ -146,7 +148,9 @@ def preflight_report(rules_dir: str | Path, *, which=shutil.which) -> dict:
         which: Injectable resolver.
 
     Returns:
-        ``{tools, semgrep_rules, missing, commands}``.
+        ``{tools, semgrep_rules, missing, commands, prove_toolchains}``.
+        ``prove_toolchains`` reports the opt-in prove lane's toolchains; a
+        missing one degrades that lane and never blocks preflight.
     """
     tools = check_tools(which=which)
     rules_ok = semgrep_rules_present(rules_dir)
@@ -155,7 +159,13 @@ def preflight_report(rules_dir: str | Path, *, which=shutil.which) -> dict:
     commands = [t["install_cmd"] for t in tools if not t["present"] and t["name"] not in _OPTIONAL]
     if not rules_ok:
         commands.append(_VENDOR_CMD)
-    return {"tools": tools, "semgrep_rules": rules_ok, "missing": missing, "commands": commands}
+    return {
+        "tools": tools,
+        "semgrep_rules": rules_ok,
+        "missing": missing,
+        "commands": commands,
+        "prove_toolchains": {t: which(t) is not None for t in PROVE_TOOLCHAINS},
+    }
 
 
 def main(argv: list[str] | None = None) -> int:

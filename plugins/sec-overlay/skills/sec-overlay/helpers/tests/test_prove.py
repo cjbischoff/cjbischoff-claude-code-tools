@@ -141,6 +141,7 @@ def test_the_gate_accepts_a_reproduction_only_confirmed_finding(tmp_path: Path) 
     f = _finding()
     f.status = FindingStatus.CONFIRMED
     f.evidence_sources = [prove.REPRODUCTION_RECEIPT]
+    f.impact = "the proof drove the entrypoint and the collector observed the request"
     write_findings(ws, [f])
     assert validate_findings(ws) == []
 

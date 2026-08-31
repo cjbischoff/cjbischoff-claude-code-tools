@@ -293,3 +293,11 @@ renders each present key as its own section, so an omitted key costs a section, 
 carries `needs_egress`, which tells a tester whether the channel needs a request to leave the
 network. The prompt requires every no-egress channel first, and requires the in-band channel
 first when the sink reply is caller-observable.
+
+`prove.md` is the prompt for the opt-in `prove` phase (REQ-30), which the driver dispatches between
+`redteam` and `artifact-gate` only when `scan_options.prove_findings` is true. It is the one prompt
+that permits execution, and it confines every build and every run to `{{WORKSPACE}}/repro`. The
+prompt allows no network egress: the only oracle is in-band and on loopback. It names the five
+auto-confirmable classes, routes `sqli` and `authz` to a human-run harness, and requires the agent
+to record `scope` as `entrypoint` or `slice` honestly. The agent writes `kb/prove.json` and never
+edits a finding file; the deterministic side in `helpers/sec_overlay/prove.py` applies the proofs.

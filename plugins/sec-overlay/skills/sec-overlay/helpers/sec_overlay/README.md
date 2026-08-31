@@ -1434,3 +1434,40 @@ The splitter now keeps a separate `item` buffer. A list marker starts it, an ind
 Trade-off: `--build-mode=none` extracts without compiling, so CodeQL resolves fewer cross-package references on a Go target. Some dataflow that an autobuilt database would find is lost. A build that writes into the reviewed tree is the worse cost.
 
 `prefilter.run_prefilter` records that cost when it applies. The CodeQL work unit now returns its result tagged `codeql:<lang>` instead of the bare `codeql`, so the result fold can tell a Go failure from any other. The fold branches on `backend.startswith("codeql")`, and a failing Go unit adds `skipped_reasons["codeql-go"] = "build-unfenceable"`. The `failed` entry still carries the bare name `codeql`, so no external consumer sees the tag. `codeql-go` is a reason key, not a backend: it never joins `backends_run`, and the never-silent contract loop still checks the four real backend names only.
+
+### The opt-in proof-by-execution lane (REQ-30)
+
+`prove.py` is the one module that runs target-derived code. Every other phase reads the target and
+never runs it. The lane is off unless `scan_options.prove_findings` is exactly `true` in
+`kb/scan-profile.json`, so a normal audit executes nothing. `prove_enabled` returns False for a
+missing file, a malformed file, and an absent key.
+
+A proof promotes a finding only when three conditions hold together. The agent drove a real
+entrypoint (`scope: entrypoint`), the class has a wrapper-decidable oracle, and the oracle observed
+the effect. `_reject_reason` checks them in one order and returns the first failure:
+`prove: toolchain-absent`, `prove: slice-unbuildable`, `prove: harness-only-class`,
+`prove: class-not-oracle-able`, then `prove: oracle-silent`. `AUTO_CONFIRMABLE` holds `ssrf`,
+`cmdi`, `path-traversal`, `deserialization`, and `expr-eval-rce`. `HARNESS_ONLY` holds `sqli` and
+`authz`, whose oracles need a provisioned backend, so a proof for them attaches a record and never
+promotes. A proof that ran attaches a `reproduction` object to the finding even when it does not
+promote; a `toolchain-absent` rejection attaches nothing, because nothing ran.
+
+`loopback_collector` is the in-band oracle. It binds a stdlib `ThreadingHTTPServer` on
+`127.0.0.1:0` and records each request path, so an egress proof needs no network egress and no new
+dependency.
+
+Six modules carry the wiring. `Workspace.repro` names the out-of-tree build and run root, created
+by `ensure()`, so a proof never builds inside the target. `phases.py` declares a `prove` agent
+phase between `redteam` and `artifact-gate`, driven by `agents/prove.md` and declaring
+`kb/prove.json` as its output. `driver.run_audit` skips that phase and records the stage when the
+lane is off — a declared output plus the auto-advance rule would otherwise cost one wasted model
+dispatch on every default run. `findings_gate` accepts a `reproduction` receipt in place of a
+Tier-1 tool receipt. `preflight_report` adds a `prove_toolchains` map for `opa`, `go`, `node`, and
+`python3`; a missing toolchain degrades the lane and never blocks preflight.
+
+`evidence.py` stays byte-identical. It is pinned by the D-15 frozen-contract test, so the
+reproduction receipt vocabulary lives in `prove.py`, and `findings_gate` consults both modules.
+Trade-offs: a `reproduction`-only confirmed finding leaves `receipt_tier` null, because the tier
+map lives in the pinned file; `_promote` writes `runtime_disposition` as `static-settled`, because
+the pinned `RUNTIME_DISPOSITIONS` set carries no proven value; and `run_prove` skips a proof whose
+named finding file is absent without recording a degradation.

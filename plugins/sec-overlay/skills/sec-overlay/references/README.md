@@ -290,3 +290,8 @@ object, the string, and null. The array holds observation-channel objects that `
 writes and `helpers/sec_overlay/render_util.py` renders.
 
 The `STE_PROSE` block's mandated front-matter statement is now three sentences: "Prose follows an ASD-STE100-inspired clarity standard. A linter enforces the structural rules. The lexical dictionary stays unverified." The prior single sentence used a semicolon, which the same block forbids and `ste_lint.lint_prose` reports as an error (REQ-12).
+
+`finding.schema.json` also declares a `reproduction` object (REQ-30) with seven keys: `command`,
+`exit_code`, `oracle`, `oracle_result`, `toolchain`, `resolved_version`, and `scope`. `scope` is an
+enum of `entrypoint` and `slice`. `helpers/sec_overlay/prove.py` writes the object when a proof
+runs, and only an `entrypoint` proof of an oracle-able class promotes its finding.
