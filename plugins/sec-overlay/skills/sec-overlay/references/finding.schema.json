@@ -51,7 +51,7 @@
     "runtime_test": {
       "type": ["object", "null"],
       "properties": {
-        "expected_signal": {"type": ["object", "string", "null"]}
+        "expected_signal": {"type": ["array", "object", "string", "null"]}
       }
     },
     "preconditions": {"type": "array", "items": {"type": "string"}},

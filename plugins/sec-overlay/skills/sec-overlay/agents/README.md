@@ -287,3 +287,9 @@ may record `attacker`, `privilege`, `exact_request`, and `exfil_channels`. Valid
 `library_version`, `refutation`, `negative_results`, and `baseline`. Both blocks are
 evidence-gated: an agent omits a key it cannot support and never guesses a value. The report
 renders each present key as its own section, so an omitted key costs a section, not a run.
+
+`redteam.md` gained a multi-channel `expected_signal` rule (REQ-34). The field may stay the
+`{secure, insecure}` object, or become an array of named observation channels. Each channel
+carries `needs_egress`, which tells a tester whether the channel needs a request to leave the
+network. The prompt requires every no-egress channel first, and requires the in-band channel
+first when the sink reply is caller-observable.

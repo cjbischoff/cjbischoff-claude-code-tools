@@ -1399,3 +1399,20 @@ already stashes every unknown key on the instance under `_OVERFLOW_ATTR`, and
 `workspace.write_findings` merges the same mapping back on the way out (REQ-27). `render_finding`
 reads that mapping. The trade-off: the eight fields are not typed, so a wrong type is caught by the
 schema in `references/finding.schema.json` rather than by the dataclass.
+
+### Multi-channel expected signals (REQ-34)
+
+`render_util.signal_lines` now accepts three shapes, not two. A list of channel objects renders
+one block per channel; a `{secure, insecure}` dict and a bare string render as before. A channel
+object is `{"name", "needs_egress", "secure", "insecure"}`. `_channel_lines` renders the name and
+the egress marker on a header bullet, then indents the secure and insecure lines under it.
+
+The egress marker is the point of the change. A tester inside a fenced network cannot observe an
+out-of-band channel, so a plan that offers only a collector callback is untestable for that
+tester. `agents/redteam.md` now orders the array with every no-egress channel first, and requires
+the in-band channel first whenever the sink reply is caller-observable.
+
+Both existing callers — `redteam._signal` and `report.render_ndt` — already delegate to
+`signal_lines`, so neither changed. Trade-off: a channel object is validated by
+`references/finding.schema.json` only. A malformed entry that is not a dict is skipped in silence
+rather than reported.

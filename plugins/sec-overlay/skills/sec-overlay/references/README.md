@@ -284,3 +284,7 @@ pre-commit hook (see the plugin [`CLAUDE.md`](../../../CLAUDE.md), "Documentatio
 check on these fields, because they ride the finding overflow rather than a `Finding` dataclass
 field (`models.py` is byte-pinned by the D-15 frozen-contract test). The schema declares no
 `additionalProperties`, so a finding written before this change still validates.
+
+`finding.schema.json`'s `expected_signal` now also accepts an array (REQ-34), alongside the
+object, the string, and null. The array holds observation-channel objects that `agents/redteam.md`
+writes and `helpers/sec_overlay/render_util.py` renders.
