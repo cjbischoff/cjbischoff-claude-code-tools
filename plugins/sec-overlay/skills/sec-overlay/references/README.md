@@ -277,3 +277,10 @@ The agent does **not** get to argue md5 is fine "in this context" — the YAML s
 
 **When code here changes, this README must change in the same commit** — the repo's
 pre-commit hook (see the plugin [`CLAUDE.md`](../../../CLAUDE.md), "Documentation" section) enforces it.
+
+`finding.schema.json` declares the eight REQ-33 Part D elements: `attacker`, `privilege`,
+`exact_request`, `library_version`, `refutation`, and `baseline` as nullable strings, plus
+`exfil_channels` and `negative_results` as nullable string arrays. The schema is the only type
+check on these fields, because they ride the finding overflow rather than a `Finding` dataclass
+field (`models.py` is byte-pinned by the D-15 frozen-contract test). The schema declares no
+`additionalProperties`, so a finding written before this change still validates.

@@ -20,7 +20,13 @@ from sec_overlay.render_util import signal_lines
 from sec_overlay.review_findings import ReviewFinding
 from sec_overlay.sarif import to_sarif
 from sec_overlay.state import load_state
-from sec_overlay.workspace import Workspace, _atomic_write, load_paths, read_findings
+from sec_overlay.workspace import (
+    _OVERFLOW_ATTR,
+    Workspace,
+    _atomic_write,
+    load_paths,
+    read_findings,
+)
 
 _ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 _REPORTABLE = {FindingStatus.CONFIRMED, FindingStatus.FIXED}
@@ -44,6 +50,46 @@ def _risk_sort_key(f: Finding) -> tuple[int, int, str]:
 
 # Full template for these tiers; condensed (Summary/Mechanism/Severity/Fix) below.
 _FULL_TIERS = {"critical", "high"}
+
+# REQ-33: Part D elements. They ride the finding overflow (workspace._OVERFLOW_ATTR),
+# never a `Finding` field — models.py is byte-pinned by the D-15 frozen-contract test.
+_OPTIONAL_LABELS = {
+    "attacker": "Attacker",
+    "privilege": "Privilege required",
+    "exact_request": "Exact request",
+    "exfil_channels": "Exfiltration channels",
+    "library_version": "Library version",
+    "refutation": "Refutation attempted",
+    "negative_results": "Negative results",
+    "baseline": "Baseline",
+}
+_CONTEXT_KEYS = ("attacker", "privilege", "exact_request", "exfil_channels")
+_EVIDENCE_KEYS = ("library_version", "refutation", "negative_results", "baseline")
+
+
+def _optional_sections(extra: dict, keys: tuple[str, ...]) -> list[str]:
+    """Render the present Part D elements for ``keys`` as Markdown lines.
+
+    Args:
+        extra: The finding's overflow mapping; absent keys render nothing.
+        keys: The ordered subset of :data:`_OPTIONAL_LABELS` to render.
+
+    Returns:
+        Markdown lines, empty when no key is present.
+    """
+    out: list[str] = []
+    for key in keys:
+        value = extra.get(key)
+        if value is None or value == "" or value == []:
+            continue
+        label = _OPTIONAL_LABELS[key]
+        if isinstance(value, list):
+            out += [f"**{label}.**", *(f"- {item}" for item in value), ""]
+        elif key == "exact_request":
+            out += [f"**{label}.**", "```http", str(value).strip(), "```", ""]
+        else:
+            out += [f"**{label}.** {value}", ""]
+    return out
 
 
 def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
@@ -109,6 +155,7 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
         else "_(no patch generated; remediate per §2 root cause)_"
     )
     full = f.severity.value in _FULL_TIERS
+    extra = getattr(f, _OVERFLOW_ATTR, {}) or {}
 
     out = [f"### {f.id} — {f.cls} — {f.severity.value.title()}", ""]
     if f.status is FindingStatus.FIXED and patch_status is not None:
@@ -124,6 +171,7 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
         if f.codeguard_ids:
             comp.append("CodeGuard " + ", ".join(f.codeguard_ids))
         out += [f"**Compliance.** {'; '.join(comp)}.", ""]
+    out += _optional_sections(extra, _CONTEXT_KEYS)
     # §2 Mechanism
     out += ["**2. Mechanism (source).** Data flow:", flow]
     if f.evidence:
@@ -156,6 +204,7 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
         ),
         "",
     ]
+    out += _optional_sections(extra, _EVIDENCE_KEYS)
     if not full:
         out += [
             (

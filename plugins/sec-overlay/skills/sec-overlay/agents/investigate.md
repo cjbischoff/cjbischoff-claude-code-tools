@@ -209,6 +209,17 @@ Write each finding as JSON to `{{WORKSPACE}}/findings/<id>.json` matching this s
 - Do NOT set `risk_score`, `verification`, or `patch_diff` — those belong to
   later phases.
 
+### Attack-context fields (optional, evidence-gated)
+Add these four keys to a finding when the evidence you already read supports them.
+Omit a key you cannot support. Never guess a value.
+
+- `attacker` — a string. Name who reaches the source.
+- `privilege` — a string. Name the privilege the attacker needs.
+- `exact_request` — a string. Give the exact request that reaches the sink.
+- `exfil_channels` — an array of strings. Name each channel that returns data.
+
+The report renders each present key as its own section. An absent key renders nothing.
+
 After writing, return a 3–5 line summary: how many confirmed (`raw`) vs rejected
 vs discarded as hallucinations, and the strongest finding's source→sink in one line.
 

@@ -122,6 +122,16 @@ guessed vector produces a flat, wrong score (ISSUE-008). If you cannot derive a
 vector, the finding is not `confirmed`; route it to `needs-deployment-testing` with
 the open question that blocks scoring.
 
+### Refutation-evidence fields (optional, evidence-gated)
+Add these four keys to a finding you confirm. Omit a key you cannot support. Never guess a value.
+
+- `library_version` — a string. Give the resolved version of the vulnerable library.
+- `refutation` — a string. State the refutation you attempted and its result.
+- `negative_results` — an array of strings. Name each control you looked for and did not find.
+- `baseline` — a string. State how the same code behaved before the change.
+
+The report renders each present key as its own section. An absent key renders nothing.
+
 Return a verdict table with exactly as many rows as the candidate count from
 step 1 (id, verdict, one-line reason), followed by confirmed/rejected/verify-error
 counts.

@@ -37,6 +37,14 @@
     "asvs_ids": {"type": "array", "items": {"type": "string"}},
     "codeguard_ids": {"type": "array", "items": {"type": "string"}},
     "completeness_tier": {"type": ["string", "null"]},
+    "attacker": {"type": ["string", "null"]},
+    "privilege": {"type": ["string", "null"]},
+    "exact_request": {"type": ["string", "null"]},
+    "exfil_channels": {"type": ["array", "null"], "items": {"type": "string"}},
+    "library_version": {"type": ["string", "null"]},
+    "refutation": {"type": ["string", "null"]},
+    "negative_results": {"type": ["array", "null"], "items": {"type": "string"}},
+    "baseline": {"type": ["string", "null"]},
     "runtime_disposition": {
       "enum": ["needs-runtime", "static-settled", "unassessed", null]
     },

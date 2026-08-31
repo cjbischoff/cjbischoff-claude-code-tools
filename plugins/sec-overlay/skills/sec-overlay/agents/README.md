@@ -281,3 +281,9 @@ recon names every route it investigates in `entrypoints`/`attack_surface`, archi
 every control by key, and threat-model keeps every entrypoint listed before its hunt-list
 prioritization. The recall gate derives `route_summary` (`total`/`covered`/`uncovered`) from
 the route census after recon finishes; recon must never emit that field itself (REQ-11).
+
+`investigate.md` and `validate.md` each gained one optional-field block for REQ-33. Investigate
+may record `attacker`, `privilege`, `exact_request`, and `exfil_channels`. Validate may record
+`library_version`, `refutation`, `negative_results`, and `baseline`. Both blocks are
+evidence-gated: an agent omits a key it cannot support and never guesses a value. The report
+renders each present key as its own section, so an omitted key costs a section, not a run.

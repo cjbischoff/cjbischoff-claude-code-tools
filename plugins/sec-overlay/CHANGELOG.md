@@ -6,6 +6,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- The eight Part D elements now render on a finding page (REQ-33). `report.render_finding` emits `attacker`, `privilege`, `exact_request`, and `exfil_channels` after the Compliance line, then `library_version`, `refutation`, `negative_results`, and `baseline` after the Severity Rationale. A new `_optional_sections` helper renders both groups: a list value becomes a bullet list, `exact_request` renders in an `http` fence, and every other value renders inline. An absent key renders nothing. The eight values ride the finding overflow and are declared in `references/finding.schema.json`, because `models.py` is byte-pinned by the D-15 frozen-contract test. `agents/investigate.md` and `agents/validate.md` each gained an evidence-gated block naming the keys the phase may record. Trade-off: the fields are schema-checked, not dataclass-typed.
+
 - Failing tests for REQ-33 in `helpers/tests/test_report_optional_sections.py`. They pin the eight Part D elements a finding page must carry: `attacker`, `privilege`, `exact_request`, `exfil_channels`, `library_version`, `refutation`, `negative_results`, and `baseline`. The fields ride the finding overflow rather than a `Finding` field, because `models.py` is byte-pinned by the D-15 frozen-contract test. Four of the five tests fail against the current `report.render_finding`.
 
 - A terminal artifact-consistency gate (REQ-31). The new `artifact-consistency` phase runs between

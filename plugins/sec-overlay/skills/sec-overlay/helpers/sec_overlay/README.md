@@ -1382,3 +1382,20 @@ uv run python -m sec_overlay.artifact_consistency --workspace <WS>
 ```
 
 The CLI prints each contradiction and exits 1 when the artifacts disagree.
+
+### The Part D finding elements (REQ-33)
+
+`report.py` renders eight optional elements on a finding page: `attacker`, `privilege`,
+`exact_request`, and `exfil_channels` after the Compliance line, then `library_version`,
+`refutation`, `negative_results`, and `baseline` after the Severity Rationale. One helper,
+`_optional_sections(extra, keys)`, renders both groups. A list value becomes a bullet list.
+`exact_request` renders inside an ```` ```http ```` fence. Every other value renders inline. An
+absent, empty, or null key renders nothing, so a finding written before this change loses no
+output.
+
+The eight values ride the finding overflow, not a `Finding` field. `models.py` is byte-pinned by
+the D-15 frozen-contract test, so a new dataclass field is not available. `workspace.read_findings`
+already stashes every unknown key on the instance under `_OVERFLOW_ATTR`, and
+`workspace.write_findings` merges the same mapping back on the way out (REQ-27). `render_finding`
+reads that mapping. The trade-off: the eight fields are not typed, so a wrong type is caught by the
+schema in `references/finding.schema.json` rather than by the dataclass.
