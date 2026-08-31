@@ -1448,3 +1448,14 @@ wall-clock data and nothing else, then asserts that the two token headers do not
 the `## Run economics` heading is absent. `report.py` prints both token headers unconditionally
 and the heading whenever the payload is truthy, so a run that measured nothing still claims two
 measurements. Both fail on the header assertion.
+
+## 2026-08-31 — REQ-31 red: no terminal gate reconciles the artifacts
+
+`test_artifact_consistency.py` is new. Twelve tests drive the terminal consistency gate through
+its six checks — dangling `findings/<id>.md` links, a next action whose `redteam-plan.md` section
+omits the finding, a completeness claim the coverage ledger denies, a self-score that contradicts
+the rendered counts, a `(measured):` header over an empty body, and a triage title truncated
+mid-word — plus its `kb/gates/artifact-consistency.json` audit trail, its
+`scan_options.consistency_gate` opt-out, its degrade-to-no-op path on a workspace with no report,
+and its position between `artifact-review` and `postflight` in `PHASE_TABLE`. All twelve fail at
+collection with `ModuleNotFoundError: No module named 'sec_overlay.artifact_consistency'`.

@@ -6,6 +6,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Failing tests for the terminal artifact-consistency gate (REQ-31). Twelve tests in
+  `tests/test_artifact_consistency.py` pin the six terminal checks, the gate's
+  `kb/gates/artifact-consistency.json` audit trail, its `scan_options.consistency_gate` opt-out,
+  its degrade-to-no-op path on a workspace with no report, and its position between
+  `artifact-review` and `postflight`. No `sec_overlay.artifact_consistency` module exists yet, so
+  all twelve fail at collection.
 - The run-economics section prints only what the run measured (REQ-05). Both token headers
   printed unconditionally, so a run that collected neither published `(measured):` over an empty
   body. `report._render_economics` keeps a measurement group only when it holds rows, appends the
