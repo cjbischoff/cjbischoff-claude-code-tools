@@ -1427,3 +1427,14 @@ loop-until-dry bound is prose in a manual, not a mechanism. The first two fail
 with `FileNotFoundError` on `kb/discovery-ledger.json`, the third with
 `ImportError: cannot import name '_investigate_is_saturated'`, and the fourth
 because `agents/investigate.md` names neither a wave nor saturation.
+
+## 2026-08-31 — REQ-03 red: the next action names the wrong section
+
+`test_report.py` gains three tests that read the "Next action" cell of a
+triage row. `test_below_bar_ndt_next_action_points_at_the_gaps_section`,
+`test_unrunnable_ndt_next_action_points_at_the_preconditions_section`, and
+`test_directive_ndt_next_action_points_at_the_directive_section` each build a
+needs-runtime finding that `redteam.discriminate` sorts into a different
+bucket. `report.py` hardcodes one action for all three, so every row tells the
+reader to run a directive. Two of the three findings have no directive to run.
+All three fail with `assert 'run redteam-plan test' == '<expected>'`.

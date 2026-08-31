@@ -35,6 +35,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- Failing next-action tests for REQ-03: `test_report.py`'s
+  `test_below_bar_ndt_next_action_points_at_the_gaps_section`,
+  `test_unrunnable_ndt_next_action_points_at_the_preconditions_section`, and
+  `test_directive_ndt_next_action_points_at_the_directive_section` pin that a needs-runtime
+  triage row names the `redteam-plan.md` section that actually contains the finding. All three
+  fail with `assert 'run redteam-plan test' == '<expected>'`, because the report hardcodes one
+  action for every needs-runtime row.
 - Failing saturation-loop tests for REQ-24: `test_driver.py`'s
   `test_findings_gate_records_a_discovery_wave`,
   `test_repeated_findings_gate_runs_reach_a_terminal_reason`, and
