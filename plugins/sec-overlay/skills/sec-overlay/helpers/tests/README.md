@@ -1486,3 +1486,9 @@ partition assert survives the new receipt vocabulary.
 One test needed a fixture repair. `test_the_gate_accepts_a_reproduction_only_confirmed_finding`
 failed on an unrelated pre-existing gate rule: a shipping finding must carry a non-empty `impact`.
 The finding now sets `impact`, so the test asserts the one thing it was written to assert.
+
+New `test_phase_artifact_contract.py` pins REQ-42: no phase reads an artifact no earlier phase
+writes. Three tests assert `factcheck` is absent from `PHASE_TABLE` and `DETERMINISTIC_ACTIONS`,
+`fact-checked` is absent from `VERIFICATION_VALUES`, and no `sec_overlay.factcheck` module or
+`agents/factcheck.md` prompt exists. All three fail: the phase's only input, `kb/verdicts.json`,
+had no producing phase, so every run recorded `factcheck: done` after doing nothing.
