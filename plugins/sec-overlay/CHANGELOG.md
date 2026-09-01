@@ -28,6 +28,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- `sec_overlay.cost` holds only `record_timing` and `aggregate_timings_by_phase` (REQ-46). The harness never surfaced a subagent's token usage, so `record_agent`, `aggregate_by_phase`, `aggregate_by_model`, and `estimate_cost_usd` always rendered an empty "Tokens by" table or a zero "Estimated cost" line; all four and the `_RATES_USD_PER_MTOK` table are removed. `report.py`'s `_render_economics` now reads only a `by_phase_seconds` key and drops the "Run economics" heading when it is empty, unchanged from before. `bench/run.py` and `bench/tally.py` keep only the wall-time cost record (`wall_time_s`); the "Cost & latency" section keeps its latency row and drops the token/USD ones. `SKILL.md`'s cost-recording convention now names `cost.record_timing` instead of the removed `cost.record_agent`. `test_cost.py`, `test_report.py`, and `test_bench.py` drop their token/USD assertions and keep their wall-clock ones.
+
 - `run_postflight` derives its drift set from a `target` argument instead of never receiving one (REQ-45). `_drift_since` diffs the prior context's pinned SHA against the current pass's SHA in `target`'s working tree and returns the changed files; `_merge` drops prior items on those files and keeps the rest. `_act_postflight` now passes `ctx.target` through, and the CLI gains a `--target` flag. `changed_files`/`target` merging is unchanged when both are supplied explicitly, and passing neither keeps every prior item, matching a first pass with no drift signal.
 
 - The `validate-fix` node in the pipeline diagram carries its step number `11.5` (`skills/sec-overlay/README.md`), matching every neighbouring node's numbering style.

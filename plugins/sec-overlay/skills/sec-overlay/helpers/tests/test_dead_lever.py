@@ -67,7 +67,7 @@ def test_postflight_without_a_target_keeps_every_prior_item(tmp_path: Path):
 
 
 def test_cost_module_exposes_only_timing_helpers():
-    import sec_overlay.cost as cost
+    from sec_overlay import cost
 
     public = {
         k

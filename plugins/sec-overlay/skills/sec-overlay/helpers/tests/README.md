@@ -1,14 +1,19 @@
 # `tests/` — the deterministic test suite
 
-132 pytest files, 1697 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+132 pytest files, 1693 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
 `test_dead_lever.py` gains three tests pinning REQ-46: `sec_overlay.cost` must expose only
 `record_timing` and `aggregate_timings_by_phase`, a bare workspace's rendered report must hold no
-"Tokens by" or "Estimated cost" line, and `SKILL.md` must never name `record_agent(`. Two fail:
-`cost` still exposes `record_agent`/`aggregate_by_phase`/`aggregate_by_model`/`estimate_cost_usd`,
-and `SKILL.md` still names `record_agent(` in its cost-recording convention.
+"Tokens by" or "Estimated cost" line, and `SKILL.md` must never name `record_agent(`. `cost.py`
+now holds only the two timing helpers. `test_cost.py` drops its four token/USD tests, keeping
+only `test_record_and_aggregate_timings`. `test_report.py` drops
+`test_write_report_renders_run_economics` and
+`test_run_economics_section_renders_phase_model_and_usd_estimate` — both asserted a token or USD
+total that no longer exists. `test_bench.py` drops `test_scorecard_cost_none_per_tp_when_no_tp`
+and trims the token/USD assertions out of `test_scorecard_carries_cost_columns` and
+`test_scorecard_markdown_renders_cost_and_per_class_fp`, keeping their wall-clock assertions.
 
 New `test_findings_overflow.py` (REQ-27, 5 tests) covers the load-and-save round trip through
 `read_findings`/`write_findings`: an unknown finding key survives the round trip, known fields

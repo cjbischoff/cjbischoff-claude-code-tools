@@ -31,15 +31,15 @@ Measures and locks in detection quality. Not part of the shipped harness. Three 
   reader (default `real`); `--only-local` skips http clone targets for an offline gate.
   `--repeats N` runs the benchmark N times into `run-<n>/` and writes an aggregate
   `scorecard_agg.{json,md}` (mean ± range per metric) via `run_repeated` (REQ-M5).
-  Each run captures wall-time and sums per-repo token totals from every
-  `workspaces/*/state.json` budget (via `sec_overlay.cost`), passing a `cost`
-  record to `tally` so the scorecard carries cost/latency columns (REQ-M6).
+  Each run captures wall-time, passing a `cost` record to `tally` so the
+  scorecard carries a latency column (REQ-M6). Token and USD accounting was
+  removed at REQ-46: the harness never surfaced a subagent's usage, so those
+  columns always rendered empty.
 - `tally.py` — also `aggregate_scorecards(cards)`: mean/min/max per metric
   (precision, recall, f1, fp_rate) across repeated runs; skips `None` metrics.
-  `tally(..., cost=...)` attaches a cost block (`tokens`, `wall_time_s`,
-  `usd_per_confirmed_tp` = USD estimate / real-confirmed TP, `None` when no TP);
-  `to_markdown` renders a "Cost & latency (estimates)" section, and per-class
-  FP-rate rows already publish in the "By class" table (REQ-M6, T3b).
+  `tally(..., cost=...)` attaches a cost block (`wall_time_s`); `to_markdown`
+  renders a "Cost & latency" section, and per-class FP-rate rows already
+  publish in the "By class" table (REQ-M6, T3b).
   `tally(..., findings_by_id=...)` attaches a verified-fix block
   (`fixed`, `confirmed`, `rate` = (`FIXED` ∪ `verified-static`) / confirmed
   true-positives) and a headline markdown row; `run.py` plumbs the per-repo

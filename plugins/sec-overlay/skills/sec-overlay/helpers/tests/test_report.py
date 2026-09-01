@@ -447,24 +447,6 @@ def test_write_report_without_target_skips_patch_check(tmp_path):
     assert "Caution" not in md
 
 
-def test_write_report_renders_run_economics(tmp_path):
-    from sec_overlay import cost
-    from sec_overlay.report import write_report
-    from sec_overlay.state import load_state, save_state
-    from sec_overlay.workspace import Workspace, write_findings
-
-    ws = Workspace(root=tmp_path / "ws")
-    ws.ensure()
-    write_findings(ws, [])
-    st = load_state(ws)
-    cost.record_agent(st, "investigate", "sonnet", 1234)
-    save_state(ws, st)
-    write_report(ws)
-    md = ws.report_path.read_text()
-    assert "## Run economics" in md
-    assert "investigate" in md and "sonnet" in md and "1234" in md
-
-
 def _dep():
     return Finding(
         id="DEP-1",
@@ -710,14 +692,6 @@ def test_triage_puts_ndt_lead_above_low_dep():
     detail = out.split("## Detail")[1]
     assert detail.index("NDT-T4") < detail.index("DEP-T4")  # leads above confirmed, risk-ordered
 
-
-def test_run_economics_section_renders_phase_model_and_usd_estimate():
-    econ = {"by_phase": {"investigate": 1500}, "by_model": {"sonnet": 1500}, "usd_estimate": 0.0045}
-    md = to_markdown([], economics=econ)
-    assert "## Run economics" in md
-    assert "investigate" in md and "sonnet" in md
-    assert "estimate" in md.lower()  # USD must be labelled an estimate
-    assert "$0.0045" in md
 
 
 def test_external_leads_render_in_their_own_bucket():

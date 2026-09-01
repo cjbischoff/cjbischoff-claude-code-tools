@@ -251,17 +251,6 @@ T1. **Tier-1 substrate** (no LLM) — `python -m sec_overlay.graph build --targe
 For repeat passes see **Phase 6** (incremental scoping + carry-forward). The per-phase
 sections below detail each step.
 
-**Cost-recording convention:** after each subagent completes, the orchestrator records its token
-usage with `cost.record_agent(state, <phase>, <model>, <tokens>)` and `save_state`; the final
-report renders measured per-phase token totals ("Token spend by phase"). USD is an opt-in
-estimate (`cost.estimate_cost_usd`), never shown as a measured figure.
-
-If the harness does not surface a subagent's token usage, record a labelled proxy
-instead of a fabricated token count: call
-`cost.record_agent(state, <phase>, <model>, 0)` and additionally note the agent
-count and output byte size in the run log. Never write an invented number into the
-`tokens` field. The Run-economics section states "measured" only for real usage.
-
 ## Process methodology (knobs + playbook)
 
 Four `scan_options` knobs let the orchestrator tune cost, coverage, and fan-out without
@@ -328,8 +317,8 @@ Soft per-scan output-token target. The orchestrator uses this as a scaling signa
 budget narrows the investigate fan-out (fewer parallel wave agents per round-trip) and may
 skip optional tuning rounds; a looser budget widens fan-out and enables the adaptive
 tool-tuning loop (Phase 0.5). The budget is a steering heuristic, not a hard abort — a
-finding already in flight is never dropped mid-run to hit the target. Record measured token
-spend per phase with `cost.record_agent` so the next run can calibrate.
+finding already in flight is never dropped mid-run to hit the target. Record measured
+wall-clock per phase with `cost.record_timing` so the next run can calibrate.
 
 ## Phase 0–1: Knowledge Base build + threat model (agentic)
 

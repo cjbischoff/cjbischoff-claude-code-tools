@@ -280,6 +280,10 @@ MEMORY.md, learnings/     durable per-repo memory across runs
 command. Its `main()` only prints to stdout, so the driver phase is the supported path
 to `kb/route-census.json`.
 
+`state.json`'s `budget` field carries per-phase wall-clock timings (`sec_overlay.cost`); `report.md`
+renders them under "Run economics" when any were recorded. Token and USD accounting is gone (REQ-46)
+— the harness never surfaced a subagent's usage, so those figures always rendered empty or zero.
+
 ---
 
 ## Develop

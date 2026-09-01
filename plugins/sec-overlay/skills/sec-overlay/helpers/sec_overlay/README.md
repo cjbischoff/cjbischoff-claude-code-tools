@@ -147,12 +147,12 @@ findings from `context.control_findings` inherit the check since they land in th
 files. `driver._act_findings_gate` calls it alongside `validate_findings` and folds both error
 lists into the same `PhaseHalt`.
 
-`cost.py` gained `aggregate_by_model` (per-model token totals, alongside the existing
-`aggregate_by_phase`), feeding `report.py`'s "Run economics" section — see the module map entry.
-It also gained `record_timing`/`aggregate_timings_by_phase`, summing per-phase wall-clock
-seconds recorded in `CampaignState.budget["timings"]` (ISSUE-014). `write_report` folds
-`aggregate_timings_by_phase` into the economics dict as `by_phase_seconds`, and `to_markdown`
-renders it as a "Wall-clock by phase, seconds" list in "Run economics" when present.
+`cost.py` holds `record_timing`/`aggregate_timings_by_phase`, summing per-phase wall-clock
+seconds recorded in `CampaignState.budget["timings"]` (ISSUE-014) — see the module map entry.
+`write_report` folds `aggregate_timings_by_phase` into the economics dict as `by_phase_seconds`,
+and `to_markdown` renders it as a "Wall-clock by phase, seconds" list in "Run economics" when
+present. Token and USD accounting was removed at REQ-46: the harness never surfaced a
+subagent's usage, so those tables always rendered empty.
 
 `models.py`'s `Finding` gained `cluster_id` (systemic-cluster id) and `affected_sites` (member
 sites on a cluster primary) — additive, nullable fields that round-trip through `to_dict`/
@@ -1369,10 +1369,12 @@ Confirmed rows are untouched — `bump` and `apply fix (§ below)` already name 
 
 `to_markdown` printed `**Tokens by phase** (measured):` and `**Tokens by model** (measured):`
 whenever the `economics` payload was truthy, so a run that collected neither still published two
-headers over empty bodies. `_render_economics(economics)` builds the three measurement groups,
-keeps a group only when it holds rows, appends `**Estimated cost:**` only when `usd_estimate` is
-present, and returns `[]` when no group survives — which drops the `## Run economics` heading
-with them. `to_markdown`'s `if economics:` branch is now one line.
+headers over empty bodies. `_render_economics(economics)` originally built three measurement
+groups plus an `**Estimated cost:**` line, keeping only groups that held rows and dropping the
+`## Run economics` heading when none survived. Token and USD accounting is gone (REQ-46):
+`_render_economics` now reads only `by_phase_seconds` and still returns `[]` when it is empty,
+so the same drop-when-nothing-measured guarantee holds with one measurement group instead of
+three.
 
 The rest of REQ-05 stays open by decision. Five report sections render when empty on purpose
 under D-13, D-14, and D-15, and `tests/test_report.py` pins that behaviour, so R-41, R-42, and

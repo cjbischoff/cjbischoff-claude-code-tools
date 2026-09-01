@@ -340,46 +340,24 @@ def _triage_row(f: Finding, status_label: str, action: str) -> str:
 
 
 def _render_economics(economics: dict) -> list[str]:
-    """Render the run-economics section, omitting every measurement that is absent.
-
-    A "(measured)" header above an empty body claims a measurement the run never
-    took. Each group renders only when it holds data, and the section itself
-    disappears when no group does (REQ-05).
+    """Render the run-economics section, omitting it when nothing was measured.
 
     Args:
-        economics: Cost aggregate with optional ``by_phase``, ``by_model``,
-            ``by_phase_seconds``, and ``usd_estimate`` keys.
+        economics: Cost aggregate with an optional ``by_phase_seconds`` key.
 
     Returns:
         Markdown lines for the section, or ``[]`` when nothing was measured.
 
     Example:
-        >>> _render_economics({"by_phase": {}, "by_model": {}})
+        >>> _render_economics({"by_phase_seconds": {}})
         []
     """
-    groups = (
-        (
-            "**Tokens by phase** (measured):",
-            [f"- **{k}**: {v}" for k, v in (economics.get("by_phase") or {}).items()],
-        ),
-        (
-            "**Tokens by model** (measured):",
-            [f"- **{k}**: {v}" for k, v in (economics.get("by_model") or {}).items()],
-        ),
-        (
-            "**Wall-clock by phase, seconds** (measured):",
-            [f"- **{k}**: {v:.2f}" for k, v in (economics.get("by_phase_seconds") or {}).items()],
-        ),
-    )
-    body: list[str] = []
-    for header, items in groups:
-        if items:
-            body += ([""] if body else []) + [header] + items
-    usd = economics.get("usd_estimate")
-    if usd is not None:
-        cost = f"**Estimated cost:** ${usd:.4f} (estimate, not a billed figure)."
-        body += ([""] if body else []) + [cost]
-    return ["", "## Run economics", ""] + body if body else []
+    seconds = economics.get("by_phase_seconds") or {}
+    if not seconds:
+        return []
+    body = ["**Wall-clock by phase, seconds** (measured):"]
+    body += [f"- **{k}**: {v:.2f}" for k, v in seconds.items()]
+    return ["", "## Run economics", ""] + body
 
 
 def to_markdown(
@@ -415,9 +393,9 @@ def to_markdown(
             "Manual runtime testing" section pointing the engineer at it (O-022).
         patch_statuses: Optional ``finding.id`` → :class:`PatchStatus`, from
             :func:`check_patch_applied` against the real target, for ``fixed`` findings.
-        economics: Optional ``{"by_phase": dict, "by_model": dict, "by_phase_seconds": dict,
-            "usd_estimate": float}`` from :func:`sec_overlay.cost`; renders a "Run economics"
-            section and takes priority over ``token_spend`` when both are given.
+        economics: Optional ``{"by_phase_seconds": dict}`` from :func:`sec_overlay.cost`;
+            renders a "Run economics" section and takes priority over ``token_spend`` when
+            both are given.
         dropped: Review-mode findings the position gate placed outside the diff
             (``phase_gate.DroppedFinding``); rendered under ``DROPPED_FINDINGS_HEADING``
             unconditionally, so an empty run states none-dropped rather than omitting the
@@ -698,18 +676,8 @@ def write_report(
         build_coverage_ledger(ws)
     coverage_ledger = json.loads(cl_path.read_text()) if cl_path.exists() else None
     state = load_state(ws)
-    by_phase = cost.aggregate_by_phase(state)
     by_phase_seconds = cost.aggregate_timings_by_phase(state)
-    economics = (
-        {
-            "by_phase": by_phase,
-            "by_model": cost.aggregate_by_model(state),
-            "by_phase_seconds": by_phase_seconds,
-            "usd_estimate": cost.estimate_cost_usd(state),
-        }
-        if by_phase or by_phase_seconds
-        else None
-    )
+    economics = {"by_phase_seconds": by_phase_seconds} if by_phase_seconds else None
     patch_statuses = None
     if target:
         patch_statuses = {
