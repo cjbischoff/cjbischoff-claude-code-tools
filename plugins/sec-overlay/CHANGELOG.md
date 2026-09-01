@@ -6,6 +6,19 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- New `tests/test_no_dead_helpers.py` pins REQ-48: an AST-precise scan walks every public
+  function in `sec_overlay/`, and each one must either have a real Python caller in
+  non-test `sec_overlay/`/`bench/` code, appear in `DEAD_ALLOWLIST` with a one-line reason,
+  or appear in `PROMPT_ONLY` naming the agent prompt or `SKILL.md` that runs it by name. A
+  second test fails the moment a listed entry gains a real caller, and a third fails the
+  moment a listed entry names a function that no longer exists, so the two lists cannot
+  drift from the tree silently. Reconciling the lists against the current tree dropped one
+  stale `PROMPT_ONLY` entry (`scoring.py:score_fix`, now called directly by `verify.py`) and
+  added one (`reflection.py:validate_verdict`, named only by `agents/README.md`).
+  `report.to_markdown`'s unreached `token_spend` branch needs no entry: the scan is
+  function-level, and `to_markdown` itself is still called by `write_report` and by
+  `test_report.py`.
+
 - `tests/test_dead_lever.py` pins REQ-47: `sec_overlay.scope` must no longer import, `sec_overlay.scanscope` must expose only `ScanScope`, `resolve`, `write_scope`, and `load_scope`, and `SKILL.md` must source the scope tokens from `run.env` instead of restating the old `kb/scan-scope.json` sentence. All three fail: `sec_overlay.scope` still imports, `scanscope` still exposes `rel_to_root`, and `SKILL.md` names neither `run.env` nor the replacement wording.
 
 - `tests/test_dead_lever.py` pins REQ-46: `sec_overlay.cost` must expose exactly `record_timing` and `aggregate_timings_by_phase`, a bare workspace's rendered report must hold no "Tokens by" or "Estimated cost" line, and `SKILL.md` must never name `record_agent(`. Two of three fail: `cost` still exposes `record_agent`, `aggregate_by_phase`, `aggregate_by_model`, and `estimate_cost_usd`, and `SKILL.md` still names `record_agent(` in its cost-recording convention.

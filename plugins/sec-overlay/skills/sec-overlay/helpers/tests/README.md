@@ -1,8 +1,22 @@
 # `tests/` — the deterministic test suite
 
-132 pytest files, 1693 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+140 pytest files, 1782 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_no_dead_helpers.py` (REQ-48) is the standing guard against the class of dead lever
+`test_dead_lever.py` pins one instance at a time: an AST-precise scan walks every public function
+in `sec_overlay/` and requires each one to have a real Python caller, a `DEAD_ALLOWLIST` entry with
+a one-line reason, or a `PROMPT_ONLY` entry naming the agent prompt or `SKILL.md` that runs it by
+name (never a Python import). A second test fails the moment a listed entry gains a real caller,
+and a third fails the moment a listed entry names a function deleted from the tree, so a new dead
+helper fails the suite instead of joining the pile silently. Reconciling the two lists against the
+current tree dropped `scoring.py:score_fix` from `PROMPT_ONLY` (`verify.py` now imports and calls
+it directly) and added `reflection.py:validate_verdict` (named only by `agents/README.md`).
+`report.py`'s `to_markdown` keeps an unreached `token_spend`/"Token spend by phase" branch behind
+`economics`, deliberately left in place by an earlier task; it needs no allowlist entry because the
+scan is function-level and `to_markdown` itself is still called by `write_report` and by
+`test_report.py`.
 
 `test_dead_lever.py`'s three REQ-47 tests now pass: `sec_overlay.scope` and `test_scope.py` are
 deleted (the module had no caller), `scanscope.py`'s `rel_to_root` is deleted along with its test
