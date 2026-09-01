@@ -233,8 +233,10 @@ never invents a boundary — see the module map entry.
 
 `calibrate.py` gained `_EXTERNAL_CAP` (3) and `_is_external_boundary`: a finding whose
 `reachability.blocker == "external-boundary"` has its `risk_score` capped at 3 (below the medium
-floor of 4) and `completeness_tier` set to `"external-unverifiable"`, so it can never present as a
-confirmed medium regardless of claimed severity.
+floor of 4) and `completeness_tier` set to `"external-unverifiable"`. `calibrate_findings` also
+demotes a `CONFIRMED` external-boundary finding to `NEEDS_DEPLOYMENT_TESTING` (REQ-41) — the prior
+rule lived only in the `validate` prompt, which cannot see the `trace`-phase blocker set after it
+runs — so the finding can never present as confirmed regardless of claimed severity.
 
 `report.to_markdown` partitions the needs-runtime bucket further: findings with
 `completeness_tier == "external-unverifiable"` render in their own "Leads — pending

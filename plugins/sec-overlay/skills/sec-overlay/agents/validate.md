@@ -88,9 +88,6 @@ substitute for reading the control; only the threat model's declared trust bound
      entry corroborates and never confirms. Propose a `cvss_vector`, append
      `history` `{"event": "validate:confirmed"}`.
      If your independent trace differs from the recorded `dataflow`, correct it.
-     Never confirm a finding whose `reachability.blocker == "external-boundary"` —
-     it stays a lead (`status: "raw"`); the calibrate cap and the report's external
-     bucket handle it, not the confirmed path.
    - **Rejected** (you found and cited the specific `file:line` control that
      defeats the attack — the FP-needs-evidence rule above): set
      `status: "rejected"`, append `history`

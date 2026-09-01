@@ -266,6 +266,10 @@ def calibrate_findings(ws: Workspace) -> int:
                 if _is_external_boundary(f):
                     f.risk_score = min(f.risk_score, _EXTERNAL_CAP)
                     f.completeness_tier = "external-unverifiable"
+                    if f.status is FindingStatus.CONFIRMED:
+                        # REQ-41: the report's external bucket reads NDT findings,
+                        # so demote to NDT, not RAW — RAW would erase the finding.
+                        f.status = FindingStatus.NEEDS_DEPLOYMENT_TESTING
                     if not any(h.get("event") == "calibrate:external-boundary" for h in f.history):
                         f.history.append({"event": "calibrate:external-boundary"})
                 delta = inflation_delta(f, derived)

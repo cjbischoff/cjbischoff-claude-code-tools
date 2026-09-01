@@ -200,7 +200,7 @@ def test_calibrate_demotes_an_external_boundary_confirmation(tmp_path) -> None:
     f = read_findings(ws)[0]
     assert f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING
     assert f.completeness_tier == "external-unverifiable"
-    assert f.risk_score <= 3
+    assert f.risk_score is not None and f.risk_score <= 3
 
 
 def test_the_validate_prompt_no_longer_bans_external_boundary() -> None:

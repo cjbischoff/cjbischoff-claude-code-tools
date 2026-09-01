@@ -1535,3 +1535,7 @@ demote a `CONFIRMED` external-boundary finding to `NEEDS_DEPLOYMENT_TESTING`, an
 must no longer carry the `external-boundary` ban it could not enforce — `trace` runs after
 `validate`, so a blocker `trace` sets was never checked. Both fail: the status stays `CONFIRMED`,
 and the banned phrase is still in the prompt.
+
+The REQ-41 `risk_score` assertion now reads `f.risk_score is not None and f.risk_score <= 3`,
+matching the null-check idiom already used in `test_calibrate.py` — `risk_score` types as
+`int | None`, so a bare `<= 3` fails the type checker.
