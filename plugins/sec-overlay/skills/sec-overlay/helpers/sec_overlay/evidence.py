@@ -21,6 +21,9 @@ TIER2_RECEIPTS = frozenset({"ripgrep", "structural-index", "ast-grep", "tree-sit
                              "dependency-catalog"})
 SHIPPING_STATUSES = frozenset({"confirmed", "fixed", "needs-deployment-testing"})
 RUNTIME_DISPOSITIONS = frozenset({"needs-runtime", "static-settled", "unassessed"})
+VERIFICATION_VALUES = frozenset(
+    {"verified-static", "static-only", "not-fixed", "verify-error", "fact-checked"}
+)
 
 assert TIER1_RECEIPTS | TIER2_RECEIPTS == _MECHANICAL, "receipt tiers must partition _MECHANICAL"
 

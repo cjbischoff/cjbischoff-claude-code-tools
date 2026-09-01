@@ -34,7 +34,7 @@ answers. `references/` kills that drift two ways:
 ```mermaid
 flowchart LR
     subgraph REF["references/"]
-        PC["prompt-constants.md<br/>(15 verbatim blocks)"]
+        PC["prompt-constants.md<br/>(16 verbatim blocks)"]
         AC["attack-classes.md"]
         ARCH["architecture-standards.md"]
         TMS["threat-model-standards.md"]
@@ -88,8 +88,8 @@ flowchart LR
 
 ### Prompt text — injected into agents
 
-#### `prompt-constants.md` — the constitution (15 blocks, pasted into every agent)
-The single most load-bearing file here. Fifteen named blocks are copied **verbatim** into the
+#### `prompt-constants.md` — the constitution (16 blocks, pasted into every agent)
+The single most load-bearing file here. Sixteen named blocks are copied **verbatim** into the
 top of every agent prompt (agents reference it via the `{{OVERLAY_ROOT}}` path token). If
 you change a word here, every agent's behaviour changes.
 
@@ -99,7 +99,7 @@ you change a word here, every agent's behaviour changes.
 | `EXCLUSION_RULES` | Five gates (A–E) that disqualify a finding: no attacker path, no impact, wrong layer, provably handled elsewhere, or below the noise floor. Used by the `security` review profile. |
 | `GENERAL_PROFILE_EXCLUSION_RULES` | Same five gates for the `general` review profile: gates A and B are skipped for a general-defect class (null dereference, thread safety, resource leak, error swallowing, injection); gates C, D, and E apply to every candidate unchanged. `sec_overlay.review_findings.EXCLUSION_BLOCK_BY_PROFILE` owns which block name a profile selects. |
 | `SEVERITY_GUIDANCE` | Legal CVSS v4.0 vector format; `severity` is exactly one of `info \| low \| medium \| high \| critical`. Status values (`needs-deployment-testing` etc.) may **never** appear in the `severity` field — the gate rejects that. |
-| `SEVERITY_PRECONDITION` | You must enumerate the preconditions an attack needs *before* you pick a severity band. This kills "it's SQLi therefore it's critical" anchoring. |
+| `SEVERITY_PRECONDITION` | You must enumerate the preconditions an attack needs *before* you pick a severity band. This kills "it's SQLi therefore it's critical" anchoring. States the `risk_score` cap table by precondition weight (free=0, weak=0.5, strong=1.0), matching `calibrate.PRECONDITION_CAPS` (REQ-32 contract lint). |
 | `SHAPE_HUNTING` | Hunt by structural *shape* (source→sink), not by ticking off a named-API checklist. |
 | `EXHAUSTIVENESS` | Don't stop at the first instance / first caller; expand every concrete instance. |
 | `TOOL_TRUST` | Mechanical receipts (Read / ast-grep / structural-index / semgrep …) outrank `llm-claimed` reasoning. Bytes read through a piped shell are **not** trustworthy for exact-content claims. Also warns that an absence check cuts the other way: an over-rigid rule reports every call site as unsafe, including fixed ones. Run the rule against a known-safe site and confirm it produces no match before citing an absence. |
@@ -107,6 +107,7 @@ you change a word here, every agent's behaviour changes.
 | `OUTPUT_WRITE_FALLBACK` | If a host blocks the agent's Write tool on a findings/report path, write via a `python3 shutil.copy` from a temp file instead — so a blocked write never silently drops a finding. |
 | `DIAGRAM_STYLE` | When emitting a mermaid diagram, enforce the 10-entity hard cap per diagram, one diagram per job. Short node IDs with detail in legend/edges. Diagrams are navigational; `file:line` claims live in prose, not diagram nodes. |
 | `FIELD_OWNERSHIP` | Each `Finding` field is owned by exactly one phase. Only populate your phase's Output fields; never overwrite downstream phase fields (e.g. `risk_score`, `patch_diff`). |
+| `FINDING_SHAPES` | Names the exact keys of the three nested `Finding` fields: `runtime_test`, `open_questions`, `affected_sites`. A different key is dropped when the finding loads. Bound to `models.RUNTIME_TEST_KEYS`/`OPEN_QUESTION_KEYS`/`AFFECTED_SITE_KEYS` by a drift test (REQ-18). |
 | `QUALIFIER_PROOF` | A blanket security claim ("mitigated", "sanitized", "handled elsewhere") is a claim about *every* code path. Enumerate all reachable paths and confirm the qualifier on each, or state which specific paths you verified. |
 | `EVIDENCE_VOCABULARY` | The receipt tiers, shipping statuses, and `runtime_disposition` enum are closed sets — Tier-1 (`codeql`/`semgrep`/`sca`/`secrets`) confirms alone, Tier-2 (`ripgrep`/`structural-index`/`ast-grep`/`tree-sitter`/`dependency-catalog`) only corroborates. `dependency-catalog:<entry-id>` locates a sink inside a declared dependency; it never confirms alone. Bound to `sec_overlay.evidence`'s constants by a drift test. |
 | `STE_PROSE` | Human-facing prose (arc42.md, threat-model.md, findings-table free text) follows ASD-STE100's checkable core: active voice, one claim per sentence, ≤25-word sentences, no semicolons, ≤3-word noun clusters, ≤6-sentence paragraphs, lists for 3+ steps. Hedges and scope qualifiers are never dropped. Checked by `sec_overlay.ste_lint`. |
@@ -227,8 +228,8 @@ they never confirm a finding.
 
 | File | Read by | What it decides |
 |------|---------|-----------------|
-| `finding.schema.json` | `findings_gate.py` | Every `findings/*.json` must validate: required fields, `status`/`severity` enums, the hard rule that `confirmed`/`fixed` findings carry ≥1 tool receipt, the inner shape of `runtime_test` (its `expected_signal` may be object, string, or null — the renderers tolerate all three), `open_questions` (array of `{question, why_it_matters, who_to_ask_or_check}` objects — human-answerable unknowns a live-exploit test can't settle, populated by `trace`/`redteam`), `cluster_id`/`affected_sites` (systemic-cluster id and, on a cluster primary, the member sites `{id, file, line}` — set by the cluster pass), and `receipt_tier` (optional integer or null — the derived tool-receipt strength, absent until a gate stamps it), and `impact` (string, default empty — required non-empty for a `SHIPPING_STATUSES` finding, enforced by `findings_gate`). |
-| `scan-profile.schema.json` | `profile.py` | `kb/scan-profile.json` shape (languages, frameworks, attack_surface, sast_plan, agents_to_spawn, budget_hint, attack_surface_evidence — required, matches `profile._REQUIRED`; optional subsystems, scan_options). |
+| `finding.schema.json` | `findings_gate.py` | Every `findings/*.json` must validate: required fields, `status`/`severity` enums, the hard rule that `confirmed`/`fixed` findings carry ≥1 tool receipt, the inner shape of `runtime_test` (its `expected_signal` may be object, string, or null — the renderers tolerate all three), `open_questions` (array of `{question, why_it_matters, who_to_ask_or_check}` objects — human-answerable unknowns a live-exploit test can't settle, populated by `trace`/`redteam`), `cluster_id`/`affected_sites` (systemic-cluster id and, on a cluster primary, the member sites `{id, file, line}` — set by the cluster pass), and `receipt_tier` (optional integer or null — the derived tool-receipt strength, absent until a gate stamps it), and `impact` (string, default empty — required non-empty for a `SHIPPING_STATUSES` finding, enforced by `findings_gate`). `verification` and `runtime_disposition` are closed enums (REQ-02) mirroring `sec_overlay.evidence`'s `VERIFICATION_VALUES`/`RUNTIME_DISPOSITIONS`, checked verbatim by `helpers/tests/test_contract_lint.py`. |
+| `scan-profile.schema.json` | `profile.py` | `kb/scan-profile.json` shape (languages, frameworks, attack_surface, sast_plan, agents_to_spawn, budget_hint, attack_surface_evidence — required, matches `profile._REQUIRED`; optional subsystems, scan_options, route_summary). `route_summary` is derived: the recall gate writes it back after recon, and recon never authors it (REQ-11). |
 | `fix-disposition.schema.json` | `fix_disposition.py` | Fix-completeness records (FULL/MITIGATION/WORKAROUND + gates/evidence/rationale). |
 | `coverage-ledger.schema.json` | `coverage_ledger.py` | The surface-completeness ledger (`completeness`, `surfaces`, `deferred`, `open_questions`). Each surface item gained two optional properties for a site-keyed surface, `cls` (attack class) and `site` (`file:line`). `id`/`disposition` stay required. |
 | `approved-crypto-algorithms.yaml` | `crypto_policy.py` | Approved algos (aes-256-gcm, chacha20-poly1305, sha256+, argon2/bcrypt/scrypt/pbkdf2); denied (md5, sha1, des, 3des, rc4, ecb …); floors (rsa≥3072, pbkdf2≥600000, ecc≥256, aes≥128). |
@@ -276,3 +277,21 @@ The agent does **not** get to argue md5 is fine "in this context" — the YAML s
 
 **When code here changes, this README must change in the same commit** — the repo's
 pre-commit hook (see the plugin [`CLAUDE.md`](../../../CLAUDE.md), "Documentation" section) enforces it.
+
+`finding.schema.json` declares the eight REQ-33 Part D elements: `attacker`, `privilege`,
+`exact_request`, `library_version`, `refutation`, and `baseline` as nullable strings, plus
+`exfil_channels` and `negative_results` as nullable string arrays. The schema is the only type
+check on these fields, because they ride the finding overflow rather than a `Finding` dataclass
+field (`models.py` is byte-pinned by the D-15 frozen-contract test). The schema declares no
+`additionalProperties`, so a finding written before this change still validates.
+
+`finding.schema.json`'s `expected_signal` now also accepts an array (REQ-34), alongside the
+object, the string, and null. The array holds observation-channel objects that `agents/redteam.md`
+writes and `helpers/sec_overlay/render_util.py` renders.
+
+The `STE_PROSE` block's mandated front-matter statement is now three sentences: "Prose follows an ASD-STE100-inspired clarity standard. A linter enforces the structural rules. The lexical dictionary stays unverified." The prior single sentence used a semicolon, which the same block forbids and `ste_lint.lint_prose` reports as an error (REQ-12).
+
+`finding.schema.json` also declares a `reproduction` object (REQ-30) with seven keys: `command`,
+`exit_code`, `oracle`, `oracle_result`, `toolchain`, `resolved_version`, and `scope`. `scope` is an
+enum of `entrypoint` and `slice`. `helpers/sec_overlay/prove.py` writes the object when a proof
+runs, and only an `entrypoint` proof of an oracle-able class promotes its finding.

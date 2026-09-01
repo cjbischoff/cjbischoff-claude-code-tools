@@ -4,6 +4,259 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- An opt-in proof-by-execution lane (REQ-30). `helpers/sec_overlay/prove.py` is the one module that runs target-derived code, and it runs only when `scan_options.prove_findings` is exactly `true` in `kb/scan-profile.json`. A new `prove` agent phase sits between `redteam` and `artifact-gate` and is driven by `agents/prove.md`; the driver skips it and records the stage when the lane is off, so a default run costs no model dispatch. A proof promotes a finding to `confirmed` only when the agent drove a real entrypoint, the class is one of `ssrf`, `cmdi`, `path-traversal`, `deserialization`, or `expr-eval-rce`, and the oracle observed the effect. `sqli` and `authz` route to a human-run harness. Every weaker outcome records a degradation reason and leaves the finding where it was. `Workspace.repro` gives the lane an out-of-tree build and run root, `findings_gate` accepts a `reproduction` receipt in place of a Tier-1 tool receipt, `finding.schema.json` declares the `reproduction` object, and `preflight_report` reports the lane's toolchains without blocking. The oracle is a stdlib loopback HTTP collector, so the lane needs no network egress and no new dependency. Trade-offs: `evidence.py` stays byte-identical for the D-15 frozen-contract test, so a `reproduction`-only confirmed finding leaves `receipt_tier` null and takes `runtime_disposition` `static-settled`.
+
+- Failing tests pin the opt-in proof-by-execution lane (REQ-30). `helpers/tests/test_prove.py` asserts the `scan_options.prove_findings` flag gate, the `reproduction` receipt vocabulary, the scope soundness guard (an `entrypoint` proof promotes an auto-confirmable class, a `slice` proof never does, `sqli` never does), the two degradation strings, the phase-table position, `Workspace.repro`, the schema object, the driver skip, and the preflight toolchain report. All nineteen fail: `sec_overlay.prove` does not exist.
+
+### Fixed
+
+- A Go CodeQL database no longer builds inside the target tree (REQ-14). `codeql.run_codeql` appends `--build-mode=none` to `codeql database create` for Go only, because the default Go extractor autobuilds and writes into the reviewed source. `prefilter.run_prefilter` tags each CodeQL work unit `codeql:<lang>` so its result fold can record `skipped_reasons["codeql-go"] = "build-unfenceable"` when a Go unit fails; the `failed` entry keeps the bare backend name `codeql`, and `codeql-go` never joins `backends_run`. Trade-off: `--build-mode=none` resolves fewer cross-package references, so a Go target loses some dataflow an autobuilt database would find.
+
+- The STE rule no longer breaks its own linter (REQ-12). `references/prompt-constants.md` mandated a front-matter sentence that used a semicolon, which the same block forbids; it now reads as three sentences. `ste_lint._prose_blocks` folds a wrapped list item into one block instead of two, so a sentence spread across a hard wrap has its words counted once. The splitter also closes an open paragraph on a heading, a table row, and a code fence, which it did not do before, so prose on either side of a heading is no longer merged into one block. Trade-off: the rest of `prompt-constants.md` still carries pre-existing lint violations that no gate checks.
+
+### Added
+
+- `tests/test_codeql_go_build.py` pins the Go CodeQL build mode (REQ-14). Six tests assert that `codeql database create` passes `--build-mode=none` for Go and no build mode for another language, and that a Go CodeQL failure records `skipped_reasons["codeql-go"] = "build-unfenceable"` without adding a backend. Two fail: the create argv carries no build mode, and the prefilter fold records no Go reason.
+
+- `tests/test_ste_lint_wrapped.py` pins the STE self-consistency rule (REQ-12). Five tests assert that the sentence `prompt-constants.md` mandates lints clean, that the file publishes the reworded three-sentence form, and that `_prose_blocks` folds a wrapped list item into one block while keeping an unindented paragraph separate. Two fail: the file still carries the semicolon form, and a continuation line still becomes its own block.
+
+- A runtime test may now name several observation channels (REQ-34). `render_util.signal_lines` gained a list branch: each entry is `{name, needs_egress, secure, insecure}`, and a new `_channel_lines` helper renders the name and an explicit `no egress` or `needs egress` marker above the two signal lines. The dict and bare-string shapes render exactly as before. `references/finding.schema.json` widens `expected_signal` to accept an array. `agents/redteam.md` requires every no-egress channel first, and requires the in-band channel first whenever the sink reply is caller-observable, so a tester behind a network fence still has a runnable oracle. Trade-off: a channel entry is schema-checked only, and a non-dict entry is skipped without a report.
+
+- `tests/test_signal_channels.py` pins a multi-channel `expected_signal` (REQ-34). Six tests assert that a list of observation-channel objects renders each channel by name, marks each one `no egress` or `needs egress`, and carries a secure and an insecure line per channel. Three more tests hold the existing dict, bare-string, and empty shapes. Three of the six fail against `render_util.signal_lines`, which has no list branch.
+
+- The eight Part D elements now render on a finding page (REQ-33). `report.render_finding` emits `attacker`, `privilege`, `exact_request`, and `exfil_channels` after the Compliance line, then `library_version`, `refutation`, `negative_results`, and `baseline` after the Severity Rationale. A new `_optional_sections` helper renders both groups: a list value becomes a bullet list, `exact_request` renders in an `http` fence, and every other value renders inline. An absent key renders nothing. The eight values ride the finding overflow and are declared in `references/finding.schema.json`, because `models.py` is byte-pinned by the D-15 frozen-contract test. `agents/investigate.md` and `agents/validate.md` each gained an evidence-gated block naming the keys the phase may record. Trade-off: the fields are schema-checked, not dataclass-typed.
+
+- Failing tests for REQ-33 in `helpers/tests/test_report_optional_sections.py`. They pin the eight Part D elements a finding page must carry: `attacker`, `privilege`, `exact_request`, `exfil_channels`, `library_version`, `refutation`, `negative_results`, and `baseline`. The fields ride the finding overflow rather than a `Finding` field, because `models.py` is byte-pinned by the D-15 frozen-contract test. Four of the five tests fail against the current `report.render_finding`.
+
+- A terminal artifact-consistency gate (REQ-31). The new `artifact-consistency` phase runs between
+  `artifact-review` and `postflight`. It reconciles a finished run's own artifacts against each
+  other: report cross-references resolve to files, every triage next-action names a `redteam-plan.md`
+  section that holds its finding, the rendered completeness matches `kb/coverage-ledger.json`, the
+  self-score does not undercount the report, no `(measured):` header stands above an empty body, and
+  a truncated triage title matches its source. The gate halts the run on a contradiction, writes
+  `kb/gates/artifact-consistency.json` on every run, degrades to a silent pass when an artifact is
+  absent, and turns off through `scan_options.consistency_gate`.
+- Failing tests for the terminal artifact-consistency gate (REQ-31). Twelve tests in
+  `tests/test_artifact_consistency.py` pin the six terminal checks, the gate's
+  `kb/gates/artifact-consistency.json` audit trail, its `scan_options.consistency_gate` opt-out,
+  its degrade-to-no-op path on a workspace with no report, and its position between
+  `artifact-review` and `postflight`. No `sec_overlay.artifact_consistency` module exists yet, so
+  all twelve fail at collection.
+- The run-economics section prints only what the run measured (REQ-05). Both token headers
+  printed unconditionally, so a run that collected neither published `(measured):` over an empty
+  body. `report._render_economics` keeps a measurement group only when it holds rows, appends the
+  estimated cost only when `usd_estimate` is present, and returns no lines at all when nothing
+  was measured — which drops the `## Run economics` heading with it. REQ-05's other clause is not
+  built: five report sections render when empty by D-13, D-14, and D-15 design, so R-41, R-42,
+  and R-43's "No X" half stays open. The word-boundary truncation clause already holds through
+  `_short_title`.
+- A needs-runtime triage row names the `redteam-plan.md` section that holds the finding
+  (REQ-03). Every such row carried the same `run redteam-plan test` action, but
+  `redteam.discriminate` files the finding into one of three plan sections, so most rows sent the
+  reader to a section their finding is not in. `report._ndt_next_actions` calls `discriminate` on
+  the needs-runtime list and maps each id to `run redteam-plan directive`, `see redteam-plan
+  preconditions`, or `see redteam-plan gaps`. The map has three entries, not four:
+  `redteam.wants_runtime` returns True for every `needs-deployment-testing` finding, so the
+  `static_settled` bucket is unreachable from this list. Confirmed rows are unchanged.
+- The investigate saturation loop is enforced by the driver (REQ-24). `discovery_ledger`
+  shipped as a complete library with no production caller, so the loop-until-dry bound was an
+  instruction in the operating manual rather than a mechanism.
+  `driver._record_discovery_wave` folds one wave per `findings-gate` run — it records every
+  current finding's fingerprint into `kb/discovery-ledger.json` before the gate validates, so a
+  rejected wave still counts. `driver._investigate_is_saturated` reads the ledger back in the
+  dispatch loop; once `terminal_reason` is `saturated` or `capped`, the driver records the
+  `investigate` stage and advances instead of printing another dispatch block. A missing or
+  unreadable ledger reads as not-saturated. `agents/investigate.md` gains a "Discovery loop"
+  section telling the agent it is one wave of a bounded loop, and that a class counts as
+  exhausted only when a wave adds nothing new.
+- `dependency_sinks.indicator_classes(root)` routes a dependency-sink class on a source
+  indicator, not only on a manifest declaration (REQ-25). A Bazel or vendored build declares
+  no manifest, so `match_manifests` alone left its whole dependency-sink surface unrouted. The
+  matcher reads target source files under the existing vendored-tree skip list and returns the
+  sorted classes of every catalog entry with at least one indicator token present.
+  `partition.reconcile_plan` unions it with `matched_classes` under the existing `target_root`
+  keyword; a planned class is still never removed and never duplicated.
+- `route_summary` is a derived field on `ScanProfile` (REQ-11). `driver._act_recall_gate`
+  computes it from the route census after recon — `total` census sites, `covered` sites the
+  profile mentions, and `uncovered` ids it never mentions — then writes the profile back.
+  `validate_profile` rejects a non-object value, so the legacy list of route strings no longer
+  validates. `route_control.check_recon_routes` still reads the legacy list form for a
+  non-census table and treats any other shape as "nothing summarised", so every table route
+  stays a logged gap. `agents/recon.md` no longer instructs recon to emit the field, and
+  `references/scan-profile.schema.json` documents it as derived.
+
+### Fixed
+
+- Failing run-economics tests for REQ-05: `test_report.py`'s
+  `test_run_economics_omits_a_measured_header_with_no_body` and
+  `test_run_economics_section_absent_when_nothing_was_measured` pin that the report prints no
+  `(measured):` header above an empty body and no `## Run economics` heading when nothing was
+  measured. Both fail because the two token headers print unconditionally.
+- Failing next-action tests for REQ-03: `test_report.py`'s
+  `test_below_bar_ndt_next_action_points_at_the_gaps_section`,
+  `test_unrunnable_ndt_next_action_points_at_the_preconditions_section`, and
+  `test_directive_ndt_next_action_points_at_the_directive_section` pin that a needs-runtime
+  triage row names the `redteam-plan.md` section that actually contains the finding. All three
+  fail with `assert 'run redteam-plan test' == '<expected>'`, because the report hardcodes one
+  action for every needs-runtime row.
+- Failing saturation-loop tests for REQ-24: `test_driver.py`'s
+  `test_findings_gate_records_a_discovery_wave`,
+  `test_repeated_findings_gate_runs_reach_a_terminal_reason`, and
+  `test_a_saturated_ledger_stops_re_dispatching_investigate` pin that the findings gate folds a
+  discovery wave and that a terminal ledger stops another investigate dispatch.
+  `test_contracts.py::test_investigate_prompt_carries_wave_language` pins that the prompt names
+  the bounded loop it runs inside.
+- Failing indicator-routing tests for REQ-25: `test_dependency_sinks.py`'s
+  `test_indicator_classes_routes_without_a_manifest` and
+  `test_indicator_classes_is_empty_without_an_indicator` pin a new `indicator_classes`
+  matcher, and `test_partition.py`'s `test_reconcile_plan_routes_a_class_on_an_indicator_hit`
+  pins that an indicator hit routes the entry's class with no manifest present.
+- Failing route-summary tests for REQ-11: `test_profile.py`'s
+  `test_from_dict_accepts_a_route_summary_key` and
+  `test_validate_profile_rejects_a_non_object_route_summary` pin the new field and its shape
+  guard, and `test_driver.py`'s `test_recall_gate_derives_route_summary_from_the_census` pins
+  that the recall gate writes a derived coverage summary back into the profile.
+- `sec_overlay/README.md` carried two paragraphs stating the post-REQ-04 module map: one on
+  `coverage.py`'s removal, a second repeating that `coverage_ledger.py` is the single coverage
+  source and adding process notes on the docstring fix. Folded into one paragraph that states
+  the module map once, keeping the fact only the second paragraph carried: the two docstrings no
+  longer name the deleted module, and `test_frozen_contract.py` pins only `models.py` and
+  `evidence.py`.
+- Two module docstrings still named the deleted `coverage.py` (REQ-04):
+  `review_coverage.py`'s docstring called it "shipped" and a "frozen milestone contract" — it
+  was never one of the two files `test_frozen_contract.py` pins (`models.py`, `evidence.py`
+  only) — and `coverage_ledger.py`'s docstring claimed to complement its per-language
+  accounting. Both now describe the code as it stands: `coverage_ledger.py` is the single
+  coverage source.
+- `kb/coverage-ledger.json` is now the single coverage source (REQ-04): `coverage.py` is
+  deleted, `prefilter.py` no longer computes a per-language dataflow percentage or writes
+  `kb/coverage.json`, and `report.py` no longer reads that file or renders a second, competing
+  "Coverage & limitations" section from it. `kb/coverage.json` was the transcript's last
+  surviving backend-provenance trace before REQ-16 made the `prefilter` receipt survive a
+  fence abort; the receipt call now drops its `artifacts=` argument along with the file.
+- An unknown finding key now survives a load-and-save round trip (REQ-27):
+  `workspace.read_findings` stashes any key not in `Finding.__dataclass_fields__` on the
+  returned instance, in sorted order, and `workspace.write_findings` merges it back before
+  writing. Previously the round trip silently dropped it. `models.py` (`models.py:177` drops
+  unknown keys on `from_dict`; the requirement cited `models.py:154`, since moved) is
+  untouched — it is a byte-identical mirror of a separate Go port (D-15) with a pinned sha256.
+  `findings_gate.py:100` and `bench/run.py:101` still drop unknown keys; both are terminal
+  consumers, not round-trippers, so no rewrite loses data there.
+- `check_patch_applied` now runs the forward `git apply --check` before the reverse one
+  (REQ-01): a patch is `APPLIED` only when it does NOT apply forward AND does apply
+  reversed. The prior reverse-first order could call an unapplied additive patch
+  `APPLIED` and suppress the deployment caution. `tests/test_patch_status.py`'s two
+  order-pinning tests were re-pinned to the new call order.
+
+### Added
+
+- Failing report/prefilter coverage-absence tests for REQ-04: `test_report.py`'s
+  `test_report_renders_no_dataflow_percentage_line` pins that a stale `kb/coverage.json` no
+  longer prints a "Dataflow coverage" line, and `test_prefilter.py`'s
+  `test_run_prefilter_writes_no_coverage_artifact` pins that `run_prefilter` returns no
+  `"coverage"` key and writes no `coverage.json`. `test_a_partial_ledger_claims_no_full_coverage`
+  already passes — a pre-existing ledger regression guard, not a new red test.
+- Failing finding-overflow tests for REQ-27: `tests/test_findings_overflow.py` pins that an
+  unknown finding key must survive a `read_findings`/`write_findings` round trip, that known
+  fields stay unchanged, and that `read_findings` warns on stderr naming each preserved key.
+- Failing patch-order tests for REQ-01: `tests/test_patch_status_real_git.py` drives real
+  `git apply --check` against an additive-patch fixture, and `tests/test_patch_status.py`'s
+  two order-pinning tests were rewritten to expect a forward-then-reverse call order instead
+  of reverse-then-forward.
+- Typed the REQ-20 evidence-score test fixture: `test_calibrate_evidence.py`'s `_f` builder
+  now builds a base `Finding(...)` and layers overrides with `dataclasses.replace`, instead
+  of a `dict()`-splat construction. This clears a ruff `C408` finding and 34 `ty`
+  `invalid-argument-type` diagnostics the brief's original fixture carried; it changes no
+  assertion — all six REQ-20 tests still pin the same comparisons.
+- Evidence strength and reachability move the derived score (REQ-20):
+  `calibrate.py` gained `_evidence_adjust`, called from `_derived_score`
+  before the precondition cap. A stronger tool-receipt tier, a
+  `verified-static` verification, and an assessed-reachable finding each add
+  to the score. The adjustment is reward-only, so a finding with none of
+  these fields set scores exactly as it did before. REQ-20's other half — the
+  `_precondition_weight`/`prompt-constants.md` regeneration — was already
+  closed in group 1; this change is the scoring half only.
+- Evidence-adjust score tests (REQ-20, RED): `test_calibrate_evidence.py` pins
+  that `calibrate_score` ranks a stronger tool receipt above a weaker one,
+  `verified-static` above `static-only`, and an assessed-reachable finding
+  above an assessed-unreachable one, while an unassessed finding scores the
+  same as before the change (reward-only, no penalty).
+- The trace prompt widens its scope and names its channels (REQ-06, REQ-19):
+  `agents/trace.md` now traces findings with `status` in `{"confirmed",
+  "needs-deployment-testing"}`, not `confirmed` alone, so a real-but-unproven
+  finding gets a reachability verdict before a human tests it. The procedure
+  gained a step that enumerates every source-to-sink path and records an
+  in-band channel — a sink reply the caller can observe, such as a response
+  body, an error, or a log line — before any out-of-band channel. Both
+  requirements edit the same two lines of `agents/trace.md`, so they ship in
+  one commit.
+- Trace prompt scope and channel tests (REQ-06, REQ-19, RED):
+  `test_trace_prompt.py` pins that `agents/trace.md` traces
+  `needs-deployment-testing` findings, not only `confirmed` ones, and names an
+  in-band channel — a sink reply observable to the caller — before any
+  out-of-band channel.
+- Verify-config resolver tests (REQ-22, RED): `test_verify_configs.py` pins a
+  `resolve_configs(ws, fallback)` helper that reads the semgrep rulesets the
+  scan profile planned, falling back to the caller's scalar only when the
+  profile is missing, unreadable, or plans no rulesets, and pins that
+  `verify_findings` passes the resolved list to the verifier instead of its
+  own scalar.
+- The verify verdict reads the planned rulesets (REQ-22): `resolve_configs(ws,
+  fallback)` reads `profile.sast_plan["semgrep"]["rulesets"]` from the scan
+  profile and falls back to the caller's scalar only when the profile is
+  missing, unreadable, or plans no rulesets. `verify_findings` resolves this
+  list once and passes it to the verifier instead of its own scalar, so a
+  finding is re-scanned with the ruleset that actually flagged it.
+  `verify_patch`'s `config` parameter now accepts `str | list[str]`, and
+  `_check` calls `_file_has_hit` once per config for the semgrep backend,
+  OR-combining the tri-state result: `True` if any config flags the file,
+  `None` if none flags it and at least one could not run, `False` only when
+  every config ran and none flagged the file; codeql/sca ignore the list
+  and run once.
+- Named verify-cause tests (REQ-21, RED): `test_verify_causes.py` pins that
+  `verify_patch` returns one of five named causes instead of overloading
+  `"static-only"`, and that `verify_findings` maps each cause to a legal
+  verification value and records it in history. `test_verify.py` renames the
+  test that pinned the old `"static-only"` overload to expect `"rule-no-match"`.
+- The verify verdict names its cause (REQ-21): `verify_patch` now returns one
+  of five members of `VERIFY_CAUSES` (`verified-static`, `not-fixed`,
+  `patch-not-applied`, `rule-no-match`, `unconfirmed`) instead of overloading
+  `"static-only"` from three distinct sites. `verify_findings` maps the cause
+  to a legal `Finding.verification` value through `_CAUSE_TO_VERIFICATION`
+  and records `{"event": "verify:cause:<cause>"}` in the finding's history.
+  An unmapped cause degrades to `static-only` rather than laundering an
+  unknown verdict clean.
+
+- Prefilter receipt survives a fence abort (REQ-16, RED): `test_prefilter_receipt.py`
+  gains two tests — one failing, pinning that `run_prefilter` writes its receipt
+  to disk, and one already passing, pinning that a backend abort leaves the
+  `prefilter` stage unrecorded.
+- Repo-root-relative candidate paths (REQ-15, RED): `test_prefilter_paths.py`
+  gains three failing tests pinning that `run_prefilter` rewrites an absolute
+  backend path to a `target`-relative one, leaves an already-relative path
+  alone, and leaves a path outside `target` verbatim.
+- Attack-class fan-out as JSON (REQ-17, RED): `test_dispatch_classes.py` gains
+  four tests pinning that the dispatch block's `{{ATTACK_CLASS}}` value is a
+  compact JSON array. Two fail against the pre-fix comma-joined string.
+- Every dispatch token is fillable (REQ-08, RED): `test_prompt_tokens.py`
+  gains two failing tests. One scans the 11 `PHASE_TABLE` prompts and finds
+  three tokens the dispatch map cannot fill: `OVERLAY_ROOT` (11 files),
+  `HELPERS_DIR` (5 files), `FP_FEEDBACK` (2 files). The other calls
+  `render_dispatch` and fails because `{{FP_FEEDBACK}}` is absent from the
+  substitute line.
+- A finding's class must be a canonical key (REQ-09, RED): `test_canonical_classes.py`
+  gains five tests (one parametrized over 14 keys). All fail to import:
+  `clsmap.canonical_classes` does not exist yet.
+- A finding's class must be a canonical key (REQ-09): `clsmap.canonical_classes()`
+  unions every publisher of an attack-class key — the two tables in
+  `attack-classes.md`, `CWE_CLS`/`_RULE_ID_CLS`, `review_findings.GENERAL_DEFECT_CLASSES`,
+  every `agents/classes/*.md` stem, and `context.py`'s `manual-review` — into one
+  51-key set. `findings_gate.validate_findings` now rejects a finding whose `cls`
+  is outside that set. A missing `agents/classes/*.md` file still ships as a
+  `class_ext.py` gap, never a rejection: validity and coverage stay separate.
+
 ### Changed
 
 - Parity plan tracking: marked Task 22 (REQ-T3c/T3h), Task 23 (REQ-T3d), and
@@ -15,6 +268,57 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- Prefilter receipt survives a fence abort (REQ-16): `run_prefilter` now writes
+  its `prefilter` receipt before calling `record_stage`, so the receipt and the
+  state transition land in the same order the driver's other phases use. Before
+  this, a fence abort in the driver's `on_complete` could leave `state.json`
+  saying `prefilter` is done with no receipt on disk.
+- Repo-root-relative candidate paths (REQ-15): `run_prefilter` now calls a new
+  `_relativize_paths` before `normalize`, rewriting an absolute `Finding.file`
+  under `target` to a repo-root-relative one. A path outside `target` stays
+  verbatim so a vendored or out-of-tree hit stays visible instead of being
+  rewritten into something that does not resolve.
+- Attack-class fan-out as JSON (REQ-17): the dispatch block's `{{ATTACK_CLASS}}`
+  value is now a compact JSON array, not a comma-joined string. The old format
+  clashed with `investigate.md`'s single-key use of the same token.
+  `agents/investigate.md` and `agents/README.md` now state the array shape.
+- Every dispatch token is fillable (REQ-08): `DISPATCH_TOKENS` grows from four
+  names to seven — `OVERLAY_ROOT`, `HELPERS_DIR`, and `FP_FEEDBACK` join
+  `TARGET`, `WORKSPACE`, `SHA`, `ATTACK_CLASS`. `render_dispatch` now writes
+  the prior-rejection feedback block to `<ws.kb>/fp-feedback.md` (it is a
+  multi-line `<untrusted>` envelope, so it cannot ride the space-joined
+  `substitute:` line) and substitutes the file path instead. The file is
+  always written, even with no prior rejections, so the token always
+  resolves. `agents/critic.md` and `agents/investigate.md` each gain one
+  sentence telling the agent to read the file. This closes REQ-32's
+  deferred property (c): `test_dispatch_tokens_are_a_single_source` in
+  `test_contract_lint.py` now calls `render_dispatch` and asserts its
+  `substitute:` line's token set against `DISPATCH_TOKENS`, so it fails if
+  the two ever disagree again.
+- `test_dispatch_classes.py`'s token-count assertion hardcoded `4`, the old
+  `DISPATCH_TOKENS` length. Adding three tokens (REQ-08) broke it. It now
+  reads `len(DISPATCH_TOKENS)` so a future token count change cannot make it
+  drift again.
+- Data integrity (REQ-13, folds in REQ-23): every phase receipt and gate
+  receipt now records true finding counts. `run.py` counted
+  `findings/F-*.json`, but every real finding id starts `C-` or `<CLASS>-`,
+  so every receipt recorded zero findings. `workspace.finding_counts(ws)`
+  now returns `findings_in` (every finding file) and `findings_out` (the
+  `evidence.SHIPPING_STATUSES` subset); `findings` stays equal to
+  `findings_in`. `driver._write_gate` and `artifact_gate.run_artifact_gate`
+  add the same two keys to their gate JSON, so a gate receipt records counts,
+  not only `passed`.
+- Contract layer (REQ-32): `test_contract_lint.py`'s lint let four kinds of
+  drift pass undetected — a `PRECONDITION_CAPS` threshold, a `PRECONDITION_CAPS`
+  cap, a dropped `RUNTIME_TEST_KEYS` key, and a bogus `FINDING_SHAPES` key.
+  Two tests now parse the exact published numbers and key sets, instead of
+  only checking that a substring is present, and a new test checks that
+  `FINDING_SHAPES` names no key or field the model does not declare. Also
+  corrected four stale documentation counts the lint's own gaps had let
+  drift: the pytest test count (1623 → 1633), `helpers/README.md`'s
+  `_MECHANICAL` list (missing `dependency-catalog`), and the
+  `prompt-constants.md` block count in two `CLAUDE.md` files (twelve → sixteen,
+  naming the four missing blocks).
 - `test_rule_glob.py`'s `fake_run_review` spy accepts the `commit`,
   `workspace_dirty`, `plan`, `token_budget`, `background`, and `tier` keyword
   arguments the real `run_review` now takes; the stale stub raised
@@ -23,6 +327,76 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Data integrity (REQ-13, folds in REQ-23, Task 1 RED): `test_receipt_counts.py`
+  gains three failing tests for a phase receipt's finding counts. They fail to
+  import: `workspace.finding_counts` does not exist yet.
+- Contract layer (REQ-32, Task 5 GREEN): `calibrate.py` exports
+  `PRECONDITION_CAPS` and `PRECONDITION_CAP_FLOOR`; `_precondition_cap` now
+  reads the ceiling from that table instead of four hardcoded branches.
+  `prompt-constants.md`'s `SEVERITY_PRECONDITION` block states the same
+  weight-based cap table. `driver.py` exports `DISPATCH_TOKENS`, and
+  `render_dispatch` builds its `substitute:` line from that tuple instead of
+  a hand-written string, so the class token now sits on the same line as the
+  other three. This closes REQ-32 property (b); property (c) is REQ-08's work.
+- Contract layer (REQ-32, Task 5 RED): `test_contract_lint.py` gains three
+  failing tests for the last open lint property. They check that
+  `prompt-constants.md` states the precondition cap table by weight, that
+  `_precondition_cap` reads that table from a single constant, and that
+  `driver.py` exposes a `DISPATCH_TOKENS` tuple naming `TARGET`, `WORKSPACE`,
+  `SHA`, and `ATTACK_CLASS`. All three fail to import: none of
+  `PRECONDITION_CAPS`, `PRECONDITION_CAP_FLOOR`, or `DISPATCH_TOKENS` exist yet.
+- Contract layer (REQ-10, Task 4 GREEN): `agents/threat-model.md`'s `## Imports`
+  section now names `QUALIFIER_PROOF`. The prompt grades severity, so a blanket
+  mitigation claim must name the reachable paths checked, not just assert
+  safety.
+- Contract layer (REQ-10, Task 4 RED): `test_contract_lint.py` gains a failing
+  test. It checks `agents/threat-model.md`'s `## Imports` section names
+  `QUALIFIER_PROOF`. The prompt grades severity, so it needs the rule, but the
+  section today names only `FIELD_OWNERSHIP`, `OUTPUT_WRITE_FALLBACK`, and
+  `STE_PROSE`.
+- Contract layer (REQ-07, Task 3 GREEN): `agents/validate.md`'s `**Confirmed**`
+  verdict now names the Tier-1 receipts (`codeql:`, `semgrep:`, `sca:`,
+  `secrets:`) and requires at least one of them. A finding whose only receipts
+  are Tier-2 (`ast-grep:`, `structural-index:`, `ripgrep:`, `tree-sitter:`,
+  `dependency-catalog:`) routes to `needs-deployment-testing`, not `confirmed`,
+  matching `findings_gate.py`'s `confirms_alone` gate. An `llm-claimed:` entry
+  is stated to corroborate and never confirm.
+- Contract layer (REQ-07, Task 3 RED): `test_contract_lint.py` gains two failing
+  tests. One checks `agents/validate.md` names every `evidence.TIER1_RECEIPTS`
+  value and the word `Tier-1`. The other checks the prompt's `**Confirmed**`
+  verdict section names `Tier-1`, so a Tier-2 receipt never reads as sufficient.
+  Both fail: the prompt today tells the agent to record `ast-grep:`/
+  `structural-index:`/`ripgrep:` receipts for `confirmed`, all Tier-2, with no
+  `Tier-1` string anywhere in the file.
+- Contract layer (REQ-02, Task 1 RED): failing tests pin the closed enums for
+  `Finding.verification` and `Finding.runtime_disposition`. `test_models.py`
+  gains four cases: a prose `verification` value and an unknown
+  `runtime_disposition` must raise `ValueError`; a documented value or `null`
+  must load. `test_contract_lint.py` (new) asserts `finding.schema.json`'s
+  enums match `sec_overlay.evidence`'s constants; it fails to import until
+  `VERIFICATION_VALUES` exists.
+- Contract layer (REQ-02, Task 1 GREEN): `evidence.VERIFICATION_VALUES` closes
+  the `verification` enum to five values — `verified-static`, `static-only`,
+  `not-fixed`, `verify-error`, `fact-checked`; `finding.schema.json`'s `verification` and
+  `runtime_disposition` enums mirror `evidence.py`'s constants; `Finding.from_dict`
+  raises `ValueError` when either field holds a value outside its closed set
+  and is not `null`. `fact-checked` is in the enum because `factcheck.py`'s
+  F8 stage writes it to real findings; the set is the union of every value
+  shipped code writes, not the verify-stage vocabulary alone. The two
+  `test_frozen_contract.py` byte-identity pins moved to the new digests in
+  this commit — no Go port is reachable from this repository to sync by hand.
+- Contract layer (REQ-18, Task 2 GREEN): `models.py` gains `RUNTIME_TEST_KEYS`,
+  `OPEN_QUESTION_KEYS`, and `AFFECTED_SITE_KEYS`, naming the exact keys of the
+  `runtime_test`, `open_questions`, and `affected_sites` nested `Finding` fields.
+  `prompt-constants.md` publishes them in a new `FINDING_SHAPES` block, and
+  `agents/investigate.md` imports it alongside `FIELD_OWNERSHIP`. The
+  `test_frozen_contract.py` `_MODELS_SHA256` pin moved to the new digest in this
+  commit, since `models.py` gained the three constants.
+- Contract layer (REQ-18, Task 2 RED): `test_contract_lint.py` gains two failing
+  tests. One checks the `FINDING_SHAPES` block in `prompt-constants.md` names
+  every key of `models.RUNTIME_TEST_KEYS`, `OPEN_QUESTION_KEYS`, and
+  `AFFECTED_SITE_KEYS`. The other checks `agents/investigate.md` references
+  `FINDING_SHAPES`. Both fail to import until the three key tuples exist.
 - Parity audit (Task 25): `docs/parity/PARITY-AUDIT.md` walks `EXTRACTION.md`
   row by row and gives every item (M/P/S/T3/R/W/G/D/X/V/HR — 87 rows) a final
   disposition with `file:line` evidence, `rejected:<reason>`, or

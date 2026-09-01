@@ -56,6 +56,8 @@ def test_investigate_example_passes_the_gate(tmp_path):
         if not f.file:
             f.file = "x.py"
         f.line = max(f.line, 1)
+        if "{{" in f.cls:
+            f.cls = "sqli"  # the documented example carries the {{ATTACK_CLASS}} token
         findings.append(f)
     write_findings(ws, findings)
     # the documented example must be gate-clean (no raw+duplicate_of, valid shape)
@@ -146,3 +148,10 @@ def test_phase_adversary_verdict_tables_are_untouched_by_recall():
 
     txt = (Path(__file__).resolve().parents[2] / "agents" / "phase-adversary.md").read_text()
     assert "OMISSION" not in txt
+
+
+def test_investigate_prompt_carries_wave_language():
+    """The agent must know it participates in a bounded loop (REQ-24)."""
+    text = (AGENTS / "investigate.md").read_text().lower()
+    assert "wave" in text
+    assert "saturat" in text

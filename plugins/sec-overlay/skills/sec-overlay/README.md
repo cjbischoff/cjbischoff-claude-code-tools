@@ -82,7 +82,8 @@ flowchart TB
 ```
 
 - **`references/`** is stated once, obeyed everywhere — severity bands, scope rules, JSON
-  schemas, the crypto allow/deny lists, and the deep hunting guides.
+  schemas, the crypto allow/deny lists, and the deep hunting guides. `prompt-constants.md`
+  holds sixteen verbatim rule blocks, imported by every agent prompt so a rule never drifts.
   `dependency-sinks.json` routes an attack class from a manifest match when the sink lives
   inside a dependency's own source. → [details](references/README.md)
 - **`agents/`** are the LLM prompts. Producers (Sonnet) find things; adversaries (Opus, a

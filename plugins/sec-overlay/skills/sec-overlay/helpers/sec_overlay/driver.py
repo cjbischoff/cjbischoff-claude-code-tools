@@ -10,13 +10,23 @@ import json
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 from sec_overlay import cost
 from sec_overlay.calibrate import calibrate_findings
 from sec_overlay.campaign import record_stage
 from sec_overlay.dedupe import dedupe_findings
+from sec_overlay.discovery_ledger import (
+    is_terminal,
+    load_ledger,
+    new_ledger,
+    record_wave,
+    save_ledger,
+)
 from sec_overlay.factcheck import apply_verdict, validate_verdict
 from sec_overlay.findings_gate import validate_citations, validate_findings
+from sec_overlay.fingerprint import fingerprint
+from sec_overlay.fp_feedback import render_fp_feedback
 from sec_overlay.partition import demote_noise, reconcile_plan, unrouted_candidate_classes
 from sec_overlay.phases import (
     PHASE_TABLE,
@@ -27,13 +37,14 @@ from sec_overlay.phases import (
 )
 from sec_overlay.prefilter import run_prefilter
 from sec_overlay.profile import ScanProfile, load_profile
+from sec_overlay.prove import prove_enabled
 from sec_overlay.redactor import safe_for_prompt
 from sec_overlay.report import write_report
 from sec_overlay.route_census import census, write_census
 from sec_overlay.selfscore import write_self_score
 from sec_overlay.state import load_state, save_state
 from sec_overlay.verify import verify_findings
-from sec_overlay.workspace import Workspace, read_findings, write_findings
+from sec_overlay.workspace import Workspace, finding_counts, read_findings, write_findings
 
 
 @dataclass
@@ -101,6 +112,45 @@ def run_deterministic_phase(
     record_stage(ctx.ws, phase.name)
 
 
+# Tokens render_dispatch tells the orchestrator to substitute. A prompt using a
+# token absent from this tuple ships a literal {{TOKEN}} to the model; the
+# contract lint checks the two agree.
+DISPATCH_TOKENS: tuple[str, ...] = (
+    "TARGET",
+    "WORKSPACE",
+    "SHA",
+    "ATTACK_CLASS",
+    "OVERLAY_ROOT",
+    "HELPERS_DIR",
+    "FP_FEEDBACK",
+)
+
+
+def _overlay_root() -> Path:
+    """Return the skill root — the directory holding ``agents/`` and ``helpers/``."""
+    return Path(__file__).resolve().parents[2]
+
+
+def _write_fp_feedback(ws: Workspace) -> Path:
+    """Persist the prior-rejection block and return its path.
+
+    ``render_fp_feedback`` returns a multi-line ``<untrusted>`` envelope, which
+    cannot ride the space-joined ``substitute:`` line. The prompt reads the file
+    instead. The file is always written, so ``{{FP_FEEDBACK}}`` always resolves.
+
+    Args:
+        ws: The audit workspace.
+
+    Returns:
+        The path written: ``<ws.kb>/fp-feedback.md``.
+    """
+    block = render_fp_feedback(ws) or "No prior rejections. This is the first pass."
+    ws.kb.mkdir(parents=True, exist_ok=True)
+    path = ws.kb / "fp-feedback.md"
+    path.write_text(block)
+    return path
+
+
 def render_dispatch(
     phase: PhaseSpec, ctx: AuditContext, *, classes: list[str] | None = None
 ) -> str:
@@ -108,7 +158,8 @@ def render_dispatch(
 
     The orchestrator runs the model; this only tells it which prompt to run and
     what to substitute. Advancement happens later, when the phase's declared
-    outputs exist.
+    outputs exist. As a side effect, this writes the prior-rejection feedback
+    block to ``<ctx.ws.kb>/fp-feedback.md``.
 
     Args:
         phase: The agent phase to dispatch.
@@ -123,15 +174,22 @@ def render_dispatch(
     if phase.prompt is None:
         raise ValueError(f"render_dispatch requires an agent phase; {phase.name!r} has no prompt")
     outputs = ", ".join(str(p(ctx.ws)) for p in phase.outputs) or "(none)"
-    class_line = ""
+    root = _overlay_root()
+    values = {
+        "TARGET": ctx.target,
+        "WORKSPACE": str(ctx.ws.root),
+        "SHA": ctx.sha,
+        "OVERLAY_ROOT": str(root),
+        "HELPERS_DIR": str(root / "helpers"),
+        "FP_FEEDBACK": str(_write_fp_feedback(ctx.ws)),
+    }
     if classes:
-        class_line = "\n  {{ATTACK_CLASS}}=" + ",".join(classes)
+        values["ATTACK_CLASS"] = json.dumps(classes, separators=(",", ":"))
+    pairs = [f"{{{{{name}}}}}={values[name]}" for name in DISPATCH_TOKENS if name in values]
     block = (
         f"NEXT AGENT PHASE: {phase.name}\n"
         f"  prompt: agents/{phase.prompt}\n"
-        f"  substitute: {{{{TARGET}}}}={ctx.target} "
-        f"{{{{WORKSPACE}}}}={ctx.ws.root} {{{{SHA}}}}={ctx.sha}"
-        f"{class_line}\n"
+        f"  substitute: {' '.join(pairs)}\n"
         f"  required outputs before advancing: {outputs}"
     )
     return safe_for_prompt(block)
@@ -173,7 +231,43 @@ def _act_prefilter(ctx: AuditContext) -> None:
     run_prefilter(ctx.ws, ctx.target, _load_profile(ctx))
 
 
+def _record_discovery_wave(ctx: AuditContext) -> None:
+    """Fold this pass's finding fingerprints into the discovery ledger (REQ-24).
+
+    ``findings-gate`` is the first deterministic phase after ``investigate``, so it
+    is the only mechanical hook the bounded discovery loop has. One gate run is one
+    wave. Runs before the gate's own validation, so a rejected wave still counts.
+
+    Args:
+        ctx: The audit context whose workspace holds the findings and the ledger.
+    """
+    try:
+        ledger = load_ledger(ctx.ws)
+    except (FileNotFoundError, json.JSONDecodeError):
+        ledger = new_ledger()
+    record_wave(ledger, [f.fingerprint or fingerprint(f) for f in read_findings(ctx.ws)])
+    save_ledger(ctx.ws, ledger)
+
+
+def _investigate_is_saturated(ws: Workspace) -> bool:
+    """True once the discovery ledger reached a terminal_reason (REQ-24).
+
+    Args:
+        ws: The campaign workspace.
+
+    Returns:
+        ``True`` when the ledger exists and carries a ``terminal_reason``;
+        ``False`` when it is absent or unreadable, so a missing ledger never
+        stops a wave that has not run yet.
+    """
+    try:
+        return is_terminal(load_ledger(ws))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return False
+
+
 def _act_findings_gate(ctx: AuditContext) -> None:
+    _record_discovery_wave(ctx)
     errors = validate_findings(ctx.ws)  # records its own stage too
     errors += validate_citations(ctx.ws, ctx.target)
     if errors:
@@ -241,11 +335,21 @@ def _act_artifact_gate(ctx: AuditContext) -> None:
         )
 
 
+def _act_artifact_consistency(ctx: AuditContext) -> None:
+    from sec_overlay.artifact_consistency import run_artifact_consistency  # local: avoid cycle
+
+    errors = run_artifact_consistency(ctx.ws)
+    if errors:
+        raise PhaseHalt(
+            f"artifact-consistency rejected {len(errors)} contradiction(s): " + "; ".join(errors)
+        )
+
+
 def _write_gate(ws: Workspace, name: str, errors: list[str], warnings: list[str]) -> None:
     (ws.kb / "gates").mkdir(parents=True, exist_ok=True)
-    (ws.kb / "gates" / f"{name}.json").write_text(
-        json.dumps({"passed": not errors, "errors": errors, "warnings": warnings}, indent=2)
-    )
+    payload = {"passed": not errors, "errors": errors, "warnings": warnings}
+    payload.update(finding_counts(ws))
+    (ws.kb / "gates" / f"{name}.json").write_text(json.dumps(payload, indent=2))
 
 
 def _act_arch_gate(ctx: AuditContext) -> None:
@@ -301,6 +405,10 @@ def _act_recall_gate(ctx: AuditContext) -> None:
     (``disposition``/``reason``/``next_step``) ``record_route_gaps`` needs to
     demote ``completeness`` — a route-census phase action cannot do this because
     it runs before recon, when no profile exists yet to compare against.
+
+    Also derives ``route_summary`` from the census and writes it back into the
+    profile: total census routes, routes the profile mentions, and routes it does
+    not. The field reports coverage of the census, never a copy of it (REQ-11).
     """
     from sec_overlay.dependency_sinks import match_manifests
     from sec_overlay.route_census import load_census
@@ -312,9 +420,16 @@ def _act_recall_gate(ctx: AuditContext) -> None:
 
     profile_dict = json.loads((ctx.ws.kb / "scan-profile.json").read_text())
     sites = load_census(ctx.ws)
-    gaps = check_census_routes(sites, profile_dict)
+    route_gaps = check_census_routes(sites, profile_dict)
+    gaps = list(route_gaps)
     gaps += check_catalog_classes(match_manifests(ctx.target), profile_dict)
     record_route_gaps(ctx.ws, gaps)
+    profile_dict["route_summary"] = {
+        "total": len(sites),
+        "covered": len(sites) - len(route_gaps),
+        "uncovered": [g["id"] for g in route_gaps],
+    }
+    (ctx.ws.kb / "scan-profile.json").write_text(json.dumps(profile_dict, indent=2))
     _write_gate(ctx.ws, "recall-gate", [], [])
 
 
@@ -336,6 +451,7 @@ DETERMINISTIC_ACTIONS.update(
         "report": _act_report,
         "selfscore": _act_selfscore,
         "artifact-gate": _act_artifact_gate,
+        "artifact-consistency": _act_artifact_consistency,
         "arch-gate": _act_arch_gate,
         "tm-gate": _act_tm_gate,
         "postflight": _act_postflight,
@@ -388,6 +504,16 @@ def run_audit(
             continue
         distinct_outputs = tuple(p for p in phase.outputs if p not in phase.inputs)
         if distinct_outputs and all(p(ctx.ws).exists() for p in distinct_outputs):
+            if on_complete is not None:
+                on_complete(phase.name)
+            record_stage(ctx.ws, phase.name)
+            continue
+        if phase.name == "prove" and not prove_enabled(ctx.ws):
+            if on_complete is not None:
+                on_complete(phase.name)
+            record_stage(ctx.ws, phase.name)
+            continue
+        if phase.name == "investigate" and _investigate_is_saturated(ctx.ws):
             if on_complete is not None:
                 on_complete(phase.name)
             record_stage(ctx.ws, phase.name)

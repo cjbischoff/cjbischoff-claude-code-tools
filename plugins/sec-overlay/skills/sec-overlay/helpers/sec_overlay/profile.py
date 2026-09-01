@@ -41,6 +41,9 @@ class ScanProfile:
             (``full`` | ``gate-by-exception``), ``model_tier_map`` (phase→tier),
             ``wave_k``/``max_waves`` (investigate saturation), ``token_budget``.
             Never required; absent ⇒ full depth + defaults.
+        route_summary: Derived census coverage the recall gate writes back:
+            ``total`` census routes, ``covered`` routes the profile mentions, and
+            ``uncovered`` route ids it never mentions. Never hand-authored by recon.
     """
 
     languages: list[str] = field(default_factory=list)
@@ -55,6 +58,7 @@ class ScanProfile:
     subsystems: list[dict] = field(default_factory=list)
     attack_surface_evidence: dict[str, list[str]] = field(default_factory=dict)
     scan_options: dict = field(default_factory=dict)
+    route_summary: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         """Serialize to a JSON-safe dict."""
@@ -68,7 +72,7 @@ class ScanProfile:
 
 _LIST_STR_FIELDS = ("languages", "frameworks", "entrypoints", "attack_surface", "agents_to_spawn")
 _DICT_FIELDS = ("sast_plan", "budget_hint", "attack_surface_evidence")
-_OPTIONAL_DICT_FIELDS = ("scan_options",)
+_OPTIONAL_DICT_FIELDS = ("scan_options", "route_summary")
 _REQUIRED = (*_LIST_STR_FIELDS, "runnable", *_DICT_FIELDS)
 
 

@@ -6,7 +6,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from sec_overlay.clsmap import is_noise_class
-from sec_overlay.dependency_sinks import matched_classes
+from sec_overlay.dependency_sinks import indicator_classes, matched_classes
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.workspace import Workspace, read_findings, write_findings
 
@@ -100,7 +100,9 @@ def reconcile_plan(
     A dependency can hold the sink inside its own code (an OPA policy calling
     http.send), which leaves no first-party pattern for recon to see. When
     ``target_root`` is given, every attack class of a matched dependency-sink
-    catalog entry is added too.
+    catalog entry is added too — either because a manifest declares the package,
+    or because one of the entry's indicator APIs appears in target source. A
+    Bazel or vendored target has the second and not the first.
 
     Args:
         ws: Workspace to read candidates from.
@@ -128,7 +130,10 @@ def reconcile_plan(
     )
     if target_root is not None:
         planned = set(base) | set(extra)
-        extra = sorted(extra + [c for c in matched_classes(target_root) if c not in planned])
+        found = list(
+            dict.fromkeys(matched_classes(target_root) + indicator_classes(target_root))
+        )
+        extra = sorted(extra + [c for c in found if c not in planned])
     return base + extra
 
 

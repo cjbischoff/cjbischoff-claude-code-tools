@@ -20,15 +20,15 @@ def _runner(returncodes):
     return _Runner(returncodes)
 
 
-def test_check_patch_applied_reverse_succeeds_means_applied():
-    runner = _runner([0])  # reverse check succeeds
-    assert check_patch_applied("/tgt", "diff", runner=runner) is PatchStatus.APPLIED
+def test_check_patch_applied_forward_succeeds_means_not_applied():
+    runner = _runner([0])  # forward check succeeds -> the patch is not in the tree yet
+    assert check_patch_applied("/tgt", "diff", runner=runner) is PatchStatus.NOT_APPLIED
     assert len(runner.calls) == 1
 
 
-def test_check_patch_applied_forward_succeeds_means_not_applied():
-    runner = _runner([1, 0])  # reverse fails, forward succeeds
-    assert check_patch_applied("/tgt", "diff", runner=runner) is PatchStatus.NOT_APPLIED
+def test_check_patch_applied_reverse_only_means_applied():
+    runner = _runner([1, 0])  # forward fails, reverse succeeds -> the change is already live
+    assert check_patch_applied("/tgt", "diff", runner=runner) is PatchStatus.APPLIED
     assert len(runner.calls) == 2
 
 

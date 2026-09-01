@@ -38,25 +38,28 @@ def check_patch_applied(
         runner: Injectable subprocess runner (for tests).
 
     Returns:
-        ``APPLIED`` if the diff's changes are already present (reverse-apply succeeds),
-        ``NOT_APPLIED`` if the diff still applies cleanly forward, ``UNKNOWN`` if neither
-        check succeeds (e.g. the file has diverged since the patch was generated) or
-        ``patch_diff`` is empty.
+        ``NOT_APPLIED`` if the diff still applies cleanly forward, ``APPLIED`` if it does
+        not apply forward but does apply reversed (its changes are already present),
+        ``UNKNOWN`` if neither check succeeds (e.g. the file has diverged since the patch
+        was generated) or ``patch_diff`` is empty.
     """
     if not patch_diff or not patch_diff.strip():
         return PatchStatus.UNKNOWN
-    reverse = runner(
-        ["git", "apply", "--check", "--reverse"],
-        cwd=str(target), input=patch_diff, capture_output=True, text=True,
-    )
-    if reverse.returncode == 0:
-        return PatchStatus.APPLIED
+    # Forward first, deliberately. A patch counts as applied only when it does NOT apply
+    # forward AND does apply reversed. Reverse-first calls a patch live whenever the reverse
+    # check passes, which over-reports and suppresses the deployment caution.
     forward = runner(
         ["git", "apply", "--check"],
         cwd=str(target), input=patch_diff, capture_output=True, text=True,
     )
     if forward.returncode == 0:
         return PatchStatus.NOT_APPLIED
+    reverse = runner(
+        ["git", "apply", "--check", "--reverse"],
+        cwd=str(target), input=patch_diff, capture_output=True, text=True,
+    )
+    if reverse.returncode == 0:
+        return PatchStatus.APPLIED
     return PatchStatus.UNKNOWN
 
 

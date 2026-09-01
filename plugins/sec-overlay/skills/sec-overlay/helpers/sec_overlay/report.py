@@ -15,11 +15,18 @@ from sec_overlay.evidence import is_tool_receipt
 from sec_overlay.models import Finding, FindingStatus
 from sec_overlay.patch_status import PatchStatus, check_patch_applied, not_applied_caution
 from sec_overlay.positioning import PositionResult
+from sec_overlay.redteam import discriminate
 from sec_overlay.render_util import signal_lines
 from sec_overlay.review_findings import ReviewFinding
 from sec_overlay.sarif import to_sarif
 from sec_overlay.state import load_state
-from sec_overlay.workspace import Workspace, _atomic_write, load_paths, read_findings
+from sec_overlay.workspace import (
+    _OVERFLOW_ATTR,
+    Workspace,
+    _atomic_write,
+    load_paths,
+    read_findings,
+)
 
 _ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 _REPORTABLE = {FindingStatus.CONFIRMED, FindingStatus.FIXED}
@@ -43,6 +50,46 @@ def _risk_sort_key(f: Finding) -> tuple[int, int, str]:
 
 # Full template for these tiers; condensed (Summary/Mechanism/Severity/Fix) below.
 _FULL_TIERS = {"critical", "high"}
+
+# REQ-33: Part D elements. They ride the finding overflow (workspace._OVERFLOW_ATTR),
+# never a `Finding` field — models.py is byte-pinned by the D-15 frozen-contract test.
+_OPTIONAL_LABELS = {
+    "attacker": "Attacker",
+    "privilege": "Privilege required",
+    "exact_request": "Exact request",
+    "exfil_channels": "Exfiltration channels",
+    "library_version": "Library version",
+    "refutation": "Refutation attempted",
+    "negative_results": "Negative results",
+    "baseline": "Baseline",
+}
+_CONTEXT_KEYS = ("attacker", "privilege", "exact_request", "exfil_channels")
+_EVIDENCE_KEYS = ("library_version", "refutation", "negative_results", "baseline")
+
+
+def _optional_sections(extra: dict, keys: tuple[str, ...]) -> list[str]:
+    """Render the present Part D elements for ``keys`` as Markdown lines.
+
+    Args:
+        extra: The finding's overflow mapping; absent keys render nothing.
+        keys: The ordered subset of :data:`_OPTIONAL_LABELS` to render.
+
+    Returns:
+        Markdown lines, empty when no key is present.
+    """
+    out: list[str] = []
+    for key in keys:
+        value = extra.get(key)
+        if value is None or value == "" or value == []:
+            continue
+        label = _OPTIONAL_LABELS[key]
+        if isinstance(value, list):
+            out += [f"**{label}.**", *(f"- {item}" for item in value), ""]
+        elif key == "exact_request":
+            out += [f"**{label}.**", "```http", str(value).strip(), "```", ""]
+        else:
+            out += [f"**{label}.** {value}", ""]
+    return out
 
 
 def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
@@ -108,6 +155,7 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
         else "_(no patch generated; remediate per §2 root cause)_"
     )
     full = f.severity.value in _FULL_TIERS
+    extra = getattr(f, _OVERFLOW_ATTR, {}) or {}
 
     out = [f"### {f.id} — {f.cls} — {f.severity.value.title()}", ""]
     if f.status is FindingStatus.FIXED and patch_status is not None:
@@ -123,6 +171,7 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
         if f.codeguard_ids:
             comp.append("CodeGuard " + ", ".join(f.codeguard_ids))
         out += [f"**Compliance.** {'; '.join(comp)}.", ""]
+    out += _optional_sections(extra, _CONTEXT_KEYS)
     # §2 Mechanism
     out += ["**2. Mechanism (source).** Data flow:", flow]
     if f.evidence:
@@ -155,6 +204,7 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
         ),
         "",
     ]
+    out += _optional_sections(extra, _EVIDENCE_KEYS)
     if not full:
         out += [
             (
@@ -239,6 +289,31 @@ def _short_title(text: str, limit: int = 72) -> str:
     return (cut or text[:limit].rstrip()) + "…"
 
 
+def _ndt_next_actions(ndt: list[Finding]) -> dict[str, str]:
+    """Map each needs-runtime finding id to the ``redteam-plan.md`` section that holds it.
+
+    The plan files a needs-runtime finding into one of three sections, so a single
+    "run redteam-plan test" action sends two readers in three to a section their
+    finding is not in.
+
+    Args:
+        ndt: The needs-deployment-testing findings the report renders.
+
+    Returns:
+        A dict of finding id to next-action phrase. A finding the plan files
+        nowhere is absent from the dict.
+
+    Example:
+        >>> _ndt_next_actions([])
+        {}
+    """
+    disc = discriminate(ndt)
+    actions = {f.id: "see redteam-plan gaps" for f in disc["below_bar"]}
+    actions.update({f.id: "see redteam-plan preconditions" for f in disc["unrunnable"]})
+    actions.update({f.id: "run redteam-plan directive" for f in disc["needs_runtime"]})
+    return actions
+
+
 def _triage_row(f: Finding, status_label: str, action: str) -> str:
     """Render one triage table row: id, risk, one-clause what, location, status, next action.
 
@@ -255,11 +330,53 @@ def _triage_row(f: Finding, status_label: str, action: str) -> str:
     return f"| {f.id} | {risk} | {what} | {f.file}:{f.line} | {status_label} | {action} |"
 
 
+def _render_economics(economics: dict) -> list[str]:
+    """Render the run-economics section, omitting every measurement that is absent.
+
+    A "(measured)" header above an empty body claims a measurement the run never
+    took. Each group renders only when it holds data, and the section itself
+    disappears when no group does (REQ-05).
+
+    Args:
+        economics: Cost aggregate with optional ``by_phase``, ``by_model``,
+            ``by_phase_seconds``, and ``usd_estimate`` keys.
+
+    Returns:
+        Markdown lines for the section, or ``[]`` when nothing was measured.
+
+    Example:
+        >>> _render_economics({"by_phase": {}, "by_model": {}})
+        []
+    """
+    groups = (
+        (
+            "**Tokens by phase** (measured):",
+            [f"- **{k}**: {v}" for k, v in (economics.get("by_phase") or {}).items()],
+        ),
+        (
+            "**Tokens by model** (measured):",
+            [f"- **{k}**: {v}" for k, v in (economics.get("by_model") or {}).items()],
+        ),
+        (
+            "**Wall-clock by phase, seconds** (measured):",
+            [f"- **{k}**: {v:.2f}" for k, v in (economics.get("by_phase_seconds") or {}).items()],
+        ),
+    )
+    body: list[str] = []
+    for header, items in groups:
+        if items:
+            body += ([""] if body else []) + [header] + items
+    usd = economics.get("usd_estimate")
+    if usd is not None:
+        cost = f"**Estimated cost:** ${usd:.4f} (estimate, not a billed figure)."
+        body += ([""] if body else []) + [cost]
+    return ["", "## Run economics", ""] + body if body else []
+
+
 def to_markdown(
     findings: list[Finding],
     token_spend: dict[str, int] | None = None,
     needs_deployment: list[Finding] | None = None,
-    coverage: dict | None = None,
     coverage_ledger: dict | None = None,
     has_redteam_plan: bool = False,
     patch_statuses: dict[str, PatchStatus] | None = None,
@@ -283,9 +400,6 @@ def to_markdown(
         token_spend: Optional per-phase token totals.
         needs_deployment: Findings real-but-unprovable from source alone. Reported
             separately, never counted as confirmed.
-        coverage: Optional ``compute_coverage`` output (``kb/coverage.json``); when given,
-            appends a "Coverage & limitations" section so a clean scan carries its
-            denominator (O-007/O-033). Omitted entirely when ``None``.
         coverage_ledger: Optional coverage-completeness ledger (``kb/coverage-ledger.json``);
             when given, appends a "Coverage completeness" section. Omitted when ``None``.
         has_redteam_plan: True when ``redteam-plan.md`` exists in the reports dir; adds a
@@ -348,7 +462,10 @@ def to_markdown(
     ]
 
     # Triage table — all findings merged, risk-ordered desc
-    all_triage = [(f, "needs-runtime", "run redteam-plan test") for f in ndt] + [
+    ndt_actions = _ndt_next_actions(ndt)
+    all_triage = [
+        (f, "needs-runtime", ndt_actions.get(f.id, "see redteam-plan gaps")) for f in ndt
+    ] + [
         (f, "confirmed", "bump" if f.cls == "deps" else "apply fix (§ below)") for f in conf
     ]
     all_triage.sort(key=lambda t: _risk_sort_key(t[0]))
@@ -404,29 +521,6 @@ def to_markdown(
         for f in external:
             lines += ["", render_ndt(f)]
 
-    if coverage:
-        lines += [
-            "",
-            "## Coverage & limitations",
-            "",
-            (
-                "_SAST coverage by language. `none` = no mechanical dataflow OR pattern "
-                "analysis (LLM shape-hunting only)._"
-            ),
-            "",
-            "| Language | Files | Tier |",
-            "|----------|-------|------|",
-        ]
-        for lang in coverage.get("languages", []):
-            lines.append(f"| {lang['language']} | {lang['files']} | {lang['tier']} |")
-        uncovered = ", ".join(coverage.get("uncovered", [])) or "none"
-        lines += [
-            "",
-            (
-                f"Dataflow coverage: {coverage.get('dataflow_pct', 0)}% of counted "
-                f"source. Uncovered (LLM-only): {uncovered}."
-            ),
-        ]
     if has_redteam_plan:
         lines += [
             "",
@@ -437,18 +531,7 @@ def to_markdown(
     if coverage_ledger:
         lines += ["", render_coverage_ledger(coverage_ledger)]
     if economics:
-        lines += ["", "## Run economics", ""]
-        lines += ["**Tokens by phase** (measured):"]
-        lines += [f"- **{phase}**: {n}" for phase, n in economics.get("by_phase", {}).items()]
-        lines += ["", "**Tokens by model** (measured):"]
-        lines += [f"- **{model}**: {n}" for model, n in economics.get("by_model", {}).items()]
-        by_secs = economics.get("by_phase_seconds") or {}
-        if by_secs:
-            lines += ["", "**Wall-clock by phase, seconds** (measured):"]
-            lines += [f"- **{phase}**: {secs:.2f}" for phase, secs in by_secs.items()]
-        usd = economics.get("usd_estimate")
-        if usd is not None:
-            lines += ["", f"**Estimated cost:** ${usd:.4f} (estimate, not a billed figure)."]
+        lines += _render_economics(economics)
     elif token_spend:
         lines += ["", "## Token spend by phase", ""]
         lines += [f"- **{phase}**: {n}" for phase, n in token_spend.items()]
@@ -587,8 +670,6 @@ def write_report(
     ndt = [f for f in all_findings if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING]
     reportable = collapse_clusters(reportable)
     ndt = collapse_clusters(ndt)
-    coverage_path = ws.kb / "coverage.json"
-    coverage = json.loads(coverage_path.read_text()) if coverage_path.exists() else None
     cl_path = ws.kb / "coverage-ledger.json"
     if not cl_path.exists():
         from sec_overlay.coverage_ledger import build_coverage_ledger  # local: avoid cycle
@@ -625,7 +706,6 @@ def write_report(
         to_markdown(
             reportable,
             needs_deployment=ndt,
-            coverage=coverage,
             coverage_ledger=coverage_ledger,
             has_redteam_plan=has_redteam_plan,
             patch_statuses=patch_statuses,

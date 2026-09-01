@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from sec_overlay.campaign import record_stage
+from sec_overlay.clsmap import canonical_classes
 from sec_overlay.dependency_sinks import catalog_ids
 from sec_overlay.evidence import (
     RUNTIME_DISPOSITIONS,
@@ -16,6 +17,7 @@ from sec_overlay.evidence import (
 )
 from sec_overlay.models import Finding
 from sec_overlay.phase_gate import resolve_ref
+from sec_overlay.prove import is_reproduction_receipt
 from sec_overlay.review_findings import (
     GENERAL_DEFECT_CLASSES,
     NEEDS_DEPLOYMENT_TESTING_DISPOSITION,
@@ -136,7 +138,12 @@ def validate_findings(ws: Workspace) -> list[str]:
                     f"cite a first-party sink line"
                 )
 
-        if f.status.value in ("confirmed", "fixed") and not confirms_alone(f.evidence_sources):
+        proven = any(is_reproduction_receipt(s) for s in f.evidence_sources)
+        if (
+            f.status.value in ("confirmed", "fixed")
+            and not confirms_alone(f.evidence_sources)
+            and not proven
+        ):
             errors.append(
                 f"{f.id}: {f.status.value} finding has no Tier-1 tool receipt "
                 f"(sources {f.evidence_sources or 'none'}) — a Tier-2-only match "
@@ -148,6 +155,12 @@ def validate_findings(ws: Workspace) -> list[str]:
             errors.append(
                 f"{f.id}: runtime_disposition {f.runtime_disposition!r} is not one of "
                 f"{sorted(RUNTIME_DISPOSITIONS)}"
+            )
+
+        if f.cls not in canonical_classes():
+            errors.append(
+                f"{f.id}: cls {f.cls!r} is not a canonical attack class "
+                f"(see references/attack-classes.md)"
             )
 
         if f.status.value in SHIPPING_STATUSES and not (f.impact or "").strip():

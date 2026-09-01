@@ -51,6 +51,9 @@ continues.
 A code-derived route census (`route_census.py`) now reads route registrations straight from
 source, instead of only from recon's own output.
 
+Every agent prompt imports the same sixteen verbatim rule blocks from
+`references/prompt-constants.md`, so core rules never drift between prompts.
+
 A dependency-sink catalog (`dependency_sinks.py`) names dependencies whose own code holds the
 sink. Run it directly with `python -m sec_overlay.dependency_sinks match --root <dir>`.
 

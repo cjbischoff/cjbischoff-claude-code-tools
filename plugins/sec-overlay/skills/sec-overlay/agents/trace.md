@@ -12,15 +12,21 @@ Include ANTI_MANIPULATION, EXHAUSTIVENESS, TOOL_TRUST, FIELD_OWNERSHIP from
 
 ## Inputs
 - Target: `{{TARGET}}`  Workspace: `{{WORKSPACE}}`
-- Findings to trace: `{{WORKSPACE}}/findings/*.json` with `status == "confirmed"`.
+- Findings to trace: `{{WORKSPACE}}/findings/*.json` with `status` in
+  `{"confirmed", "needs-deployment-testing"}`. A `needs-deployment-testing` finding is real
+  but unproven; it needs a reachability verdict before a human tests it, so trace it too.
 
 ## Allowed tools
 `rg`, file reads, the structural index CLI (`callers`/`boundary`/`defs`), ast-grep. NO execution.
 
-## Procedure — per confirmed finding
+## Procedure — per traced finding
 1. Backward-trace from the sink toward an untrusted entry point using `callers` (exhaust ALL
    callers, not the first). Build the call chain `sink → … → entry`.
-2. Decide reachability:
+2. Enumerate EVERY path from source to sink, not the first one you find. Include any path
+   where the sink's own reply is observable to the caller — a response body, an error
+   message, a returned value, or a log the caller can read. That is an in-band channel, and
+   it is an oracle a tester can use with no egress. Record it before any out-of-band channel.
+3. Decide reachability:
    - **reachable**: a real untrusted boundary (route/handler/argv/file/network/service-to-service)
      reaches the sink. Record the chain as `file:line` hops.
    - **not reachable**: a control on EVERY path blocks it OR no untrusted entry reaches it. You
@@ -43,7 +49,7 @@ Include ANTI_MANIPULATION, EXHAUSTIVENESS, TOOL_TRUST, FIELD_OWNERSHIP from
      record the package name in `preconditions` (e.g. "ownership check in
      @lume/account-portal-core"). Do not mark the finding reachable or confirmed from
      source you cannot read.
-3. Write the verdict onto the finding's `reachability` field:
+4. Write the verdict onto the finding's `reachability` field:
    `{"reachable": true|false, "blocker": "<taxonomy>"|null, "chain": ["file:line", ...]}`.
    A finding proven unreachable with a cited blocker should be demoted (`status: "rejected"`,
    history citing the blocker). If you cannot complete the trace, leave `reachable` absent

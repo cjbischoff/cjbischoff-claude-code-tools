@@ -10,6 +10,7 @@ from sec_overlay.evidence import (
     SHIPPING_STATUSES,
     TIER1_RECEIPTS,
     TIER2_RECEIPTS,
+    VERIFICATION_VALUES,
 )
 from sec_overlay.models import FindingStatus
 
@@ -173,7 +174,10 @@ def test_evidence_vocabulary_block_lists_all_values():
     text = _CONSTS.read_text()
     assert "## EVIDENCE_VOCABULARY" in text
     block = text.split("## EVIDENCE_VOCABULARY", 1)[1].split("\n## ", 1)[0]
-    for value in TIER1_RECEIPTS | TIER2_RECEIPTS | SHIPPING_STATUSES | RUNTIME_DISPOSITIONS:
+    for value in (
+        TIER1_RECEIPTS | TIER2_RECEIPTS | SHIPPING_STATUSES | RUNTIME_DISPOSITIONS
+        | VERIFICATION_VALUES
+    ):
         assert value in block, f"{value} missing from EVIDENCE_VOCABULARY block"
 
 

@@ -9,6 +9,8 @@ handling.
 from __future__ import annotations
 
 import re
+from functools import lru_cache
+from pathlib import Path
 
 # leading-zero-stripped CWE number -> attack-class key (attack-classes.md keys,
 # plus log-injection / clear-text-logging surfaced by CodeQL security-extended).
@@ -69,6 +71,55 @@ _RULE_ID_CLS: dict[str, str] = {
 # (O-030: xss/log-injection vendored rules ~100% FP on a real backend). Demoted to `informational`
 # rather than promoted to `raw`, so they don't flood the FP ladder. `unknown` = a hit with no CWE.
 NOISE_CLASSES: frozenset[str] = frozenset({"log-injection", "clear-text-logging", "unknown"})
+
+
+_ATTACK_CLASSES_PATH = Path(__file__).resolve().parents[2] / "references" / "attack-classes.md"
+_CLASS_PROMPT_DIR = Path(__file__).resolve().parents[2] / "agents" / "classes"
+
+# The universal table's key is the whole first cell. The `vs` rows of the
+# disambiguation table and the `hunting/*.md` first column do not match.
+_UNIVERSAL_KEY_RE = re.compile(r"^\| `([a-z][a-z0-9-]*)` \|", re.MULTILINE)
+# The F2 companion table publishes its keys in the second cell.
+_COMPANION_ROW_RE = re.compile(r"^\| `hunting/[^`]+` \|(.*)\|\s*$", re.MULTILINE)
+_KEY_RE = re.compile(r"`([a-z][a-z0-9-]*)`")
+
+# context.py:303 emits this pseudo-class for a recorded attack lead.
+_HARNESS_CLASSES: frozenset[str] = frozenset({"manual-review"})
+
+
+@lru_cache(maxsize=1)
+def canonical_classes() -> frozenset[str]:
+    """Return every attack-class key a finding may legitimately carry.
+
+    The set is derived from every publisher rather than enumerated, so it
+    cannot drift from its emitters: the two key tables in
+    ``references/attack-classes.md``, this module's own CWE and rule-id
+    tables, the review lane's general-defect classes, the class-extension
+    prompts under ``agents/classes/``, and the harness's own pseudo-classes.
+    Cached, so the files are read once per process and never at import time.
+
+    Returns:
+        The canonical key set.
+
+    Raises:
+        FileNotFoundError: ``references/attack-classes.md`` is missing.
+
+    Example:
+        >>> "ssrf" in canonical_classes()
+        True
+    """
+    # local: keep clsmap a leaf at import time
+    from sec_overlay.review_findings import GENERAL_DEFECT_CLASSES
+
+    doc = _ATTACK_CLASSES_PATH.read_text()
+    keys = set(_UNIVERSAL_KEY_RE.findall(doc))
+    for cell in _COMPANION_ROW_RE.findall(doc):
+        keys |= set(_KEY_RE.findall(cell))
+    keys |= set(CWE_CLS.values()) | set(_RULE_ID_CLS.values())
+    keys |= {"security-other", "unknown"}  # cls_from_semgrep_meta / cls_from_cwe fall-backs
+    keys |= set(GENERAL_DEFECT_CLASSES)
+    keys |= {p.stem for p in _CLASS_PROMPT_DIR.glob("*.md") if p.name != "README.md"}
+    return frozenset(keys | _HARNESS_CLASSES)
 
 
 def is_noise_class(cls: str) -> bool:

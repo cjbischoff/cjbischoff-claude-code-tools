@@ -178,3 +178,18 @@ def test_reconcile_plan_does_not_duplicate_an_already_planned_class(tmp_path):
     ws.ensure()
     plan = reconcile_plan(ws, ["ssrf"], target_root=_DEP_FIXTURE)
     assert plan.count("ssrf") == 1
+
+
+def test_reconcile_plan_routes_a_class_on_an_indicator_hit(tmp_path):
+    """An indicator hit routes the entry's class even with no manifest match (REQ-25)."""
+    from sec_overlay.partition import reconcile_plan
+    from sec_overlay.workspace import Workspace
+
+    ws = Workspace(tmp_path / "ws")
+    ws.ensure()
+    target = tmp_path / "t"
+    target.mkdir()
+    (target / "policy.go").write_text(
+        "package main\n\nfunc run() { r := rego.New(rego.Query(\"x\")) ; _ = r }\n"
+    )
+    assert "ssrf" in reconcile_plan(ws, ["authz"], target_root=target)

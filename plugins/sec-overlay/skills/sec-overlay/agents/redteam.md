@@ -60,7 +60,21 @@ repo text.
 3. **Write the runtime_test block** on each `needs-runtime` finding (and any new path, as a
    finding): `{objective, preconditions, payloads[], expected_signal, telemetry}`. `expected_signal`
    MUST be an object `{"secure": "<observed when the control holds>", "insecure": "<observed when
-   it fails>"}` — not a bare string; the deterministic renderer reads both keys. Payloads use
+   it fails>"}` — not a bare string; the deterministic renderer reads both keys.
+
+   `expected_signal` may instead be an ARRAY of observation channels when the finding gives a
+   tester more than one way to see the result. Each channel is
+   `{"name": "<channel>", "needs_egress": <bool>, "secure": "<...>", "insecure": "<...>"}`.
+   Set `needs_egress` to `false` for a channel the tester reads from the response itself.
+   Set it to `true` for a channel that needs a request to leave the network — a DNS lookup,
+   a collector callback, an outbound HTTP connection. A tester in a fenced network can only
+   run a `false` channel, so order the array with every no-egress channel first.
+
+   When the sink reply is caller-observable, the first channel MUST be the in-band one, at
+   `needs_egress: false`. Add the out-of-band channel after it, never in its place. A finding
+   whose only channel needs egress is untestable behind a fence — say so in `open_questions`.
+
+   Payloads use
    shell variables only (`$HOST`, `$TOKEN`, `$TARGET_ID`, …) — never literal secrets/hosts, and
    aligned to the real code path from the finding's dataflow. Before shipping a payload as a live
    directive, trace it source→sink through the target's own input validation; a payload you

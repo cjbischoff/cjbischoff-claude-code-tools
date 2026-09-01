@@ -16,7 +16,7 @@ from sec_overlay.phases import PHASE_TABLE
 from sec_overlay.profile import ScanProfile
 from sec_overlay.repo_memory import RepoMemory
 from sec_overlay.state import begin_pass, load_state
-from sec_overlay.workspace import Workspace
+from sec_overlay.workspace import Workspace, finding_counts
 
 _RBAC_SIGNALS = ("auth", "rbac", "iam", "policy", "interceptor", "middleware", "identity")
 _SERVICE_SIGNALS = ("grpc", "http", "service", "handler", "endpoint", "network")
@@ -222,11 +222,7 @@ def drive(target, config, *, scope=".", workspace=None, runner=subprocess.run, t
 
     def on_complete(phase_name: str) -> None:
         fence(target, baseline, runner=runner)
-        receipt(
-            ws,
-            phase_name,
-            counts={"findings": len(list(ws.findings_dir.glob("F-*.json")))},
-        )
+        receipt(ws, phase_name, counts=finding_counts(ws))
 
     return run_audit(ctx, table=table, on_complete=on_complete)
 
@@ -251,10 +247,6 @@ def advance(target, phase: str, *, workspace=None, runner=subprocess.run) -> Pat
     ws = Workspace(root=workspace) if workspace else _target_workspace(target)
     baseline = _load_baseline(ws, target, runner)
     fence(target, baseline, runner=runner)
-    rcpt = receipt(
-        ws,
-        phase,
-        counts={"findings": len(list(ws.findings_dir.glob("F-*.json")))},
-    )
+    rcpt = receipt(ws, phase, counts=finding_counts(ws))
     record_stage(ws, phase)
     return rcpt

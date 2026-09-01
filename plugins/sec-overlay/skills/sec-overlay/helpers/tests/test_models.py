@@ -1,6 +1,22 @@
 """Tests for the Finding / CampaignState models."""
 
+import pytest
+
 from sec_overlay.models import CampaignState, Finding, FindingStatus, Severity
+
+
+def _minimal_finding_dict() -> dict:
+    """Return the smallest dict ``Finding.from_dict`` accepts."""
+    return {
+        "id": "SSRF-0001",
+        "rule_id": "r1",
+        "cls": "ssrf",
+        "status": "raw",
+        "severity": "medium",
+        "file": "app/main.py",
+        "line": 10,
+        "message": "unvalidated outbound request",
+    }
 
 
 def test_finding_roundtrip_preserves_all_fields():
@@ -185,3 +201,31 @@ def test_old_finding_without_impact_loads_blank():
     d = {"id": "F-2", "rule_id": "r", "cls": "sqli", "status": "confirmed",
          "severity": "high", "file": "a.py", "line": 1, "message": "m"}
     assert Finding.from_dict(d).impact == ""
+
+
+def test_from_dict_rejects_prose_verification():
+    d = _minimal_finding_dict()
+    d["verification"] = (
+        "The fix was reviewed by hand and appears to address the reported issue."
+    )
+    with pytest.raises(ValueError, match="verification"):
+        Finding.from_dict(d)
+
+
+def test_from_dict_accepts_a_documented_verification_value():
+    d = _minimal_finding_dict()
+    d["verification"] = "static-only"
+    assert Finding.from_dict(d).verification == "static-only"
+
+
+def test_from_dict_accepts_a_null_verification():
+    d = _minimal_finding_dict()
+    d["verification"] = None
+    assert Finding.from_dict(d).verification is None
+
+
+def test_from_dict_rejects_an_unknown_runtime_disposition():
+    d = _minimal_finding_dict()
+    d["runtime_disposition"] = "neither"
+    with pytest.raises(ValueError, match="runtime_disposition"):
+        Finding.from_dict(d)

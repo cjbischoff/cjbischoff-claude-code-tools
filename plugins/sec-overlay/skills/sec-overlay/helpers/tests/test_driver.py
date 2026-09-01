@@ -487,3 +487,57 @@ def test_recall_gate_phase_records_an_unmentioned_census_route_as_a_ledger_gap(t
     ledger = json.loads((ctx.ws.kb / "coverage-ledger.json").read_text())
     assert any(s["disposition"] == "needs_follow_up" for s in ledger["surfaces"])
     assert ledger["completeness"] == "partial"
+
+
+def test_recall_gate_derives_route_summary_from_the_census(tmp_path):
+    """route_summary must report census coverage, not restate entrypoints (REQ-11).
+
+    A census route the profile never names is uncovered; a route it names is not.
+    """
+    from sec_overlay.driver import DETERMINISTIC_ACTIONS
+
+    ctx = _ctx(tmp_path, target=str(_ROUTE_FIXTURE))
+    DETERMINISTIC_ACTIONS["route-census"](ctx)
+    (ctx.ws.kb / "scan-profile.json").write_text(
+        json.dumps({"entrypoints": ["/policy/evaluate"], "attack_surface": []})
+    )
+    DETERMINISTIC_ACTIONS["recall-gate"](ctx)
+    summary = json.loads((ctx.ws.kb / "scan-profile.json").read_text())["route_summary"]
+    assert summary["total"] >= 2
+    assert any("/health" in u for u in summary["uncovered"])
+    assert not any("/policy/evaluate" in u for u in summary["uncovered"])
+    assert summary["covered"] == summary["total"] - len(summary["uncovered"])
+
+
+def test_findings_gate_records_a_discovery_wave(tmp_path):
+    """The saturation loop must be mechanical, not a prose instruction (REQ-24)."""
+    from sec_overlay.driver import DETERMINISTIC_ACTIONS
+
+    ctx = _ctx(tmp_path)
+    DETERMINISTIC_ACTIONS["findings-gate"](ctx)
+    ledger = json.loads((ctx.ws.kb / "discovery-ledger.json").read_text())
+    assert len(ledger["waves"]) == 1
+
+
+def test_repeated_findings_gate_runs_reach_a_terminal_reason(tmp_path):
+    """Waves that add nothing new must saturate and stop the loop (REQ-24)."""
+    from sec_overlay.driver import DETERMINISTIC_ACTIONS
+
+    ctx = _ctx(tmp_path)
+    for _ in range(3):
+        DETERMINISTIC_ACTIONS["findings-gate"](ctx)
+    ledger = json.loads((ctx.ws.kb / "discovery-ledger.json").read_text())
+    assert ledger["terminal_reason"] == "saturated"
+
+
+def test_a_saturated_ledger_stops_re_dispatching_investigate(tmp_path):
+    """A terminal ledger records the stage instead of dispatching another wave (REQ-24)."""
+    from sec_overlay.discovery_ledger import new_ledger, save_ledger
+    from sec_overlay.driver import _investigate_is_saturated
+
+    ctx = _ctx(tmp_path)
+    assert _investigate_is_saturated(ctx.ws) is False
+    ledger = new_ledger()
+    ledger["terminal_reason"] = "saturated"
+    save_ledger(ctx.ws, ledger)
+    assert _investigate_is_saturated(ctx.ws) is True

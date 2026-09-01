@@ -2,13 +2,16 @@
 
 The ``Finding`` schema defined here is the frozen contract consumed by every
 later phase (investigation, FP-reduction ladder, remediation, reporting).
-Verification values: ``verified-static | static-only | not-fixed | verify-error``.
+Verification values: ``verified-static | static-only | not-fixed | verify-error |
+fact-checked``.
 """
 
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from enum import Enum
+
+from sec_overlay.evidence import RUNTIME_DISPOSITIONS, VERIFICATION_VALUES
 
 
 class Severity(str, Enum):
@@ -38,6 +41,22 @@ class FindingStatus(str, Enum):
     # Low-value vendored-rule hit (O-027): terminal, never re-run, never enters the
     # confirmed report or the FP ladder as `raw`.
     INFORMATIONAL = "informational"
+
+
+_CLOSED_ENUMS: dict[str, frozenset[str]] = {
+    "verification": VERIFICATION_VALUES,
+    "runtime_disposition": RUNTIME_DISPOSITIONS,
+}
+
+RUNTIME_TEST_KEYS = (
+    "objective",
+    "preconditions",
+    "payloads",
+    "expected_signal",
+    "telemetry",
+)
+OPEN_QUESTION_KEYS = ("question", "why_it_matters", "who_to_ask_or_check")
+AFFECTED_SITE_KEYS = ("id", "file", "line")
 
 
 @dataclass
@@ -150,8 +169,18 @@ class Finding:
 
         Tolerates unknown keys (forward-compat): a finding written by a newer schema
         loads under an older one, dropping fields it doesn't know.
+
+        Raises:
+            ValueError: ``verification`` or ``runtime_disposition`` holds a value
+                outside its closed enum and is not ``None``.
         """
         d = {k: v for k, v in d.items() if k in cls.__dataclass_fields__}
+        for name, allowed in _CLOSED_ENUMS.items():
+            value = d.get(name)
+            if value is not None and value not in allowed:
+                raise ValueError(
+                    f"{name} {value!r} is not one of {sorted(allowed)} or null"
+                )
         d["status"] = FindingStatus(d["status"])
         d["severity"] = Severity(d["severity"])
         return cls(**d)

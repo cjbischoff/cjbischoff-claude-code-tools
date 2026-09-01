@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 
 from sec_overlay.evidence import SHIPPING_STATUSES
-from sec_overlay.workspace import Workspace, read_findings
+from sec_overlay.workspace import Workspace, finding_counts, read_findings
 
 # Constant/placeholder fragments that ISSUE-052 removed from the renderer. Their
 # reappearance in report.md means a stale render or a regression.
@@ -155,9 +155,9 @@ def run_artifact_gate(ws: Workspace) -> list[str]:
         errors.extend(check_duplication(arc42.read_text(), tm_doc.read_text()))
 
     (ws.kb / "gates").mkdir(parents=True, exist_ok=True)
-    (ws.kb / "gates" / "artifact-gate.json").write_text(
-        json.dumps({"passed": not errors, "errors": errors}, indent=2)
-    )
+    payload = {"passed": not errors, "errors": errors}
+    payload.update(finding_counts(ws))
+    (ws.kb / "gates" / "artifact-gate.json").write_text(json.dumps(payload, indent=2))
     return errors
 
 

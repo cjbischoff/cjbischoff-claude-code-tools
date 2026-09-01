@@ -155,30 +155,6 @@ def test_select_reportable_filters_and_sorts():
     assert [f.id for f in out] == ["F-0002", "F-0001"]  # rejected/candidate dropped; risk-sorted
 
 
-def test_report_renders_coverage_section(tmp_path):
-    import json
-
-    from sec_overlay.workspace import Workspace
-
-    ws = Workspace(tmp_path / "ws")
-    ws.ensure()
-    (ws.kb / "coverage.json").write_text(
-        json.dumps(
-            {
-                "languages": [
-                    {"language": "liquid", "files": 194, "tier": "none"},
-                    {"language": "javascript", "files": 40, "tier": "dataflow"},
-                ],
-                "dataflow_pct": 17,
-                "uncovered": ["liquid"],
-            }
-        )
-    )
-    write_report(ws)
-    md = ws.report_path.read_text()
-    assert "Coverage" in md and "liquid" in md and "17%" in md
-
-
 def test_write_report_writes_final_artifacts(tmp_path):
     import json
 
@@ -1149,3 +1125,134 @@ def test_ledger_dropped_count_matches_markdown_row_count(tmp_path: Path):
         1 for line in section.splitlines() if line.startswith("|") and "---" not in line and "Path" not in line
     )
     assert row_count == len(ledger["dropped"]) == 3
+
+
+def test_report_renders_no_dataflow_percentage_line(tmp_path):
+    """A stale coverage.json must not resurrect the file-based percentage (REQ-04).
+
+    The per-sink ledger is the single coverage source. A second percentage beside
+    it contradicted the ledger whenever the two disagreed.
+    """
+    import json
+
+    from sec_overlay.workspace import Workspace
+
+    ws = Workspace(tmp_path / "ws")
+    ws.ensure()
+    (ws.kb / "coverage.json").write_text(
+        json.dumps(
+            {
+                "languages": [{"language": "liquid", "files": 194, "tier": "none"}],
+                "dataflow_pct": 17,
+                "uncovered": ["liquid"],
+            }
+        )
+    )
+    write_report(ws)
+    md = ws.report_path.read_text()
+    assert "Dataflow coverage" not in md
+    assert "of counted source" not in md
+
+
+def test_a_partial_ledger_claims_no_full_coverage(tmp_path):
+    """A partial ledger must not print a full-coverage claim anywhere (REQ-04)."""
+    import json
+
+    from sec_overlay.workspace import Workspace
+
+    ws = Workspace(tmp_path / "ws")
+    ws.ensure()
+    (ws.kb / "coverage-ledger.json").write_text(
+        json.dumps(
+            {
+                "completeness": "partial",
+                "surfaces": [
+                    {
+                        "id": "http-api",
+                        "disposition": "needs_follow_up",
+                        "reason": "no investigator ran",
+                        "next_step": "route an investigator",
+                    }
+                ],
+                "deferred": [],
+                "open_questions": [],
+            }
+        )
+    )
+    write_report(ws)
+    md = ws.report_path.read_text()
+    assert "partial" in md
+    assert "100%" not in md
+    assert "Dataflow coverage" not in md
+
+
+def _ndt_below_bar():
+    """Low-severity, low-risk NDT finding — below the redteam-plan action bar."""
+    return Finding(
+        id="AUTHZ-0001",
+        rule_id="investigation:authz",
+        cls="authz",
+        status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
+        severity=Severity.LOW,
+        file="src/rbac/spec.js",
+        line=7,
+        risk_score=3,
+        message="owner check may be advisory",
+        dataflow=["a -> b"],
+        preconditions=["handler unscoped"],
+    )
+
+
+def _ndt_unrunnable():
+    """Above-bar NDT finding whose payload cannot be traced source->sink."""
+    return Finding(
+        id="SSRF-0002",
+        rule_id="investigation:ssrf",
+        cls="ssrf",
+        status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
+        severity=Severity.HIGH,
+        file="src/net/fetch.js",
+        line=21,
+        risk_score=8,
+        message="outbound URL may be attacker controlled",
+    )
+
+
+def _triage_action(md: str, fid: str) -> str:
+    """Return the 'Next action' cell of the triage row for ``fid``."""
+    triage = md.split("## Triage")[1].split("\n## ")[0]
+    row = next(line for line in triage.splitlines() if line.startswith(f"| {fid} "))
+    return [c.strip() for c in row.strip().strip("|").split("|")][-1]
+
+
+def test_below_bar_ndt_next_action_points_at_the_gaps_section():
+    """REQ-03: a below-bar finding has no directive, so it must not be sent to one."""
+    md = to_markdown([], needs_deployment=[_ndt_below_bar()])
+    assert _triage_action(md, "AUTHZ-0001") == "see redteam-plan gaps"
+    assert "run redteam-plan test" not in md
+
+
+def test_unrunnable_ndt_next_action_points_at_the_preconditions_section():
+    """REQ-03: an untraceable payload lands under 'Unrunnable preconditions', not 'gaps'."""
+    md = to_markdown([], needs_deployment=[_ndt_unrunnable()])
+    assert _triage_action(md, "SSRF-0002") == "see redteam-plan preconditions"
+
+
+def test_directive_ndt_next_action_points_at_the_directive_section():
+    """REQ-03: an above-bar, traceable finding keeps a directive-shaped action."""
+    md = to_markdown([], needs_deployment=[_ndt_med()])
+    assert _triage_action(md, "NDT-T4") == "run redteam-plan directive"
+
+
+def test_run_economics_omits_a_measured_header_with_no_body():
+    """REQ-05: a measurement that was not collected prints no header."""
+    md = to_markdown([], economics={"by_phase": {}, "by_phase_seconds": {"report": 1.5}})
+    assert "**Tokens by phase** (measured):" not in md
+    assert "**Tokens by model** (measured):" not in md
+    assert "**Wall-clock by phase, seconds** (measured):" in md
+
+
+def test_run_economics_section_absent_when_nothing_was_measured():
+    """REQ-05: an empty economics payload renders no section at all."""
+    md = to_markdown([], economics={"by_phase": {}, "by_model": {}})
+    assert "## Run economics" not in md

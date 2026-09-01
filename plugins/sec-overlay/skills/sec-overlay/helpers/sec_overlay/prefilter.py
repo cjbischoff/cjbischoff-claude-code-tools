@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import shutil
@@ -12,7 +11,6 @@ from pathlib import Path
 
 from sec_overlay.campaign import record_stage
 from sec_overlay.codeql import CodeQLError, codeql_config_trusted, qlpack_installed, run_codeql
-from sec_overlay.coverage import compute_coverage
 from sec_overlay.exclusions import apply_exclusions, load_exclusions
 from sec_overlay.models import Finding
 from sec_overlay.normalize import normalize
@@ -20,7 +18,7 @@ from sec_overlay.profile import ScanProfile
 from sec_overlay.sast import run_semgrep
 from sec_overlay.sca import ScaError, run_sca
 from sec_overlay.secrets import scan_secrets
-from sec_overlay.workspace import Workspace, write_findings
+from sec_overlay.workspace import Workspace, finding_counts, write_findings
 
 
 def _assign_candidate_ids(kept: list[Finding]) -> None:
@@ -68,6 +66,31 @@ def _raise_on_incomplete_backends(
             f"prefilter: planned backend(s) did not run — {joined}. "
             "A partial scan is a coverage hole, not 'no findings'."
         )
+
+
+def _relativize_paths(findings: list[Finding], target: str) -> None:
+    """Rewrite each finding's ``file`` repo-root-relative, in place.
+
+    PATH_BASE requires every cited path to resolve from the repo root. Backends
+    disagree: semgrep echoes the path it was given, CodeQL emits a SARIF URI. A
+    path outside ``target`` is left verbatim so a vendored or out-of-tree hit stays
+    visible instead of being rewritten into a path that does not resolve.
+
+    Args:
+        findings: Candidates to rewrite.
+        target: The scanned source root.
+    """
+    root = Path(target).resolve()
+    for f in findings:
+        if not f.file:
+            continue
+        p = Path(f.file)
+        if not p.is_absolute():
+            continue
+        try:
+            f.file = p.resolve().relative_to(root).as_posix()
+        except ValueError:
+            continue
 
 
 def run_prefilter(
@@ -125,12 +148,10 @@ def run_prefilter(
 
     Returns:
         ``{"candidates", "backends_run", "skipped", "failed", "excluded", "dropped_nonsecurity",
-        "skipped_reasons", "coverage"}`` where ``failed`` is a list of ``{"backend", "error"}``,
+        "skipped_reasons"}`` where ``failed`` is a list of ``{"backend", "error"}``,
         ``excluded`` is the count of suppressed findings, ``dropped_nonsecurity`` is the count of
-        unknown-class semgrep findings dropped when security_only is enabled, ``skipped_reasons``
-        records why each backend was not run, and ``coverage`` is the per-language dataflow/
-        pattern-only/none breakdown from :func:`sec_overlay.coverage.compute_coverage` (also
-        persisted to ``kb/coverage.json``).
+        unknown-class semgrep findings dropped when security_only is enabled, and
+        ``skipped_reasons`` records why each backend was not run.
 
     Raises:
         RuntimeError: ``strict`` (the default) and a planned backend is skipped or failed.
@@ -183,10 +204,13 @@ def run_prefilter(
                         # is now durable per-repo memory, and the DB is a large (100s of
                         # MB) rebuildable artifact that must not bloat/pollute it.
                         db_dir = str(Path(codeql_db_root) / f"codeql-db-{lang}")
+                        # The result tag carries the language so the fold below can
+                        # record a per-language reason; the recorded backend name
+                        # stays "codeql".
                         try:
-                            return ("codeql", codeql(target, lang, db_dir), None)
+                            return (f"codeql:{lang}", codeql(target, lang, db_dir), None)
                         except CodeQLError as exc:
-                            return ("codeql", [], str(exc))
+                            return (f"codeql:{lang}", [], str(exc))
                     units.append(_codeql_unit)
                     codeql_unit_count += 1
         else:
@@ -233,9 +257,13 @@ def run_prefilter(
         shutil.rmtree(codeql_db_root, ignore_errors=True)  # never keep the CodeQL DB
     for backend, backend_findings, error in results:
         raw.extend(backend_findings)
-        if backend == "codeql":
+        if backend.startswith("codeql"):
             if error is not None:
                 failed.append({"backend": "codeql", "error": error})
+                if backend.partition(":")[2] == "go":
+                    # A Go database needs an extraction that never builds in the
+                    # target tree; a failure here is a coverage hole, not a crash.
+                    skipped_reasons["codeql-go"] = "build-unfenceable"
             else:
                 codeql_completed += 1
         elif backend == "sca":
@@ -267,6 +295,7 @@ def run_prefilter(
         raw = [f for f in raw if not (_is_semgrep(f) and f.cls == "unknown")]
         dropped_nonsecurity = before - len(raw)
 
+    _relativize_paths(raw, target)
     findings = normalize(raw)
     kept, dropped = apply_exclusions(findings, exclusions_fn(ws))
 
@@ -279,10 +308,12 @@ def run_prefilter(
     _assign_candidate_ids(kept)
 
     write_findings(ws, kept)
-    coverage = compute_coverage(profile, ran, target)
-    ws.kb.mkdir(parents=True, exist_ok=True)
-    (ws.kb / "coverage.json").write_text(json.dumps(coverage, indent=2))
     _raise_on_incomplete_backends(skipped_reasons=skipped_reasons, failed=failed, strict=strict)
+    from sec_overlay.run import receipt  # local: avoid import cycle
+
+    # REQ-16: the receipt must exist before state says the phase is done, or a
+    # fence abort in the driver's on_complete leaves a done stage with no receipt.
+    receipt(ws, "prefilter", counts=finding_counts(ws))
     record_stage(ws, "prefilter")
     return {
         "candidates": len(kept),
@@ -292,5 +323,4 @@ def run_prefilter(
         "excluded": len(dropped),
         "dropped_nonsecurity": dropped_nonsecurity,
         "skipped_reasons": skipped_reasons,
-        "coverage": coverage,
     }

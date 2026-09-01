@@ -111,6 +111,15 @@ flowchart TD
 On pass N>1, prior `rejected` findings are injected as `{{FP_FEEDBACK}}` negative examples so
 the agent doesn't re-raise known false positives.
 
+**The discovery loop is now mechanical (REQ-24).** `investigate.md`'s "Discovery loop" section
+tells the agent it is one **wave** of a bounded loop. The bound itself lives in the driver, not
+in the prompt: `driver._record_discovery_wave` folds the pass's finding fingerprints into
+`kb/discovery-ledger.json` on every `findings-gate` run, and `_investigate_is_saturated` reads
+that ledger back. Once `terminal_reason` is `saturated` (two consecutive waves add no new
+fingerprint) or `capped` (the wave cap), the driver records the `investigate` stage and advances
+instead of printing another dispatch block. The agent therefore cannot end the loop early by
+declaring a class exhausted, and cannot extend it past the cap.
+
 `investigate.md`'s allowed-tools list also documents an ast-grep absence check: `astgrep run
 --not <safe-pattern>` for a construction that omits its safe option, and `astgrep rule --file
 <path>` for a hand-written rule when Go's `kind`/`has` anchoring is needed (a bare selector-call
@@ -127,7 +136,7 @@ safe option, or a codeql dataflow path.
 |--------|-------|-----|
 | `critic.md` | sonnet | production-viability filter: reject debug-only/dead/test-fixture/vendored/fully-mitigated code. **Demote on doubt, don't hard-reject.** |
 | `judge.md` | cheap, **no tools** | reads only the finding + critic verdict; asks "is the severity inflated?" Uphold / downgrade / flag. |
-| `validate.md` | opus (different family) | **assumes every finding is wrong** and tries to refute it independently. Survival = confirmation. A `false-positive` verdict *requires* a `file:line` cite of the defeating control. Never confirms a finding whose `reachability.blocker == "external-boundary"` — it stays a lead for calibrate/report to handle. A `confirmed` finding now also requires a real (derived, not placeholder) CVSS v4.0 `cvss_vector` and a non-empty `preconditions` list, or it routes to `needs-deployment-testing` instead (ISSUE-008) — calibrate scores off this vector verbatim. |
+| `validate.md` | opus (different family) | **assumes every finding is wrong** and tries to refute it independently. Survival = confirmation. A `false-positive` verdict *requires* a `file:line` cite of the defeating control. Never confirms a finding whose `reachability.blocker == "external-boundary"` — it stays a lead for calibrate/report to handle. `confirmed` requires at least one Tier-1 receipt (`codeql:`/`semgrep:`/`sca:`/`secrets:`); a Tier-2-only finding (REQ-07) routes to `needs-deployment-testing` instead, matching `findings_gate.py`'s `confirms_alone` rule. A `confirmed` finding now also requires a real (derived, not placeholder) CVSS v4.0 `cvss_vector` and a non-empty `preconditions` list, or it routes to `needs-deployment-testing` instead (ISSUE-008) — calibrate scores off this vector verbatim. |
 
 > `judge` and `validate` must **never** run concurrently against the same finding file — the
 > last writer silently drops the other's field. (Enforced by orchestration order, not code.)
@@ -141,7 +150,9 @@ safe option, or a codeql dataflow path.
 ### Phase 5.5 — Red team (static → runtime bridge)
 | Prompt | Model | Job |
 |--------|-------|-----|
-| `trace.md` | opus | backward-trace each confirmed sink to an entry point; verdict `reachable?` + blocker taxonomy; when the blocker is an external fact this repo can't answer, populates `open_questions` instead of guessing; when a sink resolves into an un-ingested dependency, sets `reachability.blocker = "external-boundary"` and records the package in `preconditions` rather than guessing reachable/confirmed. On a static-settled `reachable: true` verdict, also records `preconditions` (attacker position, required inputs, config/state) that feed calibrate's severity precondition check (ISSUE-008). |
+| `trace.md` | opus | backward-trace each confirmed sink to an entry point; verdict `reachable?` + blocker taxonomy; when the blocker is an external fact this repo can't answer, populates `open_questions` instead of guessing; when a sink resolves into an un-ingested dependency, sets `reachability.blocker = "external-boundary"` and records the package in `preconditions` rather than guessing reachable/confirmed. On a static-settled `reachable: true` verdict, also records `preconditions` (attacker position, required inputs, config/state) that feed calibrate's severity precondition check (ISSUE-008). Traces both `confirmed` and
+`needs-deployment-testing` findings, and records any in-band channel — a sink reply observable
+to the caller — before an out-of-band channel. |
 | `redteam.md` | sonnet | split confirmed findings into `static-settled` vs `needs-runtime`; write a `runtime_test` block (objective, preconditions, `$SHELL_VAR` payloads — **never literal secrets**, expected signal, telemetry). `expected_signal` must be an object `{secure, insecure}` — not a bare string — because the deterministic renderer reads both keys. `redteam.py`'s `wants_runtime()` is a plain OR over two independent triggers — `runtime_disposition == "needs-runtime"` or `status is FindingStatus.NEEDS_DEPLOYMENT_TESTING` — either alone forces a finding into the plan; there is no third disposition value that opts one out. `open_questions` is a separate, non-bucket-affecting mechanism: for findings that hinge on a human-answerable fact rather than a runtime test, populates `open_questions` instead of forcing a hollow `runtime_test`. |
 | `redteam-adversary.md` | opus | strip items that are actually settleable from source, payloads not tied to a real sink, or claims resting on `llm-claimed` confidence alone. Writes verdicts to `kb/gates/redteam-adversary.json`; `redteam.py` owns `kb/gates/redteam.json`. |
 
@@ -222,9 +233,9 @@ Each is **appended** to `investigate.md` / `patch.md` for that class and supplie
 | `{{OVERLAY_ROOT}}` | absolute path to `skills/sec-overlay/` (so agents find `references/`) |
 | `{{HELPERS_DIR}}` | absolute path to `helpers/` (for `python -m sec_overlay.*` calls) |
 | `{{REPO_ROOT}}` / `{{SCAN_SCOPE}}` | git top-level of the target + scan sub-path (from `kb/scan-scope.json`) |
-| `{{ATTACK_CLASS}}` | one class key (investigate agents) |
+| `{{ATTACK_CLASS}}` | one class key (investigate agents); the dispatch block carries the fan-out list as compact JSON |
 | `{{PHASE}}` | `recon` / `architecture` / `threat-model` / `context` (phase-adversary) |
-| `{{FP_FEEDBACK}}` | prior-pass rejected findings, as negative examples |
+| `{{FP_FEEDBACK}}` | path to a file holding prior-pass rejected findings, as negative examples |
 | `{{ROUND}}` | tuning iteration number (tune-config) |
 
 Every agent wraps untrusted repo text in the trust envelope and imports the
@@ -236,6 +247,13 @@ phase field-ownership boundaries: `investigate.md`, `critic.md`, `validate.md`, 
 `phase-adversary.md`, plus `architecture.md` / `threat-model.md` (which write no Finding
 fields, but consume the same ownership table when citing findings). Agents that never touch
 a finding record (`judge.md`, `recon.md`, `tune-config.md`, the `classes/` extensions) do not.
+
+`investigate.md` also imports `FINDING_SHAPES` (REQ-18): the exact keys of the `runtime_test`,
+`open_questions`, and `affected_sites` nested fields it populates, so a written key always
+matches `models.py`'s key tuples.
+
+`threat-model.md` now also imports `QUALIFIER_PROOF` (REQ-10): the prompt grades severity, so
+a blanket mitigation claim must name the reachable paths it checked, not just assert safety.
 
 ---
 
@@ -259,5 +277,27 @@ repo pre-commit hook (plugin [`CLAUDE.md`](../../../CLAUDE.md), "Documentation" 
 
 `recon.md`, `architecture.md`, and `threat-model.md` each gained one additive instruction so
 their output matches `sec_overlay.route_control`'s checks (ISSUE-027, ISSUE-029, ISSUE-036):
-recon emits a `route_summary` field, architecture names every control by key, and threat-model
-keeps every entrypoint listed before its hunt-list prioritization.
+recon names every route it investigates in `entrypoints`/`attack_surface`, architecture names
+every control by key, and threat-model keeps every entrypoint listed before its hunt-list
+prioritization. The recall gate derives `route_summary` (`total`/`covered`/`uncovered`) from
+the route census after recon finishes; recon must never emit that field itself (REQ-11).
+
+`investigate.md` and `validate.md` each gained one optional-field block for REQ-33. Investigate
+may record `attacker`, `privilege`, `exact_request`, and `exfil_channels`. Validate may record
+`library_version`, `refutation`, `negative_results`, and `baseline`. Both blocks are
+evidence-gated: an agent omits a key it cannot support and never guesses a value. The report
+renders each present key as its own section, so an omitted key costs a section, not a run.
+
+`redteam.md` gained a multi-channel `expected_signal` rule (REQ-34). The field may stay the
+`{secure, insecure}` object, or become an array of named observation channels. Each channel
+carries `needs_egress`, which tells a tester whether the channel needs a request to leave the
+network. The prompt requires every no-egress channel first, and requires the in-band channel
+first when the sink reply is caller-observable.
+
+`prove.md` is the prompt for the opt-in `prove` phase (REQ-30), which the driver dispatches between
+`redteam` and `artifact-gate` only when `scan_options.prove_findings` is true. It is the one prompt
+that permits execution, and it confines every build and every run to `{{WORKSPACE}}/repro`. The
+prompt allows no network egress: the only oracle is in-band and on loopback. It names the five
+auto-confirmable classes, routes `sqli` and `authz` to a human-run harness, and requires the agent
+to record `scope` as `entrypoint` or `slice` honestly. The agent writes `kb/prove.json` and never
+edits a finding file; the deterministic side in `helpers/sec_overlay/prove.py` applies the proofs.

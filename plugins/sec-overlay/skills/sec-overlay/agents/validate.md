@@ -79,9 +79,14 @@ substitute for reading the control; only the threat model's declared trust bound
 4. Verdict, one of:
    - **Confirmed** (you tried and could not refute it; the source→sink path
      holds, at confidence 8–10 per the anchor above): set `status: "confirmed"`,
-     record `evidence_sources` (the tool receipts you personally confirmed —
-     `ast-grep:`/`structural-index:`/`ripgrep:` entries, not just `llm-claimed:`),
-     propose a `cvss_vector`, append `history` `{"event": "validate:confirmed"}`.
+     record `evidence_sources` (the tool receipts you personally confirmed).
+     `confirmed` requires at least one Tier-1 receipt — `codeql:`, `semgrep:`,
+     `sca:`, or `secrets:`. A finding whose only receipts are Tier-2
+     (`ast-grep:`, `structural-index:`, `ripgrep:`, `tree-sitter:`,
+     `dependency-catalog:`) is real but unproven from source: set
+     `status: "needs-deployment-testing"`, not `confirmed`. An `llm-claimed:`
+     entry corroborates and never confirms. Propose a `cvss_vector`, append
+     `history` `{"event": "validate:confirmed"}`.
      If your independent trace differs from the recorded `dataflow`, correct it.
      Never confirm a finding whose `reachability.blocker == "external-boundary"` —
      it stays a lead (`status: "raw"`); the calibrate cap and the report's external
@@ -116,6 +121,16 @@ exploit needs. Calibrate computes the numeric score from this vector — a missi
 guessed vector produces a flat, wrong score (ISSUE-008). If you cannot derive a
 vector, the finding is not `confirmed`; route it to `needs-deployment-testing` with
 the open question that blocks scoring.
+
+### Refutation-evidence fields (optional, evidence-gated)
+Add these four keys to a finding you confirm. Omit a key you cannot support. Never guess a value.
+
+- `library_version` — a string. Give the resolved version of the vulnerable library.
+- `refutation` — a string. State the refutation you attempted and its result.
+- `negative_results` — an array of strings. Name each control you looked for and did not find.
+- `baseline` — a string. State how the same code behaved before the change.
+
+The report renders each present key as its own section. An absent key renders nothing.
 
 Return a verdict table with exactly as many rows as the candidate count from
 step 1 (id, verdict, one-line reason), followed by confirmed/rejected/verify-error

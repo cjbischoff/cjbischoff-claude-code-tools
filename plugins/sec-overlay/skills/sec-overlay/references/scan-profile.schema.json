@@ -33,6 +33,19 @@
         "max_waves": {"type": "integer", "description": "Maximum number of investigation waves."},
         "token_budget": {"type": "integer", "description": "Token budget cap for the scan."}
       }
+    },
+    "route_summary": {
+      "type": "object",
+      "description": "Derived census coverage the recall gate writes back after recon. Never hand-authored by recon.",
+      "properties": {
+        "total": {"type": "integer", "description": "Route census site count."},
+        "covered": {"type": "integer", "description": "Census routes the profile mentions."},
+        "uncovered": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Census route ids the profile never mentions."
+        }
+      }
     }
   }
 }

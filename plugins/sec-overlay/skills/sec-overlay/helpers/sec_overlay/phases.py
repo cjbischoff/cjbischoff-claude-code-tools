@@ -86,8 +86,16 @@ def _artifact_review_json(ws: Workspace) -> Path:
     return ws.kb / "gates" / "artifact-review.json"
 
 
+def _artifact_consistency_json(ws: Workspace) -> Path:
+    return ws.kb / "gates" / "artifact-consistency.json"
+
+
 def _redteam_plan(ws: Workspace) -> Path:
     return ws.reports / "redteam-plan.md"
+
+
+def _prove_json(ws: Workspace) -> Path:
+    return ws.kb / "prove.json"
 
 
 def _route_census(ws: Workspace) -> Path:
@@ -132,6 +140,7 @@ PHASE_TABLE: tuple[PhaseSpec, ...] = (
     PhaseSpec("report", "deterministic", (_findings_dir,), (_report, _sarif)),
     PhaseSpec("selfscore", "deterministic", (_report,), (_findings_dir,)),
     PhaseSpec("redteam", "agent", (_findings_dir,), (_redteam_plan,), prompt="redteam.md"),
+    PhaseSpec("prove", "agent", (_findings_dir,), (_prove_json,), prompt="prove.md"),
     PhaseSpec("artifact-gate", "deterministic", (_report, _sarif), (_artifact_gate_json,)),
     PhaseSpec(
         "artifact-review",
@@ -140,6 +149,7 @@ PHASE_TABLE: tuple[PhaseSpec, ...] = (
         (_artifact_review_json,),
         prompt="artifact-review.md",
     ),
+    PhaseSpec("artifact-consistency", "deterministic", (_report,), (_artifact_consistency_json,)),
     PhaseSpec("postflight", "deterministic", (_artifact_review_json,), (prior_context_path,)),
 )
 

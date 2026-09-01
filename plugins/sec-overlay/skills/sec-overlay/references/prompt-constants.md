@@ -56,8 +56,10 @@ of two bands: (a) precondition COUNT — 0 → high band, 1–2 → medium band,
 (b) ACCESS level — unauthenticated+remote → high, authenticated OR one hop → medium,
 local-only → low. A threat-model consideration may raise the result by at most ONE step.
 This stops "SQL injection, therefore critical" anchoring: go through the evidence first,
-label last. The harness caps `risk_score` by the precondition count deterministically and
-flags any claimed severity that sits well above the derived score as inflation.
+label last. The harness then caps `risk_score` by precondition WEIGHT, not count. A free
+precondition weighs 0, a weak one 0.5, and a strong one 1.0. Summed weight below 1 caps at
+10, below 2 caps at 8, below 3 caps at 7, and 3 or more caps at 5. The harness flags any
+claimed severity that sits well above the derived score as inflation.
 
 ## SHAPE_HUNTING
 Hunt by vulnerability SHAPE, not by an API checklist. The dangerous property is structural:
@@ -140,6 +142,18 @@ better. That field's owning phase will set or correct it. Writing outside your
 remit has repeatedly produced lower-quality values that a downstream phase then
 has to detect and redo.
 
+## FINDING_SHAPES
+
+Three `Finding` fields hold nested objects. Use exactly these keys. A different key
+is dropped when the finding loads.
+
+- **`runtime_test`** — one object, or null. Keys: `objective`, `preconditions`,
+  `payloads`, `expected_signal`, `telemetry`. The red-team phase owns this field.
+- **`open_questions`** — a list of objects. Keys per object: `question`,
+  `why_it_matters`, `who_to_ask_or_check`. Trace and red-team own this field.
+- **`affected_sites`** — a list of objects, on a cluster primary only. Keys per
+  object: `id`, `file`, `line`. The cluster pass owns this field.
+
 ## QUALIFIER_PROOF
 A blanket security qualifier — "mitigated", "allowlisted", "sanitized",
 "single chokepoint", "authorized by X", "handled elsewhere" — is a claim about
@@ -173,6 +187,9 @@ The evidence, status, and disposition vocabularies are closed sets. Use only the
   `needs-deployment-testing`.
 - **`runtime_disposition` (closed enum):** `needs-runtime`, `static-settled`, `unassessed`.
   Any other value (e.g. `neither`) is rejected at the findings gate.
+- **`verification` (closed enum):** `verified-static`, `static-only`, `not-fixed`,
+  `verify-error`, `fact-checked`. Any other value is rejected when a finding loads. Never
+  write prose here.
 
 ## STE_PROSE
 
@@ -183,8 +200,8 @@ sentences on one topic; numbered/bulleted list for any 3+ step sequence. Lexical
 are directional: one word per meaning (pick one verb per action and reuse it), verb over
 noun form, define kept domain terms once in the glossary. Preserve every hedge and scope
 qualifier — "may have failed" never becomes "failed"; when the tense rule and a hedge
-conflict, the hedge wins. Put the one-time statement "Prose follows an ASD-STE100-inspired
-clarity standard (structural rules enforced; lexical dictionary not verified)." in the
-document front matter. A deterministic linter rejects sentence/semicolon/paragraph
+conflict, the hedge wins. Put this one-time statement in the document front matter:
+"Prose follows an ASD-STE100-inspired clarity standard.
+A linter enforces the structural rules. The lexical dictionary stays unverified." A deterministic linter rejects sentence/semicolon/paragraph
 violations, so write compliant the first time. Diagram labels are governed by
 mermaid-caps.md, not this block.
