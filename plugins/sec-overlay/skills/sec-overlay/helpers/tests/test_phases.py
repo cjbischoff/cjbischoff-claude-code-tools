@@ -87,14 +87,16 @@ def test_phase_table_contains_redteam_and_postflight():
     assert "postflight" in names
 
 
-def test_redteam_precedes_the_artifact_gate():
-    # Correction to the rough pattern draft: redteam must sit before
-    # artifact-gate (artifact_gate.run_artifact_gate hard-requires
-    # redteam-plan.md to exist), not after artifact-review.
+def test_redteam_precedes_the_report():
+    # REQ-40 reverses the earlier invariant: redteam writes redteam-plan.md, which
+    # the report links and now declares as an input, so redteam runs first.
+    # artifact_gate.run_artifact_gate still hard-requires the file, and still runs
+    # later.
     from sec_overlay.phases import PHASE_TABLE
 
     names = [p.name for p in PHASE_TABLE]
-    assert names.index("selfscore") < names.index("redteam") < names.index("artifact-gate")
+    assert names.index("demote-noise") < names.index("redteam") < names.index("report")
+    assert names.index("report") < names.index("artifact-gate")
     rt = next(p for p in PHASE_TABLE if p.name == "redteam")
     assert rt.kind == "agent" and rt.prompt == "redteam.md"
 

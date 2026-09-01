@@ -222,16 +222,18 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
     return "\n".join(out)
 
 
-def render_ndt(f: Finding) -> str:
+def render_ndt(f: Finding, *, has_redteam_plan: bool = True) -> str:
     """Render a needs-deployment-testing finding as a foregrounded, needs-runtime-labeled view.
 
     Populated from the fields an NDT finding actually carries — ``message`` (what/why),
     ``dataflow`` (source-side chain), ``preconditions``, and ``runtime_test`` (objective +
     secure/insecure signal). Always labeled needs-runtime and never described as confirmed; the
-    runnable payloads/telemetry live in ``redteam-plan.md``.
+    runnable payloads/telemetry live in ``redteam-plan.md``, when the run produced one.
 
     Args:
         f: A needs-deployment-testing finding.
+        has_redteam_plan: True when the run produced ``redteam-plan.md``. When
+            False, the pointer to that file is omitted, because it does not exist.
 
     Returns:
         A Markdown section string for the finding.
@@ -267,7 +269,8 @@ def render_ndt(f: Finding) -> str:
         ]
         out += [f"| {s['id']} | `{s['file']}:{s['line']}` |" for s in f.affected_sites]
         out += [""]
-    out += ["_Runnable payloads + telemetry: see `redteam-plan.md`._", ""]
+    if has_redteam_plan:
+        out += ["_Runnable payloads + telemetry: see `redteam-plan.md`._", ""]
     return "\n".join(out)
 
 
@@ -289,7 +292,9 @@ def _short_title(text: str, limit: int = 72) -> str:
     return (cut or text[:limit].rstrip()) + "…"
 
 
-def _ndt_next_actions(ndt: list[Finding]) -> dict[str, str]:
+def _ndt_next_actions(
+    ndt: list[Finding], *, has_redteam_plan: bool = True
+) -> dict[str, str]:
     """Map each needs-runtime finding id to the ``redteam-plan.md`` section that holds it.
 
     The plan files a needs-runtime finding into one of three sections, so a single
@@ -298,6 +303,8 @@ def _ndt_next_actions(ndt: list[Finding]) -> dict[str, str]:
 
     Args:
         ndt: The needs-deployment-testing findings the report renders.
+        has_redteam_plan: True when the run produced ``redteam-plan.md``. When
+            False the actions name no file, because none exists.
 
     Returns:
         A dict of finding id to next-action phrase. A finding the plan files
@@ -308,6 +315,8 @@ def _ndt_next_actions(ndt: list[Finding]) -> dict[str, str]:
         {}
     """
     disc = discriminate(ndt)
+    if not has_redteam_plan:
+        return {f.id: "no runtime plan produced" for f in ndt}
     actions = {f.id: "see redteam-plan gaps" for f in disc["below_bar"]}
     actions.update({f.id: "see redteam-plan preconditions" for f in disc["unrunnable"]})
     actions.update({f.id: "run redteam-plan directive" for f in disc["needs_runtime"]})
@@ -462,9 +471,10 @@ def to_markdown(
     ]
 
     # Triage table — all findings merged, risk-ordered desc
-    ndt_actions = _ndt_next_actions(ndt)
+    ndt_actions = _ndt_next_actions(ndt, has_redteam_plan=has_redteam_plan)
+    default_action = "see redteam-plan gaps" if has_redteam_plan else "no runtime plan produced"
     all_triage = [
-        (f, "needs-runtime", ndt_actions.get(f.id, "see redteam-plan gaps")) for f in ndt
+        (f, "needs-runtime", ndt_actions.get(f.id, default_action)) for f in ndt
     ] + [
         (f, "confirmed", "bump" if f.cls == "deps" else "apply fix (§ below)") for f in conf
     ]
@@ -519,7 +529,7 @@ def to_markdown(
             ),
         ]
         for f in external:
-            lines += ["", render_ndt(f)]
+            lines += ["", render_ndt(f, has_redteam_plan=has_redteam_plan)]
 
     if has_redteam_plan:
         lines += [
@@ -539,7 +549,11 @@ def to_markdown(
 
 
 def write_finding_details(
-    ws: Workspace, findings: list[Finding], patch_statuses: dict | None = None
+    ws: Workspace,
+    findings: list[Finding],
+    patch_statuses: dict | None = None,
+    *,
+    has_redteam_plan: bool = True,
 ) -> list[str]:
     """Write one Markdown detail file per finding to ``ws.findings_dir/<ID>.md``.
 
@@ -547,6 +561,8 @@ def write_finding_details(
         ws: Workspace whose ``findings_dir`` receives the ``<ID>.md`` files.
         findings: Confirmed/fixed/NDT findings to render in full.
         patch_statuses: Optional ``id -> PatchStatus`` for fixed findings.
+        has_redteam_plan: True when the run produced ``redteam-plan.md``; passed
+            through to :func:`render_ndt` for each NDT finding.
 
     Returns:
         The finding ids written, in input order.
@@ -555,7 +571,7 @@ def write_finding_details(
     written: list[str] = []
     for f in findings:
         if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING:
-            body = render_ndt(f)
+            body = render_ndt(f, has_redteam_plan=has_redteam_plan)
         else:
             body = render_finding(f, patch_status=(patch_statuses or {}).get(f.id))
         (ws.findings_dir / f"{f.id}.md").write_text(body + "\n")
@@ -621,6 +637,7 @@ def write_report(
     reflection_skips: list | None = None,
     review_findings: list[ReviewFinding] | None = None,
     review_source_skips: list | None = None,
+    has_redteam_plan: bool = False,
 ) -> dict:
     """Assemble the final SARIF + Markdown report from a workspace's findings.
 
@@ -654,6 +671,10 @@ def write_report(
             no finding survived profile gating.
         review_source_skips: Files whose review source produced nothing; rendered and
             ledgered the same way as ``reflection_skips`` (D-15).
+        has_redteam_plan: True when the run produced ``redteam-plan.md``. The
+            ``redteam`` phase runs before ``report`` and declares this file as
+            an input, so the driver always passes ``True``; the default of
+            ``False`` covers a caller with no redteam phase, such as review mode.
 
     Returns:
         ``{"reported": <count>, "sarif": <path>, "report": <path>}``.
@@ -676,7 +697,6 @@ def write_report(
 
         build_coverage_ledger(ws)
     coverage_ledger = json.loads(cl_path.read_text()) if cl_path.exists() else None
-    has_redteam_plan = (ws.reports / "redteam-plan.md").exists()
     state = load_state(ws)
     by_phase = cost.aggregate_by_phase(state)
     by_phase_seconds = cost.aggregate_timings_by_phase(state)
@@ -717,7 +737,12 @@ def write_report(
             review_source_skips=review_source_skips,
         )
     )
-    write_finding_details(ws, reportable + ndt, patch_statuses=patch_statuses)
+    write_finding_details(
+        ws,
+        reportable + ndt,
+        patch_statuses=patch_statuses,
+        has_redteam_plan=has_redteam_plan,
+    )
     findings_out = reportable + ndt
     ws.findings_json_path.write_text(json.dumps([f.to_dict() for f in findings_out], indent=2))
     write_review_ledger(

@@ -267,14 +267,28 @@ review-improvements branch; keep them that way (run `ruff format` before committ
 helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit driver walks —
 `PHASE_TABLE` now opens with `route-census` (deterministic, no inputs, output `_route_census` —
 `kb/route-census.json`). It runs before `recon` so the census reads only the target's source,
-never recon's own output — see the module map entry. `PHASE_TABLE` now ends with `redteam` (agent, `agents/redteam.md`,
-input `_findings_dir`, output `_redteam_plan` — `reports/redteam-plan.md`) after `selfscore` and
-before `artifact-gate` (deterministic, input `_report`/`_sarif`, output `_artifact_gate_json`) —
-`artifact_gate.run_artifact_gate` hard-requires `redteam-plan.md` to exist, so redteam must run
-first (D-01) — then `artifact-review` (agent, `agents/artifact-review.md`, input
-`_artifact_gate_json`, output `_artifact_review_json`), and finally `postflight`
-(deterministic, input `_artifact_review_json`, output `context.prior_context_path` —
-`kb/prior_context.json`), the durable cross-scan distillation that closes the pipeline. `architecture` now outputs `_arc42`/`_container` (`kb.arc42_path` /
+never recon's own output — see the module map entry. `PHASE_TABLE` runs `redteam` (agent,
+`agents/redteam.md`, input `_findings_dir`, output `_redteam_plan` — `reports/redteam-plan.md`)
+right after `demote-noise` and before `report` (REQ-40): `report` names `redteam-plan.md` in its
+rendered output, so `report` now also declares `_redteam_plan` as an input, and the driver gates
+on it existing before `report` may start. `selfscore` and `prove` still follow `report`, then
+`artifact-gate` (deterministic, input `_report`/`_sarif`, output `_artifact_gate_json`) —
+`artifact_gate.run_artifact_gate` still hard-requires `redteam-plan.md` to exist (D-01) — then
+`artifact-review` (agent, `agents/artifact-review.md`, input `_artifact_gate_json`, output
+`_artifact_review_json`), and finally `postflight` (deterministic, input
+`_artifact_review_json`, output `context.prior_context_path` — `kb/prior_context.json`), the
+durable cross-scan distillation that closes the pipeline.
+
+`report.py` (REQ-40) no longer probes the filesystem for `redteam-plan.md`; the caller now states
+whether the run produced one. `render_ndt`, `_ndt_next_actions`, `write_finding_details`, and
+`write_report` all take a `has_redteam_plan` keyword — `render_ndt`/`_ndt_next_actions`/
+`write_finding_details` default it `True` (the common case), `write_report` defaults it `False`
+(the review-mode case with no redteam phase); `write_report` no longer needs a probe because
+`driver._act_report` passes `has_redteam_plan=True`, guaranteed by `report`'s new
+`_redteam_plan` input declaration. `cli.py`'s two review-mode call sites (`run_semgrep`,
+`run_review`) keep the `False` default, correctly, since neither runs a redteam phase.
+
+`architecture` now outputs `_arc42`/`_container` (`kb.arc42_path` /
 `kb.container_diagram_path`, i.e. `architecture/arc42.md` + `architecture/container-diagram.mmd`,
 not the old `kb/architecture.md`), immediately followed by the deterministic `arch-gate` row
 (input those same two paths, output `_arch_gate_json` — `kb/gates/arch-gate.json`). `threat_model`

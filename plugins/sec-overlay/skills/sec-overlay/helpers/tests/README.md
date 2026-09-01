@@ -524,7 +524,24 @@ general-defect finding WITH a Tier-1 receipt still reaches `confirmed` through t
 `test_phase_artifact_contract.py` gained four tests pinning REQ-40: `report` must declare
 `reports/redteam-plan.md` as an input, `redteam` must run before `report`, `render_ndt` must
 accept a `has_redteam_plan` keyword and omit the pointer when false, and `report.py` must hold
-no `redteam-plan.md` filesystem probe.
+no `redteam-plan.md` filesystem probe. All four are green. `phases.py` moves `redteam` ahead of
+`report` in `PHASE_TABLE`; `report.py` threads a `has_redteam_plan` keyword through `render_ndt`,
+`_ndt_next_actions`, `to_markdown`, and `write_finding_details`, and `write_report` takes the
+same keyword instead of probing the filesystem for `redteam-plan.md`. `driver.py`'s `_act_report`
+passes `has_redteam_plan=True`, since the driver only calls `write_report` after the `redteam`
+phase has run.
+
+`test_phases.py`'s `test_redteam_precedes_the_artifact_gate` is renamed
+`test_redteam_precedes_the_report` and now asserts `demote-noise` < `redteam` < `report` <
+`artifact-gate`, tracking the REQ-40 reorder.
+
+`test_report.py`'s `test_report_links_redteam_plan_and_shows_receipts` now calls `write_report`
+with `has_redteam_plan=True`, since the probe it used to rely on is gone. Three REQ-03 tests —
+`test_below_bar_ndt_next_action_points_at_the_gaps_section`,
+`test_unrunnable_ndt_next_action_points_at_the_preconditions_section`, and
+`test_directive_ndt_next_action_points_at_the_directive_section` — gained the same keyword on
+their `to_markdown` calls, because `_ndt_next_actions` returns a fixed no-plan action for every
+finding when the caller omits it.
 
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
@@ -1475,7 +1492,7 @@ The reason key is deliberately not a backend name. `run_prefilter` asserts that 
 
 The REQ-14 import block was reordered by `ruff --fix` after the red commit. The change is import order only.
 
-`test_prove.py` pins the opt-in proof-by-execution lane (REQ-30). Nineteen tests cover seven layers. Three assert the flag gate: `prove_enabled` is False without a scan profile, False when `scan_options.prove_findings` is absent, and True only when the key is exactly `true`. One asserts that `run_prove` mutates no finding when the lane is off. Two pin the receipt vocabulary — `prove.is_reproduction_receipt` accepts `reproduction` and rejects `semgrep:x`, while `evidence.is_tool_receipt("reproduction")` stays False, because `evidence.py` is byte-pinned by the D-15 frozen-contract test. Five pin the soundness guard: an `entrypoint` proof promotes an `ssrf` finding to `confirmed`, a `slice` proof leaves it `raw` and `needs-runtime`, a `slice` proof records `prove: slice-unbuildable`, a `sqli` finding never promotes, and a missing toolchain records `prove: toolchain-absent`. One asserts that `findings_gate` accepts a `confirmed` finding whose only evidence source is `reproduction`. One drives the stdlib loopback collector and asserts it reports the observed request path. The last five cover the wiring: the `prove` phase sits between `redteam` and `artifact-gate`, `Workspace.repro` exists after `ensure()`, `finding.schema.json` declares the seven-key `reproduction` object, the driver skips the phase when the lane is off and dispatches it when the lane is on, and `preflight_report` reports the prove-lane toolchains.
+`test_prove.py` pins the opt-in proof-by-execution lane (REQ-30). Nineteen tests cover seven layers. Three assert the flag gate: `prove_enabled` is False without a scan profile, False when `scan_options.prove_findings` is absent, and True only when the key is exactly `true`. One asserts that `run_prove` mutates no finding when the lane is off. Two pin the receipt vocabulary — `prove.is_reproduction_receipt` accepts `reproduction` and rejects `semgrep:x`, while `evidence.is_tool_receipt("reproduction")` stays False, because `evidence.py` is byte-pinned by the D-15 frozen-contract test. Five pin the soundness guard: an `entrypoint` proof promotes an `ssrf` finding to `confirmed`, a `slice` proof leaves it `raw` and `needs-runtime`, a `slice` proof records `prove: slice-unbuildable`, a `sqli` finding never promotes, and a missing toolchain records `prove: toolchain-absent`. One asserts that `findings_gate` accepts a `confirmed` finding whose only evidence source is `reproduction`. One drives the stdlib loopback collector and asserts it reports the observed request path. The last five cover the wiring: `Workspace.repro` exists after `ensure()`, `finding.schema.json` declares the seven-key `reproduction` object, the driver skips the phase when the lane is off and dispatches it when the lane is on, and `preflight_report` reports the prove-lane toolchains. A fifth wiring test originally pinned `prove` directly after `redteam`; REQ-40 moved `report` and `selfscore` between them, so the test is renamed `test_the_phase_table_places_prove_directly_before_the_artifact_gate` and now asserts only `redteam` < `prove` and `prove` immediately before `artifact-gate`.
 
 All nineteen fail at collection: `sec_overlay.prove` does not exist.
 

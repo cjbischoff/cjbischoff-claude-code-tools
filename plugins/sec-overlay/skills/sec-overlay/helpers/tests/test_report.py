@@ -344,7 +344,7 @@ def test_report_links_redteam_plan_and_shows_receipts(tmp_path):
             )
         ],
     )
-    write_report(ws)
+    write_report(ws, has_redteam_plan=True)
     md = (ws.reports / "report.md").read_text()
     assert "redteam-plan.md" in md  # T11a: link the manual test plan
     # T11b: receipts visible in the per-finding detail file, even at condensed (medium) tier
@@ -601,7 +601,7 @@ def test_render_ndt_degrades_without_runtime_test():
     assert "needs runtime" in out.lower()
     assert "no source chain recorded" in out
     assert "none recorded" in out
-    assert "redteam-plan.md" in out  # pointer present unconditionally
+    assert "redteam-plan.md" in out  # pointer present when a plan exists (the default)
 
 
 def test_render_ndt_tolerates_string_expected_signal():
@@ -1227,20 +1227,20 @@ def _triage_action(md: str, fid: str) -> str:
 
 def test_below_bar_ndt_next_action_points_at_the_gaps_section():
     """REQ-03: a below-bar finding has no directive, so it must not be sent to one."""
-    md = to_markdown([], needs_deployment=[_ndt_below_bar()])
+    md = to_markdown([], needs_deployment=[_ndt_below_bar()], has_redteam_plan=True)
     assert _triage_action(md, "AUTHZ-0001") == "see redteam-plan gaps"
     assert "run redteam-plan test" not in md
 
 
 def test_unrunnable_ndt_next_action_points_at_the_preconditions_section():
     """REQ-03: an untraceable payload lands under 'Unrunnable preconditions', not 'gaps'."""
-    md = to_markdown([], needs_deployment=[_ndt_unrunnable()])
+    md = to_markdown([], needs_deployment=[_ndt_unrunnable()], has_redteam_plan=True)
     assert _triage_action(md, "SSRF-0002") == "see redteam-plan preconditions"
 
 
 def test_directive_ndt_next_action_points_at_the_directive_section():
     """REQ-03: an above-bar, traceable finding keeps a directive-shaped action."""
-    md = to_markdown([], needs_deployment=[_ndt_med()])
+    md = to_markdown([], needs_deployment=[_ndt_med()], has_redteam_plan=True)
     assert _triage_action(md, "NDT-T4") == "run redteam-plan directive"
 
 

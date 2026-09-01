@@ -81,16 +81,18 @@ R0 Route census      driver phase `route-census` (`_act_route_census`)   # code-
    Validate-fix     agents/validate-fix.md (opus; personas: security-architect + penetration-tester)
 12 Verify           python -m sec_overlay.verify --workspace <WS> --target <T> --config <rules>
 13 Gate             python -m sec_overlay.findings_gate --workspace <WS>
-14 Report           python -m sec_overlay.report --workspace <WS>   → report.sarif + report.md
-14.2 Selfscore      python -m sec_overlay.selfscore --workspace <WS>
+14 Red Team         agents/redteam.md (sonnet) → agents/redteam-adversary.md (opus)
+                    # PHASE_TABLE-wired (D-01): the driver dispatches this automatically after
+                    # demote-noise, before report — report.py declares reports/redteam-plan.md
+                    # as an input, so the report never links a file the run has not written yet.
+                    # `python -m sec_overlay.redteam --workspace <WS> [--min-risk N]` remains
+                    # available for a standalone manual re-run.
+14.2 Report         python -m sec_overlay.report --workspace <WS>   → report.sarif + report.md
+14.4 Selfscore      python -m sec_overlay.selfscore --workspace <WS>
                     # post-gate finding counts written back to state — a run-quality signal
                     # (reported vs needs-runtime, clusters, rejects), not a re-score
-14.4 Red Team       agents/redteam.md (sonnet) → agents/redteam-adversary.md (opus)
-                    # PHASE_TABLE-wired (D-01): the driver dispatches this automatically after
-                    # selfscore, before artifact-gate — artifact_gate.run_artifact_gate hard-requires
-                    # redteam-plan.md to exist. `python -m sec_overlay.redteam --workspace <WS>
-                    # [--min-risk N]` remains available for a standalone manual re-run.
 14.5 Artifact gate  python -m sec_overlay.artifact_gate --workspace <WS>   # deterministic self-check (runs first)
+                    # artifact_gate.run_artifact_gate still hard-requires redteam-plan.md to exist.
 14.6 Artifact review agents/artifact-review.md (opus, DIFFERENT family) — claim↔evidence, cannot delete a receipt-backed finding
 15 Postflight       PHASE_TABLE-wired (D-01) as the driver's DETERMINISTIC_ACTIONS["postflight"] entry —
                     the final phase, dispatched automatically after artifact-review. `python -m

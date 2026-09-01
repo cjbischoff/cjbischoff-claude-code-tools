@@ -296,7 +296,7 @@ def _act_calibrate(ctx: AuditContext) -> None:
 
 
 def _act_report(ctx: AuditContext) -> None:
-    write_report(ctx.ws, target=ctx.target)
+    write_report(ctx.ws, target=ctx.target, has_redteam_plan=True)
 
 
 def _act_artifact_gate(ctx: AuditContext) -> None:

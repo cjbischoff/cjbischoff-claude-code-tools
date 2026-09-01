@@ -152,11 +152,13 @@ def test_the_loopback_collector_reports_the_observed_path() -> None:
     assert "/hit" in collector.paths
 
 
-def test_the_phase_table_places_prove_between_redteam_and_artifact_gate() -> None:
+def test_the_phase_table_places_prove_directly_before_the_artifact_gate() -> None:
+    # REQ-40 moved redteam ahead of report, so redteam and prove are no longer
+    # adjacent; prove still sits directly before artifact-gate.
     from sec_overlay.phases import PHASE_TABLE
 
     names = [p.name for p in PHASE_TABLE]
-    assert names.index("redteam") + 1 == names.index("prove")
+    assert names.index("redteam") < names.index("prove")
     assert names.index("prove") + 1 == names.index("artifact-gate")
     spec = PHASE_TABLE[names.index("prove")]
     assert (spec.kind, spec.prompt) == ("agent", "prove.md")

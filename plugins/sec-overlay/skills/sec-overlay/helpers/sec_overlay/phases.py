@@ -133,9 +133,9 @@ PHASE_TABLE: tuple[PhaseSpec, ...] = (
     PhaseSpec("patch", "agent", (_findings_dir,), (_findings_dir,), prompt="patch.md"),
     PhaseSpec("verify", "deterministic", (_findings_dir,), (_findings_dir,)),
     PhaseSpec("demote-noise", "deterministic", (_findings_dir,), (_findings_dir,)),
-    PhaseSpec("report", "deterministic", (_findings_dir,), (_report, _sarif)),
-    PhaseSpec("selfscore", "deterministic", (_report,), (_findings_dir,)),
     PhaseSpec("redteam", "agent", (_findings_dir,), (_redteam_plan,), prompt="redteam.md"),
+    PhaseSpec("report", "deterministic", (_findings_dir, _redteam_plan), (_report, _sarif)),
+    PhaseSpec("selfscore", "deterministic", (_report,), (_findings_dir,)),
     PhaseSpec("prove", "agent", (_findings_dir,), (_prove_json,), prompt="prove.md"),
     PhaseSpec("artifact-gate", "deterministic", (_report, _sarif), (_artifact_gate_json,)),
     PhaseSpec(
