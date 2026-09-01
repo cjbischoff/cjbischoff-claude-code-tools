@@ -4,6 +4,15 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Fixed
+
+- `tests/test_no_dead_helpers.py` resolves a reference to the module that defines the function.
+  A bare name in an unrelated module no longer counts as a caller, and `_public_functions` now
+  matches `ast.AsyncFunctionDef`. `helpers/tests/` stays outside the scan, so a test-only
+  importer never makes a helper live. Reconciling the two lists added `context.py:load` and
+  `crypto_policy.py:check` to `PROMPT_ONLY`, and `diffscope.py:head_sha`,
+  `fix_disposition.py:validate`, and `reachability.py:partition` to `DEAD_ALLOWLIST`.
+
 ### Added
 
 - `tests/test_no_dead_helpers.py` gains two tests pinning fix round 1, finding I1 and finding M5.

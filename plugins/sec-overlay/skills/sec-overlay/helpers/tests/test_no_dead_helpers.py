@@ -1,9 +1,16 @@
 """REQ-48: a public helper with no caller must be on a list, and a list entry must stay dead.
 
-The scan is AST-precise. A name counts as referenced when it appears as a loaded
-``Name``, an ``Attribute`` attribute, or an ``ImportFrom`` name anywhere in non-test
-``sec_overlay/`` or ``bench/`` code. A docstring mention does not count, and neither
-does a parameter of the same name.
+The scan resolves a reference to the module that defines the function, so a bare name in
+an unrelated module no longer counts. ``mod.fn`` is referenced when a non-test
+``sec_overlay/`` or ``bench/`` file imports it by name, imports ``mod`` and reads
+``mod.fn``, or uses ``fn`` as a bare name inside ``mod.py`` itself. A docstring mention
+does not count, and neither does a parameter of the same name.
+
+A test-only importer is not a caller. ``helpers/tests/`` stays outside the scan, because
+a helper that only tests reach is what the two dictionaries exist to record.
+
+Module keys are file basenames, so two modules of the same name in different packages
+share one key. ``cli.py`` and ``workspace.py`` are the two cases in this tree.
 """
 
 from __future__ import annotations
@@ -29,8 +36,10 @@ DEAD_ALLOWLIST: dict[str, str] = {
     "custom_checks.py:custom_check_classes": "unreferenced at 2.1.11",
     "diffhunks.py:added_line_numbers": "unreferenced at 2.1.11",
     "diffhunks.py:line_in_hunk": "unreferenced at 2.1.11",
+    "diffscope.py:head_sha": "unreferenced at 2.1.12; imported only by tests/test_diffscope.py",
     "envelope.py:attribution_banner": "unreferenced at 2.1.11",
     "fix_disposition.py:compute_tier": "unreferenced at 2.1.11",
+    "fix_disposition.py:validate": "unreferenced at 2.1.12; imported only by tests/test_fix_and_gates.py",
     "gates.py:run_gates": "unreferenced at 2.1.11",
     "githist.py:files_in_commit": "unreferenced at 2.1.11",
     "graph.py:attacker_controls": "unreferenced at 2.1.11; adjacent finding A-4",
@@ -47,6 +56,7 @@ DEAD_ALLOWLIST: dict[str, str] = {
     "prove.py:loopback_collector": "unreferenced at 2.1.11; adjacent finding A-3",
     "prove.py:run_prove": "unreferenced at 2.1.11; adjacent finding A-3",
     "reachability.py:blocker_of": "unreferenced at 2.1.11",
+    "reachability.py:partition": "unreferenced at 2.1.12; imported only by tests/test_bucket_c.py",
     "route_control.py:build_route_control_table": "unreferenced at 2.1.11",
     "route_control.py:check_architecture_controls": "unreferenced at 2.1.11",
     "route_control.py:check_recon_routes": "unreferenced at 2.1.11",
@@ -66,8 +76,10 @@ PROMPT_ONLY: dict[str, str] = {
     "context.py:control_worklist": "SKILL.md",
     "context.py:hunt_rows": "SKILL.md",
     "context.py:leads": "agents/redteam.md",
+    "context.py:load": "agents/context-ingest.md",
     "context.py:manual_review_findings": "SKILL.md",
     "context.py:save": "agents/context-ingest.md",
+    "crypto_policy.py:check": "agents/classes/crypto.md",
     "custom_checks.py:custom_check_instructions": "SKILL.md",
     "custom_checks.py:discover_custom_checks": "SKILL.md",
     "custom_checks.py:merge_custom_check_classes": "SKILL.md",
@@ -94,33 +106,75 @@ PROMPT_ONLY: dict[str, str] = {
 }
 
 
-def _public_functions() -> dict[str, str]:
+def _public_functions(root: Path | None = None) -> dict[str, str]:
     """Map ``"<module>.py:<function>"`` to the module file name for every public def."""
     out: dict[str, str] = {}
-    for path in sorted((HELPERS / "sec_overlay").rglob("*.py")):
+    for path in sorted((root or HELPERS / "sec_overlay").rglob("*.py")):
         if path.name == "__init__.py":
             continue
         for node in ast.parse(path.read_text()).body:
-            if isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
+            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and not node.name.startswith(
+                "_"
+            ):
                 out[f"{path.name}:{node.name}"] = path.name
     return out
 
 
-def _referenced_names() -> set[str]:
-    """Every identifier loaded, attribute-accessed, or imported in non-test code."""
-    names: set[str] = set()
+def _package_modules() -> set[str]:
+    """Every module name that ``sec_overlay/`` defines, without the ``.py`` suffix."""
+    return {p.stem for p in (HELPERS / "sec_overlay").rglob("*.py") if p.name != "__init__.py"}
+
+
+def _dotted(node: ast.Attribute) -> str:
+    """Flatten an attribute chain to ``a.b.c``. Return ``""`` if the base is not a name."""
+    parts = [node.attr]
+    cur: ast.expr = node.value
+    while isinstance(cur, ast.Attribute):
+        parts.append(cur.attr)
+        cur = cur.value
+    if not isinstance(cur, ast.Name):
+        return ""
+    parts.append(cur.id)
+    return ".".join(reversed(parts))
+
+
+def _referenced_keys() -> set[str]:
+    """Every ``"<module>.py:<function>"`` that non-test code resolves to that module."""
+    modules = _package_modules()
+    keys: set[str] = set()
+    own_names: dict[str, set[str]] = {}
     for root in ("sec_overlay", "bench"):
-        for path in (HELPERS / root).rglob("*.py"):
+        for path in sorted((HELPERS / root).rglob("*.py")):
             if "test" in path.name:
                 continue
-            for node in ast.walk(ast.parse(path.read_text())):
-                if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
-                    names.add(node.id)
-                elif isinstance(node, ast.Attribute):
-                    names.add(node.attr)
-                elif isinstance(node, ast.ImportFrom):
-                    names.update(alias.name for alias in node.names)
-    return names
+            tree = ast.parse(path.read_text())
+            aliases: dict[str, str] = {}
+            loaded: set[str] = set()
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom):
+                    owner = (node.module or "").rsplit(".", 1)[-1]
+                    for alias in node.names:
+                        if owner in modules:
+                            keys.add(f"{owner}.py:{alias.name}")
+                        if alias.name in modules:
+                            aliases[alias.asname or alias.name] = alias.name
+                elif isinstance(node, ast.Import):
+                    for alias in node.names:
+                        tail = alias.name.rsplit(".", 1)[-1]
+                        if tail in modules:
+                            aliases[alias.asname or tail] = tail
+                elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+                    loaded.add(node.id)
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Attribute):
+                    parts = _dotted(node).split(".")
+                    if len(parts) > 1 and parts[-2] in aliases:
+                        keys.add(f"{aliases[parts[-2]]}.py:{parts[-1]}")
+            if root == "sec_overlay":
+                own_names.setdefault(path.name, set()).update(loaded)
+    for module, names in own_names.items():
+        keys.update(f"{module}:{name}" for name in names)
+    return keys
 
 
 def _prompt_texts() -> list[tuple[str, str]]:
@@ -130,17 +184,17 @@ def _prompt_texts() -> list[tuple[str, str]]:
 
 
 def test_every_public_helper_has_a_caller_or_a_listed_reason():
-    referenced = _referenced_names()
+    referenced = _referenced_keys()
     prompts = _prompt_texts()
     unlisted_dead: list[str] = []
     unlisted_prompt: list[str] = []
     for key in _public_functions():
-        name = key.split(":", 1)[1]
-        if name in referenced:
+        if key in referenced:
             continue
+        name = key.split(":", 1)[1]
         named_by = [label for label, text in prompts if re.search(rf"\b{re.escape(name)}\b", text)]
         if named_by:
-            if key not in PROMPT_ONLY:
+            if key not in PROMPT_ONLY and key not in DEAD_ALLOWLIST:
                 unlisted_prompt.append(f"{key} (named by {named_by[0]})")
         elif key not in DEAD_ALLOWLIST:
             unlisted_dead.append(key)
@@ -151,11 +205,8 @@ def test_every_public_helper_has_a_caller_or_a_listed_reason():
 
 
 def test_no_list_entry_has_gained_a_caller():
-    referenced = _referenced_names()
-    stale = sorted(
-        key for key in (DEAD_ALLOWLIST | PROMPT_ONLY)
-        if key.split(":", 1)[1] in referenced
-    )
+    referenced = _referenced_keys()
+    stale = sorted(key for key in (DEAD_ALLOWLIST | PROMPT_ONLY) if key in referenced)
     assert not stale, "these entries now have a Python caller and must be removed: " + ", ".join(stale)
 
 

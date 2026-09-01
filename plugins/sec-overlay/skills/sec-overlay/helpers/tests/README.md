@@ -23,6 +23,15 @@ scan is function-level and `to_markdown` itself is still called by `write_report
 them behind an unrelated identifier of the same name. The second requires `_public_functions` to
 report an `async def` helper. Both tests fail against the flat name scan.
 
+The scan now resolves a reference to the module that defines the function, so a bare name in an
+unrelated module no longer counts as a caller. A key is `<module>.py:<function>`. It counts as
+referenced when a non-test file imports the function by name from that module, imports the module
+and reads the attribute, or uses the bare name inside the defining module itself.
+`_public_functions` also matches `ast.AsyncFunctionDef`. `helpers/tests/` stays outside the scan,
+so a test-only importer never makes a helper live: `fix_disposition.py:validate` is imported by
+`test_fix_and_gates.py` and still belongs in `DEAD_ALLOWLIST`. Module keys are file basenames, so
+`cli.py` and `workspace.py`, which each exist twice in this tree, share one key per name.
+
 `test_dead_lever.py`'s three REQ-47 tests now pass: `sec_overlay.scope` and `test_scope.py` are
 deleted (the module had no caller), `scanscope.py`'s `rel_to_root` is deleted along with its test
 in `test_scanscope.py` (also no caller), and `SKILL.md`'s scope-token paragraph now points at
