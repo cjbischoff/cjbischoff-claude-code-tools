@@ -521,6 +521,11 @@ injection's explicitly rather than by falling through a default), and
 general-defect finding WITH a Tier-1 receipt still reaches `confirmed` through the unchanged
 `confirms_alone` path, proving no reflection outcome or profile value can grant that status.
 
+`test_phase_artifact_contract.py` gained four tests pinning REQ-40: `report` must declare
+`reports/redteam-plan.md` as an input, `redteam` must run before `report`, `render_ndt` must
+accept a `has_redteam_plan` keyword and omit the pointer when false, and `report.py` must hold
+no `redteam-plan.md` filesystem probe.
+
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 
