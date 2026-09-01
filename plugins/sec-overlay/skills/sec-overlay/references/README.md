@@ -307,8 +307,13 @@ update the matching schema block in the same commit, or `test_contract_lint.py` 
 
 - `completeness_tier` mirrors `sec_overlay.fix_disposition.TIERS`.
 - `judge_verdict` mirrors `sec_overlay.calibrate.JUDGE_VERDICTS`.
-- `reachability.blocker` mirrors `sec_overlay.reachability.BLOCKERS`.
-- `receipt_tier` mirrors the two-tier receipt scheme (`1`, `2`) `EVIDENCE_VOCABULARY` states.
+- `reachability.blocker` mirrors `sec_overlay.reachability.BLOCKERS`, which REQ-52 extended with
+  `external-boundary` — the blocker an agent cites when a sink resolves into a dependency outside
+  the ingested set; a finding carrying it must also carry a complete `open_questions` entry, or
+  `findings_gate.py` rejects it.
+- `receipt_tier` pins the two integer tiers (`1`, `2`) themselves; `EVIDENCE_VOCABULARY` names the
+  tiers those integers stand for (Tier-1/Tier-2), not the digits — the two are complementary, not
+  a mirror of each other.
 - `open_questions` and `affected_sites` item schemas mirror `sec_overlay.models.OPEN_QUESTION_KEYS`
   and `AFFECTED_SITE_KEYS`; `history` items require an `event` string. None of the three nested
   item schemas set `additionalProperties: false` — `history` extras vary by event kind and

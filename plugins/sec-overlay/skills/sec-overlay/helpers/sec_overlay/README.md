@@ -1596,3 +1596,21 @@ name that was never added to a tier) passed through silently, confirming nothing
 nothing. The reproduction receipt is exempted in `unknown_receipts` itself, not by importing
 `prove.py` — `evidence.py` importing `prove.py` would cycle back through `workspace.py`, which
 already imports `evidence.py`.
+
+### `external-boundary` joins the blocker taxonomy, and the gate enforces its open question (REQ-52)
+
+`agents/trace.md` already told an agent to write `reachability.blocker = "external-boundary"` when
+a sink resolves into a dependency outside the ingested set — but `reachability.BLOCKERS` never
+listed it, so `blocker_of` silently coerced the value to `"other"` and the schema's
+`reachability.blocker` enum rejected it outright. `BLOCKERS` now reads `("sanitizer", "auth_check",
+"input_validation", "dead_code", "feature_flag", "external-boundary", "other")`, and the schema
+enum gains the same value in the same position (`test_contract_lint.py`'s derivation test keeps
+both sides in lockstep).
+
+`external-boundary` is the one blocker that does not assert `reachable: false` — the trace prompt
+now says so explicitly, and to leave `reachable` absent rather than guessed. `findings_gate.py`
+gained a matching clause: a finding whose `reachability.blocker` is `"external-boundary"` must
+carry at least one `open_questions` entry with all three `OPEN_QUESTION_KEYS`
+(`question`/`why_it_matters`/`who_to_ask_or_check`) non-empty, or the gate reports it by id. The
+prose already asked an agent for this entry; the gate now makes the omission a build failure
+instead of a silent gap.

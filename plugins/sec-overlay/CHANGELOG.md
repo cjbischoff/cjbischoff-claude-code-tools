@@ -6,6 +6,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- `reachability.BLOCKERS` admits a seventh value, `external-boundary` (REQ-52) — the blocker `agents/trace.md` already told an agent to write when a sink resolves into a dependency outside the ingested set, but the taxonomy never declared. `blocker_of` no longer coerces it to `"other"`, and `finding.schema.json`'s `reachability.blocker` enum gains the same value in the same position. `external-boundary` is the one blocker that does not assert `reachable: false`; the trace prompt now says so and instructs leaving `reachable` absent. `findings_gate.validate_findings` gains a matching clause: an `external-boundary` finding must carry at least one `open_questions` entry with all three `OPEN_QUESTION_KEYS` non-empty, or the gate reports it by id — the prose already asked for this entry, the gate now enforces it.
+
+### Fixed
+
+- `references/README.md`'s note on `receipt_tier` no longer claims it "mirrors" `EVIDENCE_VOCABULARY` — that block names the tier labels, never the digits `1`/`2`. Reworded to state what each side actually pins. `helpers/tests/README.md`'s note on `evidence.is_tool_receipt("reproduction")` no longer cites the D-15 frozen-contract test as the reason the assertion stays False; the real reason is that `"reproduction"` is not a member of `_MECHANICAL`.
+
+### Added
+
 - New `tests/test_constraint_enforcer.py` tests pin REQ-52: `reachability.BLOCKERS` must admit `external-boundary`, `blocker_of` must stop coercing it to `"other"`, `agents/trace.md`'s reachability-decision prose must name it in the closed taxonomy, and `findings_gate.validate_findings` must reject an `external-boundary` finding whose `open_questions` carries no complete entry (all three `OPEN_QUESTION_KEYS` present and non-empty) while accepting one that does. Five of the six new assertions fail: `external-boundary` is absent from `BLOCKERS` and the `reachability.blocker` schema enum, the trace prompt's taxonomy bullet does not name it, and the gate has no clause for it.
 
 ### Added

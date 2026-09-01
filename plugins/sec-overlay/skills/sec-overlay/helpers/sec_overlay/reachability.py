@@ -14,7 +14,8 @@ from __future__ import annotations
 
 from sec_overlay.models import Finding
 
-BLOCKERS = ("sanitizer", "auth_check", "input_validation", "dead_code", "feature_flag", "other")
+BLOCKERS = ("sanitizer", "auth_check", "input_validation", "dead_code", "feature_flag",
+            "external-boundary", "other")
 
 
 def is_reachable(finding: Finding) -> bool:

@@ -16,7 +16,7 @@ from sec_overlay.evidence import (
     receipt_tier,
     unknown_receipts,
 )
-from sec_overlay.models import Finding
+from sec_overlay.models import OPEN_QUESTION_KEYS, Finding
 from sec_overlay.phase_gate import resolve_ref
 from sec_overlay.prove import is_reproduction_receipt
 from sec_overlay.review_findings import (
@@ -175,6 +175,17 @@ def validate_findings(ws: Workspace) -> list[str]:
             errors.append(
                 f"{f.id}: impact must be non-empty for a shipping finding "
                 f"(status {f.status.value})"
+            )
+
+        if (f.reachability or {}).get("blocker") == "external-boundary" and not any(
+            isinstance(q, dict) and all(str(q.get(k, "")).strip() for k in OPEN_QUESTION_KEYS)
+            for q in f.open_questions
+        ):
+            errors.append(
+                f"{f.id}: reachability.blocker is 'external-boundary' but the finding "
+                f"carries no complete open_questions entry (keys "
+                f"{list(OPEN_QUESTION_KEYS)}); name the person, team, or system that can "
+                f"settle the external fact"
             )
     record_stage(ws, "findings-gate")
     return errors
