@@ -1550,3 +1550,12 @@ one mid-run, then asserts the untouched finding keeps the concurrent writer's va
 The REQ-44 test's `config` argument reads `""`, not `{}`: `verify_findings`'s `config` parameter
 types as `str`, and the injected stub verifier ignores its `configs` argument entirely, so an
 empty string satisfies `ty check` with no change in what the test exercises.
+
+New `test_dead_lever.py` pins REQ-45: `run_postflight` must derive its drift set from a `target`
+argument instead of dropping the parameter every caller left unpassed. Four tests build a
+workspace whose prior context holds one settled non-finding, then drive `run_postflight` with a
+fake git runner. One asserts a prior item on a file `git diff` reports as changed is dropped from
+the merged context, and that the runner's `cwd` and argv carry `target` and the prior context's
+pinned SHA. One asserts a prior item on an unchanged file survives. One asserts the merge key
+strips a prior item's leading `./` before comparing it against `git diff`'s bare paths. Three
+fail: `run_postflight` takes no `target` keyword at all.

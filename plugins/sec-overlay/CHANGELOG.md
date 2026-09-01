@@ -22,6 +22,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 - `tests/test_phase_artifact_contract.py` gains two tests pinning REQ-41: `calibrate_findings` must demote a `CONFIRMED` external-boundary finding to `NEEDS_DEPLOYMENT_TESTING`, and `validate.md` must drop the `external-boundary` ban it never enforced. Both fail: the status stays `CONFIRMED`, and the prompt still bans the phrase.
 
+- `tests/test_dead_lever.py` pins REQ-45: `run_postflight` must take a `target` argument and drop a prior item whose file `git diff` reports as changed against the prior context's pinned SHA. Three of four tests fail: `run_postflight` has no `target` keyword.
+
 ### Fixed
 
 - The `validate-fix` node in the pipeline diagram carries its step number `11.5` (`skills/sec-overlay/README.md`), matching every neighbouring node's numbering style.
