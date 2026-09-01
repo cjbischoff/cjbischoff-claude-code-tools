@@ -1529,3 +1529,9 @@ writes. Three tests assert `factcheck` is absent from `PHASE_TABLE` and `DETERMI
 `fact-checked` is absent from `VERIFICATION_VALUES`, and no `sec_overlay.factcheck` module or
 `agents/factcheck.md` prompt exists. All three fail: the phase's only input, `kb/verdicts.json`,
 had no producing phase, so every run recorded `factcheck: done` after doing nothing.
+
+`test_phase_artifact_contract.py` gains two tests pinning REQ-41: `calibrate_findings` must
+demote a `CONFIRMED` external-boundary finding to `NEEDS_DEPLOYMENT_TESTING`, and `validate.md`
+must no longer carry the `external-boundary` ban it could not enforce — `trace` runs after
+`validate`, so a blocker `trace` sets was never checked. Both fail: the status stays `CONFIRMED`,
+and the banned phrase is still in the prompt.

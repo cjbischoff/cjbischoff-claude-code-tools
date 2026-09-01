@@ -167,3 +167,45 @@ def test_score_fix_has_a_non_test_caller() -> None:
     from sec_overlay import verify
 
     assert "score_fix" in inspect.getsource(verify)
+
+
+def test_calibrate_demotes_an_external_boundary_confirmation(tmp_path) -> None:
+    # REQ-41: the rule lived only in the validate prompt, and trace runs after
+    # validate, so a blocker set by trace was never enforced.
+    from sec_overlay.calibrate import calibrate_findings
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.workspace import read_findings, write_findings
+
+    ws = Workspace(tmp_path / "w")
+    ws.ensure()
+    write_findings(
+        ws,
+        [
+            Finding(
+                id="EXT-1",
+                rule_id="r",
+                cls="ssrf",
+                status=FindingStatus.CONFIRMED,
+                severity=Severity.HIGH,
+                file="a.py",
+                line=1,
+                message="m",
+                reachability={"blocker": "external-boundary"},
+            )
+        ],
+    )
+
+    calibrate_findings(ws)
+
+    f = read_findings(ws)[0]
+    assert f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING
+    assert f.completeness_tier == "external-unverifiable"
+    assert f.risk_score <= 3
+
+
+def test_the_validate_prompt_no_longer_bans_external_boundary() -> None:
+    # REQ-41: an unenforced prompt rule is worse than no rule; calibrate owns it.
+    from pathlib import Path
+
+    prompt = (Path(__file__).resolve().parents[2] / "agents" / "validate.md").read_text()
+    assert "external-boundary" not in prompt
