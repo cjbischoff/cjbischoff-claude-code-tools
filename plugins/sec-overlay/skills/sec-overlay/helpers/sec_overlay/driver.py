@@ -411,7 +411,7 @@ def _act_recall_gate(ctx: AuditContext) -> None:
 def _act_postflight(ctx: AuditContext) -> None:
     from sec_overlay.postflight import run_postflight  # local: avoid import cycle
 
-    run_postflight(ctx.ws, ctx.sha)
+    run_postflight(ctx.ws, ctx.sha, target=ctx.target)
 
 
 DETERMINISTIC_ACTIONS.update(

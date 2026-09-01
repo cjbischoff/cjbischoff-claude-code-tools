@@ -26,6 +26,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- `run_postflight` derives its drift set from a `target` argument instead of never receiving one (REQ-45). `_drift_since` diffs the prior context's pinned SHA against the current pass's SHA in `target`'s working tree and returns the changed files; `_merge` drops prior items on those files and keeps the rest. `_act_postflight` now passes `ctx.target` through, and the CLI gains a `--target` flag. `changed_files`/`target` merging is unchanged when both are supplied explicitly, and passing neither keeps every prior item, matching a first pass with no drift signal.
+
 - The `validate-fix` node in the pipeline diagram carries its step number `11.5` (`skills/sec-overlay/README.md`), matching every neighbouring node's numbering style.
 
 - `verify_findings` writes back only the findings it touched (REQ-44). It read the whole finding set with `read_findings`, then wrote the whole in-memory list back with `write_findings` regardless of which findings it changed — overwriting any finding another writer had mutated between the read and the write with `verify`'s stale copy. The `changed: bool` flag is replaced with a `touched: list[Finding]` accumulator; each of the two sites that used to set `changed = True` now appends the finding it just mutated, and the final write passes only `touched`. `write_findings` writes one file per finding (`workspace.py`), so a subset write needs no additional barrier.

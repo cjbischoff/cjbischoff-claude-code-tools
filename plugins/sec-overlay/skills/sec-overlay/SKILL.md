@@ -639,8 +639,9 @@ pass resumes after interruption.
 3. Ends with `pass_report` for a state + findings-by-status summary.
 
 **Pass N>1 (incremental):**
-- Scope to changed code:
-  `changed = diffscope.changed_files(<prior_sha>, "HEAD")`.
+- Scope to changed code: the `postflight` phase computes the drift set itself from
+  the prior context's pinned SHA, so pass only the target. Nothing computes
+  `changed_files` by hand.
 - Carry settled findings forward with a drift re-check:
   `uv run python -c "from pathlib import Path; from sec_overlay.campaign import carry_forward; from sec_overlay.workspace import Workspace; print(carry_forward(Workspace(Path('<WS>')), <changed>))"`
   Settled findings (`confirmed`/`fixed`/`rejected`) on changed files become `stale`

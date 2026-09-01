@@ -234,8 +234,12 @@ uv run python -m sec_overlay.report        --workspace <WS>    # 14.2
 uv run python -m sec_overlay.selfscore     --workspace <WS>    # 14.4 — post-gate counts back to state
 uv run python -m sec_overlay.artifact_gate --workspace <WS>    # 14.5
 # 14.6 spawn agents/artifact-review.md (opus)
-uv run python -m sec_overlay.postflight    --workspace <WS> --sha <sha>   # 15, final phase
+uv run python -m sec_overlay.postflight    --workspace <WS> --sha <sha> --target <T>   # 15, final phase
 ```
+
+> Pass `--target <T>` on `postflight` so it can derive its own drift set: it diffs the prior
+> context's pinned SHA against this pass's SHA and drops prior conclusions on any file that
+> changed, keeping the rest (REQ-45). Omit it only for a first pass with no prior context.
 
 > **A scan is clean only if every planned backend actually ran.** If `preflight` shows a
 > missing CodeQL pack, that language has *zero dataflow coverage* — a partial scan is a

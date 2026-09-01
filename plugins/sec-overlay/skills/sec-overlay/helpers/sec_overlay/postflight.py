@@ -12,10 +12,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 from pathlib import Path
 
 from sec_overlay.campaign import record_stage
 from sec_overlay.context import Context, ContextItem, prior_context_path
+from sec_overlay.diffscope import changed_files as changed_files_between
+from sec_overlay.diffscope import validate_ref
 from sec_overlay.models import Finding, FindingStatus
 from sec_overlay.workspace import Workspace, read_findings
 
@@ -56,6 +59,22 @@ def build_prior_context(ws: Workspace, sha: str | None) -> Context:
     return Context(items=items, provenance={"sha": sha, "kind": "postflight"})
 
 
+def _file_of(where: str) -> str:
+    """Return the file part of a ``ContextItem.where`` note, base-normalized.
+
+    ``Finding.file`` is repo-relative by contract (``models.py``), and ``git diff
+    --name-only`` returns top-level-relative paths, so both sides share a base. A
+    leading ``./`` or ``/`` is the only remaining difference, and this strips it.
+
+    Args:
+        where: A ``ContextItem.where`` value, normally ``"<file>:<line>"``.
+
+    Returns:
+        The file path with any leading ``./`` or ``/`` removed.
+    """
+    return where.split(":", 1)[0].removeprefix("./").lstrip("/")
+
+
 def _merge(old: Context, new: Context, changed_files: set[str]) -> Context:
     """Merge new postflight over old prior-context, drift-aware.
 
@@ -64,7 +83,8 @@ def _merge(old: Context, new: Context, changed_files: set[str]) -> Context:
     """
     def key(i: ContextItem):
         return (i.kind, i.where, i.text[:60])
-    kept = [i for i in old.items if i.where.split(":", 1)[0] not in changed_files]
+    drift = {_file_of(f) for f in changed_files}
+    kept = [i for i in old.items if _file_of(i.where) not in drift]
     seen = {key(i) for i in kept}
     for i in new.items:
         if key(i) not in seen:
@@ -73,7 +93,39 @@ def _merge(old: Context, new: Context, changed_files: set[str]) -> Context:
     return Context(items=kept, provenance=new.provenance)
 
 
-def run_postflight(ws: Workspace, sha: str | None, *, changed_files: set[str] | None = None) -> int:
+def _drift_since(old: Context, sha: str | None, target: str, runner) -> set[str]:
+    """Return the files changed between the prior pass's SHA and this pass's SHA.
+
+    Args:
+        old: The prior context, whose provenance holds the last postflight's SHA.
+        sha: This pass's SHA; ``None`` falls back to ``HEAD``.
+        target: The audited repository, bound as the git working directory.
+        runner: Injectable process runner.
+
+    Returns:
+        Repo-relative changed paths, or an empty set when the prior context carries
+        no SHA — the first pass has nothing to drift against.
+    """
+    base = str(old.provenance.get("sha") or "")
+    if not base:
+        return set()
+    validate_ref(base)
+    head = validate_ref(sha) if sha else "HEAD"
+
+    def git(cmd, **kwargs):
+        return runner(cmd, cwd=target, **kwargs)
+
+    return set(changed_files_between(base, head, runner=git))
+
+
+def run_postflight(
+    ws: Workspace,
+    sha: str | None,
+    *,
+    changed_files: set[str] | None = None,
+    target: str | None = None,
+    runner=subprocess.run,
+) -> int:
     """Distill the scan and merge into the durable prior_context.json.
 
     Args:
@@ -81,6 +133,10 @@ def run_postflight(ws: Workspace, sha: str | None, *, changed_files: set[str] | 
         sha: Scanned SHA.
         changed_files: Repo-relative files changed since the last postflight (drift);
             old conclusions on these are dropped so the next scan re-examines them.
+            Wins over ``target`` when both are given.
+        target: The audited repository. With no explicit ``changed_files``, the drift
+            set is computed from it against the prior context's SHA.
+        runner: Injectable process runner for the git call.
 
     Returns:
         Total item count in the merged prior context.
@@ -88,7 +144,9 @@ def run_postflight(ws: Workspace, sha: str | None, *, changed_files: set[str] | 
     new = build_prior_context(ws, sha)
     p = prior_context_path(ws)
     old = Context.from_dict(json.loads(p.read_text())) if p.exists() else Context()
-    merged = _merge(old, new, changed_files or set())
+    if changed_files is None:
+        changed_files = _drift_since(old, sha, target, runner) if target else set()
+    merged = _merge(old, new, changed_files)
     ws.kb.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(merged.to_dict(), indent=2))
     record_stage(ws, "postflight")
@@ -100,8 +158,10 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="sec-overlay-postflight")
     ap.add_argument("--workspace", required=True)
     ap.add_argument("--sha", default=None)
+    ap.add_argument("--target", default=None,
+                    help="Audited repository; enables the drift-set computation.")
     args = ap.parse_args(argv)
-    n = run_postflight(Workspace(Path(args.workspace)), args.sha)
+    n = run_postflight(Workspace(Path(args.workspace)), args.sha, target=args.target)
     print(f"prior_context.json now holds {n} item(s)")
     return 0
 
