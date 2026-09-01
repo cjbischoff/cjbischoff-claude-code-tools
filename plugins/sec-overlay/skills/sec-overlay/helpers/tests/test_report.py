@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.patch_status import PatchStatus
 from sec_overlay.phase_gate import DroppedFinding, review_position_gate
@@ -115,9 +117,13 @@ def test_markdown_orders_by_severity_desc():
     assert md.index("F-0002") < md.index("F-0001")
 
 
-def test_markdown_includes_token_spend_when_given():
-    md = to_markdown([_f("F-0001", Severity.HIGH)], token_spend={"investigate": 1200})
-    assert "Token spend" in md and "investigate" in md and "1200" in md
+def test_markdown_has_no_token_spend_section():
+    """REQ-46 deleted the token columns, so the parameter and the section are gone."""
+    md = to_markdown([_f("F-0001", Severity.HIGH)])
+    assert "Token spend" not in md
+    with pytest.raises(TypeError):
+        # ty: ignore[unknown-argument] — the rejected argument is what this test proves.
+        to_markdown([], token_spend={"investigate": 1200})
 
 
 def _rf(id_, status, risk=None, verification=None, sev=Severity.HIGH):

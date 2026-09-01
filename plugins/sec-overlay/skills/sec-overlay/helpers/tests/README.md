@@ -5,18 +5,19 @@ checkout are environmental (gitignored bench corpus, excluded vendored semgrep c
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
 New `test_no_dead_helpers.py` (REQ-48) is the standing guard against the class of dead lever
-`test_dead_lever.py` pins one instance at a time: an AST-precise scan walks every public function
-in `sec_overlay/` and requires each one to have a real Python caller, a `DEAD_ALLOWLIST` entry with
-a one-line reason, or a `PROMPT_ONLY` entry naming the agent prompt or `SKILL.md` that runs it by
-name (never a Python import). A second test fails the moment a listed entry gains a real caller,
+`test_dead_lever.py` pins one instance at a time: an AST scan walks every public function in
+`sec_overlay/` and requires each one to carry a reference from a non-test Python file, a
+`DEAD_ALLOWLIST` entry with a one-line reason, or a `PROMPT_ONLY` entry naming the agent prompt or
+`SKILL.md` that runs it by name (never a Python import). The scan proves a reference, not a call:
+an unused import still counts, so the guard is a floor against new dead code, not a reachability
+proof. A second test fails the moment a listed entry gains a reference,
 and a third fails the moment a listed entry names a function deleted from the tree, so a new dead
 helper fails the suite instead of joining the pile silently. Reconciling the two lists against the
 current tree dropped `scoring.py:score_fix` from `PROMPT_ONLY` (`verify.py` now imports and calls
 it directly) and added `reflection.py:validate_verdict` (named only by `agents/README.md`).
-`report.py`'s `to_markdown` keeps an unreached `token_spend`/"Token spend by phase" branch behind
-`economics`, deliberately left in place by an earlier task; it needs no allowlist entry because the
-scan is function-level and `to_markdown` itself is still called by `write_report` and by
-`test_report.py`.
+`report.py`'s `to_markdown` carried an unreached `token_spend`/"Token spend by phase" branch behind
+`economics`; REQ-46 deleted the token measurements, so this task deleted the parameter and the
+branch with it.
 
 `test_no_dead_helpers.py` gains two tests. The first requires `context.py:load` and
 `fix_disposition.py:validate` to carry a list entry. Both are dead, and the flat name scan hides

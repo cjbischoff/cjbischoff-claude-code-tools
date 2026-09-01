@@ -103,8 +103,9 @@ the binary and offline-detection variants.
 ## Scope confound
 
 The scorecard states a scope confound, and any cross-tool comparison inherits it: a
-deterministic file selection reviews less code, so a lower token count partly measures
-doing less, not doing better. A token gap is not a pure efficiency signal. When a
+deterministic file selection reviews less code, so a lower wall-time partly measures
+doing less, not doing better. A wall-time gap is not a pure efficiency signal. The scorecard
+publishes no token count: REQ-46 deleted the token measurements. When a
 cross-tool run grades OCR, OCR is scored under the same judge (REQ-M3.3); the losses
 it reports are accepted and published unedited.
 

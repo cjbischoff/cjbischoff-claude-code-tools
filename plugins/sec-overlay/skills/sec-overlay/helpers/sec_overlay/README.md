@@ -152,7 +152,9 @@ seconds recorded in `CampaignState.budget["timings"]` (ISSUE-014) — see the mo
 `write_report` folds `aggregate_timings_by_phase` into the economics dict as `by_phase_seconds`,
 and `to_markdown` renders it as a "Wall-clock by phase, seconds" list in "Run economics" when
 present. Token and USD accounting was removed at REQ-46: the harness never surfaced a
-subagent's usage, so those tables always rendered empty.
+subagent's usage, so those tables always rendered empty. REQ-46 left `to_markdown` a
+`token_spend` parameter and a "Token spend by phase" branch that no caller could reach; this
+task deleted both.
 
 `models.py`'s `Finding` gained `cluster_id` (systemic-cluster id) and `affected_sites` (member
 sites on a cluster primary) — additive, nullable fields that round-trip through `to_dict`/

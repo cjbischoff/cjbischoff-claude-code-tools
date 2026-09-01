@@ -204,10 +204,12 @@ these before spawning: `{{TARGET}}`, `{{WORKSPACE}}`, `{{ATTACK_CLASS}}`, `{{PHA
 `skills/sec-overlay/`) and `{{HELPERS_DIR}}` (absolute path to
 `skills/sec-overlay/helpers`), and the two scope anchors `{{REPO_ROOT}}` and `{{SCAN_SCOPE}}`.
 Neither is a dispatch token: `DISPATCH_TOKENS` does not carry them. The driver writes both
-into `{{WORKSPACE}}/run.env` (`run.py`'s `write_env`), and every agent reads that file.
+into `{{WORKSPACE}}/run.env` (`run.py`'s `write_env`). No agent prompt reads `run.env`. Read
+the file yourself, then substitute both tokens before you spawn an agent.
 All agents cite paths **repo-root-relative**; all gates, dedupe, and verify resolve
-against `{{REPO_ROOT}}`. `kb/scan-scope.json` is the durable record the prefilter
-writes; `agents/context-ingest.md` reads it through `scanscope.load_scope`. When this
+against `{{REPO_ROOT}}`. `kb/scan-scope.json` is the durable record the `scan` command writes
+at pass start (`cli.write_scan_scope`); `agents/context-ingest.md` reads it through
+`scanscope.load_scope`. When this
 skill runs as the installed `sec-overlay` plugin, set `{{OVERLAY_ROOT}}` =
 `${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay`
 and `{{HELPERS_DIR}}` = `${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay/helpers`. Record each phase

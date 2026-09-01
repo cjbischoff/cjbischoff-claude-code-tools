@@ -312,5 +312,5 @@ One coupling point to respect before editing:
   `{{KEY}}` tokens and raises if any remain — CLAUDE.md §2 has the orchestrator render every
   dispatched agent prompt through it instead of hand-substituting tokens.
 - **Scope tokens are runtime-only.** `{{REPO_ROOT}}` and `{{SCAN_SCOPE}}` aren't in `driver.py`'s
-  `DISPATCH_TOKENS`; the driver writes both to `{{WORKSPACE}}/run.env` and every agent reads that
-  file — see `SKILL.md`.
+  `DISPATCH_TOKENS`; the driver writes both to `{{WORKSPACE}}/run.env`. No agent prompt reads that
+  file, so the orchestrator reads it and substitutes both tokens — see `SKILL.md`.

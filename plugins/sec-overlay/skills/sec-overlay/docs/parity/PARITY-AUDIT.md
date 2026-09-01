@@ -27,7 +27,7 @@ every EXTRACTION.md id appears below.
 | M4 | done | `bench/corpus_seed/` ships ≥30 committed public entries (dogfood, dep-CVE, public-app, negatives); `test_bench.py::test_seed_corpus_has_min_entries` gates counts. Task 4. |
 | M4a | done | `.github/workflows/sec-overlay-tests.yml` runs the offline detection gate on the two locked dogfood entries. Task 4. |
 | M5 | done | `bench/run.py:151` `run_repeated`; `bench/tally.py:250` `aggregate_scorecards` (mean ± min/max per metric); writes `scorecard_agg.{json,md}`. Task 6. |
-| M6 | done | `bench/tally.py:42` cost block (`tokens`, `wall_time_s`, `usd_per_confirmed_tp`); `run.py` captures wall-time and sums per-repo tokens; per-class FP-rate rows publish. Task 7. |
+| M6 | done | `bench/tally.py:42` cost block (`wall_time_s`); `run.py` captures wall-time; per-class FP-rate rows publish. REQ-46 deleted the token and USD columns. Task 7. |
 
 ## Tier 1 — Review-mode parity (P items)
 

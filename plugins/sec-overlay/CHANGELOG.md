@@ -6,7 +6,15 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
-- `diffscope.changed_files` raises `ValueError` when `git diff --name-only` exits non-zero. The
+- Documentation and dead-code repairs from fix round 1, findings I3, M1, M2, and M3. `SKILL.md`
+  no longer claims that every agent reads `{{WORKSPACE}}/run.env`; no agent prompt reads that
+  file, so the orchestrator reads it and substitutes the two scope tokens. `SKILL.md` now
+  attributes `kb/scan-scope.json` to the `scan` command (`cli.write_scan_scope`) instead of the
+  prefilter. The dead-helper guard no longer calls its scan "AST-precise" in
+  `tests/test_no_dead_helpers.py`, `tests/README.md`, or the REQ-48 changelog entry: the scan
+  proves a reference, not a call. `report.to_markdown` loses the unreachable `token_spend`
+  parameter and its "Token spend by phase" branch, left behind by REQ-46. The parity documents
+  and `bench/README.md` no longer describe a token or USD column that the scorecard cannot emit. The
   message names the operation and both revisions. Before this change a failed diff returned an
   empty list, and `postflight` kept every stale prior conclusion.
 
@@ -51,16 +59,18 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   `fix_disposition.py:validate` as live because unrelated identifiers share their names, and
   `_public_functions` matches only `ast.FunctionDef`.
 
-- New `tests/test_no_dead_helpers.py` pins REQ-48: an AST-precise scan walks every public
-  function in `sec_overlay/`, and each one must either have a real Python caller in
-  non-test `sec_overlay/`/`bench/` code, appear in `DEAD_ALLOWLIST` with a one-line reason,
-  or appear in `PROMPT_ONLY` naming the agent prompt or `SKILL.md` that runs it by name. A
-  second test fails the moment a listed entry gains a real caller, and a third fails the
+- New `tests/test_no_dead_helpers.py` pins REQ-48: an AST scan walks every public
+  function in `sec_overlay/`, and each one must either carry a reference from non-test
+  `sec_overlay/`/`bench/` code, appear in `DEAD_ALLOWLIST` with a one-line reason,
+  or appear in `PROMPT_ONLY` naming the agent prompt or `SKILL.md` that runs it by name. The
+  scan proves a reference, not a call, so it is a floor against new dead code rather than a
+  reachability proof. A
+  second test fails the moment a listed entry gains a reference, and a third fails the
   moment a listed entry names a function that no longer exists, so the two lists cannot
   drift from the tree silently. Reconciling the lists against the current tree dropped one
   stale `PROMPT_ONLY` entry (`scoring.py:score_fix`, now called directly by `verify.py`) and
   added one (`reflection.py:validate_verdict`, named only by `agents/README.md`).
-  `report.to_markdown`'s unreached `token_spend` branch needs no entry: the scan is
+  `report.to_markdown`'s unreached `token_spend` branch needed no entry: the scan is
   function-level, and `to_markdown` itself is still called by `write_report` and by
   `test_report.py`.
 

@@ -362,7 +362,6 @@ def _render_economics(economics: dict) -> list[str]:
 
 def to_markdown(
     findings: list[Finding],
-    token_spend: dict[str, int] | None = None,
     needs_deployment: list[Finding] | None = None,
     coverage_ledger: dict | None = None,
     has_redteam_plan: bool = False,
@@ -384,7 +383,6 @@ def to_markdown(
 
     Args:
         findings: Confirmed/fixed findings to render.
-        token_spend: Optional per-phase token totals.
         needs_deployment: Findings real-but-unprovable from source alone. Reported
             separately, never counted as confirmed.
         coverage_ledger: Optional coverage-completeness ledger (``kb/coverage-ledger.json``);
@@ -394,8 +392,7 @@ def to_markdown(
         patch_statuses: Optional ``finding.id`` → :class:`PatchStatus`, from
             :func:`check_patch_applied` against the real target, for ``fixed`` findings.
         economics: Optional ``{"by_phase_seconds": dict}`` from :func:`sec_overlay.cost`;
-            renders a "Run economics" section and takes priority over ``token_spend`` when
-            both are given.
+            renders a "Run economics" section.
         dropped: Review-mode findings the position gate placed outside the diff
             (``phase_gate.DroppedFinding``); rendered under ``DROPPED_FINDINGS_HEADING``
             unconditionally, so an empty run states none-dropped rather than omitting the
@@ -520,9 +517,6 @@ def to_markdown(
         lines += ["", render_coverage_ledger(coverage_ledger)]
     if economics:
         lines += _render_economics(economics)
-    elif token_spend:
-        lines += ["", "## Token spend by phase", ""]
-        lines += [f"- **{phase}**: {n}" for phase, n in token_spend.items()]
     return "\n".join(lines) + "\n"
 
 

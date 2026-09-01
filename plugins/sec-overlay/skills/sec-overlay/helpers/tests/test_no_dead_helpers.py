@@ -6,6 +6,10 @@ an unrelated module no longer counts. ``mod.fn`` is referenced when a non-test
 ``mod.fn``, or uses ``fn`` as a bare name inside ``mod.py`` itself. A docstring mention
 does not count, and neither does a parameter of the same name.
 
+The scan proves a reference, not a call. A name that is imported and never used still
+reads as referenced, and a local variable that shadows ``fn`` inside ``mod.py`` reads the
+same way. The guard is a floor against silent new dead code, not a reachability proof.
+
 A test-only importer is not a caller. ``helpers/tests/`` stays outside the scan, because
 a helper that only tests reach is what the two dictionaries exist to record.
 
