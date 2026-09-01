@@ -10,6 +10,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- `evidence._MECHANICAL` now derives from `TIER1_RECEIPTS | TIER2_RECEIPTS` instead of an independent literal plus a module-load assert (REQ-51). A new `evidence.unknown_receipts(sources)` returns every source whose prefix names neither tier, is not `llm`-namespaced, and is not a reproduction receipt; `findings_gate.validate_findings` calls it on every finding and reports each offender instead of silently ignoring it. `REPRODUCTION_RECEIPT` and `is_reproduction_receipt` moved from `prove.py` into `evidence.py` (`prove.py` now imports both), so the `prove` lane's reproduction receipt has one definition and stays exempt from the new check without `evidence.py` importing `prove.py` (which would cycle through `workspace.py`). `tests/test_frozen_contract.py`'s pinned `evidence.py` digest (D-15) is updated to match.
+
+### Fixed
+
 - `finding.schema.json`'s `completeness_tier`, `judge_verdict`, `receipt_tier`, and `reachability.blocker` now carry a schema `enum` derived from their code source (REQ-50): `sec_overlay.fix_disposition.TIERS`, a new `sec_overlay.calibrate.JUDGE_VERDICTS`, the literal `{1, 2}`, and `sec_overlay.reachability.BLOCKERS`. `calibrate.py`'s judge-downgrade branch now reads `f.judge_verdict in _DOWNGRADE_VERDICTS` instead of a literal tuple. The `open_questions`, `affected_sites`, and `history` item schemas gain typed `properties` mirroring `models.OPEN_QUESTION_KEYS`, `models.AFFECTED_SITE_KEYS`, and a required `event` string. None of the three nested item schemas gain `additionalProperties: false` — `history` extras vary by event kind and `reachability` carries `chain` alongside future fields, so both stay open by design.
 
 ### Added

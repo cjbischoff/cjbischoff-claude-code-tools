@@ -14,6 +14,7 @@ from sec_overlay.evidence import (
     SHIPPING_STATUSES,
     confirms_alone,
     receipt_tier,
+    unknown_receipts,
 )
 from sec_overlay.models import Finding
 from sec_overlay.phase_gate import resolve_ref
@@ -124,6 +125,13 @@ def validate_findings(ws: Workspace) -> list[str]:
         if data.get("receipt_tier") != stamped_tier:
             data["receipt_tier"] = stamped_tier
             p.write_text(json.dumps(data))
+
+        for source in unknown_receipts(f.evidence_sources):
+            errors.append(
+                f"{f.id}: evidence source {source!r} names a receipt prefix outside the "
+                f"closed set (see references/prompt-constants.md, EVIDENCE_VOCABULARY); "
+                f"use a declared receipt or namespace the claim llm-claimed:"
+            )
 
         # A dependency-catalog receipt names a real catalog entry, or it is free text
         # dressed as a receipt (Task 4 added the receipt kind; this makes it falsifiable).

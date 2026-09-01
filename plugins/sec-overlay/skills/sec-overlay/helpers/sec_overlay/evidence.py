@@ -11,9 +11,6 @@ from __future__ import annotations
 
 from enum import Enum
 
-_MECHANICAL = {"semgrep", "codeql", "ast-grep", "tree-sitter", "ripgrep",
-               "structural-index", "secrets", "sca", "dependency-catalog"}
-
 TIER1_RECEIPTS = frozenset({"codeql", "semgrep", "sca", "secrets"})
 # Tier 2 locates a sink; it never confirms alone. `dependency-catalog` proves a
 # dependency is declared and names the sink inside it, which is location, not reach.
@@ -25,7 +22,15 @@ VERIFICATION_VALUES = frozenset(
     {"verified-static", "static-only", "not-fixed", "verify-error"}
 )
 
-assert TIER1_RECEIPTS | TIER2_RECEIPTS == _MECHANICAL, "receipt tiers must partition _MECHANICAL"
+# `prove.py`'s reproduction receipt: a real tool receipt (the harness drove a live
+# entrypoint) that names no tier prefix, because it proves by execution, not by
+# static match. Defined here — not in `prove.py` — so `unknown_receipts` below has
+# one place to check it without `evidence.py` importing `prove.py` (which imports
+# `workspace.py`, which imports this module; that path would be circular).
+# `prove.py` imports both names from here to keep a single definition.
+REPRODUCTION_RECEIPT = "reproduction"
+
+_MECHANICAL = TIER1_RECEIPTS | TIER2_RECEIPTS
 
 
 class Confidence(str, Enum):
@@ -82,6 +87,52 @@ def receipt_tier(source: str) -> int | None:
     if head in TIER1_RECEIPTS:
         return 1
     return 2
+
+
+def is_reproduction_receipt(source: str) -> bool:
+    """Report whether an evidence source is a reproduction receipt.
+
+    Args:
+        source: One entry of a finding's ``evidence_sources``.
+
+    Returns:
+        True for ``reproduction`` and for its colon form ``reproduction:<tool>``.
+
+    Example:
+        >>> is_reproduction_receipt("reproduction")
+        True
+    """
+    return source == REPRODUCTION_RECEIPT or source.startswith(REPRODUCTION_RECEIPT + ":")
+
+
+def unknown_receipts(sources: list[str]) -> list[str]:
+    """Return the sources that claim a receipt prefix outside the closed set.
+
+    An ``llm``-namespaced source claims no receipt and never appears here. A
+    reproduction receipt (``prove.py``) is a genuine receipt outside both tiers —
+    it proves by execution, not by static match — so it is exempt too. Every
+    other source names a tool, so a prefix in neither receipt tier is a contract
+    violation — a typo or an undeclared tool — not a source with no tier. Callers
+    report the result; this function raises nothing, because ``receipt_tier`` runs
+    inside comprehensions that an exception would abort.
+
+    Args:
+        sources: Evidence source strings, each ``<prefix>:<detail>`` or a bare prefix.
+
+    Returns:
+        The offending sources, in input order. Empty when every source is declared.
+
+    Example:
+        >>> unknown_receipts(["semgrp:a.py:1", "llm-claimed:reasoning"])
+        ['semgrp:a.py:1']
+    """
+    return [
+        s
+        for s in sources
+        if not s.startswith(("llm-claimed:", "llm"))
+        and not is_reproduction_receipt(s)
+        and s.split(":", 1)[0] not in _MECHANICAL
+    ]
 
 
 def confirms_alone(sources: list[str]) -> bool:

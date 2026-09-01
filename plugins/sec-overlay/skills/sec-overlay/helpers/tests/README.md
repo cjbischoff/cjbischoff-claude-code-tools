@@ -13,7 +13,9 @@ confirms `validate_findings` reports the offending source with a "closed set" me
 silently ignoring it; a second gate test confirms a finding confirmed solely by `reproduction`
 still passes. `test_findings_gate.py::test_confirmed_requires_tool_receipt`'s fixture drops
 `read:sanity` (an undeclared prefix under REQ-51) for `llm-claimed:read-sanity` — same intent, no
-mechanical receipt, now legal under the closed set.
+mechanical receipt, now legal under the closed set. `test_frozen_contract.py`'s pinned
+`_EVIDENCE_SHA256` (D-15) is updated to match `evidence.py`'s new bytes — `unknown_receipts` and
+the `_MECHANICAL` derivation moved `REPRODUCTION_RECEIPT`/`is_reproduction_receipt` into that file.
 
 `test_contract_lint.py::test_every_closed_vocabulary_matches_its_schema_enum` (REQ-50) now also
 derives `completeness_tier`, `judge_verdict`, `receipt_tier`, and `reachability.blocker` from

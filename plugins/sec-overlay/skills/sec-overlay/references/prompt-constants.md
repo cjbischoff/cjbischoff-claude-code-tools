@@ -190,6 +190,10 @@ The evidence, status, and disposition vocabularies are closed sets. Use only the
 - **`verification` (closed enum):** `verified-static`, `static-only`, `not-fixed`,
   `verify-error`. Any other value is rejected when a finding loads. Never
   write prose here.
+- A source whose prefix is in neither receipt tier, and which is not `llm-claimed:` or
+  `llm-corroborated`, is rejected at the findings gate. There is no third category: name a
+  declared receipt, or namespace the claim `llm-claimed:`. The `prove` lane's `reproduction`
+  receipt is the one exception — it proves by execution, not by static match, and is exempt.
 
 ## STE_PROSE
 

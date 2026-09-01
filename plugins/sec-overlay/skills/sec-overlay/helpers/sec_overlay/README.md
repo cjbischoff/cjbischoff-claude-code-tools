@@ -1570,3 +1570,29 @@ source. `finding.schema.json`'s `judge_verdict` enum, `completeness_tier` enum (
 by the new `test_nested_item_schemas_declare_their_published_keys`. None of the three nested item
 schemas set `additionalProperties: false` — `history` extras vary by event kind and
 `reachability` carries `chain` alongside future fields, so both stay open by design.
+
+### `evidence.unknown_receipts` closes the receipt-prefix set, superseding the REQ-30 note above (REQ-51)
+
+The REQ-30 section above ("`evidence.py` stays byte-identical...") is now stale on one point: the
+reproduction receipt vocabulary no longer lives solely in `prove.py`. `REPRODUCTION_RECEIPT` and
+`is_reproduction_receipt` moved into `evidence.py`, and `prove.py` now imports both names from
+there instead of defining them. `evidence.py`'s D-15 frozen-contract digest changed accordingly
+(pinned in `tests/test_frozen_contract.py`) — the byte-identity pin was never a promise that the
+file's *contents* would never change, only that a change there is deliberate and mirrored to the
+Go port by hand. The rest of the REQ-30 note (`receipt_tier` null on a reproduction-only finding,
+`runtime_disposition` written as `static-settled`, silent skip on a missing finding file) still
+holds; only the "vocabulary lives in `prove.py`" claim is superseded.
+
+`_MECHANICAL` was an independently-maintained literal that happened to equal
+`TIER1_RECEIPTS | TIER2_RECEIPTS`, checked by a module-load `assert`. It is now derived directly
+(`_MECHANICAL = TIER1_RECEIPTS | TIER2_RECEIPTS`), so the two tiers are the only place a receipt
+prefix is declared — no second list to fall out of sync.
+
+A new `unknown_receipts(sources)` returns every source whose prefix names neither tier, is not
+`llm`-namespaced, and is not a reproduction receipt. `findings_gate.validate_findings` calls it on
+every finding's `evidence_sources` and reports each offender as an error naming the closed set
+(`prompt-constants.md`, `EVIDENCE_VOCABULARY`) — previously an undeclared prefix (a typo, or a tool
+name that was never added to a tier) passed through silently, confirming nothing and rejecting
+nothing. The reproduction receipt is exempted in `unknown_receipts` itself, not by importing
+`prove.py` — `evidence.py` importing `prove.py` would cycle back through `workspace.py`, which
+already imports `evidence.py`.

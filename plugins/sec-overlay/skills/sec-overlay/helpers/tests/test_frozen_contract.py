@@ -28,7 +28,7 @@ _HELPERS_ROOT = Path(__file__).parent.parent
 # Go port by hand, get sign-off, then update the constant below to the new digest
 # (`python3 -c "import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" <path>`).
 _MODELS_SHA256 = "e0ebe72fac56de8bc746718e56a0026d5ba443cc83780abf126da9b53de73902"
-_EVIDENCE_SHA256 = "c326a8489c27a773f8b50f3595aa8ebc4c5bcdad8d96c4c908dc3542f5142e86"
+_EVIDENCE_SHA256 = "4f5074cd212143818e9df099facb2296ce4ffd02954cbac58d0939b7c012da18"
 
 
 def _sha256_of(relative_path: str) -> str:
