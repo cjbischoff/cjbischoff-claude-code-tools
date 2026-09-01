@@ -6,6 +6,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- New `tests/test_constraint_enforcer.py` tests pin REQ-52: `reachability.BLOCKERS` must admit `external-boundary`, `blocker_of` must stop coercing it to `"other"`, `agents/trace.md`'s reachability-decision prose must name it in the closed taxonomy, and `findings_gate.validate_findings` must reject an `external-boundary` finding whose `open_questions` carries no complete entry (all three `OPEN_QUESTION_KEYS` present and non-empty) while accepting one that does. Five of the six new assertions fail: `external-boundary` is absent from `BLOCKERS` and the `reachability.blocker` schema enum, the trace prompt's taxonomy bullet does not name it, and the gate has no clause for it.
+
+### Added
+
 - New `tests/test_constraint_enforcer.py` tests pin REQ-51: `evidence._MECHANICAL` must derive from `TIER1_RECEIPTS | TIER2_RECEIPTS` instead of an independent literal, and a new `evidence.unknown_receipts` must report a source whose prefix names neither tier and is not `llm`-namespaced, pass a declared prefix, pass an `llm-claimed:`/`llm-corroborated` source, and pass the `prove` lane's `reproduction` receipt. Two `findings_gate` tests confirm the gate reports an undeclared prefix with a "closed set" message and that a finding confirmed solely by `reproduction` still passes. `test_findings_gate.py::test_confirmed_requires_tool_receipt`'s fixture drops `read:sanity` for `llm-claimed:read-sanity` — `read:sanity` names an undeclared prefix under REQ-51. Five of the seven new assertions fail: `evidence.unknown_receipts` does not exist yet, and the gate does not check it.
 
 ### Fixed

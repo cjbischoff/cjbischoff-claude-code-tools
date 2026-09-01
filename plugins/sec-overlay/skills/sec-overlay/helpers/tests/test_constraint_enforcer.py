@@ -133,3 +133,78 @@ def test_gate_passes_a_finding_confirmed_solely_by_reproduction(tmp_path):
     f.evidence_sources = ["reproduction"]
     write_findings(ws, [f])
     assert validate_findings(ws) == []
+
+
+def _external_boundary_finding():
+    from sec_overlay.models import Finding, FindingStatus, Severity
+
+    f = Finding(id="F-0002", rule_id="r", cls="sqli", status=FindingStatus.RAW,
+                severity=Severity.HIGH, file="app.py", line=18, message="m",
+                dataflow=["a -> b"], evidence="e")
+    f.reachability = {"blocker": "external-boundary", "chain": ["app.py:18"]}
+    return f
+
+
+def test_external_boundary_is_in_the_blocker_taxonomy():
+    """REQ-52: the value agents are told to write is a declared blocker."""
+    from sec_overlay.reachability import BLOCKERS
+
+    assert "external-boundary" in BLOCKERS
+
+
+def test_blocker_of_no_longer_coerces_external_boundary():
+    """REQ-52: an undeclared value was silently rewritten to 'other'."""
+    from sec_overlay.reachability import blocker_of
+
+    f = _external_boundary_finding()
+    f.reachability["reachable"] = False
+    assert blocker_of(f) == "external-boundary"
+
+
+def test_trace_prompt_declares_external_boundary_in_the_taxonomy():
+    """REQ-52: the prose taxonomy and the code taxonomy agree."""
+    text = (SKILL / "agents" / "trace.md").read_text()
+    assert "`external-boundary`" in text.split("3. Decide reachability:")[1].split("4. Write")[0]
+
+
+def test_gate_rejects_external_boundary_without_an_open_question(tmp_path):
+    """REQ-52: the prose asked for the entry; the gate now requires it."""
+    from sec_overlay.findings_gate import validate_findings
+    from sec_overlay.workspace import Workspace, write_findings
+
+    ws = Workspace(tmp_path / "workspace")
+    ws.ensure()
+    write_findings(ws, [_external_boundary_finding()])
+    errors = validate_findings(ws)
+    assert any("external-boundary" in e and "open_questions" in e for e in errors)
+
+
+def test_gate_rejects_an_incomplete_open_question(tmp_path):
+    """REQ-52: an entry missing who to ask settles nothing."""
+    from sec_overlay.findings_gate import validate_findings
+    from sec_overlay.workspace import Workspace, write_findings
+
+    ws = Workspace(tmp_path / "workspace")
+    ws.ensure()
+    f = _external_boundary_finding()
+    f.open_questions = [{"question": "does policy X apply?", "why_it_matters": "gates the sink"}]
+    write_findings(ws, [f])
+    errors = validate_findings(ws)
+    assert any("external-boundary" in e and "open_questions" in e for e in errors)
+
+
+def test_gate_accepts_external_boundary_with_a_full_open_question(tmp_path):
+    """REQ-52: a complete entry passes."""
+    from sec_overlay.findings_gate import validate_findings
+    from sec_overlay.workspace import Workspace, write_findings
+
+    ws = Workspace(tmp_path / "workspace")
+    ws.ensure()
+    f = _external_boundary_finding()
+    f.open_questions = [{
+        "question": "does @lume/account-portal-core check ownership?",
+        "why_it_matters": "it is the only control between the route and the sink",
+        "who_to_ask_or_check": "ask the platform team or read the published package",
+    }]
+    write_findings(ws, [f])
+    assert validate_findings(ws) == []
