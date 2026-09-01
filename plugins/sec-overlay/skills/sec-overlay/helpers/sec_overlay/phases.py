@@ -106,6 +106,10 @@ def _recall_gate_json(ws: Workspace) -> Path:
     return ws.kb / "gates" / "recall-gate.json"
 
 
+def _validate_fix_json(ws: Workspace) -> Path:
+    return ws.kb / "gates" / "validate-fix.json"
+
+
 PHASE_TABLE: tuple[PhaseSpec, ...] = (
     # No inputs: the census reads the target's source, never recon's output —
     # that is what lets it catch a route recon never named.
@@ -131,7 +135,16 @@ PHASE_TABLE: tuple[PhaseSpec, ...] = (
     PhaseSpec("trace", "agent", (_findings_dir,), (_findings_dir,), prompt="trace.md"),
     PhaseSpec("calibrate", "deterministic", (_findings_dir,), (_findings_dir,)),
     PhaseSpec("patch", "agent", (_findings_dir,), (_findings_dir,), prompt="patch.md"),
-    PhaseSpec("verify", "deterministic", (_findings_dir,), (_findings_dir,)),
+    PhaseSpec(
+        "validate-fix",
+        "agent",
+        (_findings_dir,),
+        (_validate_fix_json,),
+        prompt="validate-fix.md",
+    ),
+    PhaseSpec(
+        "verify", "deterministic", (_findings_dir, _validate_fix_json), (_findings_dir,)
+    ),
     PhaseSpec("demote-noise", "deterministic", (_findings_dir,), (_findings_dir,)),
     PhaseSpec("redteam", "agent", (_findings_dir,), (_redteam_plan,), prompt="redteam.md"),
     PhaseSpec("report", "deterministic", (_findings_dir, _redteam_plan), (_report, _sarif)),

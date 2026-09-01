@@ -9,6 +9,7 @@ after.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -65,9 +66,10 @@ def _copy_ignore(directory: str, names: list[str]) -> set[str]:
 from sec_overlay.campaign import record_stage
 from sec_overlay.codeql import CodeQLError, run_codeql
 from sec_overlay.kb import read_profile
-from sec_overlay.models import FindingStatus
+from sec_overlay.models import Finding, FindingStatus
 from sec_overlay.sast import run_semgrep
 from sec_overlay.sca import ScaError, run_sca
+from sec_overlay.scoring import score_fix
 from sec_overlay.workspace import Workspace, read_findings, write_findings
 
 
@@ -323,6 +325,50 @@ def resolve_configs(ws: Workspace, fallback: str) -> list[str]:
     if not isinstance(rulesets, list):
         rulesets = []
     return [str(r) for r in rulesets] or [fallback]
+
+
+def apply_fix_gates(ws: Workspace) -> int:
+    """Score the validate-fix agent's per-gate statuses and record each verdict.
+
+    The agent supplies gate statuses only. ``scoring.score_fix`` computes the
+    verdict, so an LLM cannot promote a finding by writing a status field. This
+    function never sets ``status``: ``verify_findings`` owns promotion, and its
+    ``verify:conflict`` branch reads the history event written here.
+
+    Args:
+        ws: The audit workspace. ``kb/gates/validate-fix.json`` must exist; the
+            phase table declares it as verify's input, so a missing file is a
+            driver-level halt, not a case to tolerate here.
+
+    Returns:
+        The number of findings stamped with a verdict.
+
+    Raises:
+        FileNotFoundError: The gate file is absent.
+        json.JSONDecodeError: The gate file is not valid JSON.
+
+    Example:
+        >>> from sec_overlay.scoring import score_fix
+        >>> score_fix({"root_cause": "pass", "instance_coverage": "pass",
+        ...            "no_new_vulnerabilities": "pass", "best_practices": "pass"})[0]
+        'fixed'
+    """
+    gates = json.loads((ws.kb / "gates" / "validate-fix.json").read_text())
+    touched: list[Finding] = []
+    for f in read_findings(ws):
+        entry = gates.get(f.id)
+        if not isinstance(entry, dict):
+            continue
+        verdict, score = score_fix(entry)
+        f.history.append({"event": f"validate-fix:{verdict}", "score": score})
+        if verdict in ("partial", "not_fixed"):
+            f.verification = "not-fixed"
+        elif verdict == "unverifiable":
+            f.verification = "verify-error"
+        touched.append(f)
+    if touched:
+        write_findings(ws, touched)
+    return len(touched)
 
 
 def verify_findings(

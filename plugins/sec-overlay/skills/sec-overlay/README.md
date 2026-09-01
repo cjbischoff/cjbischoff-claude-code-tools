@@ -119,8 +119,9 @@ flowchart TD
     DED --> CLUS["7.5 · cluster<br/>≥3 same-class/sink -> systemic cluster"]
     CLUS --> LAD(("8-9 · critic → judge → validate(opus refutes)"))
     LAD --> CAL["10 · calibrate<br/>risk_score 1-10 + citations"]
-    CAL --> PAT(("11 · patch(opus) → validate-fix"))
-    PAT --> VER["12 · verify<br/>apply patch to COPY, re-scan"]
+    CAL --> PAT(("11 · patch(opus)"))
+    PAT --> VF(("validate-fix(opus)<br/>architect + pentester score the patch"))
+    VF --> VER["12 · verify<br/>apply_fix_gates scores validate-fix.json, then re-scan"]
     VER --> GATE["13 · findings_gate"]
     GATE --> RT(("14 · redteam → redteam-adversary"))
     RT --> RTR["redteam.py → redteam-plan.md"]
@@ -222,8 +223,10 @@ uv run python -m sec_overlay.dedupe        --workspace <WS>    # 7
 uv run python -m sec_overlay.cluster       --workspace <WS>    # 7.5
 # 8-9 spawn critic → judge → validate
 uv run python -m sec_overlay.calibrate     --workspace <WS>    # 10
-# 11 spawn patch → validate-fix
-uv run python -m sec_overlay.verify        --workspace <WS> --target <T> --config <rules>   # 12
+# 11 spawn agents/patch.md
+# spawn agents/validate-fix.md → kb/gates/validate-fix.json (per-gate statuses, no verdict)
+uv run python -m sec_overlay.verify        --workspace <WS> --target <T> --config <rules>
+# 12 — apply_fix_gates scores validate-fix.json with score_fix first, then re-scans the patch
 uv run python -m sec_overlay.findings_gate --workspace <WS>    # 13 — idempotent re-run before report
 # 14 spawn redteam → redteam-adversary (before report: report.py reads redteam-plan.md as an input)
 uv run python -m sec_overlay.redteam       --workspace <WS>    # 14 — manual re-run of the plan render

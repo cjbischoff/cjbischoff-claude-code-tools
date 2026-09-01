@@ -42,7 +42,7 @@ from sec_overlay.report import write_report
 from sec_overlay.route_census import census, write_census
 from sec_overlay.selfscore import write_self_score
 from sec_overlay.state import load_state, save_state
-from sec_overlay.verify import verify_findings
+from sec_overlay.verify import apply_fix_gates, verify_findings
 from sec_overlay.workspace import Workspace, finding_counts, read_findings
 
 
@@ -284,6 +284,7 @@ def _act_demote_noise(ctx: AuditContext) -> None:
 
 
 def _act_verify(ctx: AuditContext) -> None:
+    apply_fix_gates(ctx.ws)
     verify_findings(ctx.ws, ctx.target, ctx.config)
 
 

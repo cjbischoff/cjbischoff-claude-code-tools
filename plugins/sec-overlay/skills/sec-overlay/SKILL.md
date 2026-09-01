@@ -520,7 +520,10 @@ patches apply to a throwaway copy only.
    writers touch distinct per-id files and never collide. Read-only on the target.
 2. **Validate-fix** (model: opus, personas: `security-architect` + `penetration-tester`):
    spawn a subagent with `agents/validate-fix.md` to assess patch viability and exploit
-   resistance. Uses `sec_overlay.scoring.score_fix` to grade each patch.
+   resistance. This is a `PHASE_TABLE` phase between `patch` and `verify`; it writes
+   `kb/gates/validate-fix.json` (per-gate statuses, never a verdict). The deterministic
+   `verify.apply_fix_gates` scores each patch with `sec_overlay.scoring.score_fix` — the
+   agent supplies gate statuses only, never a fixed/not-fixed verdict.
 3. **Verify** (no LLM): `uv run python -m sec_overlay.verify --workspace <WS>
    --target <T> --config <rules>` — for each confirmed finding with a patch, copies
    the target, applies the patch with `git apply`, re-runs the SAST on the copy, and

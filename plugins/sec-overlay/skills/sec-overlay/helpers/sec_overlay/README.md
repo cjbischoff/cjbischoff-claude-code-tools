@@ -1491,3 +1491,21 @@ Trade-offs: a `reproduction`-only confirmed finding leaves `receipt_tier` null, 
 map lives in the pinned file; `_promote` writes `runtime_disposition` as `static-settled`, because
 the pinned `RUNTIME_DISPOSITIONS` set carries no proven value; and `run_prove` skips a proof whose
 named finding file is absent without recording a degradation.
+
+### `validate-fix` is wired as a phase, and `score_fix` gets a caller (REQ-43)
+
+`scoring.score_fix` and `agents/validate-fix.md` shipped with no caller: nothing in `PHASE_TABLE`
+ran the prompt, and no module named the scorer. `verify.py`'s `verify:conflict` branch, which
+checks a finding's history for a `validate-fix:` event, was dead code for the same reason — that
+event never got written.
+
+`phases.py` adds a `validate-fix` agent row between `patch` and `verify`, naming
+`agents/validate-fix.md`. Its output is `kb/gates/validate-fix.json`; `verify` declares that same
+path as an input, so the deterministic re-check never runs ahead of the scored gate. `verify.py`
+gains `apply_fix_gates(ws)`: it reads the gate file, calls `score_fix` on each finding's four
+gate statuses, appends a `validate-fix:<verdict>` history event, and sets `verification` to
+`not-fixed` on a `partial`/`not_fixed` verdict or `verify-error` on `unverifiable` — it never
+touches `status`, leaving promotion to the deterministic `verify` phase that runs next.
+`driver.py`'s `_act_verify` calls `apply_fix_gates` before `verify_findings`, as its own step, not
+a call inside `verify_findings` itself. `verify.py` was missing the `Finding` import
+`apply_fix_gates` needs; it is added alongside the existing `FindingStatus` one.

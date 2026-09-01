@@ -299,3 +299,12 @@ prompt allows no network egress: the only oracle is in-band and on loopback. It 
 auto-confirmable classes, routes `sqli` and `authz` to a human-run harness, and requires the agent
 to record `scope` as `entrypoint` or `slice` honestly. The agent writes `kb/prove.json` and never
 edits a finding file; the deterministic side in `helpers/sec_overlay/prove.py` applies the proofs.
+
+`validate-fix.md` is now `PHASE_TABLE`-wired between `patch` and `verify` (REQ-43); it shipped
+earlier with no phase entry, so the driver never dispatched it. Its output is
+`kb/gates/validate-fix.json`, mapping each patched finding id to the two personas' combined
+`root_cause` / `instance_coverage` / `no_new_vulnerabilities` / `best_practices` statuses. The
+agent never computes or writes a verdict — `helpers/sec_overlay/verify.py`'s `apply_fix_gates`
+runs `sec_overlay.scoring.score_fix` on those statuses, so only the deterministic scorer decides
+`fixed`/`partial`/`not_fixed`/`unverifiable`. The prompt writes `{}` when it validated nothing;
+the phase does not complete until the file exists at all.
