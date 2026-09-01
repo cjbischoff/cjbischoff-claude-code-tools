@@ -6,6 +6,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- `tests/test_report.py` gains two tests pinning REQ-40's CLI boundary (fix round 1). `report.main()` must probe `redteam-plan.md` on disk. It must not take `write_report`'s `False` default. One test fails. The CLI passes no `has_redteam_plan`, so the report omits the pointer even when the file exists.
+
 - `tests/test_phase_artifact_contract.py` gains four tests pinning REQ-40: `report` must declare `reports/redteam-plan.md` as an input, `redteam` must precede `report`, `render_ndt` must accept a `has_redteam_plan` keyword and omit the pointer when false, and `report.py` must hold no `redteam-plan.md` filesystem probe. All four fail: `report` declares no such input, `redteam` still runs after `selfscore`, `render_ndt` rejects the keyword, and the probe is present.
 
 - `tests/test_phase_artifact_contract.py` pins REQ-42: the factcheck phase must be deleted. Three tests assert `factcheck` is absent from `PHASE_TABLE` and `DETERMINISTIC_ACTIONS`, `fact-checked` is absent from `VERIFICATION_VALUES`, and no `sec_overlay.factcheck` module or `agents/factcheck.md` prompt exists. All three fail: the phase, the value, the module, and the prompt still exist.

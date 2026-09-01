@@ -12,6 +12,7 @@ from sec_overlay.report import (
     POSITION_REVIEW_HEADING,
     _short_title,
     collapse_clusters,
+    main,
     render_dropped_findings_section,
     render_finding,
     render_ndt,
@@ -349,6 +350,28 @@ def test_report_links_redteam_plan_and_shows_receipts(tmp_path):
     assert "redteam-plan.md" in md  # T11a: link the manual test plan
     # T11b: receipts visible in the per-finding detail file, even at condensed (medium) tier
     assert "ripgrep:a.py:1" in (ws.findings_dir / "F-1.md").read_text()
+
+
+def test_main_probes_redteam_plan_when_present(tmp_path):
+    # REQ-40: main() is a CLI boundary with no phase context, so it reads the
+    # filesystem for has_redteam_plan instead of taking the library default.
+    ws = Workspace(tmp_path / "ws")
+    ws.ensure()
+    (ws.reports).mkdir(parents=True, exist_ok=True)
+    (ws.reports / "redteam-plan.md").write_text("# plan\n")
+    write_findings(ws, [_f_new("F-1", FindingStatus.CONFIRMED)])
+    main(["--workspace", str(tmp_path / "ws")])
+    md = (ws.reports / "report.md").read_text()
+    assert "redteam-plan.md" in md
+
+
+def test_main_omits_redteam_plan_when_absent(tmp_path):
+    ws = Workspace(tmp_path / "ws")
+    ws.ensure()
+    write_findings(ws, [_f_new("F-1", FindingStatus.CONFIRMED)])
+    main(["--workspace", str(tmp_path / "ws")])
+    md = (ws.reports / "report.md").read_text()
+    assert "redteam-plan.md" not in md
 
 
 def test_to_markdown_renders_coverage_ledger():

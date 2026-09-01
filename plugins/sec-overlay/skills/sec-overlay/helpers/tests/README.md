@@ -543,6 +543,12 @@ with `has_redteam_plan=True`, since the probe it used to rely on is gone. Three 
 their `to_markdown` calls, because `_ndt_next_actions` returns a fixed no-plan action for every
 finding when the caller omits it.
 
+`test_report.py` gained `test_main_probes_redteam_plan_when_present` and
+`test_main_omits_redteam_plan_when_absent` (REQ-40 fix round 1). They call `report.main()` with
+an argument vector, not `write_report()` directly. `main()` is a CLI boundary with no phase
+context, so it probes `redteam-plan.md` on disk instead of taking `write_report`'s `False`
+default.
+
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 
