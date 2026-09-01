@@ -4,6 +4,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- New `tests/test_constraint_enforcer.py` pins REQ-49: `_validate_object_fields` must reject a key no `properties` entry declares when a schema sets `additionalProperties: false`, must still accept a declared key, and must leave the object open under the dict form of `additionalProperties`. Further tests assert `finding.schema.json` sets `additionalProperties: false`, that a golden finding with `render_stale: true` grafted on now fails validation, that no `agents/*.md` prompt still offers `render_stale`, and that `artifact-review.md`'s verdict vocabulary drops to `"clean" | "downgrades"` with no `forced_rerender` id list. `test_finding_schema.py::test_unknown_extra_key_is_not_flagged` becomes `test_unknown_extra_key_is_flagged`. Six of the eight assertions fail: the validator ignores `additionalProperties`, the schema declares none, and the lever's prose and key are still live.
+
 ### Fixed
 
 - Documentation and dead-code repairs from fix round 1, findings I3, M1, M2, and M3. `SKILL.md`

@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-140 pytest files, 1788 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+141 pytest files, 1795 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -1624,3 +1624,15 @@ the merged context, and that the runner's `cwd` and argv carry `target` and the 
 pinned SHA. One asserts a prior item on an unchanged file survives. One asserts the merge key
 strips a prior item's leading `./` before comparing it against `git diff`'s bare paths. Three
 fail: `run_postflight` takes no `target` keyword at all.
+
+New `test_constraint_enforcer.py` pins REQ-49: `_validate_object_fields` must reject a key no
+`properties` entry declares when the schema sets `additionalProperties: false`, must still accept
+every declared key, and must leave the object open when `additionalProperties` is the dict form
+(a subschema for undeclared keys, not the closing boolean). Two more tests assert
+`finding.schema.json` itself sets `additionalProperties: false` and that the golden fixture with
+`render_stale: true` grafted on now fails — the deleted re-render lever's key no longer validates.
+A prompt-scan test asserts no `agents/*.md` file still offers `render_stale`, and a text test
+asserts `artifact-review.md`'s verdict vocabulary dropped to `"clean" | "downgrades"` with no
+`forced_rerender` id list. `test_finding_schema.py`'s `test_unknown_extra_key_is_not_flagged`
+becomes `test_unknown_extra_key_is_flagged`: the schema is closed now, so an undeclared key is an
+error, not silent overflow.

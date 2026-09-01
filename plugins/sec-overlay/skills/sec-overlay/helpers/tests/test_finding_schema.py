@@ -63,10 +63,11 @@ def test_wrong_type_for_line_is_flagged():
     assert any("line" in e for e in errors)
 
 
-def test_unknown_extra_key_is_not_flagged():
+def test_unknown_extra_key_is_flagged():
+    """REQ-49: the schema is closed, so an undeclared key is an error."""
     data = json.loads(GOLDEN_PATH.read_text())
     data["some_future_field"] = "value"
-    assert validate(data, _schema()) == []
+    assert any("some_future_field" in e for e in validate(data, _schema()))
 
 
 def test_default_finding_to_dict_validates_against_schema():
