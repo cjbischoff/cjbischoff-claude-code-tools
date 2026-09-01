@@ -14,7 +14,12 @@ import json
 import re
 from pathlib import Path
 
-from sec_overlay.calibrate import PRECONDITION_CAP_FLOOR, PRECONDITION_CAPS, _precondition_cap
+from sec_overlay.calibrate import (
+    JUDGE_VERDICTS,
+    PRECONDITION_CAP_FLOOR,
+    PRECONDITION_CAPS,
+    _precondition_cap,
+)
 from sec_overlay.driver import DISPATCH_TOKENS, render_dispatch
 from sec_overlay.evidence import (
     RUNTIME_DISPOSITIONS,
@@ -22,7 +27,9 @@ from sec_overlay.evidence import (
     TIER2_RECEIPTS,
     VERIFICATION_VALUES,
 )
+from sec_overlay.fix_disposition import TIERS
 from sec_overlay.models import AFFECTED_SITE_KEYS, OPEN_QUESTION_KEYS, RUNTIME_TEST_KEYS, Finding
+from sec_overlay.reachability import BLOCKERS
 
 SKILL = Path(__file__).resolve().parents[2]
 CONSTS = SKILL / "references" / "prompt-constants.md"
@@ -31,14 +38,34 @@ AGENTS = SKILL / "agents"
 
 
 def test_every_closed_vocabulary_matches_its_schema_enum():
-    """Each code constant with a schema counterpart must equal that enum."""
+    """Each code constant with a schema counterpart must equal that enum (REQ-50)."""
     props = json.loads(SCHEMA.read_text())["properties"]
     for field, allowed in (
         ("verification", VERIFICATION_VALUES),
         ("runtime_disposition", RUNTIME_DISPOSITIONS),
+        ("completeness_tier", frozenset(TIERS)),
+        ("judge_verdict", JUDGE_VERDICTS),
+        ("receipt_tier", frozenset({1, 2})),
     ):
         assert "enum" in props[field], f"{field} has no schema enum"
         assert set(props[field]["enum"]) == allowed | {None}, f"{field} drifted"
+    blocker = props["reachability"]["properties"]["blocker"]
+    assert set(blocker["enum"]) == frozenset(BLOCKERS) | {None}, "reachability.blocker drifted"
+
+
+def test_nested_item_schemas_declare_their_published_keys():
+    """``open_questions``, ``affected_sites``, and ``history`` items are typed (REQ-50)."""
+    props = json.loads(SCHEMA.read_text())["properties"]
+    for field, keys in (
+        ("open_questions", OPEN_QUESTION_KEYS),
+        ("affected_sites", AFFECTED_SITE_KEYS),
+    ):
+        item = props[field]["items"]
+        assert set(item["properties"]) == set(keys), f"{field} item schema drifted"
+        assert "required" not in item, f"{field} items must require nothing (ruling R-7)"
+    history = props["history"]["items"]
+    assert history["required"] == ["event"], "history items must require event"
+    assert set(history["properties"]) == {"event"}, "history item schema drifted"
 
 
 def _block(name: str) -> str:

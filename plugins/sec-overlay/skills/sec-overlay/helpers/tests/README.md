@@ -1,8 +1,15 @@
 # `tests/` — the deterministic test suite
 
-141 pytest files, 1795 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+141 pytest files, 1796 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+`test_contract_lint.py::test_every_closed_vocabulary_matches_its_schema_enum` (REQ-50) now also
+derives `completeness_tier`, `judge_verdict`, `receipt_tier`, and `reachability.blocker` from
+`fix_disposition.TIERS`, `calibrate.JUDGE_VERDICTS`, the literal `{1, 2}`, and
+`reachability.BLOCKERS`. A new `test_nested_item_schemas_declare_their_published_keys` pins the
+`open_questions`, `affected_sites`, and `history` item schemas against
+`models.OPEN_QUESTION_KEYS`, `models.AFFECTED_SITE_KEYS`, and the `history` event key.
 
 New `test_no_dead_helpers.py` (REQ-48) is the standing guard against the class of dead lever
 `test_dead_lever.py` pins one instance at a time: an AST scan walks every public function in

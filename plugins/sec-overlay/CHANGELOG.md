@@ -4,6 +4,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- `test_contract_lint.py::test_every_closed_vocabulary_matches_its_schema_enum` (REQ-50) now also checks `completeness_tier`, `judge_verdict`, `receipt_tier`, and `reachability.blocker` against `fix_disposition.TIERS`, a new `calibrate.JUDGE_VERDICTS`, `{1, 2}`, and `reachability.BLOCKERS`. New `test_nested_item_schemas_declare_their_published_keys` pins the `open_questions`, `affected_sites`, and `history` item schemas against `models.OPEN_QUESTION_KEYS`, `models.AFFECTED_SITE_KEYS`, and the `history` event key. Fails today: `calibrate.JUDGE_VERDICTS` does not exist yet, and none of the five fields carry a schema enum.
+
 ### Fixed
 
 - `_validate_object_fields` (`sec_overlay/schema.py`) rejects an undeclared key when a schema sets `additionalProperties: false` (REQ-49). Only the boolean-`false` form closes the object; the schema-form (a subschema for undeclared keys) leaves it open, matching the module docstring. `finding.schema.json` sets `additionalProperties: false` at its root object only — every nested object schema stays open, so a later addition to a nested schema is unaffected. Closing the schema retires the `render_stale` re-render lever: `artifact-review.md` no longer offers it, and its verdict shape drops to `"clean" | "downgrades"` with the unreachable `"re-render"` value and `forced_rerender` id list removed; `agents/README.md`'s phase-6 row drops the matching clause. `references/README.md` now documents the closed schema instead of claiming it declares no `additionalProperties`.
