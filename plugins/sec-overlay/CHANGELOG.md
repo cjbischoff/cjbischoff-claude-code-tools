@@ -4,6 +4,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Fixed
+
+- `_validate_object_fields` (`sec_overlay/schema.py`) rejects an undeclared key when a schema sets `additionalProperties: false` (REQ-49). Only the boolean-`false` form closes the object; the schema-form (a subschema for undeclared keys) leaves it open, matching the module docstring. `finding.schema.json` sets `additionalProperties: false` at its root object only — every nested object schema stays open, so a later addition to a nested schema is unaffected. Closing the schema retires the `render_stale` re-render lever: `artifact-review.md` no longer offers it, and its verdict shape drops to `"clean" | "downgrades"` with the unreachable `"re-render"` value and `forced_rerender` id list removed; `agents/README.md`'s phase-6 row drops the matching clause. `references/README.md` now documents the closed schema instead of claiming it declares no `additionalProperties`.
+
 ### Added
 
 - New `tests/test_constraint_enforcer.py` pins REQ-49: `_validate_object_fields` must reject a key no `properties` entry declares when a schema sets `additionalProperties: false`, must still accept a declared key, and must leave the object open under the dict form of `additionalProperties`. Further tests assert `finding.schema.json` sets `additionalProperties: false`, that a golden finding with `render_stale: true` grafted on now fails validation, that no `agents/*.md` prompt still offers `render_stale`, and that `artifact-review.md`'s verdict vocabulary drops to `"clean" | "downgrades"` with no `forced_rerender` id list. `test_finding_schema.py::test_unknown_extra_key_is_not_flagged` becomes `test_unknown_extra_key_is_flagged`. Six of the eight assertions fail: the validator ignores `additionalProperties`, the schema declares none, and the lever's prose and key are still live.

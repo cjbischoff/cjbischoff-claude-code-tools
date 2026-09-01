@@ -1636,3 +1636,11 @@ asserts `artifact-review.md`'s verdict vocabulary dropped to `"clean" | "downgra
 `forced_rerender` id list. `test_finding_schema.py`'s `test_unknown_extra_key_is_not_flagged`
 becomes `test_unknown_extra_key_is_flagged`: the schema is closed now, so an undeclared key is an
 error, not silent overflow.
+
+All eight now pass. `_validate_object_fields` (`sec_overlay/schema.py`) gains a branch: when
+`schema.get("additionalProperties") is False`, every key in `data` absent from `properties`
+appends an `"<path>.<key>: unknown field"` error. `finding.schema.json` sets
+`additionalProperties: false` at its root only — every nested object schema stays open, so a
+later task's nested addition never trips this same branch. `artifact-review.md` drops the
+`render_stale` lever and its `"re-render"`/`forced_rerender` verdict shape; `agents/README.md`'s
+phase-6 row drops the same clause.

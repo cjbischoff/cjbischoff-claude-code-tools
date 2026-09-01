@@ -1536,3 +1536,21 @@ The `changed` flag is replaced with a `touched: list[Finding]` accumulator. The 
 so a finding `verify_findings` never looked at (no `CONFIRMED` status, or no `patch_diff`) is never
 part of the write-back. `write_findings` (`workspace.py`) writes one file per finding, so a subset
 write needs no additional locking or barrier — it is already the unit of atomicity.
+
+### `schema.py` closes the object when `additionalProperties` is `false` (REQ-49)
+
+`_validate_object_fields` checked `required` and validated every declared `properties` entry, but
+never looked at a key `data` carried that no `properties` entry named — the validator accepted any
+overflow silently. `finding.schema.json` now sets `additionalProperties: false` at its root
+object, so an undeclared key on a finding is a validation error (`"<path>.<key>: unknown field"`)
+at the findings gate instead of silent overflow. Only the boolean-`false` form closes the object;
+a schema-form `additionalProperties` (a subschema for undeclared keys) leaves it open and
+unchecked, matching the module docstring's stated support. Nested object schemas
+(`reachability`, `runtime_test`, `reproduction`, `history`/`open_questions`/`affected_sites`
+items) stay open — only the root closes, so a Part D or REQ-27-overflow field arriving on a
+nested object still round-trips.
+
+Closing the schema retired the `render_stale` lever `artifact-review.md` used to force a
+re-render: the key no property declares now fails validation, and no agent prompt writes it.
+`artifact-review.md`'s verdict vocabulary drops to `"clean" | "downgrades"`; the unreachable
+`"re-render"` value and its `forced_rerender` id list are gone.

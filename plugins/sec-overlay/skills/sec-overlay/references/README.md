@@ -286,8 +286,9 @@ pre-commit hook (see the plugin [`CLAUDE.md`](../../../CLAUDE.md), "Documentatio
 `exact_request`, `library_version`, `refutation`, and `baseline` as nullable strings, plus
 `exfil_channels` and `negative_results` as nullable string arrays. The schema is the only type
 check on these fields, because they ride the finding overflow rather than a `Finding` dataclass
-field (`models.py` is byte-pinned by the D-15 frozen-contract test). The schema declares no
-`additionalProperties`, so a finding written before this change still validates.
+field (`models.py` is byte-pinned by the D-15 frozen-contract test). The schema sets `additionalProperties: false` (REQ-49), so a key no property declares is a
+validation error at the findings gate, not silent overflow. Adding a prompt-written field
+means declaring it here first.
 
 `finding.schema.json`'s `expected_signal` now also accepts an array (REQ-34), alongside the
 object, the string, and null. The array holds observation-channel objects that `agents/redteam.md`

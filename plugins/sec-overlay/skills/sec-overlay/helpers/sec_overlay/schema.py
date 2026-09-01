@@ -2,9 +2,14 @@
 
 Supports the subset this repo's ``references/*.schema.json`` files actually use:
 ``type`` (string or list-of-strings for nullable fields), ``enum``, ``required``,
-``items`` (array element schema), ``properties`` (nested object schema). Not a
-general-purpose JSON Schema implementation — extend only when a new schema file
-needs a keyword this module doesn't yet support.
+``items`` (array element schema), ``properties`` (nested object schema),
+``additionalProperties`` (object closure). Not a general-purpose JSON Schema
+implementation — extend only when a new schema file needs a keyword this module
+doesn't yet support.
+
+``additionalProperties`` is honoured only in its boolean-``false`` form, which closes
+the object. The schema form (a subschema applied to undeclared keys) is not supported;
+a truthy value leaves the object open and unchecked.
 """
 
 from __future__ import annotations
@@ -65,3 +70,7 @@ def _validate_object_fields(data: dict, schema: dict, path: str, errors: list[st
     for key, prop_schema in properties.items():
         if key in data:
             _validate_value(data[key], prop_schema, f"{path}.{key}", errors)
+    if schema.get("additionalProperties") is False:
+        for key in data:
+            if key not in properties:
+                errors.append(f"{path}.{key}: unknown field")
