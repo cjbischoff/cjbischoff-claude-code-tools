@@ -6,6 +6,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- `tests/test_no_dead_helpers.py` gains two tests pinning fix round 1, finding I1 and finding M5.
+  A dead helper masked by a name collision must carry a list entry, and `_public_functions` must
+  report an `async def` helper. Both fail. The flat name scan treats `context.py:load` and
+  `fix_disposition.py:validate` as live because unrelated identifiers share their names, and
+  `_public_functions` matches only `ast.FunctionDef`.
+
 - New `tests/test_no_dead_helpers.py` pins REQ-48: an AST-precise scan walks every public
   function in `sec_overlay/`, and each one must either have a real Python caller in
   non-test `sec_overlay/`/`bench/` code, appear in `DEAD_ALLOWLIST` with a one-line reason,

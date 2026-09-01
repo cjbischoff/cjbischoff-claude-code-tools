@@ -168,3 +168,16 @@ def test_no_list_entry_names_a_function_that_is_gone():
 def test_every_dead_allowlist_entry_carries_a_reason():
     empty = sorted(key for key, reason in DEAD_ALLOWLIST.items() if not reason.strip())
     assert not empty, "allowlist entries with no reason: " + ", ".join(empty)
+
+
+def test_a_dead_helper_masked_by_a_name_collision_is_still_listed():
+    """A dead helper whose bare name also appears elsewhere must still carry a list entry."""
+    listed = set(DEAD_ALLOWLIST) | set(PROMPT_ONLY)
+    missing = [k for k in ("context.py:load", "fix_disposition.py:validate") if k not in listed]
+    assert not missing, "dead helpers hidden by a name collision: " + ", ".join(missing)
+
+
+def test_public_functions_reports_an_async_helper(tmp_path: Path):
+    """An ``async def`` public helper must be visible to the scan."""
+    (tmp_path / "sample.py").write_text("async def go():\n    return 1\n")
+    assert _public_functions(tmp_path) == {"sample.py:go": "sample.py"}

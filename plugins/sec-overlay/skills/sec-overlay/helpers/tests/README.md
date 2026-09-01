@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-140 pytest files, 1782 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+140 pytest files, 1784 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -17,6 +17,11 @@ it directly) and added `reflection.py:validate_verdict` (named only by `agents/R
 `economics`, deliberately left in place by an earlier task; it needs no allowlist entry because the
 scan is function-level and `to_markdown` itself is still called by `write_report` and by
 `test_report.py`.
+
+`test_no_dead_helpers.py` gains two tests. The first requires `context.py:load` and
+`fix_disposition.py:validate` to carry a list entry. Both are dead, and the flat name scan hides
+them behind an unrelated identifier of the same name. The second requires `_public_functions` to
+report an `async def` helper. Both tests fail against the flat name scan.
 
 `test_dead_lever.py`'s three REQ-47 tests now pass: `sec_overlay.scope` and `test_scope.py` are
 deleted (the module had no caller), `scanscope.py`'s `rel_to_root` is deleted along with its test
