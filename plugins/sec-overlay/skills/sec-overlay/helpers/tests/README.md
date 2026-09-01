@@ -1,8 +1,12 @@
 # `tests/` — the deterministic test suite
 
-141 pytest files, 1812 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+141 pytest files, 1821 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_redteam.py::test_directive_falls_back_to_the_finding_preconditions` pins REQ-55: a
+finding with no `runtime_test` still shows its own `preconditions` in the directive body, in the
+same "Code-settled" block the heading already names.
 
 New `test_selfscore.py` tests pin REQ-54: `test_self_score_buckets_partition_the_finding_population`
 checks every finding on disk lands in exactly one `by_status` bucket and that `duplicate` matches

@@ -6,6 +6,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- A failing test pins REQ-55: a finding's directive body must show its own `preconditions`
+  when `runtime_test` omits that field, in the same block the heading groups it under.
+
 - `build_self_score` reports the finding population directly (REQ-54). `by_status` buckets every
   finding by status, `total` counts the population, and `duplicate` reads its bucket instead of
   going uncounted. `reported_collapsed` and `needs_runtime_collapsed` collapse clusters the same
