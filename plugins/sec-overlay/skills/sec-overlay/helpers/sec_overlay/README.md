@@ -169,6 +169,14 @@ narrower `reported` count (`confirmed`/`fixed` only) it retains for backward con
 no critic events), counted from `critic:viable`/`critic:rejected` history events across all
 findings (ISSUE-043) — measurement only, nothing gates on the rate.
 
+`build_self_score` gained `total`, `duplicate`, `by_status`, `reported_collapsed`, and
+`needs_runtime_collapsed` (REQ-54). `total` and `by_status` (a `Counter` over every finding's
+status value) let the artifact-consistency gate check that the score's buckets partition the
+finding population on disk. `duplicate` reads the `by_status` count for the `duplicate` status.
+`reported_collapsed` and `needs_runtime_collapsed` collapse clusters with `report.collapse_clusters`
+before counting, so they match the cluster-aware counts the rendered report shows, unlike the
+uncollapsed `reported` and `needs_runtime` counts kept for backward continuity.
+
 `evidence.py` gained a shared tier/status vocabulary: `TIER1_RECEIPTS`/`TIER2_RECEIPTS` (partition
 `_MECHANICAL`), `SHIPPING_STATUSES`, `RUNTIME_DISPOSITIONS`, and the `receipt_tier()`/
 `confirms_alone()` predicates — a single source of truth for later modules that need to know
@@ -1393,7 +1401,8 @@ finished run's own artifacts against each other and returns one string per contr
 1. every `findings/<id>.md` link in the report resolves to a file on disk;
 2. every triage next-action names a `redteam-plan.md` section that contains its finding;
 3. the report's `Completeness:` claim matches `kb/coverage-ledger.json`;
-4. `state.budget.self_score` exists and does not undercount the report's needs-runtime rows;
+4. `state.budget.self_score` exists and its needs-runtime count equals the report's (REQ-54:
+   exact equality, not a one-sided tolerance — both sides collapse clusters);
 5. no `(measured):` header stands above an empty body;
 6. a truncated triage title matches `report._short_title` of its source message.
 
@@ -1439,6 +1448,27 @@ needs-deployment-testing finding) drives the stated `Needs runtime proof:` count
 `Leads pending external verification: <n>` line when non-empty. Previously the stated count used
 `ndt` (external leads excluded), which undercounted against the SARIF and Detail populations that
 include every needs-runtime finding regardless of tier.
+
+## 2026-09-01 — REQ-54: one self-score population, with a named duplicate key
+
+`build_self_score` gained a partition check of its own, and clause (d) lost its tolerance.
+`selfscore.py` now buckets every finding by `status.value` into `by_status`, records `total` as
+the finding count on disk, and reads `duplicate` straight off that bucket instead of leaving
+duplicate findings invisible to the score. `reported_collapsed` and `needs_runtime_collapsed` run
+`report.collapse_clusters` before counting, so they match the cluster-aware numbers the rendered
+report shows — the older `reported` and `needs_runtime` counts stay for backward continuity but no
+longer feed clause (d).
+
+Clause (h), `_check_self_score_partition` in `artifact_consistency.py`, checks that a score
+carrying `total` and `by_status` (a score written before REQ-54 carries neither and degrades to a
+pass) actually partitions the finding population: `total` must equal the finding count on disk,
+and the `by_status` values must sum to `total`. A self-score that silently drops findings from
+its buckets now fails the gate instead of passing with a smaller-than-true count.
+
+Clause (d) itself now requires exact equality between the report's stated `Needs runtime proof:`
+count and `self_score.needs_runtime_collapsed` (falling back to the older `needs_runtime` key for
+a pre-REQ-54 score). Both sides collapse clusters, so a mismatch in either direction — not only an
+undercount — is a contradiction.
 
 ### The Part D finding elements (REQ-33)
 

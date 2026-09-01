@@ -8,10 +8,12 @@ cluster count, rejected count, external-boundary count), not a re-score.
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from pathlib import Path
 
 from sec_overlay.evidence import SHIPPING_STATUSES
 from sec_overlay.models import FindingStatus
+from sec_overlay.report import collapse_clusters
 from sec_overlay.state import load_state, save_state
 from sec_overlay.workspace import Workspace, read_findings
 
@@ -27,7 +29,9 @@ def build_self_score(ws: Workspace) -> dict:
     Returns:
         ``{reported, confirmed, needs_runtime, rejected, clusters,
         external_boundary, shipping, critic_viable, critic_rejected,
-        critic_reject_rate}`` — all ints except ``critic_reject_rate`` (float).
+        critic_reject_rate, total, duplicate, by_status, reported_collapsed,
+        needs_runtime_collapsed}`` — all ints except ``critic_reject_rate`` (float)
+        and ``by_status`` (``dict[str, int]``).
     """
     findings = read_findings(ws)
     clusters = {f.cluster_id for f in findings if getattr(f, "cluster_id", None)}
@@ -42,6 +46,9 @@ def build_self_score(ws: Workspace) -> dict:
     )
     critic_total = critic_viable + critic_rejected
     critic_reject_rate = (critic_rejected / critic_total) if critic_total else 0.0
+    by_status = Counter(f.status.value for f in findings)
+    reported = [f for f in findings if f.status in _REPORTED]
+    runtime = [f for f in findings if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING]
     return {
         "reported": sum(1 for f in findings if f.status in _REPORTED),
         "confirmed": sum(1 for f in findings if f.status is FindingStatus.CONFIRMED),
@@ -55,6 +62,11 @@ def build_self_score(ws: Workspace) -> dict:
         "critic_viable": critic_viable,
         "critic_rejected": critic_rejected,
         "critic_reject_rate": critic_reject_rate,
+        "total": len(findings),
+        "duplicate": by_status.get("duplicate", 0),
+        "by_status": dict(by_status),
+        "reported_collapsed": len(collapse_clusters(reported)),
+        "needs_runtime_collapsed": len(collapse_clusters(runtime)),
     }
 
 

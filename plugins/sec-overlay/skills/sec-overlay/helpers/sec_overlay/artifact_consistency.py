@@ -120,9 +120,8 @@ def _check_coverage_claim(ws: Workspace, report_md: str) -> list[str]:
 def _check_self_score(ws: Workspace, report_md: str) -> list[str]:
     """Check (d): the self-score does not contradict the report's own counts.
 
-    The report collapses clusters and the self-score does not, so a report count
-    below the self-score count is expected. Only a missing score, a zero score
-    against rendered rows, or a report count above the score is a contradiction.
+    Both sides collapse clusters (REQ-54), so the two counts must be equal. A
+    missing score is a contradiction; a report with no count line is not.
     """
     score = load_state(ws).budget.get("self_score")
     if not isinstance(score, dict):
@@ -131,8 +130,8 @@ def _check_self_score(ws: Workspace, report_md: str) -> list[str]:
     if match is None:
         return []
     reported = int(match.group(1))
-    scored = score.get("needs_runtime", 0)
-    if reported > scored:
+    scored = score.get("needs_runtime_collapsed", score.get("needs_runtime", 0))
+    if reported != scored:
         return [
             (
                 f"artifact-consistency: report shows {reported} needs-runtime "
@@ -140,6 +139,41 @@ def _check_self_score(ws: Workspace, report_md: str) -> list[str]:
             )
         ]
     return []
+
+
+def _check_self_score_partition(ws: Workspace) -> list[str]:
+    """Check (h): the self-score's buckets cover every finding on disk.
+
+    Runs only when the score carries ``total`` and ``by_status``. A score
+    written before REQ-54 carries neither and degrades to a pass.
+
+    Args:
+        ws: The finished-run workspace.
+
+    Returns:
+        Contradiction strings; empty when the buckets partition the population.
+    """
+    score = load_state(ws).budget.get("self_score")
+    if not isinstance(score, dict):
+        return []
+    by_status = score.get("by_status")
+    total = score.get("total")
+    if not isinstance(by_status, dict) or not isinstance(total, int):
+        return []
+    errors: list[str] = []
+    on_disk = len(read_findings(ws))
+    if total != on_disk:
+        errors.append(
+            f"artifact-consistency: self_score.total is {total} but "
+            f"{on_disk} finding(s) are on disk"
+        )
+    bucketed = sum(by_status.values())
+    if bucketed != total:
+        errors.append(
+            f"artifact-consistency: self_score.by_status covers {bucketed} "
+            f"finding(s) against a total of {total}"
+        )
+    return errors
 
 
 def _check_measured_sections(report_md: str) -> list[str]:
@@ -261,6 +295,7 @@ def run_artifact_consistency(ws: Workspace) -> list[str]:
         + _check_measured_sections(report_md)
         + _check_truncated_titles(ws, report_md)
         + _check_sarif_population(ws, report_md)
+        + _check_self_score_partition(ws)
     )
     (ws.kb / "gates").mkdir(parents=True, exist_ok=True)
     (ws.kb / "gates" / "artifact-consistency.json").write_text(

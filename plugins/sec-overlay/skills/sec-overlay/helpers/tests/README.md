@@ -15,6 +15,10 @@ one representative per cluster, the same way the report collapses clusters. New
 test — clause (d) now flags a mismatch in either direction, since both the report and the score
 collapse clusters under REQ-54.
 
+`test_self_score_counts_by_status_and_persists` now asserts the five new REQ-54 keys alongside
+the original ten: `total`, `duplicate`, `by_status`, `reported_collapsed`, and
+`needs_runtime_collapsed`, computed from the same fixture findings the original ten keys use.
+
 New `test_constraint_enforcer.py` tests pin REQ-51: `evidence._MECHANICAL` must equal
 `TIER1_RECEIPTS | TIER2_RECEIPTS` (the derivation, not an independent literal), and a new
 `evidence.unknown_receipts` must report a source whose prefix names neither tier and is not

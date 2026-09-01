@@ -52,6 +52,16 @@ def test_self_score_counts_by_status_and_persists(tmp_path):
         "critic_viable": 0,
         "critic_rejected": 0,
         "critic_reject_rate": 0.0,
+        "total": 6,
+        "duplicate": 0,
+        "by_status": {
+            "confirmed": 1,
+            "fixed": 1,
+            "needs-deployment-testing": 3,
+            "rejected": 1,
+        },
+        "reported_collapsed": 2,
+        "needs_runtime_collapsed": 2,
     }
     assert load_state(ws).budget["self_score"] == score
 

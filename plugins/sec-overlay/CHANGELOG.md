@@ -6,6 +6,15 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- `build_self_score` reports the finding population directly (REQ-54). `by_status` buckets every
+  finding by status, `total` counts the population, and `duplicate` reads its bucket instead of
+  going uncounted. `reported_collapsed` and `needs_runtime_collapsed` collapse clusters the same
+  way the report does, so they match what the report renders. Clause (h),
+  `_check_self_score_partition` in `artifact_consistency.py`, flags a score whose `by_status`
+  buckets do not sum to `total`, or whose `total` disagrees with the finding count on disk.
+  Clause (d) now requires exact equality between the report's stated needs-runtime count and the
+  self-score's collapsed count, in place of the old one-sided undercount tolerance.
+
 - Failing tests pin REQ-54: a self-score must partition every finding on disk across
   `by_status`, and the artifact-consistency gate must flag both a self-score that loses
   findings and any self-score mismatch against the report, not only an undercount.
