@@ -16,6 +16,13 @@ entry point; read the parent map for the full inventory.
 When a module here changes, update the module map in [`../README.md`](../README.md) **and** this
 pointer if the package layout changed — in the same commit (enforced by the pre-commit hook).
 
+`redteam.py`'s `_directive_block` now falls back to `Finding.preconditions` when
+`runtime_test` carries no `preconditions` key (REQ-55). `render_plan` already groups a
+finding with `dataflow` and no `runtime_test` as "Code-settled, runtime-impact-pending" — the
+directive body read only `runtime_test.get('preconditions')` and rendered `_not specified_`
+even when the finding's own `preconditions` field held real access requirements. The fix reads
+`rt.get('preconditions') or f.preconditions`, so the heading and the body agree on one field.
+
 `workspace.py`'s `read_findings`/`write_findings` now round-trip a finding's unknown JSON keys
 (REQ-27): `read_findings` stashes any key absent from `Finding.__dataclass_fields__` on the
 returned instance (in sorted order, for a deterministic merge) and warns on stderr naming the

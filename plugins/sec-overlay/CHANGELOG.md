@@ -4,6 +4,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Fixed
+
+- `_directive_block` falls back to `Finding.preconditions` when `runtime_test` omits its own
+  `preconditions` key (REQ-55). A finding grouped "Code-settled" by heading no longer shows
+  `_not specified_` in its directive body when the finding carries real preconditions.
+
 ### Added
 
 - A failing test pins REQ-55: a finding's directive body must show its own `preconditions`

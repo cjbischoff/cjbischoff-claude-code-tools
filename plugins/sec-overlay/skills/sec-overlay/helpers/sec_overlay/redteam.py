@@ -179,7 +179,7 @@ def _directive_block(f: Finding, patch_status: PatchStatus | None = None) -> str
             lines += [caution, ""]
     lines += [
         f"- **Objective:** {rt.get('objective', f.message)}",
-        f"- **Preconditions / access:**\n{_bullets(rt.get('preconditions'))}",
+        f"- **Preconditions / access:**\n{_bullets(rt.get('preconditions') or f.preconditions)}",
         "- **Payload(s)** (shell vars only — export before use):",
         payload_md,
         f"- **Expected signal:**{_signal(rt.get('expected_signal'))}",
