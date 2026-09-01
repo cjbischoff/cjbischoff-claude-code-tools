@@ -369,14 +369,13 @@ a precondition to test for, not a live directive. `render_plan` renders this buc
 into "Questions to ask") so these findings are surfaced, never silently dropped; `write_plan`'s
 returned summary carries an `"unrunnable"` count alongside the other buckets.
 
-`redactor.py` and `factcheck.py` are now wired into the driver (ISSUE-047, ISSUE-051).
-`render_dispatch` passes its composed block through `redactor.safe_for_prompt` before returning —
-a security control that guarantees no dispatch block the orchestrator prints can carry a
-high-confidence secret. `factcheck` is a new deterministic phase between `trace` and `calibrate`,
-declared with no inputs/outputs so a hard gate never halts the run before Plan B's fact-check
-agent exists: `_act_factcheck` reads `kb/verdicts.json` if present, applies each entry via
-`factcheck.apply_verdict` (validated first with `factcheck.validate_verdict`), and no-ops silently
-when the file is absent.
+`redactor.py` is wired into the driver (ISSUE-051). `render_dispatch` passes its composed block
+through `redactor.safe_for_prompt` before returning — a security control that guarantees no
+dispatch block the orchestrator prints can carry a high-confidence secret.
+
+REQ-42 removed the `factcheck` phase (ISSUE-047), the `sec_overlay.factcheck` module, and the
+`agents/factcheck.md` prompt. The phase's only input, `kb/verdicts.json`, had no producing phase,
+so `_act_factcheck` no-opped on every run and the `fact-checked` verification value had no writer.
 
 `phase_gate.py`'s `_parse_ref` (ISSUE-024/028) now anchors a citation with a leading-match regex
 (`_REF_ANCHOR`) instead of `rsplit(":", 1)`, so a trailing human hint after the line or range
@@ -1209,13 +1208,14 @@ failure). Plan guidance is advisory: never a tool receipt, never a finding, and 
 subject to the base/head staleness envelope that review returns carry.
 
 `evidence.py` gained `VERIFICATION_VALUES` (REQ-02): the closed set for `Finding.verification`
-— `verified-static`, `static-only`, `not-fixed`, `verify-error`, `fact-checked`. `models.py`'s
+— `verified-static`, `static-only`, `not-fixed`, `verify-error` (REQ-42 removed the fifth value,
+`fact-checked`, with the deleted `factcheck` phase that alone wrote it). `models.py`'s
 `Finding.from_dict` now rejects a `verification` or `runtime_disposition` outside its closed set
 via a module-level `_CLOSED_ENUMS` table, unless the value is `null`. `../references/finding.schema.json`
 mirrors both enums, checked verbatim by `../tests/test_contract_lint.py`.
 
-`models.py`'s module docstring now lists all five `verification` values, including `fact-checked`,
-matching `VERIFICATION_VALUES`.
+`models.py`'s module docstring lists all four `verification` values, matching
+`VERIFICATION_VALUES`.
 
 `models.py` gained `RUNTIME_TEST_KEYS`, `OPEN_QUESTION_KEYS`, and `AFFECTED_SITE_KEYS` (REQ-18):
 named key tuples for the `runtime_test`, `open_questions`, and `affected_sites` nested `Finding`

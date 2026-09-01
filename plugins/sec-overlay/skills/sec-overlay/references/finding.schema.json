@@ -25,7 +25,7 @@
     "evidence_sources": {"type": "array", "items": {"type": "string"}},
     "risk_score": {"type": ["integer", "number", "null"]},
     "verification": {
-      "enum": ["verified-static", "static-only", "not-fixed", "verify-error", "fact-checked", null]
+      "enum": ["verified-static", "static-only", "not-fixed", "verify-error", null]
     },
     "patch_diff": {"type": ["string", "null"]},
     "discovery_sha": {"type": ["string", "null"]},

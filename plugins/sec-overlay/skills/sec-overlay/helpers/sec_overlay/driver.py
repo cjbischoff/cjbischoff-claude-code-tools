@@ -23,7 +23,6 @@ from sec_overlay.discovery_ledger import (
     record_wave,
     save_ledger,
 )
-from sec_overlay.factcheck import apply_verdict, validate_verdict
 from sec_overlay.findings_gate import validate_citations, validate_findings
 from sec_overlay.fingerprint import fingerprint
 from sec_overlay.fp_feedback import render_fp_feedback
@@ -44,7 +43,7 @@ from sec_overlay.route_census import census, write_census
 from sec_overlay.selfscore import write_self_score
 from sec_overlay.state import load_state, save_state
 from sec_overlay.verify import verify_findings
-from sec_overlay.workspace import Workspace, finding_counts, read_findings, write_findings
+from sec_overlay.workspace import Workspace, finding_counts, read_findings
 
 
 @dataclass
@@ -292,31 +291,6 @@ def _act_selfscore(ctx: AuditContext) -> None:
     write_self_score(ctx.ws)
 
 
-def _act_factcheck(ctx: AuditContext) -> None:
-    """Apply verdicts from ``kb/verdicts.json`` to their findings, if present.
-
-    ``verdicts.json`` is written by a fact-check agent (Plan B) re-verifying a
-    confirmed finding's citations/scope/severity against source. Until that
-    agent exists, the file is absent and this phase no-ops silently — the
-    input is deliberately not a hard gate (see phases.py), so a missing
-    verdict artifact never halts the run.
-
-    Args:
-        ctx: The audit context; reads/writes findings in ``ctx.ws``.
-    """
-    verdicts_path = ctx.ws.kb / "verdicts.json"
-    if not verdicts_path.exists():
-        return
-    verdicts = json.loads(verdicts_path.read_text())
-    findings = {f.id: f for f in read_findings(ctx.ws)}
-    changed = []
-    for fid, d in verdicts.items():
-        if fid in findings and not validate_verdict(d):
-            changed.append(apply_verdict(findings[fid], d))
-    if changed:
-        write_findings(ctx.ws, list(findings.values()))
-
-
 def _act_calibrate(ctx: AuditContext) -> None:
     calibrate_findings(ctx.ws)
 
@@ -444,7 +418,6 @@ DETERMINISTIC_ACTIONS.update(
         "prefilter": _act_prefilter,
         "findings-gate": _act_findings_gate,
         "dedupe": _act_dedupe,
-        "factcheck": _act_factcheck,
         "calibrate": _act_calibrate,
         "verify": _act_verify,
         "demote-noise": _act_demote_noise,

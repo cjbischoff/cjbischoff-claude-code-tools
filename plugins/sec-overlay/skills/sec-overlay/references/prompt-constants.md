@@ -188,7 +188,7 @@ The evidence, status, and disposition vocabularies are closed sets. Use only the
 - **`runtime_disposition` (closed enum):** `needs-runtime`, `static-settled`, `unassessed`.
   Any other value (e.g. `neither`) is rejected at the findings gate.
 - **`verification` (closed enum):** `verified-static`, `static-only`, `not-fixed`,
-  `verify-error`, `fact-checked`. Any other value is rejected when a finding loads. Never
+  `verify-error`. Any other value is rejected when a finding loads. Never
   write prose here.
 
 ## STE_PROSE

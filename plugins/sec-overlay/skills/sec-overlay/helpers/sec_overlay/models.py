@@ -2,8 +2,7 @@
 
 The ``Finding`` schema defined here is the frozen contract consumed by every
 later phase (investigation, FP-reduction ladder, remediation, reporting).
-Verification values: ``verified-static | static-only | not-fixed | verify-error |
-fact-checked``.
+Verification values: ``verified-static | static-only | not-fixed | verify-error``.
 """
 
 from __future__ import annotations

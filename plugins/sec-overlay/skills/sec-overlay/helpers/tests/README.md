@@ -249,7 +249,7 @@ knows is non-`None` at that point — `ty` needs the narrowing spelled out; no b
 apply the same `dataclasses.replace` fix as the `Finding` builders below, for the same
 `ty` reason — no behavior change.
 
-`test_citations.py`, `test_factcheck_baseline_envelope.py`, and `test_report.py`'s `Finding`
+`test_citations.py`, `test_baseline_envelope.py`, and `test_report.py`'s `Finding`
 test-builders (`_f`/`_tf`/`_full`) now build a base `Finding(...)` call and layer per-test
 overrides with `dataclasses.replace(base, **kw)`, instead of a `dict()` + `.update(kw)` +
 `Finding(**d)` construction — `**d`'s inferred concrete dict type tripped `ty`'s
@@ -382,8 +382,7 @@ names `QUALIFIER_PROOF`, since the prompt grades severity and needs the blanket-
 suppressed-full default and the `confirmed_only` restore path.
 
 `test_phases.py` (new) covers `sec_overlay/phases.py`'s `PHASE_TABLE` order (findings-gate right
-after investigate, dedupe/demote-noise before report, trace present, and now `factcheck` sitting
-between `trace` and `calibrate` — ISSUE-047) and the pure sequencer helpers (`missing_inputs`,
+after investigate, dedupe/demote-noise before report, trace present) and the pure sequencer helpers (`missing_inputs`,
 `outputs_present`, `next_actionable_phase`). `test_artifact_phases_follow_selfscore` (new, §4.8)
 asserts `artifact-gate` sits after `selfscore` and `artifact-review` sits after `artifact-gate`,
 and that `artifact-review` is an agent phase naming `agents/artifact-review.md`.
@@ -430,10 +429,7 @@ carries `render_dispatch`'s reconciled `{{ATTACK_CLASS}}` list, including a clas
 added that recon omitted, and the triage block is appended after it when a class stays unrouted),
 `test_run_audit_passes_full_class_set_to_patch_dispatch` — drives `run_audit` up through
 `calibrate` so `patch` is the actionable phase and asserts its dispatch carries every class from
-`agents_to_spawn`, not one token (ISSUE-050), and `test_factcheck_action_applies_verdicts` —
-writes a `kb/verdicts.json` VERIFIED verdict for one finding, runs
-`DETERMINISTIC_ACTIONS["factcheck"]`, and asserts the finding is stamped
-`verification="fact-checked"` (ISSUE-047).
+`agents_to_spawn`, not one token (ISSUE-050).
 `test_run_audit_halts_when_scan_profile_missing_at_investigate` (new, M1, 0.10.1) stages state up
 to `investigate` with no `scan-profile.json` and asserts `run_audit` raises `PhaseHalt` (not
 `FileNotFoundError`) naming the missing file.
@@ -671,7 +667,7 @@ The `_full` helper in `test_report.py` builds its `Finding` kwargs as a dict lit
 `test_cvss.py`'s `sec_overlay.cvss` import is wrapped across multiple lines to satisfy ruff
 `I001` (the single-line form exceeded the 100-char limit).
 
-`test_report.py`, `test_models.py`, `test_citations.py`, and `test_factcheck_baseline_envelope.py`
+`test_report.py`, `test_models.py`, `test_citations.py`, and `test_baseline_envelope.py`
 had their fixture `cvss_vector` strings swapped from `CVSS:3.1` to `CVSS:4.0` vectors of
 equivalent meaning, matching the v4.0-only parser (`sec_overlay/cvss.py`). `test_cvss.py`'s own
 `CVSS:3.1` fixture is untouched — it exercises the parser's rejection path.
@@ -1149,7 +1145,7 @@ a finding can be routed into or out of.
 (Phase 6 security audit, T-06-02-06): it walks the live `PHASE_TABLE` and asserts every phase
 the skill `CLAUDE.md` "Phase order" block names appears in the same relative order, using a
 name-to-doc-label map. The block is a condensed operator view, so table rows it deliberately
-omits (`factcheck`, `demote-noise`, `selfscore`) are exempt from presence but a reorder of any
+omits (`demote-noise`, `selfscore`) are exempt from presence but a reorder of any
 named row fails the suite. This replaces the one-time manual side-by-side read Plan 06-02
 recorded as its doc-drift check with a standing regression guard.
 
@@ -1188,7 +1184,7 @@ order is fixed, so a full-repo `ruff check` runs clean (LINT-01).
 Phase 8 (v5.1, DOC-03) promotes `selfscore` from a deliberately-omitted PHASE_TABLE row to
 an enforced label in `test_docs_invariants.py`'s `_PHASE_DOC_LABELS`: the CLAUDE.md
 phase-order block must now carry `Selfscore` between `Report` and `Red Team`, in
-PHASE_TABLE order. Only `factcheck` and `demote-noise` remain condensed-view omissions.
+PHASE_TABLE order. Only `demote-noise` remains a condensed-view omission.
 
 `test_dependency_sinks.py` (new) covers `sec_overlay.dependency_sinks`: the shipped
 catalog loads and passes `validate_catalog` with zero errors; the `opa-rego-http-send`

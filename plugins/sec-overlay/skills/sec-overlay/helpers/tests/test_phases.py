@@ -55,8 +55,6 @@ def test_first_phase_is_prefilter_and_investigate_precedes_findings_gate():
     assert names.index("demote-noise") < names.index("report")
     # ISSUE-045: trace is a required phase.
     assert "trace" in names
-    # ISSUE-047: factcheck applies the validate phase's verdict artifact.
-    assert names.index("trace") < names.index("factcheck") < names.index("calibrate")
 
 
 def test_artifact_phases_follow_selfscore():
@@ -116,7 +114,7 @@ def test_original_phase_order_is_preserved():
     original_order = [
         "recon", "architecture", "arch-gate", "threat_model", "tm-gate", "prefilter",
         "investigate", "findings-gate", "dedupe", "critic", "judge", "validate", "trace",
-        "factcheck", "calibrate", "patch", "verify", "demote-noise", "report", "selfscore",
+        "calibrate", "patch", "verify", "demote-noise", "report", "selfscore",
         "artifact-gate", "artifact-review",
     ]
     names = [p.name for p in PHASE_TABLE]

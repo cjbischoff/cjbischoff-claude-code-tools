@@ -241,6 +241,10 @@ they never confirm a finding.
 `crypto_policy.check(algo, params, key_source)` turns "is this weak crypto?" from an LLM
 opinion into a deterministic lookup — that is the whole point of the two YAML files.
 
+REQ-42 narrowed `finding.schema.json`'s `verification` enum to four values (`verified-static`,
+`static-only`, `not-fixed`, `verify-error`), matching `sec_overlay.evidence.VERIFICATION_VALUES`
+after the deleted `factcheck` phase's `fact-checked` value lost its only writer.
+
 ---
 
 ## How a reference file flows into a decision (worked example: crypto)
