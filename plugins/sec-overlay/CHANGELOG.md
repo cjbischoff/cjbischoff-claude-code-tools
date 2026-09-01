@@ -12,6 +12,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Three failing tests pin REQ-56: the bottom-line sentence must read a high-severity
+  needs-runtime finding, not confirmed findings alone, and the triage What column must drop a
+  finding message's leading status sentence.
+
 - A failing test pins REQ-55: a finding's directive body must show its own `preconditions`
   when `runtime_test` omits that field, in the same block the heading groups it under.
 

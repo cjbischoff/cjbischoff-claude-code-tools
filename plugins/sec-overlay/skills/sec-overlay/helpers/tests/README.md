@@ -1715,3 +1715,12 @@ round on clause (g)'s render-surface guard: the guard narrowed from an OR across
 The broader OR went silent on a report that emits the `## Triage` heading but no data rows while
 the stated count stays non-zero — a `to_markdown()` rendering bug, not a missing artifact — and
 this test fails against that broader guard while passing against the single-heading check.
+
+`test_report.py` gains three tests pinning REQ-56. One test proves a high-severity needs-runtime
+finding forces the "High-severity findings require immediate remediation" sentence, not a
+"medium/low" sentence keyed only off confirmed findings. Two tests pin the new `triage_what`
+helper: it drops a leading status sentence ("Confirmed.", "Provenance unresolved.") from a
+finding's message before the What column renders it, so a rendered triage row never leaks the
+finding's lifecycle state. The three tests use `dataclasses.replace` through a new module-level
+`import dataclasses`; earlier tests in the file keep their own local `import dataclasses` lines,
+left untouched.

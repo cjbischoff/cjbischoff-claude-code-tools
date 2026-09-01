@@ -1,5 +1,6 @@
 """Tests for Markdown reporting."""
 
+import dataclasses
 import json
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from sec_overlay.report import (
     render_position_review_section,
     select_reportable,
     to_markdown,
+    triage_what,
     write_report,
     write_review_ledger,
 )
@@ -1271,3 +1273,34 @@ def test_ndt_count_includes_the_external_leads_and_states_the_split():
     out = to_markdown([], needs_deployment=[_ndt_med(), lead])
     assert "Needs runtime proof: 2" in out
     assert "Leads pending external verification: 1" in out
+
+
+def test_bottom_line_counts_the_triage_population():
+    """REQ-56: a high-severity needs-runtime finding cannot read as medium/low."""
+    high = dataclasses.replace(_ndt_med(), id="NDT-HI", severity=Severity.HIGH)
+    out = to_markdown([_confirmed_dep()], needs_deployment=[high])
+    assert "High-severity findings require immediate remediation." in out
+    assert "medium/low" not in out.split("## Triage")[0]
+
+
+def test_triage_what_drops_a_leading_status_sentence():
+    """REQ-56: the What column carries the finding, never its status word."""
+    assert triage_what(
+        dataclasses.replace(
+            _confirmed_dep(), message="Provenance unresolved. Sink reads user input."
+        )
+    ) == "Sink reads user input."
+    assert triage_what(
+        dataclasses.replace(_confirmed_dep(), message="Confirmed. Sink reads user input.")
+    ) == "Sink reads user input."
+
+
+def test_triage_row_carries_no_status_word_in_the_what_column():
+    """REQ-56: the rendered row shows the finding, not its lifecycle state."""
+    f = dataclasses.replace(
+        _confirmed_dep(), message="Provenance unresolved. Sink reads user input."
+    )
+    out = to_markdown([f])
+    row = next(l for l in out.splitlines() if l.startswith(f"| {f.id} "))
+    assert "Provenance unresolved" not in row
+    assert "Sink reads user input." in row
