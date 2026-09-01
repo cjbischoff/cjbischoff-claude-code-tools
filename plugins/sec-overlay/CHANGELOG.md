@@ -4,6 +4,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- Failing tests pin REQ-57: a systemic cluster's `affected_sites` must each become a SARIF
+  `relatedLocations` entry, every result must carry `properties.findingId`, and a needs-runtime
+  suppression must carry `kind: "external"`, not `"inSource"`.
+
 ### Fixed
 
 - `to_markdown`'s bottom-line sentence reads severity over the full triage population, needs-

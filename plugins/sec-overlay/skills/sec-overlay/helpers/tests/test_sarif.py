@@ -69,7 +69,12 @@ def test_driver_rules_populated_from_findings():
     assert rule["properties"]["codeguard_ids"] == ["CG-12"]
 
 
-def test_suppressed_findings_carry_insource_suppression():
+def test_suppressed_findings_carry_an_external_suppression():
+    """REQ-57: a needs-runtime suppression is external, not inSource.
+
+    The prior contract emitted ``inSource``, which asserts an annotation in the
+    reviewed file. No such annotation exists; the reason is out-of-repo.
+    """
     confirmed = Finding(
         id="F-1",
         rule_id="r",
@@ -96,7 +101,35 @@ def test_suppressed_findings_carry_insource_suppression():
         for r in doc["runs"][0]["results"]
     }
     assert "suppressions" not in by_id["a.py"]
-    assert by_id["b.py"]["suppressions"][0]["kind"] == "inSource"
+    assert by_id["b.py"]["suppressions"][0]["kind"] == "external"
+
+
+def test_a_cluster_emits_one_related_location_per_affected_site():
+    """REQ-57: a systemic cluster must not shrink to one location in SARIF."""
+    f = _f(Severity.HIGH)
+    f.cluster_id = "C-1"
+    f.affected_sites = [
+        {"id": "F-0002", "file": "a.py", "line": 18},
+        {"id": "F-0003", "file": "b.py", "line": 42},
+        {"id": "F-0004", "file": "c.py", "line": 7},
+    ]
+    result = to_sarif([f])["runs"][0]["results"][0]
+    related = result["relatedLocations"]
+    assert len(related) == 3
+    uris = [r["physicalLocation"]["artifactLocation"]["uri"] for r in related]
+    assert uris == ["a.py", "b.py", "c.py"]
+    assert related[1]["physicalLocation"]["region"]["startLine"] == 42
+
+
+def test_a_singleton_finding_has_no_related_locations():
+    """REQ-57: the key appears only when the finding carries sites."""
+    assert "relatedLocations" not in to_sarif([_f(Severity.LOW)])["runs"][0]["results"][0]
+
+
+def test_every_result_carries_its_finding_id():
+    """REQ-57: a SARIF consumer must be able to name the finding."""
+    result = to_sarif([_f(Severity.HIGH)])["runs"][0]["results"][0]
+    assert result["properties"]["findingId"] == "F-0001"
 
 
 # --- partialFingerprints (OUT-02) ----------------------------------------------

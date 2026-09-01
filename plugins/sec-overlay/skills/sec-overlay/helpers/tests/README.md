@@ -1724,3 +1724,15 @@ finding's message before the What column renders it, so a rendered triage row ne
 finding's lifecycle state. The three tests use `dataclasses.replace` through a new module-level
 `import dataclasses`; earlier tests in the file keep their own local `import dataclasses` lines,
 left untouched.
+
+`test_sarif.py` gains three tests pinning REQ-57. One test pins a cluster's `relatedLocations`:
+each entry of `Finding.affected_sites` must become its own SARIF location, in list order, so a
+systemic cluster stops shrinking to the single primary location. A second test pins the negative
+case: a finding with no `affected_sites` carries no `relatedLocations` key at all. A third test
+pins `result.properties.findingId`, so a SARIF consumer can name the finding a result came from.
+`test_suppressed_findings_carry_insource_suppression` is renamed to
+`test_suppressed_findings_carry_an_external_suppression` and its final assertion now expects
+`kind == "external"`, not `"inSource"` — the prior kind asserted an in-file annotation that never
+existed. The cluster and finding-id tests fail before the fix with `KeyError`; the renamed test
+fails on the kind string. The negative test (no `affected_sites`, no `relatedLocations` key)
+already holds against the unfixed code and stays green as a regression guard, not a red test.
