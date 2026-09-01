@@ -6,6 +6,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- `tests/test_phase_artifact_contract.py` pins REQ-43: `validate-fix` must sit between `patch` and `verify` as an agent phase, `verify` must declare the gate file `kb/gates/validate-fix.json` as an input, `sec_overlay.verify` must export `apply_fix_gates`, and `apply_fix_gates` must record a scored verdict in a finding's history without changing its `status`. Four tests fail: `validate-fix` is absent from `PHASE_TABLE`, `verify` declares no such input, `apply_fix_gates` does not exist, and `verify.py` names `score_fix` nowhere.
+
 - `tests/test_report.py` gains two tests pinning REQ-40's CLI boundary (fix round 1). `report.main()` must probe `redteam-plan.md` on disk. It must not take `write_report`'s `False` default. One test fails. The CLI passes no `has_redteam_plan`, so the report omits the pointer even when the file exists.
 
 - `tests/test_phase_artifact_contract.py` gains four tests pinning REQ-40: `report` must declare `reports/redteam-plan.md` as an input, `redteam` must precede `report`, `render_ndt` must accept a `has_redteam_plan` keyword and omit the pointer when false, and `report.py` must hold no `redteam-plan.md` filesystem probe. All four fail: `report` declares no such input, `redteam` still runs after `selfscore`, `render_ndt` rejects the keyword, and the probe is present.

@@ -88,3 +88,82 @@ def test_only_the_report_cli_probes_for_the_redteam_plan() -> None:
     assert probe in inspect.getsource(report.main)
     assert probe not in inspect.getsource(report.write_report)
     assert probe not in inspect.getsource(report.write_finding_details)
+
+
+def _confirmed_with_patch(fid: str):
+    from sec_overlay.models import Finding, FindingStatus, Severity
+
+    return Finding(
+        id=fid,
+        rule_id="r",
+        cls="authz",
+        status=FindingStatus.CONFIRMED,
+        severity=Severity.HIGH,
+        file="a.py",
+        line=1,
+        message="m",
+        patch_diff="--- a/a.py\n+++ b/a.py\n",
+    )
+
+
+def test_validate_fix_is_a_phase_between_patch_and_verify() -> None:
+    # REQ-43: the prompt and score_fix both shipped with no caller, so
+    # verify.py's `verify:conflict` branch was unreachable.
+    from sec_overlay.phases import PHASE_TABLE
+
+    names = [p.name for p in PHASE_TABLE]
+    assert names.index("patch") < names.index("validate-fix") < names.index("verify")
+    vf = next(p for p in PHASE_TABLE if p.name == "validate-fix")
+    assert vf.kind == "agent" and vf.prompt == "validate-fix.md"
+
+
+def test_verify_declares_the_validate_fix_gate_as_an_input(tmp_path) -> None:
+    # REQ-43: verify reads the gate file, so the driver must gate on it.
+    from sec_overlay.phases import PHASE_TABLE, missing_inputs
+
+    ws = Workspace(tmp_path / "w")
+    ws.ensure()
+    verify = next(p for p in PHASE_TABLE if p.name == "verify")
+    assert missing_inputs(verify, ws) == [ws.kb / "gates" / "validate-fix.json"]
+
+
+def test_apply_fix_gates_records_the_verdict_without_setting_status(tmp_path) -> None:
+    # REQ-43: scoring.py computes the verdict, never the LLM, and verify keeps
+    # sole ownership of promotion.
+    import json
+
+    from sec_overlay.models import FindingStatus
+    from sec_overlay.verify import apply_fix_gates
+    from sec_overlay.workspace import read_findings, write_findings
+
+    ws = Workspace(tmp_path / "w")
+    ws.ensure()
+    write_findings(ws, [_confirmed_with_patch("F-1")])
+    (ws.kb / "gates").mkdir(parents=True, exist_ok=True)
+    (ws.kb / "gates" / "validate-fix.json").write_text(
+        json.dumps(
+            {
+                "F-1": {
+                    "root_cause": "pass",
+                    "instance_coverage": "partial",
+                    "no_new_vulnerabilities": "partial",
+                    "best_practices": "pass",
+                }
+            }
+        )
+    )
+
+    assert apply_fix_gates(ws) == 1
+    f = read_findings(ws)[0]
+    assert f.status is FindingStatus.CONFIRMED  # apply_fix_gates never promotes
+    events = [h.get("event") for h in f.history]
+    assert "validate-fix:partial" in events
+
+
+def test_score_fix_has_a_non_test_caller() -> None:
+    # REQ-43: score_fix shipped with no production caller.
+    import inspect
+
+    from sec_overlay import verify
+
+    assert "score_fix" in inspect.getsource(verify)

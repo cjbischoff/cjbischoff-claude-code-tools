@@ -555,6 +555,13 @@ banned the probe substring anywhere in the module, which was broader than REQ-40
 replacement asserts the probe appears exactly once in `report.py`, inside `main()`, and confirms
 `write_report` and `write_finding_details` hold none.
 
+`test_phase_artifact_contract.py` gains four tests pinning REQ-43: `validate-fix` must sit
+between `patch` and `verify` as an agent phase naming `validate-fix.md`; `verify` must declare
+`kb/gates/validate-fix.json` as an input; `apply_fix_gates` must stamp a scored verdict into a
+finding's history without changing its `status`; and `sec_overlay.verify` must name `score_fix`.
+All four fail: `validate-fix` is absent from `PHASE_TABLE`, `verify` declares no such input,
+`apply_fix_gates` does not exist, and `verify.py` names `score_fix` nowhere.
+
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 
