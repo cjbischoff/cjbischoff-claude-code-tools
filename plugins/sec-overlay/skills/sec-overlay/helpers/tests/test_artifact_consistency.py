@@ -242,3 +242,18 @@ def test_gate_passes_when_the_report_states_the_external_split(tmp_path):
         json.dumps({"runs": [{"results": [{"ruleId": "r"}, {"ruleId": "r"}]}]})
     )
     assert run_artifact_consistency(ws) == []
+
+
+def test_gate_flags_a_triage_heading_with_no_rows_against_a_stated_count(tmp_path):
+    """Check (g): a `## Triage` heading with no data rows is a render bug, not a missing artifact."""
+    ws = _ws(tmp_path)
+    write_findings(ws, [_ndt()])
+    _selfscore(ws, {"confirmed": 0, "needs_runtime": 1})
+    ws.report_path.write_text(
+        "# sec-overlay Report\n\nConfirmed: 0\nNeeds runtime proof: 1\n\n"
+        "## Triage\n\n"
+        "| ID | Risk | What | Location | Status | Next action |\n"
+        "|----|------|------|----------|--------|-------------|\n\n"
+    )
+    errors = run_artifact_consistency(ws)
+    assert any("needs-runtime" in e and "renders" in e for e in errors)

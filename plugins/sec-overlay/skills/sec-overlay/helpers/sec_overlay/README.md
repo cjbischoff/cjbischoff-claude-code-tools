@@ -1424,10 +1424,14 @@ shape `report.py` uses for the external-leads section) — intersected with the 
 confirms exist on disk. Part one flags a stated `Needs runtime proof: N` that disagrees with how
 many rendered ids carry `FindingStatus.NEEDS_DEPLOYMENT_TESTING`; part two flags a SARIF result
 count that disagrees with the total rendered id count, degrading to a pass when `report.sarif`
-does not exist. Both parts additionally require the report to show some rendering surface at all
-(a triage row, a detail link, or a section heading) before judging the counts — a report body
-with no such surface is an incomplete artifact, not a contradiction, matching every other check in
-this module.
+does not exist. Part one additionally requires the report to contain a `## Triage` heading before
+judging the count — every real `to_markdown()` output emits that heading unconditionally, so its
+absence marks the report body as an incomplete artifact (the synthetic bare-count-line fixture
+used by a pre-existing unit test), not a contradiction, matching every other check in this module.
+The guard is a single structural check on that one heading, not an OR across triage rows, detail
+links, and section headings — a report can emit `## Triage` with a heading and no data rows (a
+`to_markdown()` regression that drops every row while the stated count stays non-zero), and that
+case must still trip the check, not go silent.
 
 `report.py`'s bottom line now separates two needs-runtime populations: `ndt_all` (every
 needs-deployment-testing finding) drives the stated `Needs runtime proof:` count, and `external`

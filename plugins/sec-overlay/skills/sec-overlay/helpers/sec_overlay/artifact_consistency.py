@@ -213,11 +213,7 @@ def _check_sarif_population(ws: Workspace, report_md: str) -> list[str]:
     rendered = _rendered_ids(ws, report_md)
     by_id = {f.id: f for f in read_findings(ws)}
     errors: list[str] = []
-    has_render_surface = (
-        bool(_triage_rows(report_md))
-        or bool(_DETAIL_LINK.search(report_md))
-        or bool(_SECTION_ID.search(report_md))
-    )
+    has_render_surface = "## Triage" in report_md
     match = re.search(r"^Needs runtime proof: (\d+)$", report_md, re.MULTILINE)
     if match is not None and has_render_surface:
         stated = int(match.group(1))

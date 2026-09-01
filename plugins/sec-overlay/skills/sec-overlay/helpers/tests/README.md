@@ -1689,3 +1689,10 @@ file that build a modified `Finding` this way; the module has no top-level `data
 All four fail before the fix: `artifact_consistency.py` has no clause reading SARIF or the
 rendered id set, and `report.py`'s `Needs runtime proof` line counts only the non-external
 needs-deployment-testing findings with no split line.
+
+A fifth test, `test_gate_flags_a_triage_heading_with_no_rows_against_a_stated_count`, pins a fix
+round on clause (g)'s render-surface guard: the guard narrowed from an OR across triage rows,
+`## Detail` links, and section headings down to one structural check, `"## Triage" in report_md`.
+The broader OR went silent on a report that emits the `## Triage` heading but no data rows while
+the stated count stays non-zero — a `to_markdown()` rendering bug, not a missing artifact — and
+this test fails against that broader guard while passing against the single-heading check.
