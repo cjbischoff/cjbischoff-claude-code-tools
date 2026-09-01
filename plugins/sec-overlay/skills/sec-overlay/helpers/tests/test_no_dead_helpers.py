@@ -228,6 +228,38 @@ def test_a_dead_helper_masked_by_a_name_collision_is_still_listed():
     assert not missing, "dead helpers hidden by a name collision: " + ", ".join(missing)
 
 
+def test_the_prompt_corpus_holds_the_command_files():
+    """The slash command invokes helpers, so ``commands/`` must be citable."""
+    labels = [label for label, _ in _prompt_texts()]
+    assert "commands/audit.md" in labels
+
+
+def test_prompt_only_cites_the_file_that_invokes_the_helper():
+    """``commands/audit.md`` runs these four helpers, so each entry must cite that file."""
+    keys = ("run.py:advance", "run.py:drive", "run.py:infer_role", "run.py:synthesize_manifest")
+    wrong = [f"{key} -> {PROMPT_ONLY.get(key, 'absent')}" for key in keys
+             if PROMPT_ONLY.get(key) != "commands/audit.md"]
+    assert not wrong, "these entries must cite commands/audit.md: " + ", ".join(wrong)
+
+
+def test_every_prompt_only_entry_cites_a_code_invocation():
+    """A citation must invoke the helper in a code span. Prose that names it does not count."""
+    fence = re.compile(r"^```.*?^```", re.MULTILINE | re.DOTALL)
+    texts = dict(_prompt_texts())
+    prose_only: list[str] = []
+    for key, label in PROMPT_ONLY.items():
+        module, name = key.split(":", 1)
+        text = texts.get(label, "")
+        code = "\n".join(fence.findall(text) + re.findall(r"`[^`\n]+`", fence.sub("\n", text)))
+        call = re.search(rf"\b{re.escape(name)}\s*\(", code)
+        qualified = re.search(rf"\b{re.escape(module[:-3])}\.{re.escape(name)}\b", code)
+        if not call and not qualified:
+            prose_only.append(f"{key} (cited {label})")
+    assert not prose_only, (
+        "PROMPT_ONLY entries with no code invocation in the cited file: " + ", ".join(
+            sorted(prose_only)))
+
+
 def test_public_functions_reports_an_async_helper(tmp_path: Path):
     """An ``async def`` public helper must be visible to the scan."""
     (tmp_path / "sample.py").write_text("async def go():\n    return 1\n")

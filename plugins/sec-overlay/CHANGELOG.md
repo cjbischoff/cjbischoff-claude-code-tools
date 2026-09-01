@@ -4,6 +4,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- `tests/test_no_dead_helpers.py` gains three tests pinning fix round 1, finding I2. The prompt
+  corpus must hold `commands/audit.md`, the four helpers that the slash command runs must cite
+  that file, and every `PROMPT_ONLY` entry must invoke its helper inside a code span of the cited
+  file. All three fail. The corpus omits `commands/`, and the citation check accepts a bare name
+  in prose.
+
 ### Fixed
 
 - `tests/test_no_dead_helpers.py` resolves a reference to the module that defines the function.

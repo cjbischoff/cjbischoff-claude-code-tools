@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-140 pytest files, 1784 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+140 pytest files, 1787 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -31,6 +31,12 @@ and reads the attribute, or uses the bare name inside the defining module itself
 so a test-only importer never makes a helper live: `fix_disposition.py:validate` is imported by
 `test_fix_and_gates.py` and still belongs in `DEAD_ALLOWLIST`. Module keys are file basenames, so
 `cli.py` and `workspace.py`, which each exist twice in this tree, share one key per name.
+
+`test_no_dead_helpers.py` gains three more tests pinning fix round 1, finding I2. The prompt corpus
+must hold `commands/audit.md`. The four helpers that the slash command runs must cite that file.
+Every `PROMPT_ONLY` entry must invoke its helper inside a code span of the cited file. All three
+fail: the corpus stops at `agents/` and `SKILL.md`, and a bare name in prose satisfies the current
+citation check.
 
 `test_dead_lever.py`'s three REQ-47 tests now pass: `sec_overlay.scope` and `test_scope.py` are
 deleted (the module had no caller), `scanscope.py`'s `rel_to_root` is deleted along with its test
