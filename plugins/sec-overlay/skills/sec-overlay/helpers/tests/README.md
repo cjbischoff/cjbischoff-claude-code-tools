@@ -4,6 +4,12 @@
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+`test_dead_lever.py` gains three tests pinning REQ-47: `sec_overlay.scope` must no longer import,
+`sec_overlay.scanscope` must expose only `ScanScope`, `resolve`, `write_scope`, and `load_scope`,
+and `SKILL.md` must source the scope tokens from `run.env` rather than restating the old
+`kb/scan-scope.json` sentence. All three fail: `sec_overlay.scope` still imports, `scanscope` still
+exposes `rel_to_root`, and `SKILL.md` names neither `run.env` nor the replacement wording.
+
 `test_dead_lever.py` gains three tests pinning REQ-46: `sec_overlay.cost` must expose only
 `record_timing` and `aggregate_timings_by_phase`, a bare workspace's rendered report must hold no
 "Tokens by" or "Estimated cost" line, and `SKILL.md` must never name `record_agent(`. `cost.py`

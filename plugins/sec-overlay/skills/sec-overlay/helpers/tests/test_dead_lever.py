@@ -93,3 +93,34 @@ def test_report_renders_no_token_or_usd_line(tmp_path: Path):
 def test_skill_md_never_names_record_agent():
     skill = Path(__file__).resolve().parents[2] / "SKILL.md"
     assert "record_agent(" not in skill.read_text()
+
+
+def test_scope_module_is_gone():
+    import importlib
+
+    try:
+        importlib.import_module("sec_overlay.scope")
+    except ModuleNotFoundError:
+        return
+    raise AssertionError("sec_overlay.scope still imports")
+
+
+def test_scanscope_keeps_only_its_live_surface():
+    from sec_overlay import scanscope
+
+    public = {
+        k
+        for k, v in vars(scanscope).items()
+        if not k.startswith("_")
+        and getattr(v, "__module__", None) == "sec_overlay.scanscope"
+    }
+    assert public == {"ScanScope", "resolve", "write_scope", "load_scope"}
+
+
+def test_skill_md_sources_the_scope_tokens_from_run_env():
+    skill = (Path(__file__).resolve().parents[2] / "SKILL.md").read_text()
+    assert "run.env" in skill
+    assert (
+        "{{SCAN_SCOPE}}` (the audit target path relative to `{{REPO_ROOT}}`, also from "
+        "`kb/scan-scope.json`)"
+    ) not in skill
