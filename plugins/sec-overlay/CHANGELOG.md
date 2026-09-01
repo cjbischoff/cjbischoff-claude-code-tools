@@ -4,6 +4,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Fixed
+
+- `dedupe_findings` stamps a fingerprint on every finding, whatever its status (REQ-58). The
+  three grouping passes still read `_ACTIVE`, so only a `RAW` or `CONFIRMED` finding can become
+  a `DUPLICATE`. `postflight._merge` now always has a real fingerprint and never falls back to
+  a `file:line:cls` key that collapsed distinct rejected findings sharing a site.
+
 ### Added
 
 - A failing test pins REQ-58: two rejected findings sharing a file and line must each get a

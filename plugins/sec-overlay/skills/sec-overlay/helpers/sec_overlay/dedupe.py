@@ -21,7 +21,9 @@ def dedupe_findings(ws: Workspace) -> int:
     Findings with the same ``(file, line, cls)`` and a status in {RAW, CONFIRMED}
     are collapsed: the highest-severity member (tiebreak: smallest id) stays; the
     rest become ``DUPLICATE`` with ``duplicate_of`` set to the primary's id.
-    All active findings are stamped with a stable fingerprint.
+    All findings are stamped with a stable fingerprint, whatever their status, so
+    the prior-context merge in ``postflight`` never falls back to a ``file:line:cls``
+    key.
 
     Args:
         ws: Workspace whose findings are deduped in place.
@@ -44,13 +46,12 @@ def dedupe_findings(ws: Workspace) -> int:
             f.history.append({"event": f"duplicate_of:{f.duplicate_of}"})
             marked += 1
 
-    # Stamp every active finding with a stable fingerprint. Resolve a refactor-
-    # resistant anchor from the substrate when present.
+    # Stamp every finding with a stable fingerprint, whatever its status. Resolve
+    # a refactor-resistant anchor from the substrate when present.
     graph = load_graph(ws) if (ws.kb / "graph.json").exists() else None
     for f in findings:
-        if f.status in _ACTIVE:
-            anchor = symbol_at(graph, f.file, f.line) if graph is not None else None
-            f.fingerprint = fingerprint(f, anchor=anchor)
+        anchor = symbol_at(graph, f.file, f.line) if graph is not None else None
+        f.fingerprint = fingerprint(f, anchor=anchor)
     stamped = True
 
     groups: dict[tuple, list[Finding]] = {}

@@ -1704,3 +1704,10 @@ reaches a SARIF consumer as a single location. Every result also gains `properti
 a consumer can name the finding a result came from. The `suppressed` parameter's suppression entry
 now carries `kind: "external"`, not `"inSource"` — the prior kind asserted an in-file annotation
 that a needs-runtime finding never carries; the reason for the suppression sits outside the repo.
+
+`dedupe.py`'s stamping loop now runs over every finding, not only `RAW` and `CONFIRMED` ones
+(REQ-58). A rejected, duplicate, or stale finding now carries the same 12-character fingerprint
+a raw one does, so `postflight._merge` always has a fingerprint to key its prior-context entry
+on and never falls back to a `file:line:cls` key that collapses distinct findings sharing a
+site. The three grouping passes below the stamping loop still read `_ACTIVE` unchanged — only
+a `RAW` or `CONFIRMED` finding may be marked `DUPLICATE`.
