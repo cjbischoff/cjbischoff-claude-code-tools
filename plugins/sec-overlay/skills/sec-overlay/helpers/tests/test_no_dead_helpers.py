@@ -21,12 +21,18 @@ from pathlib import Path
 
 HELPERS = Path(__file__).resolve().parents[1]
 SKILL_ROOT = HELPERS.parent
+PLUGIN_ROOT = SKILL_ROOT.parents[1]
+
+FENCED = re.compile(r"^```.*?^```", re.MULTILINE | re.DOTALL)
+INDENTED = re.compile(r"^(?: {4}|\t)\S.*$", re.MULTILINE)
+INLINE = re.compile(r"`[^`\n]+`")
 
 # Unreferenced at plugin 2.1.11. Each entry is a real gap, not a false positive.
 # A name added here after this plan must carry its own one-line reason.
 DEAD_ALLOWLIST: dict[str, str] = {
     "astgrep.py:astgrep_available": "unreferenced at 2.1.11",
     "calibrate.py:calibrate_score": "unreferenced at 2.1.11",
+    "campaign.py:pass_report": "unreferenced at 2.1.12; prose mention only",
     "class_ext.py:class_extension_status": "unreferenced at 2.1.11",
     "codeguard.py:default_codeguard_dir": "unreferenced at 2.1.11",
     "codeguard.py:load_rules": "unreferenced at 2.1.11",
@@ -34,12 +40,13 @@ DEAD_ALLOWLIST: dict[str, str] = {
     "coverage_guide.py:should_stop": "unreferenced at 2.1.11",
     "crypto_policy.py:load_policy": "unreferenced at 2.1.11",
     "custom_checks.py:custom_check_classes": "unreferenced at 2.1.11",
+    "detection_coverage.py:generate": "unreferenced at 2.1.12; prose mention only",
     "diffhunks.py:added_line_numbers": "unreferenced at 2.1.11",
     "diffhunks.py:line_in_hunk": "unreferenced at 2.1.11",
-    "diffscope.py:head_sha": "unreferenced at 2.1.12; imported only by tests/test_diffscope.py",
+    "diffscope.py:head_sha": "unreferenced at 2.1.12; test-only importer",
     "envelope.py:attribution_banner": "unreferenced at 2.1.11",
     "fix_disposition.py:compute_tier": "unreferenced at 2.1.11",
-    "fix_disposition.py:validate": "unreferenced at 2.1.12; imported only by tests/test_fix_and_gates.py",
+    "fix_disposition.py:validate": "unreferenced at 2.1.12; test-only importer",
     "gates.py:run_gates": "unreferenced at 2.1.11",
     "githist.py:files_in_commit": "unreferenced at 2.1.11",
     "graph.py:attacker_controls": "unreferenced at 2.1.11; adjacent finding A-4",
@@ -56,26 +63,23 @@ DEAD_ALLOWLIST: dict[str, str] = {
     "prove.py:loopback_collector": "unreferenced at 2.1.11; adjacent finding A-3",
     "prove.py:run_prove": "unreferenced at 2.1.11; adjacent finding A-3",
     "reachability.py:blocker_of": "unreferenced at 2.1.11",
-    "reachability.py:partition": "unreferenced at 2.1.12; imported only by tests/test_bucket_c.py",
+    "reachability.py:partition": "unreferenced at 2.1.12; test-only importer",
     "route_control.py:build_route_control_table": "unreferenced at 2.1.11",
     "route_control.py:check_architecture_controls": "unreferenced at 2.1.11",
     "route_control.py:check_recon_routes": "unreferenced at 2.1.11",
     "route_control.py:check_threat_entrypoints": "unreferenced at 2.1.11",
     "rule_matcher.py:build_guided_context": "unreferenced at 2.1.11",
     "rule_matcher.py:match_function": "unreferenced at 2.1.11",
-    "run.py:infer_role": "unreferenced at 2.1.11",
-    "run.py:synthesize_manifest": "unreferenced at 2.1.11",
 }
 
 # No Python importer, but a prompt names the function and runs it in a shell command.
 PROMPT_ONLY: dict[str, str] = {
     "campaign.py:carry_forward": "SKILL.md",
-    "campaign.py:pass_report": "SKILL.md",
     "campaign.py:salvage_partial": "SKILL.md",
     "context.py:control_findings": "agents/context-ingest.md",
     "context.py:control_worklist": "SKILL.md",
     "context.py:hunt_rows": "SKILL.md",
-    "context.py:leads": "agents/redteam.md",
+    "context.py:leads": "SKILL.md",
     "context.py:load": "agents/context-ingest.md",
     "context.py:manual_review_findings": "SKILL.md",
     "context.py:save": "agents/context-ingest.md",
@@ -83,8 +87,7 @@ PROMPT_ONLY: dict[str, str] = {
     "custom_checks.py:custom_check_instructions": "SKILL.md",
     "custom_checks.py:discover_custom_checks": "SKILL.md",
     "custom_checks.py:merge_custom_check_classes": "SKILL.md",
-    "detection_coverage.py:generate": "agents/tune-config.md",
-    "githist.py:security_fix_commits": "agents/recon.md",
+    "githist.py:security_fix_commits": "SKILL.md",
     "novelty.py:upstream_status": "SKILL.md",
     "partition.py:must_investigate": "SKILL.md",
     "phase_gate.py:claims_from_context": "SKILL.md",
@@ -93,8 +96,10 @@ PROMPT_ONLY: dict[str, str] = {
     "phase_gate.py:run_phase_checks": "SKILL.md",
     "reflection.py:validate_verdict": "agents/README.md",
     "rule_gaps.py:emit_semgrep_rule": "SKILL.md",
-    "run.py:advance": "SKILL.md",
-    "run.py:drive": "agents/classes/prompt-injection.md",
+    "run.py:advance": "commands/audit.md",
+    "run.py:drive": "commands/audit.md",
+    "run.py:infer_role": "commands/audit.md",
+    "run.py:synthesize_manifest": "commands/audit.md",
     "scanscope.py:load_scope": "agents/context-ingest.md",
     "stage_validate.py:repair_prompt": "SKILL.md",
     "stage_validate.py:validate_stage": "SKILL.md",
@@ -112,10 +117,9 @@ def _public_functions(root: Path | None = None) -> dict[str, str]:
     for path in sorted((root or HELPERS / "sec_overlay").rglob("*.py")):
         if path.name == "__init__.py":
             continue
+        defs = (ast.FunctionDef, ast.AsyncFunctionDef)
         for node in ast.parse(path.read_text()).body:
-            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and not node.name.startswith(
-                "_"
-            ):
+            if isinstance(node, defs) and not node.name.startswith("_"):
                 out[f"{path.name}:{node.name}"] = path.name
     return out
 
@@ -178,24 +182,42 @@ def _referenced_keys() -> set[str]:
 
 
 def _prompt_texts() -> list[tuple[str, str]]:
-    """Every agent prompt and the skill playbook, as ``(label, text)`` pairs."""
+    """Every agent prompt, the skill playbook, and every slash command, as ``(label, text)``."""
     files = sorted((SKILL_ROOT / "agents").rglob("*.md")) + [SKILL_ROOT / "SKILL.md"]
-    return [(str(p.relative_to(SKILL_ROOT)), p.read_text()) for p in files]
+    out = [(str(p.relative_to(SKILL_ROOT)), p.read_text()) for p in files]
+    commands = sorted((PLUGIN_ROOT / "commands").rglob("*.md"))
+    out += [(str(p.relative_to(PLUGIN_ROOT)), p.read_text()) for p in commands]
+    return out
+
+
+def _code_context(text: str) -> str:
+    """Keep only the code of a Markdown file: fenced blocks, indented blocks, backtick spans."""
+    fenced = FENCED.findall(text)
+    rest = FENCED.sub("\n", text)
+    return "\n".join(fenced + INDENTED.findall(rest) + INLINE.findall(rest))
+
+
+def _invokes(key: str, code: str) -> bool:
+    """Report whether ``code`` calls the helper or names it as ``<module>.<function>``."""
+    module, name = key.split(":", 1)
+    return bool(
+        re.search(rf"\b{re.escape(name)}\s*\(", code)
+        or re.search(rf"\b{re.escape(module[:-3])}\.{re.escape(name)}\b", code)
+    )
 
 
 def test_every_public_helper_has_a_caller_or_a_listed_reason():
     referenced = _referenced_keys()
-    prompts = _prompt_texts()
+    prompts = [(label, _code_context(text)) for label, text in _prompt_texts()]
     unlisted_dead: list[str] = []
     unlisted_prompt: list[str] = []
     for key in _public_functions():
         if key in referenced:
             continue
-        name = key.split(":", 1)[1]
-        named_by = [label for label, text in prompts if re.search(rf"\b{re.escape(name)}\b", text)]
-        if named_by:
-            if key not in PROMPT_ONLY and key not in DEAD_ALLOWLIST:
-                unlisted_prompt.append(f"{key} (named by {named_by[0]})")
+        invoked_by = [label for label, code in prompts if _invokes(key, code)]
+        if invoked_by:
+            if key not in PROMPT_ONLY:
+                unlisted_prompt.append(f"{key} (invoked by {invoked_by[0]})")
         elif key not in DEAD_ALLOWLIST:
             unlisted_dead.append(key)
     assert not unlisted_dead, (
@@ -207,7 +229,8 @@ def test_every_public_helper_has_a_caller_or_a_listed_reason():
 def test_no_list_entry_has_gained_a_caller():
     referenced = _referenced_keys()
     stale = sorted(key for key in (DEAD_ALLOWLIST | PROMPT_ONLY) if key in referenced)
-    assert not stale, "these entries now have a Python caller and must be removed: " + ", ".join(stale)
+    assert not stale, (
+        "these entries now have a Python caller and must be removed: " + ", ".join(stale))
 
 
 def test_no_list_entry_names_a_function_that_is_gone():
@@ -244,16 +267,10 @@ def test_prompt_only_cites_the_file_that_invokes_the_helper():
 
 def test_every_prompt_only_entry_cites_a_code_invocation():
     """A citation must invoke the helper in a code span. Prose that names it does not count."""
-    fence = re.compile(r"^```.*?^```", re.MULTILINE | re.DOTALL)
     texts = dict(_prompt_texts())
     prose_only: list[str] = []
     for key, label in PROMPT_ONLY.items():
-        module, name = key.split(":", 1)
-        text = texts.get(label, "")
-        code = "\n".join(fence.findall(text) + re.findall(r"`[^`\n]+`", fence.sub("\n", text)))
-        call = re.search(rf"\b{re.escape(name)}\s*\(", code)
-        qualified = re.search(rf"\b{re.escape(module[:-3])}\.{re.escape(name)}\b", code)
-        if not call and not qualified:
+        if not _invokes(key, _code_context(texts.get(label, ""))):
             prose_only.append(f"{key} (cited {label})")
     assert not prose_only, (
         "PROMPT_ONLY entries with no code invocation in the cited file: " + ", ".join(

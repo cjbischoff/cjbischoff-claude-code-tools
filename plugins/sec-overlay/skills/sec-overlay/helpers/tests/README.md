@@ -38,6 +38,15 @@ Every `PROMPT_ONLY` entry must invoke its helper inside a code span of the cited
 fail: the corpus stops at `agents/` and `SKILL.md`, and a bare name in prose satisfies the current
 citation check.
 
+A `PROMPT_ONLY` citation now must prove an invocation. The guard keeps only the code of the cited
+file: fenced blocks, indented blocks, and inline backtick spans. Inside that code the helper must
+appear as a call, `name(`, or as `module.name`. The corpus adds `plugins/sec-overlay/commands/`,
+which is where the slash command runs `drive`, `advance`, `infer_role`, and `synthesize_manifest`.
+Re-citing every entry moved `run.py:infer_role` and `run.py:synthesize_manifest` out of
+`DEAD_ALLOWLIST` into `PROMPT_ONLY` at `commands/audit.md`, moved `campaign.py:pass_report` and
+`detection_coverage.py:generate` the other way, and re-pointed `context.py:leads`,
+`githist.py:security_fix_commits`, `run.py:advance`, and `run.py:drive` at the file that runs them.
+
 `test_dead_lever.py`'s three REQ-47 tests now pass: `sec_overlay.scope` and `test_scope.py` are
 deleted (the module had no caller), `scanscope.py`'s `rel_to_root` is deleted along with its test
 in `test_scanscope.py` (also no caller), and `SKILL.md`'s scope-token paragraph now points at

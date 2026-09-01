@@ -4,6 +4,16 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Fixed
+
+- `tests/test_no_dead_helpers.py` requires a `PROMPT_ONLY` citation to prove an invocation. The
+  helper must appear as a call or as `module.name` inside a code span of the cited file. The
+  corpus adds `plugins/sec-overlay/commands/`. `run.py:infer_role` and
+  `run.py:synthesize_manifest` move to `PROMPT_ONLY` at `commands/audit.md`.
+  `campaign.py:pass_report` and `detection_coverage.py:generate` move to `DEAD_ALLOWLIST`.
+  `context.py:leads`, `githist.py:security_fix_commits`, `run.py:advance`, and `run.py:drive`
+  now cite the file that runs them.
+
 ### Added
 
 - `tests/test_no_dead_helpers.py` gains three tests pinning fix round 1, finding I2. The prompt
