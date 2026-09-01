@@ -14,7 +14,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
-- New `tests/test_constraint_enforcer.py` tests pin REQ-52: `reachability.BLOCKERS` must admit `external-boundary`, `blocker_of` must stop coercing it to `"other"`, `agents/trace.md`'s reachability-decision prose must name it in the closed taxonomy, and `findings_gate.validate_findings` must reject an `external-boundary` finding whose `open_questions` carries no complete entry (all three `OPEN_QUESTION_KEYS` present and non-empty) while accepting one that does. Five of the six new assertions fail: `external-boundary` is absent from `BLOCKERS` and the `reachability.blocker` schema enum, the trace prompt's taxonomy bullet does not name it, and the gate has no clause for it.
+- New `tests/test_constraint_enforcer.py` tests pin REQ-52: `reachability.BLOCKERS` must admit `external-boundary`, `blocker_of` must stop coercing it to `"other"`, `agents/trace.md`'s reachability-decision prose must name it in the closed taxonomy, and `findings_gate.validate_findings` must reject an `external-boundary` finding whose `open_questions` carries no complete entry (all three `OPEN_QUESTION_KEYS` present and non-empty) while accepting one that does. All six new assertions fail: `external-boundary` is absent from `BLOCKERS` and the `reachability.blocker` schema enum, the trace prompt's taxonomy bullet does not name it, the gate has no clause for it, and `findings_gate.py:106` runs `_schema_validate` on every finding before any gate clause, so the enum rejects `external-boundary` before the new clause is ever reached.
 
 ### Added
 
