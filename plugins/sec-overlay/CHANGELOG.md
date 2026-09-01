@@ -4,6 +4,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- New `tests/test_constraint_enforcer.py` tests pin REQ-51: `evidence._MECHANICAL` must derive from `TIER1_RECEIPTS | TIER2_RECEIPTS` instead of an independent literal, and a new `evidence.unknown_receipts` must report a source whose prefix names neither tier and is not `llm`-namespaced, pass a declared prefix, pass an `llm-claimed:`/`llm-corroborated` source, and pass the `prove` lane's `reproduction` receipt. Two `findings_gate` tests confirm the gate reports an undeclared prefix with a "closed set" message and that a finding confirmed solely by `reproduction` still passes. `test_findings_gate.py::test_confirmed_requires_tool_receipt`'s fixture drops `read:sanity` for `llm-claimed:read-sanity` — `read:sanity` names an undeclared prefix under REQ-51. Five of the seven new assertions fail: `evidence.unknown_receipts` does not exist yet, and the gate does not check it.
+
 ### Fixed
 
 - `finding.schema.json`'s `completeness_tier`, `judge_verdict`, `receipt_tier`, and `reachability.blocker` now carry a schema `enum` derived from their code source (REQ-50): `sec_overlay.fix_disposition.TIERS`, a new `sec_overlay.calibrate.JUDGE_VERDICTS`, the literal `{1, 2}`, and `sec_overlay.reachability.BLOCKERS`. `calibrate.py`'s judge-downgrade branch now reads `f.judge_verdict in _DOWNGRADE_VERDICTS` instead of a literal tuple. The `open_questions`, `affected_sites`, and `history` item schemas gain typed `properties` mirroring `models.OPEN_QUESTION_KEYS`, `models.AFFECTED_SITE_KEYS`, and a required `event` string. None of the three nested item schemas gain `additionalProperties: false` — `history` extras vary by event kind and `reachability` carries `chain` alongside future fields, so both stay open by design.

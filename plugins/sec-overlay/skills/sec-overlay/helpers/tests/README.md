@@ -1,8 +1,19 @@
 # `tests/` — the deterministic test suite
 
-141 pytest files, 1796 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+141 pytest files, 1803 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_constraint_enforcer.py` tests pin REQ-51: `evidence._MECHANICAL` must equal
+`TIER1_RECEIPTS | TIER2_RECEIPTS` (the derivation, not an independent literal), and a new
+`evidence.unknown_receipts` must report a source whose prefix names neither tier and is not
+`llm`-namespaced, pass a declared prefix, pass an `llm-claimed:`/`llm-corroborated` source, and
+pass the `prove` lane's `reproduction` receipt (a real receipt outside both tiers). A gate test
+confirms `validate_findings` reports the offending source with a "closed set" message instead of
+silently ignoring it; a second gate test confirms a finding confirmed solely by `reproduction`
+still passes. `test_findings_gate.py::test_confirmed_requires_tool_receipt`'s fixture drops
+`read:sanity` (an undeclared prefix under REQ-51) for `llm-claimed:read-sanity` — same intent, no
+mechanical receipt, now legal under the closed set.
 
 `test_contract_lint.py::test_every_closed_vocabulary_matches_its_schema_enum` (REQ-50) now also
 derives `completeness_tier`, `judge_verdict`, `receipt_tier`, and `reachability.blocker` from

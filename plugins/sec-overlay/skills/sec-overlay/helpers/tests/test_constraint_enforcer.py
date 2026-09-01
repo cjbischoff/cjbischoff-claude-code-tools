@@ -65,3 +65,71 @@ def test_artifact_review_verdict_vocabulary_drops_the_rerender_path():
     text = (SKILL / "agents" / "artifact-review.md").read_text()
     assert '"verdict": "clean" | "downgrades"' in text
     assert "forced_rerender" not in text
+
+
+def test_mechanical_set_is_derived_from_the_two_tiers():
+    """REQ-51: the tiers are the single source; no literal can drift from them."""
+    from sec_overlay import evidence
+
+    assert evidence._MECHANICAL == evidence.TIER1_RECEIPTS | evidence.TIER2_RECEIPTS
+
+
+def test_unknown_receipts_reports_an_undeclared_prefix():
+    """REQ-51: a typo or an undeclared tool is an error, not a silent tier drop."""
+    from sec_overlay.evidence import unknown_receipts
+
+    assert unknown_receipts(["semgrp:a.py:1"]) == ["semgrp:a.py:1"]
+
+
+def test_unknown_receipts_passes_a_declared_prefix():
+    """REQ-51: both tiers stay clean."""
+    from sec_overlay.evidence import unknown_receipts
+
+    assert unknown_receipts(["semgrep:a.py:1", "ripgrep:b.py:2"]) == []
+
+
+def test_unknown_receipts_passes_an_llm_claim():
+    """REQ-51: an llm-namespaced source claims no receipt, so it is not an offender."""
+    from sec_overlay.evidence import unknown_receipts
+
+    assert unknown_receipts(["llm-claimed:reasoning", "llm-corroborated"]) == []
+
+
+def test_unknown_receipts_passes_the_reproduction_receipt():
+    """REQ-51: prove.py's reproduction receipt names no tier prefix but is a real receipt."""
+    from sec_overlay.evidence import unknown_receipts
+
+    assert unknown_receipts(["reproduction", "reproduction:pytest"]) == []
+
+
+def test_gate_rejects_a_finding_with_an_undeclared_receipt_prefix(tmp_path):
+    """REQ-51: the gate reports the offender instead of dropping its tier."""
+    from sec_overlay.findings_gate import validate_findings
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.workspace import Workspace, write_findings
+
+    ws = Workspace(tmp_path / "workspace")
+    ws.ensure()
+    f = Finding(id="F-0002", rule_id="r", cls="sqli", status=FindingStatus.RAW,
+                severity=Severity.HIGH, file="app.py", line=18, message="m",
+                dataflow=["a -> b"], evidence="e")
+    f.evidence_sources = ["semgrp:app.py:18"]
+    write_findings(ws, [f])
+    errors = validate_findings(ws)
+    assert any("semgrp:app.py:18" in e and "closed set" in e for e in errors)
+
+
+def test_gate_passes_a_finding_confirmed_solely_by_reproduction(tmp_path):
+    """REQ-51: the reproduction receipt must not trip the new unknown-receipt check."""
+    from sec_overlay.findings_gate import validate_findings
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.workspace import Workspace, write_findings
+
+    ws = Workspace(tmp_path / "workspace")
+    ws.ensure()
+    f = Finding(id="F-0003", rule_id="r", cls="ssrf", status=FindingStatus.CONFIRMED,
+                severity=Severity.HIGH, file="app.py", line=18, message="m",
+                dataflow=["a -> b"], evidence="e", impact="egress to attacker-controlled host")
+    f.evidence_sources = ["reproduction"]
+    write_findings(ws, [f])
+    assert validate_findings(ws) == []

@@ -62,7 +62,7 @@ def test_confirmed_requires_tool_receipt(tmp_path):
     ws = Workspace(tmp_path / "workspace"); ws.ensure()
     f = _good()
     f.status = FindingStatus.CONFIRMED
-    f.evidence_sources = ["llm-claimed:reasoning", "read:sanity"]  # no mechanical receipt
+    f.evidence_sources = ["llm-claimed:reasoning", "llm-claimed:read-sanity"]  # no receipt
     write_findings(ws, [f])
     errs = validate_findings(ws)
     assert any("tool receipt" in e for e in errs)
