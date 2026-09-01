@@ -18,7 +18,7 @@ import re
 from pathlib import Path
 
 from sec_overlay.models import FindingStatus
-from sec_overlay.report import _short_title
+from sec_overlay.report import triage_what
 from sec_overlay.state import load_state
 from sec_overlay.workspace import Workspace, read_findings
 
@@ -200,8 +200,7 @@ def _check_truncated_titles(ws: Workspace, report_md: str) -> list[str]:
         finding = by_id.get(row[0])
         if not what.endswith("…") or finding is None:
             continue
-        source = (finding.message or "").split("|", 1)[0].split(". ")[0].strip()
-        if what != _short_title(source):
+        if what != triage_what(finding):
             errors.append(
                 f"artifact-consistency: triage title for {row[0]} is truncated mid-word: {what!r}"
             )

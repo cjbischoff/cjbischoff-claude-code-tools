@@ -31,6 +31,23 @@ from sec_overlay.workspace import (
 _ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 _REPORTABLE = {FindingStatus.CONFIRMED, FindingStatus.FIXED}
 
+# A message may open with the finding's lifecycle state. The triage "What" column
+# describes the defect, so a leading status sentence is dropped, not rendered.
+_STATUS_LEAD = frozenset(
+    {
+        "candidate",
+        "confirmed",
+        "duplicate",
+        "fixed",
+        "needs runtime proof",
+        "provenance unresolved",
+        "rejected",
+        "stale",
+        "unconfirmed",
+        "verified",
+    }
+)
+
 
 def _risk_sort_key(f: Finding) -> tuple[int, int, str]:
     """Deterministic finding order: risk descending, then severity, then id.
@@ -292,6 +309,30 @@ def _short_title(text: str, limit: int = 72) -> str:
     return (cut or text[:limit].rstrip()) + "…"
 
 
+def triage_what(f: Finding) -> str:
+    """Return the triage "What" cell for a finding.
+
+    The cell describes the defect. A message that opens with the finding's
+    lifecycle state ("Confirmed. ", "Provenance unresolved. ") has that sentence
+    dropped, because the row already carries a Status column. ``Finding`` has no
+    ``title`` field, so ``message`` is the only source.
+
+    Args:
+        f: The finding to describe.
+
+    Returns:
+        The first non-status sentence of the message, clipped by ``_short_title``.
+
+    Example:
+        >>> triage_what(Finding(message="Confirmed. Sink reads user input."))
+        'Sink reads user input.'
+    """
+    parts = (f.message or "").split("|", 1)[0].strip().split(". ")
+    while len(parts) > 1 and parts[0].strip().rstrip(".").lower() in _STATUS_LEAD:
+        parts = parts[1:]
+    return _short_title(parts[0].strip())
+
+
 def _ndt_next_actions(
     ndt: list[Finding], *, has_redteam_plan: bool = True
 ) -> dict[str, str]:
@@ -334,7 +375,7 @@ def _triage_row(f: Finding, status_label: str, action: str) -> str:
     Returns:
         A single Markdown table row string (pipe-delimited).
     """
-    what = _short_title((f.message or "").split("|", 1)[0].split(". ")[0].strip())
+    what = triage_what(f)
     risk = f.risk_score if f.risk_score is not None else "-"
     return f"| {f.id} | {risk} | {what} | {f.file}:{f.line} | {status_label} | {action} |"
 
@@ -421,13 +462,18 @@ def to_markdown(
     high = conf_counts.get("high", 0)
     med = conf_counts.get("medium", 0)
     low = conf_counts.get("low", 0)
-    total_conf = sum(conf_counts.values())
-    if total_conf == 0:
-        summary_sentence = "No source-provable findings."
-    elif crit or high:
-        summary_sentence = f"{'Critical' if crit else 'High'}-severity source-provable findings require immediate remediation."
+    triage_counts = Counter(f.severity.value for f in list(ndt) + list(conf))
+    t_crit = triage_counts.get("critical", 0)
+    t_high = triage_counts.get("high", 0)
+    if sum(triage_counts.values()) == 0:
+        summary_sentence = "No reportable findings."
+    elif t_crit or t_high:
+        summary_sentence = (
+            f"{'Critical' if t_crit else 'High'}-severity findings require "
+            "immediate remediation."
+        )
     else:
-        summary_sentence = "Source-provable findings at medium/low severity."
+        summary_sentence = "Reportable findings at medium/low severity."
     counts_phrase = (
         ", ".join(
             f"{n} {label}"
@@ -481,7 +527,7 @@ def to_markdown(
             )
             lines.append(
                 f"- [{f.id}](findings/{f.id}.md) — risk {risk} — {label} — "
-                f"{_short_title((f.message or '').split('|', 1)[0].split('. ')[0].strip())}"
+                f"{triage_what(f)}"
             )
         lines.append("")
         lines += [

@@ -6,6 +6,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- `to_markdown`'s bottom-line sentence reads severity over the full triage population, needs-
+  runtime plus confirmed, not confirmed findings alone (REQ-56). A high- or critical-severity
+  needs-runtime finding now forces the immediate-remediation sentence. A new `triage_what(f)`
+  helper drops a finding message's leading lifecycle-status sentence before the What column
+  renders it; `artifact_consistency._check_truncated_titles` calls the same helper.
+
 - `_directive_block` falls back to `Finding.preconditions` when `runtime_test` omits its own
   `preconditions` key (REQ-55). A finding grouped "Code-settled" by heading no longer shows
   `_not specified_` in its directive body when the finding carries real preconditions.

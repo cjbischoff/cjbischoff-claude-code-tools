@@ -1685,3 +1685,14 @@ pushed the agent to guess the boolean the prompt forbids. An absent `reachable` 
 `reachable` of a non-bool type stays an error. `is_reachable` keeps its recall-safe
 `r.get("reachable", True)` default, so an unassessed external-boundary finding still counts as
 reachable, and `blocker_of` still reports a blocker only for a finding proven unreachable.
+
+`report.py`'s bottom-line sentence now reads severity over the full triage population — needs-
+runtime plus confirmed — instead of confirmed findings alone (REQ-56). A high- or critical-severity
+needs-runtime finding forces the immediate-remediation sentence even when the run confirms nothing,
+where it previously read "medium/low severity" and understated the run. A new `triage_what(f)`
+helper replaces the inline `_short_title` clip at both call sites (`_triage_row` and the `##
+Detail` link line): it strips a leading lifecycle-status sentence from `Finding.message` — the
+`_STATUS_LEAD` vocabulary covers "confirmed", "provenance unresolved", and eight other status
+words — before clipping, so the What cell never repeats the Status column's word.
+`artifact_consistency._check_truncated_titles` (clause f) now calls `triage_what` too, instead of
+recomputing its own status-stripped source string, so the two never drift.
