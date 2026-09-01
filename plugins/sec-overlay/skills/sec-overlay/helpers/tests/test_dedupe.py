@@ -146,3 +146,22 @@ def test_dedupe_findings_records_stage(tmp_path):
     write_findings(ws, [_f("F-0001", "sqli", "app.py", 18, Severity.HIGH)])
     dedupe_findings(ws)
     assert "dedupe" in load_state(ws).stages
+
+
+def test_dedupe_stamps_a_fingerprint_on_a_rejected_finding(tmp_path):
+    """REQ-58: two rejected findings at one site must not share a prior-context key.
+
+    postflight._merge falls back to `file:line:cls` when the fingerprint is
+    absent, which collapses distinct rejections onto one key and drops a note.
+    """
+    ws = Workspace(tmp_path / "workspace")
+    ws.ensure()
+    a = _f("F-0001", "cmdi", "s.ts", 23, Severity.MEDIUM, status=FindingStatus.REJECTED)
+    b = _f("F-0002", "cmdi", "s.ts", 23, Severity.MEDIUM, status=FindingStatus.REJECTED)
+    a.rule_id = "rules.semgrep.javascript.lang.security.detect-child-process"
+    b.rule_id = "js/indirect-command-line-injection"
+    write_findings(ws, [a, b])
+    dedupe_findings(ws)
+    prints = {f.id: f.fingerprint for f in read_findings(ws)}
+    assert all(p is not None and len(p) == 12 for p in prints.values())
+    assert prints["F-0001"] != prints["F-0002"]

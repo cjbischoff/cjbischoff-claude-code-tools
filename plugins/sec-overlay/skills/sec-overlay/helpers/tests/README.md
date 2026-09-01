@@ -1736,3 +1736,9 @@ pins `result.properties.findingId`, so a SARIF consumer can name the finding a r
 existed. The cluster and finding-id tests fail before the fix with `KeyError`; the renamed test
 fails on the kind string. The negative test (no `affected_sites`, no `relatedLocations` key)
 already holds against the unfixed code and stays green as a regression guard, not a red test.
+
+`test_dedupe.py` gains `test_dedupe_stamps_a_fingerprint_on_a_rejected_finding`, pinning REQ-58.
+Two `REJECTED` findings share one file and line but carry different `rule_id` values. The test
+asserts both end up with a 12-character fingerprint and that the two fingerprints differ. It
+fails before the fix because the stamping loop in `dedupe.py` only stamps findings whose status
+is `RAW` or `CONFIRMED`, so both rejected findings keep a `None` fingerprint.

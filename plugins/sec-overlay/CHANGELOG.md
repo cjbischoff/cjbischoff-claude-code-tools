@@ -4,6 +4,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- A failing test pins REQ-58: two rejected findings sharing a file and line must each get a
+  distinct 12-character fingerprint. `dedupe_findings` only stamps `RAW` and `CONFIRMED`
+  findings today, so both rejected findings stay unfingerprinted.
+
 ### Fixed
 
 - `write_report`'s docstring named the `inSource` suppression kind (REQ-57 fix round 1). The
