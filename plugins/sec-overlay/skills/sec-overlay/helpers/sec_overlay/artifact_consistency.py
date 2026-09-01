@@ -17,11 +17,13 @@ import json
 import re
 from pathlib import Path
 
+from sec_overlay.models import FindingStatus
 from sec_overlay.report import _short_title
 from sec_overlay.state import load_state
 from sec_overlay.workspace import Workspace, read_findings
 
 _DETAIL_LINK = re.compile(r"\]\(findings/([^)]+)\)")
+_SECTION_ID = re.compile(r"^### (\S+) — ", re.MULTILINE)
 
 # Task 1 emits exactly these phrases; each names one redteam-plan heading.
 _ACTION_SECTIONS = {
@@ -172,6 +174,75 @@ def _check_truncated_titles(ws: Workspace, report_md: str) -> list[str]:
     return errors
 
 
+def _rendered_ids(ws: Workspace, report_md: str) -> set[str]:
+    """Return the finding ids the report renders in any section.
+
+    A finding id reaches the reader through a triage row, a ``## Detail`` link,
+    or a ``### <id> — `` section heading. Ids not on disk are dropped, so a
+    heading that names something other than a finding cannot inflate the count.
+
+    Args:
+        ws: The finished-run workspace.
+        report_md: The rendered report text.
+
+    Returns:
+        The set of rendered finding ids.
+    """
+    known = {f.id for f in read_findings(ws)}
+    ids = {row[0] for row in _triage_rows(report_md)}
+    ids |= {link.removesuffix(".md") for link in _DETAIL_LINK.findall(report_md)}
+    ids |= set(_SECTION_ID.findall(report_md))
+    return ids & known
+
+
+def _check_sarif_population(ws: Workspace, report_md: str) -> list[str]:
+    """Check (g): SARIF and the report describe one population.
+
+    Part one: the stated ``Needs runtime proof`` count equals the needs-runtime
+    findings the report renders. Part two: the SARIF result count equals the
+    total finding count the report renders. A missing SARIF file degrades part
+    two to a pass.
+
+    Args:
+        ws: The finished-run workspace.
+        report_md: The rendered report text.
+
+    Returns:
+        Contradiction strings; empty when both counts agree.
+    """
+    rendered = _rendered_ids(ws, report_md)
+    by_id = {f.id: f for f in read_findings(ws)}
+    errors: list[str] = []
+    has_render_surface = (
+        bool(_triage_rows(report_md))
+        or bool(_DETAIL_LINK.search(report_md))
+        or bool(_SECTION_ID.search(report_md))
+    )
+    match = re.search(r"^Needs runtime proof: (\d+)$", report_md, re.MULTILINE)
+    if match is not None and has_render_surface:
+        stated = int(match.group(1))
+        shown = sum(
+            1
+            for fid in rendered
+            if by_id[fid].status is FindingStatus.NEEDS_DEPLOYMENT_TESTING
+        )
+        if stated != shown:
+            errors.append(
+                f"artifact-consistency: report states {stated} needs-runtime "
+                f"finding(s) but renders {shown}"
+            )
+    if ws.sarif_path.exists():
+        doc = json.loads(ws.sarif_path.read_text())
+        runs = doc.get("runs") or [{}]
+        results = runs[0].get("results") or []
+        if len(results) != len(rendered):
+            errors.append(
+                f"artifact-consistency: SARIF holds {len(results)} result(s) "
+                f"but the report renders {len(rendered)} finding(s)"
+            )
+    return errors
+
+
 def run_artifact_consistency(ws: Workspace) -> list[str]:
     """Reconcile a finished run's artifacts against each other.
 
@@ -193,6 +264,7 @@ def run_artifact_consistency(ws: Workspace) -> list[str]:
         + _check_self_score(ws, report_md)
         + _check_measured_sections(report_md)
         + _check_truncated_titles(ws, report_md)
+        + _check_sarif_population(ws, report_md)
     )
     (ws.kb / "gates").mkdir(parents=True, exist_ok=True)
     (ws.kb / "gates" / "artifact-consistency.json").write_text(

@@ -1414,6 +1414,28 @@ uv run python -m sec_overlay.artifact_consistency --workspace <WS>
 
 The CLI prints each contradiction and exits 1 when the artifacts disagree.
 
+## 2026-09-01 — REQ-53: reconcile the SARIF and report populations
+
+Clause (g), `_check_sarif_population`, closes the last gap in the artifact-consistency gate: it
+reconciles the report's *stated* needs-runtime count and SARIF's *result* count against the ids
+the report actually renders. `_rendered_ids(ws, report_md)` collects every finding id the report
+exposes to a reader — a triage row, a `## Detail` link, or a `### <id> — ` section heading (the
+shape `report.py` uses for the external-leads section) — intersected with the ids `read_findings`
+confirms exist on disk. Part one flags a stated `Needs runtime proof: N` that disagrees with how
+many rendered ids carry `FindingStatus.NEEDS_DEPLOYMENT_TESTING`; part two flags a SARIF result
+count that disagrees with the total rendered id count, degrading to a pass when `report.sarif`
+does not exist. Both parts additionally require the report to show some rendering surface at all
+(a triage row, a detail link, or a section heading) before judging the counts — a report body
+with no such surface is an incomplete artifact, not a contradiction, matching every other check in
+this module.
+
+`report.py`'s bottom line now separates two needs-runtime populations: `ndt_all` (every
+needs-deployment-testing finding) drives the stated `Needs runtime proof:` count, and `external`
+(the subset with `completeness_tier == "external-unverifiable"`) adds a
+`Leads pending external verification: <n>` line when non-empty. Previously the stated count used
+`ndt` (external leads excluded), which undercounted against the SARIF and Detail populations that
+include every needs-runtime finding regardless of tier.
+
 ### The Part D finding elements (REQ-33)
 
 `report.py` renders eight optional elements on a finding page: `attacker`, `privilege`,

@@ -6,6 +6,18 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Artifact-consistency check (g) reconciles the SARIF and report populations (REQ-53).
+  `_check_sarif_population` in `artifact_consistency.py` flags a report whose stated
+  `Needs runtime proof` count sits below the needs-runtime findings it renders, and flags
+  a SARIF result count that disagrees with the report's total rendered finding count. A new
+  `_rendered_ids` helper collects ids from triage rows, `## Detail` links, and `### <id> — `
+  section headings, intersected with ids on disk. A `has_render_surface` guard skips the
+  needs-runtime comparison when the report has no triage rows, detail links, or section
+  headings to render from, so a synthetic report fixture with only a bare count line does not
+  trip a false contradiction. `report.py`'s bottom-line block now states `Needs runtime proof`
+  over every needs-deployment-testing finding, including external-unverifiable leads, and adds
+  a `Leads pending external verification: <n>` line when that subset is non-empty.
+
 - New `tests/test_artifact_consistency.py` tests pin REQ-53: the gate must flag a report whose stated `Needs runtime proof` count sits below the needs-runtime findings it renders, and must flag a SARIF result count that disagrees with the report's total rendered finding count; a report that states both the needs-runtime total and a `Leads pending external verification` split reconciles cleanly. A new `tests/test_report.py` test pins that the stated needs-runtime count must include external-unverifiable leads and that the report states the split. All four new assertions fail: `artifact_consistency.py` has no clause reading SARIF or the rendered count, and `report.py`'s `Needs runtime proof` line excludes external-unverifiable findings with no split line.
 
 ### Added

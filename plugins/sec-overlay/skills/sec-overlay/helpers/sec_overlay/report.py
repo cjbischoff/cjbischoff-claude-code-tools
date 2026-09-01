@@ -441,7 +441,11 @@ def to_markdown(
         "",
         f"**Bottom line.** {summary_sentence}  ",
         f"Confirmed: {counts_phrase}",
-        f"Needs runtime proof: {len(ndt)}",
+        f"Needs runtime proof: {len(ndt_all)}",
+    ]
+    if external:
+        lines.append(f"Leads pending external verification: {len(external)}")
+    lines += [
         "",
     ]
 
