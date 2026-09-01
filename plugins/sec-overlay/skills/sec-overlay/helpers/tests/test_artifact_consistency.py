@@ -119,17 +119,35 @@ def test_gate_flags_any_self_score_mismatch_against_the_report(tmp_path):
 
     The old check tolerated a report count below the score, because the report
     collapsed clusters and the score did not. REQ-54 collapses both sides, so
-    a difference in either direction is a contradiction.
+    a difference in either direction is a contradiction. Uses a modern score
+    (``needs_runtime_collapsed`` present) — a legacy score without that key
+    degrades to a pass instead (see the P4-15 test below).
     """
     ws = _ws(tmp_path)
     write_findings(ws, [_ndt()])
-    _selfscore(ws, {"confirmed": 0, "needs_runtime": 0})
+    _selfscore(ws, {"confirmed": 0, "needs_runtime": 0, "needs_runtime_collapsed": 0})
     ws.report_path.write_text(_REPORT_HEAD)
     errors = run_artifact_consistency(ws)
     assert any("needs_runtime" in e for e in errors)
-    _selfscore(ws, {"confirmed": 0, "needs_runtime": 2})
+    _selfscore(ws, {"confirmed": 0, "needs_runtime": 2, "needs_runtime_collapsed": 2})
     errors = run_artifact_consistency(ws)
     assert any("needs_runtime" in e for e in errors)
+
+
+def test_gate_degrades_a_legacy_score_missing_the_collapsed_key(tmp_path):
+    """Check (d): a legacy score with no needs_runtime_collapsed key degrades to a pass.
+
+    P4-15. A state.json written before REQ-54 (a resumed campaign, a
+    standalone module run, an upgraded plugin) supplies only the uncollapsed
+    ``needs_runtime`` count. A collapsed cluster then skews the report's count
+    against it with no way to tell drift from a real contradiction, so the
+    clause must not halt — mirroring check (h)'s legacy degrade.
+    """
+    ws = _ws(tmp_path)
+    write_findings(ws, [_ndt()])
+    _selfscore(ws, {"confirmed": 0, "needs_runtime": 2})
+    ws.report_path.write_text(_REPORT_HEAD)  # states 1, legacy score says 2
+    assert run_artifact_consistency(ws) == []
 
 
 def test_gate_flags_a_measured_header_with_an_empty_body(tmp_path):

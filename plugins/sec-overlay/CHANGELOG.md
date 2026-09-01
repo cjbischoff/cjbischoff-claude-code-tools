@@ -6,6 +6,15 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- Clause (d) of the artifact-consistency gate no longer flags a legacy self-score as a
+  contradiction (P4-15). The clause's fallback compared the report's count against the
+  uncollapsed `needs_runtime` key whenever `needs_runtime_collapsed` was absent — a shape a
+  resumed campaign, a standalone module run, or an upgraded plugin can produce mid-campaign.
+  The clause now degrades to a pass when `needs_runtime_collapsed` is absent, mirroring clause
+  (h)'s existing legacy degrade.
+
+### Fixed
+
 - Clause (g) of the artifact-consistency gate no longer halts a correct `confirmed_only=True`
   run (P4-15). `write_report` now records the mode at `state.budget["sarif_confirmed_only"]`,
   and the gate compares the SARIF result count against the confirmed/fixed subset of rendered

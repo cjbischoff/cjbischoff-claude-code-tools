@@ -123,17 +123,22 @@ def _check_coverage_claim(ws: Workspace, report_md: str) -> list[str]:
 def _check_self_score(ws: Workspace, report_md: str) -> list[str]:
     """Check (d): the self-score does not contradict the report's own counts.
 
-    Both sides collapse clusters (REQ-54), so the two counts must be equal. A
-    missing score is a contradiction; a report with no count line is not.
+    Both sides collapse clusters (REQ-54), so the two counts must be equal.
+    Runs only when the score carries ``needs_runtime_collapsed``; a legacy
+    score written before REQ-54 carries only the uncollapsed count and
+    degrades to a pass, mirroring check (h). A missing score is a
+    contradiction; a report with no count line is not.
     """
     score = load_state(ws).budget.get("self_score")
     if not isinstance(score, dict):
         return ["artifact-consistency: report exists but state.budget.self_score is missing"]
+    scored = score.get("needs_runtime_collapsed")
+    if not isinstance(scored, int):
+        return []
     match = re.search(r"^Needs runtime proof: (\d+)$", report_md, re.MULTILINE)
     if match is None:
         return []
     reported = int(match.group(1))
-    scored = score.get("needs_runtime_collapsed", score.get("needs_runtime", 0))
     if reported != scored:
         return [
             (

@@ -1752,3 +1752,17 @@ the fix to clause (g) part two. It drives the real pipeline end to end —
 []`. It fails before the fix: `write_report` in confirmed-only mode writes SARIF from the
 reportable set alone but still renders the needs-runtime row into the Markdown, so clause (g)
 always saw a SARIF/report count mismatch on an otherwise-correct run.
+
+`test_artifact_consistency.py` also gains `test_gate_degrades_a_legacy_score_missing_the_collapsed_key`,
+pinning the fix to clause (d). It writes a self-score with a `needs_runtime` key but no
+`needs_runtime_collapsed` key — the shape a `state.json` predates REQ-54 or a standalone
+`sec_overlay.artifact_consistency` run supplies — against a report stating a different count, then
+asserts `run_artifact_consistency(ws) == []`. It fails before the fix: the old fallback,
+`score.get("needs_runtime_collapsed", score.get("needs_runtime", 0))`, ran the exact-equality
+check against the uncollapsed count and flagged a contradiction that was never real.
+
+`test_gate_flags_any_self_score_mismatch_against_the_report`'s score fixtures now carry
+`needs_runtime_collapsed` alongside `needs_runtime` — the modern (post-REQ-54) shape. The test's
+assertions are unchanged; only the input shape moved off the legacy path the fix above now
+degrades instead of checks, so the test still exercises a genuine mismatch under clause (d)'s
+current logic.

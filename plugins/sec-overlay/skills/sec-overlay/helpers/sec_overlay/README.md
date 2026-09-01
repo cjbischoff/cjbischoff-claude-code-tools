@@ -1475,9 +1475,10 @@ and the `by_status` values must sum to `total`. A self-score that silently drops
 its buckets now fails the gate instead of passing with a smaller-than-true count.
 
 Clause (d) itself now requires exact equality between the report's stated `Needs runtime proof:`
-count and `self_score.needs_runtime_collapsed` (falling back to the older `needs_runtime` key for
-a pre-REQ-54 score). Both sides collapse clusters, so a mismatch in either direction — not only an
-undercount — is a contradiction.
+count and `self_score.needs_runtime_collapsed`. Both sides collapse clusters, so a mismatch in
+either direction — not only an undercount — is a contradiction. A score with no
+`needs_runtime_collapsed` key (written before REQ-54) degrades to a pass instead of falling back to
+the older uncollapsed `needs_runtime` key — see the P4-15 fix below for why the fallback was wrong.
 
 ### The Part D finding elements (REQ-33)
 
@@ -1722,3 +1723,10 @@ into the Markdown, so the two counts always disagreed. `write_report` now record
 `state.budget["sarif_confirmed_only"]` — the same pattern `selfscore.py` uses for `self_score` —
 and clause (g) compares the SARIF count against the rendered ids filtered to confirmed/fixed
 status when that flag is set, and against every rendered id otherwise.
+
+Clause (d)'s legacy fallback, `score.get("needs_runtime_collapsed", score.get("needs_runtime", 0))`,
+ran the exact-equality check against the uncollapsed count for any `state.json` written before
+REQ-54. A resumed campaign, a standalone `python -m sec_overlay.artifact_consistency` run, or a
+plugin upgraded mid-campaign supplies only that uncollapsed count, so a needs-runtime cluster
+skewed the comparison and halted a correct run. Clause (d) now mirrors clause (h)'s legacy degrade:
+when `needs_runtime_collapsed` is absent, the clause returns no error instead of falling back.
