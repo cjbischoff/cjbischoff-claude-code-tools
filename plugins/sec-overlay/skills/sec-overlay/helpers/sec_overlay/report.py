@@ -673,7 +673,7 @@ def write_report(
             ledgered the same way as ``reflection_skips`` (D-15).
         has_redteam_plan: True when the run produced ``redteam-plan.md``. The
             ``redteam`` phase runs before ``report`` and declares this file as
-            an input, so the driver always passes ``True``; the default of
+            an input, so the driver always passes ``True``. The default of
             ``False`` covers a caller with no redteam phase, such as review mode.
 
     Returns:
@@ -1017,7 +1017,12 @@ def main(argv: list[str] | None = None) -> int:
         findings_dir=args.findings_dir,
         kb_dir=args.kb_dir,
     )
-    result = write_report(ws, target=args.target, confirmed_only=args.confirmed_only)
+    result = write_report(
+        ws,
+        target=args.target,
+        confirmed_only=args.confirmed_only,
+        has_redteam_plan=(ws.reports / "redteam-plan.md").exists(),
+    )
     print(f"reported {result['reported']}")
     return 0
 

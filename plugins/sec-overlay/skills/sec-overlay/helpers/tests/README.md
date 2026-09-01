@@ -549,6 +549,12 @@ an argument vector, not `write_report()` directly. `main()` is a CLI boundary wi
 context, so it probes `redteam-plan.md` on disk instead of taking `write_report`'s `False`
 default.
 
+`test_phase_artifact_contract.py`'s `test_report_module_holds_no_redteam_plan_probe` is reversed
+to `test_only_the_report_cli_probes_for_the_redteam_plan` (REQ-40 fix round 1). The old test
+banned the probe substring anywhere in the module, which was broader than REQ-40 states. The
+replacement asserts the probe appears exactly once in `report.py`, inside `main()`, and confirms
+`write_report` and `write_finding_details` hold none.
+
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 

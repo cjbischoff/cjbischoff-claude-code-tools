@@ -288,6 +288,12 @@ whether the run produced one. `render_ndt`, `_ndt_next_actions`, `write_finding_
 `_redteam_plan` input declaration. `cli.py`'s two review-mode call sites (`run_semgrep`,
 `run_review`) keep the `False` default, correctly, since neither runs a redteam phase.
 
+`report.main()` (REQ-40 fix round 1) is the one exception to the no-probe rule above. The CLI
+entry point has no caller and so no phase context, and it had been passing no `has_redteam_plan`
+to `write_report`, silently taking the `False` default and omitting the pointer even when
+`redteam-plan.md` existed. `main()` now probes the file on disk itself, since a CLI boundary is
+the single place in this module where a filesystem read stands in for a caller.
+
 `architecture` now outputs `_arc42`/`_container` (`kb.arc42_path` /
 `kb.container_diagram_path`, i.e. `architecture/arc42.md` + `architecture/container-diagram.mmd`,
 not the old `kb/architecture.md`), immediately followed by the deterministic `arch-gate` row

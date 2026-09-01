@@ -76,11 +76,15 @@ def test_render_ndt_omits_the_redteam_pointer_when_no_plan_exists() -> None:
     assert "redteam-plan.md" not in render_ndt(f, has_redteam_plan=False)
 
 
-def test_report_module_holds_no_redteam_plan_probe() -> None:
+def test_only_the_report_cli_probes_for_the_redteam_plan() -> None:
     # REQ-40: the caller knows whether the plan exists; the filesystem does not.
+    # The CLI entry point has no caller, so it is the single permitted probe site.
     import inspect
 
     from sec_overlay import report
 
-    src = inspect.getsource(report)
-    assert 'redteam-plan.md").exists()' not in src
+    probe = 'redteam-plan.md").exists()'
+    assert inspect.getsource(report).count(probe) == 1
+    assert probe in inspect.getsource(report.main)
+    assert probe not in inspect.getsource(report.write_report)
+    assert probe not in inspect.getsource(report.write_finding_details)
