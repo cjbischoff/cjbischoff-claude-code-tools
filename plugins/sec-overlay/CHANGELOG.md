@@ -4,6 +4,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Fixed
+
+- `write_report`'s docstring named the `inSource` suppression kind (REQ-57 fix round 1). The
+  REQ-57 change replaced that kind with `external`; the docstring now names the real one.
+  `sec_overlay/README.md`'s `to_sarif` suppression description had the same stale kind name,
+  fixed in the same commit.
+
 ### Added
 
 - `to_sarif` emits a cluster's sites and a finding's id (REQ-57). A new `_related_locations`

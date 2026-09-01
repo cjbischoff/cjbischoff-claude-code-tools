@@ -272,7 +272,7 @@ so `report.md` stays short while the full evidence stays one click away. `write_
 unchanged — see the module map entry.
 
 `sarif.to_sarif` gained a `suppressed` parameter: findings in that list get a `suppressions:
-[{"kind": "inSource", "justification": "needs runtime proof"}]` entry on their SARIF result, others
+[{"kind": "external", "justification": "needs runtime proof"}]` entry on their SARIF result, others
 carry none. `report.write_report` now defaults to passing all reportable findings plus
 `needs-deployment-testing` findings as `suppressed` (behavior change on upgrade — SARIF used to
 carry confirmed/fixed only); `confirmed_only=True` (CLI: `--confirmed-only`) restores the prior

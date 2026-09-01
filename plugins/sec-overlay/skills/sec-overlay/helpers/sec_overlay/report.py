@@ -668,7 +668,7 @@ def write_report(
     ``findings.json`` always carries confirmed/fixed findings plus
     needs-deployment-testing findings (distinguished by status). By default,
     SARIF carries the same set, with needs-deployment-testing findings marked
-    with an ``inSource`` suppression so downstream tools see them without
+    with an ``external`` suppression so downstream tools see them without
     failing a gate; ``confirmed_only=True`` restores the prior behavior of
     emitting confirmed/fixed findings only, with no suppressions.
 
