@@ -1259,3 +1259,15 @@ def test_run_economics_section_absent_when_nothing_was_measured():
     """REQ-05: an empty economics payload renders no section at all."""
     md = to_markdown([], economics={"by_phase": {}, "by_model": {}})
     assert "## Run economics" not in md
+
+
+def test_ndt_count_includes_the_external_leads_and_states_the_split():
+    """REQ-53: the stated needs-runtime count covers every needs-runtime finding."""
+    import dataclasses
+
+    lead = dataclasses.replace(
+        _ndt_med(), id="NDT-EXT", completeness_tier="external-unverifiable"
+    )
+    out = to_markdown([], needs_deployment=[_ndt_med(), lead])
+    assert "Needs runtime proof: 2" in out
+    assert "Leads pending external verification: 1" in out

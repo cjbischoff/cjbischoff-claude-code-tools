@@ -6,6 +6,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- New `tests/test_artifact_consistency.py` tests pin REQ-53: the gate must flag a report whose stated `Needs runtime proof` count sits below the needs-runtime findings it renders, and must flag a SARIF result count that disagrees with the report's total rendered finding count; a report that states both the needs-runtime total and a `Leads pending external verification` split reconciles cleanly. A new `tests/test_report.py` test pins that the stated needs-runtime count must include external-unverifiable leads and that the report states the split. All four new assertions fail: `artifact_consistency.py` has no clause reading SARIF or the rendered count, and `report.py`'s `Needs runtime proof` line excludes external-unverifiable findings with no split line.
+
+### Added
+
 - `reachability.BLOCKERS` admits a seventh value, `external-boundary` (REQ-52) — the blocker `agents/trace.md` already told an agent to write when a sink resolves into a dependency outside the ingested set, but the taxonomy never declared. `blocker_of` no longer coerces it to `"other"`, and `finding.schema.json`'s `reachability.blocker` enum gains the same value in the same position. `external-boundary` is the one blocker that does not assert `reachable: false`; the trace prompt now says so and instructs leaving `reachable` absent. `findings_gate.validate_findings` gains a matching clause: an `external-boundary` finding must carry at least one `open_questions` entry with all three `OPEN_QUESTION_KEYS` non-empty, or the gate reports it by id — the prose already asked for this entry, the gate now enforces it.
 
 ### Fixed

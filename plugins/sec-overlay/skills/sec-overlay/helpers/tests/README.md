@@ -1676,3 +1676,16 @@ appends an `"<path>.<key>: unknown field"` error. `finding.schema.json` sets
 later task's nested addition never trips this same branch. `artifact-review.md` drops the
 `render_stale` lever and its `"re-render"`/`forced_rerender` verdict shape; `agents/README.md`'s
 phase-6 row drops the same clause.
+
+`test_artifact_consistency.py` gains three tests pinning REQ-53 clause (g): a report whose stated
+`Needs runtime proof` count sits below the needs-runtime finding ids the report renders (triage
+row, `## Detail` link, or `### <id> — ` heading) must be flagged, a SARIF result count that
+disagrees with the report's total rendered finding count must be flagged, and a report that
+states both the needs-runtime total and a `Leads pending external verification` split reconciles
+against SARIF with no error. `test_report.py` gains one test asserting the stated needs-runtime
+count includes external-unverifiable leads and that the report renders the split line — its
+`dataclasses.replace` call needs a local `import dataclasses`, matching the two other tests in the
+file that build a modified `Finding` this way; the module has no top-level `dataclasses` import.
+All four fail before the fix: `artifact_consistency.py` has no clause reading SARIF or the
+rendered id set, and `report.py`'s `Needs runtime proof` line counts only the non-external
+needs-deployment-testing findings with no split line.

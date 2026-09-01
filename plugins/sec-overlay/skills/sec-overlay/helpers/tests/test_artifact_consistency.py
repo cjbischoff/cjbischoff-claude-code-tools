@@ -176,3 +176,69 @@ def test_phase_table_runs_the_gate_before_postflight():
     names = [p.name for p in PHASE_TABLE]
     assert names.index("artifact-consistency") > names.index("artifact-review")
     assert names.index("artifact-consistency") < names.index("postflight")
+
+
+def _external(fid="X-1"):
+    return Finding(
+        id=fid,
+        rule_id="investigation:ssrf",
+        cls="ssrf",
+        status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
+        severity=Severity.MEDIUM,
+        file="b.js",
+        line=2,
+        risk_score=4,
+        message="sink crosses into an un-ingested package",
+        completeness_tier="external-unverifiable",
+    )
+
+
+def test_gate_flags_a_stated_ndt_count_below_the_rendered_count(tmp_path):
+    """Check (g): the report renders two needs-runtime findings and states one."""
+    ws = _ws(tmp_path)
+    write_findings(ws, [_ndt(), _external()])
+    _selfscore(ws, {"confirmed": 0, "needs_runtime": 2})
+    ws.report_path.write_text(
+        "# sec-overlay Report\n\nConfirmed: 0\nNeeds runtime proof: 1\n\n"
+        + _triage("N-1", "owner check may be advisory", "see redteam-plan gaps")
+        + "## Leads — pending external-dependency verification\n\n"
+        "### X-1 — ssrf — Medium · needs runtime proof\n\n"
+    )
+    errors = run_artifact_consistency(ws)
+    assert any("needs-runtime" in e and "renders" in e for e in errors)
+
+
+def test_gate_flags_a_sarif_result_the_report_never_renders(tmp_path):
+    """Check (g): a finding reaches SARIF and no report section."""
+    ws = _ws(tmp_path)
+    write_findings(ws, [_ndt(), _external()])
+    _selfscore(ws, {"confirmed": 0, "needs_runtime": 2})
+    ws.report_path.write_text(
+        "# sec-overlay Report\n\nConfirmed: 0\nNeeds runtime proof: 1\n\n"
+        + _triage("N-1", "owner check may be advisory", "see redteam-plan gaps")
+    )
+    ws.sarif_path.parent.mkdir(parents=True, exist_ok=True)
+    ws.sarif_path.write_text(
+        json.dumps({"runs": [{"results": [{"ruleId": "r"}, {"ruleId": "r"}]}]})
+    )
+    errors = run_artifact_consistency(ws)
+    assert any("SARIF" in e for e in errors)
+
+
+def test_gate_passes_when_the_report_states_the_external_split(tmp_path):
+    """Check (g): a report that names both buckets reconciles against SARIF."""
+    ws = _ws(tmp_path)
+    write_findings(ws, [_ndt(), _external()])
+    _selfscore(ws, {"confirmed": 0, "needs_runtime": 2})
+    ws.report_path.write_text(
+        "# sec-overlay Report\n\nConfirmed: 0\nNeeds runtime proof: 2\n"
+        "Leads pending external verification: 1\n\n"
+        + _triage("N-1", "owner check may be advisory", "see redteam-plan gaps")
+        + "## Leads — pending external-dependency verification\n\n"
+        "### X-1 — ssrf — Medium · needs runtime proof\n\n"
+    )
+    ws.sarif_path.parent.mkdir(parents=True, exist_ok=True)
+    ws.sarif_path.write_text(
+        json.dumps({"runs": [{"results": [{"ruleId": "r"}, {"ruleId": "r"}]}]})
+    )
+    assert run_artifact_consistency(ws) == []
