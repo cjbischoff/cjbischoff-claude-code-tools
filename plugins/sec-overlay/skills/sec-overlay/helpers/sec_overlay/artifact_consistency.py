@@ -200,7 +200,12 @@ def _check_measured_sections(report_md: str) -> list[str]:
 
 
 def _check_truncated_titles(ws: Workspace, report_md: str) -> list[str]:
-    """Check (f): a truncated triage title ends on a word boundary of its source."""
+    """Check (f): a truncated triage title matches the renderer's own truncation.
+
+    Detects a hand-edited or stale report, not a defect in ``triage_what`` —
+    the expected cell is built with that same helper, so the comparison
+    cannot catch a bug inside it.
+    """
     by_id = {f.id: f for f in read_findings(ws)}
     errors: list[str] = []
     for row in _triage_rows(report_md):

@@ -6,6 +6,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- Clause (f)'s docstring in the artifact-consistency gate overclaimed a word-boundary check of
+  the source message (P4-16). The assertion already compares a truncated triage title against
+  `triage_what`'s own output, so it detects a hand-edited or stale report, not a defect in
+  `triage_what` itself. Only the docstring changed; the assertion is unchanged.
+
+### Fixed
+
 - Clause (d) of the artifact-consistency gate no longer flags a legacy self-score as a
   contradiction (P4-15). The clause's fallback compared the report's count against the
   uncollapsed `needs_runtime` key whenever `needs_runtime_collapsed` was absent — a shape a

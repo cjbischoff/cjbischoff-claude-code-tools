@@ -1730,3 +1730,8 @@ REQ-54. A resumed campaign, a standalone `python -m sec_overlay.artifact_consist
 plugin upgraded mid-campaign supplies only that uncollapsed count, so a needs-runtime cluster
 skewed the comparison and halted a correct run. Clause (d) now mirrors clause (h)'s legacy degrade:
 when `needs_runtime_collapsed` is absent, the clause returns no error instead of falling back.
+
+Clause (f)'s docstring overclaimed a word-boundary check of the source message; the assertion
+itself already compares against `triage_what`'s own output and stays unchanged (rewriting it risks
+turning a dead check into a false halt) — only the docstring was corrected to say it detects a
+hand-edited or stale report, not a defect in `triage_what`.
