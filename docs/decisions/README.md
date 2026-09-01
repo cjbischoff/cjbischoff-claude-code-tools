@@ -22,6 +22,8 @@ Each file carries these sections, in this order:
 ## Rules
 
 - Add a row to [INDEX.md](INDEX.md) in the same commit that adds a decision file.
+- Add a row to the `docs/README.md` contents table in the same commit, and name the decision in the
+  `docs/decisions/` row of the root `README.md` inventory. The doc-update guard requires both files.
 - Never delete a superseded decision file. The chain is the record.
 - Read this folder before you make a decision in the same area.
 - Global Claude Code configuration decisions live in `~/.claude/docs/decisions/`, not here.
