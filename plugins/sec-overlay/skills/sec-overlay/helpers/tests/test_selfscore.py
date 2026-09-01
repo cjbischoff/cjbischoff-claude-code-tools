@@ -120,3 +120,37 @@ def test_self_score_reject_rate_zero_without_critic_events(tmp_path):
     ws.ensure()
     _wf(ws, "F-1", [])
     assert build_self_score(ws)["critic_reject_rate"] == 0.0
+
+
+def test_self_score_buckets_partition_the_finding_population(tmp_path):
+    """REQ-54: every finding on disk lands under exactly one by_status key."""
+    ws = Workspace(tmp_path / "ws")
+    ws.ensure()
+    write_findings(
+        ws,
+        [
+            _f("F-1", FindingStatus.CONFIRMED),
+            _f("F-2", FindingStatus.REJECTED),
+            _f("F-3", FindingStatus.DUPLICATE),
+            _f("F-4", FindingStatus.NEEDS_DEPLOYMENT_TESTING),
+        ],
+    )
+    score = build_self_score(ws)
+    assert score["total"] == 4
+    assert sum(score["by_status"].values()) == 4
+    assert score["by_status"]["duplicate"] == 1
+    assert score["duplicate"] == 1
+
+
+def test_self_score_reports_collapsed_counts(tmp_path):
+    """REQ-54: the collapsed counts match the report, which collapses clusters."""
+    ws = Workspace(tmp_path / "ws")
+    ws.ensure()
+    a = _f("F-1", FindingStatus.CONFIRMED)
+    b = _f("F-2", FindingStatus.CONFIRMED)
+    a.cluster_id = b.cluster_id = "C-1"
+    a.affected_sites = [{"id": "F-1", "file": "a.py", "line": 1}]
+    write_findings(ws, [a, b])
+    score = build_self_score(ws)
+    assert score["confirmed"] == 2
+    assert score["reported_collapsed"] == 1

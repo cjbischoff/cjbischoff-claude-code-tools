@@ -112,12 +112,20 @@ def test_gate_flags_a_null_self_score(tmp_path):
     assert any("self_score" in e for e in errors)
 
 
-def test_gate_flags_a_zero_self_score_against_a_reported_finding(tmp_path):
-    """Check (d): selfscore says zero needs-runtime, the report renders one."""
+def test_gate_flags_any_self_score_mismatch_against_the_report(tmp_path):
+    """Check (d), reversed by REQ-54: the counts must be equal, not bounded.
+
+    The old check tolerated a report count below the score, because the report
+    collapsed clusters and the score did not. REQ-54 collapses both sides, so
+    a difference in either direction is a contradiction.
+    """
     ws = _ws(tmp_path)
     write_findings(ws, [_ndt()])
     _selfscore(ws, {"confirmed": 0, "needs_runtime": 0})
     ws.report_path.write_text(_REPORT_HEAD)
+    errors = run_artifact_consistency(ws)
+    assert any("needs_runtime" in e for e in errors)
+    _selfscore(ws, {"confirmed": 0, "needs_runtime": 2})
     errors = run_artifact_consistency(ws)
     assert any("needs_runtime" in e for e in errors)
 
@@ -257,3 +265,26 @@ def test_gate_flags_a_triage_heading_with_no_rows_against_a_stated_count(tmp_pat
     )
     errors = run_artifact_consistency(ws)
     assert any("needs-runtime" in e and "renders" in e for e in errors)
+
+
+def test_gate_flags_a_self_score_that_loses_findings(tmp_path):
+    """Check (h): the score's buckets must cover every finding on disk."""
+    ws = _ws(tmp_path)
+    write_findings(ws, [_ndt(), _ndt("N-2")])
+    _selfscore(
+        ws,
+        {
+            "confirmed": 0,
+            "needs_runtime": 2,
+            "duplicate": 0,
+            "total": 2,
+            "by_status": {"needs-deployment-testing": 1},
+        },
+    )
+    ws.report_path.write_text(
+        "# sec-overlay Report\n\nConfirmed: 0\nNeeds runtime proof: 2\n\n"
+        + _triage("N-1", "owner check may be advisory", "see redteam-plan gaps")
+        + "### N-2 — authz — Low · needs runtime proof\n\n"
+    )
+    errors = run_artifact_consistency(ws)
+    assert any("by_status" in e for e in errors)

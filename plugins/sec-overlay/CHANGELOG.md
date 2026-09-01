@@ -4,6 +4,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- Failing tests pin REQ-54: a self-score must partition every finding on disk across
+  `by_status`, and the artifact-consistency gate must flag both a self-score that loses
+  findings and any self-score mismatch against the report, not only an undercount.
+
 ### Fixed
 
 - Clause (g)'s `has_render_surface` guard in `_check_sarif_population` narrowed to a single

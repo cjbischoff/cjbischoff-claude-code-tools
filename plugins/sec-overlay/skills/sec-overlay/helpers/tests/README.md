@@ -4,6 +4,17 @@
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+New `test_selfscore.py` tests pin REQ-54: `test_self_score_buckets_partition_the_finding_population`
+checks every finding on disk lands in exactly one `by_status` bucket and that `duplicate` matches
+the bucket count, and `test_self_score_reports_collapsed_counts` checks `reported_collapsed` counts
+one representative per cluster, the same way the report collapses clusters. New
+`test_artifact_consistency.py` tests pin the same requirement:
+`test_gate_flags_a_self_score_that_loses_findings` checks clause (h) rejects a score whose
+`by_status` buckets sum to less than `total`, and
+`test_gate_flags_any_self_score_mismatch_against_the_report` replaces the old bounded-tolerance
+test — clause (d) now flags a mismatch in either direction, since both the report and the score
+collapse clusters under REQ-54.
+
 New `test_constraint_enforcer.py` tests pin REQ-51: `evidence._MECHANICAL` must equal
 `TIER1_RECEIPTS | TIER2_RECEIPTS` (the derivation, not an independent literal), and a new
 `evidence.unknown_receipts` must report a source whose prefix names neither tier and is not
