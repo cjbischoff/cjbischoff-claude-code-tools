@@ -6,6 +6,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- `tests/test_phase_artifact_contract.py` gains a test pinning REQ-44: `verify_findings` must write back only the findings it read a verdict for, not the whole in-memory set. It fails: a concurrent writer's change to an untouched finding is overwritten with `verify`'s stale copy of that finding.
+
 - `tests/test_phase_artifact_contract.py` pins REQ-43: `validate-fix` must sit between `patch` and `verify` as an agent phase, `verify` must declare the gate file `kb/gates/validate-fix.json` as an input, `sec_overlay.verify` must export `apply_fix_gates`, and `apply_fix_gates` must record a scored verdict in a finding's history without changing its `status`. Four tests fail: `validate-fix` is absent from `PHASE_TABLE`, `verify` declares no such input, `apply_fix_gates` does not exist, and `verify.py` names `score_fix` nowhere.
 
 - `tests/test_report.py` gains two tests pinning REQ-40's CLI boundary (fix round 1). `report.main()` must probe `redteam-plan.md` on disk. It must not take `write_report`'s `False` default. One test fails. The CLI passes no `has_redteam_plan`, so the report omits the pointer even when the file exists.

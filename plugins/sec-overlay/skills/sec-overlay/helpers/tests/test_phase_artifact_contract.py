@@ -209,3 +209,37 @@ def test_the_validate_prompt_no_longer_bans_external_boundary() -> None:
 
     prompt = (Path(__file__).resolve().parents[2] / "agents" / "validate.md").read_text()
     assert "external-boundary" not in prompt
+
+
+def test_verify_writes_back_only_the_findings_it_touched(tmp_path) -> None:
+    # REQ-44: verify read the whole set, then wrote the whole set. A finding
+    # another writer changed in between was overwritten with verify's stale copy.
+    from sec_overlay.models import Finding, FindingStatus, Severity
+    from sec_overlay.verify import verify_findings
+    from sec_overlay.workspace import read_findings, write_findings
+
+    ws = Workspace(tmp_path / "w")
+    ws.ensure()
+    untouched = Finding(
+        id="U-1",
+        rule_id="r",
+        cls="xss",
+        status=FindingStatus.RAW,  # no patch_diff, so verify skips it
+        severity=Severity.LOW,
+        file="b.py",
+        line=2,
+        message="m",
+    )
+    write_findings(ws, [_confirmed_with_patch("F-1"), untouched])
+
+    def _writer_races(*args, **kwargs):
+        # Simulate a concurrent writer mutating U-1 after verify's read.
+        other = next(f for f in read_findings(ws) if f.id == "U-1")
+        other.message = "changed by another writer"
+        write_findings(ws, [other])
+        return "not-fixed"
+
+    verify_findings(ws, tmp_path, {}, verifier=_writer_races)
+
+    survivor = next(f for f in read_findings(ws) if f.id == "U-1")
+    assert survivor.message == "changed by another writer"

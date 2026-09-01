@@ -1539,3 +1539,10 @@ and the banned phrase is still in the prompt.
 The REQ-41 `risk_score` assertion now reads `f.risk_score is not None and f.risk_score <= 3`,
 matching the null-check idiom already used in `test_calibrate.py` — `risk_score` types as
 `int | None`, so a bare `<= 3` fails the type checker.
+
+`test_phase_artifact_contract.py` gains one test pinning REQ-44: `verify_findings` reads the
+whole finding set, then writes the whole set back, so a finding it never touched overwrites a
+concurrent writer's change to that same finding with the stale copy from its own read. The test
+writes two findings, has the injected verifier simulate a second writer changing the untouched
+one mid-run, then asserts the untouched finding keeps the concurrent writer's value after
+`verify_findings` returns. It fails: the untouched finding reverts to its pre-race value.
