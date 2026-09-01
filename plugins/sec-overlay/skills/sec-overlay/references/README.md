@@ -300,3 +300,16 @@ The `STE_PROSE` block's mandated front-matter statement is now three sentences: 
 `exit_code`, `oracle`, `oracle_result`, `toolchain`, `resolved_version`, and `scope`. `scope` is an
 enum of `entrypoint` and `slice`. `helpers/sec_overlay/prove.py` writes the object when a proof
 runs, and only an `entrypoint` proof of an oracle-able class promotes its finding.
+
+REQ-50 pins five more schema enums, and two nested item shapes, to their code source so a future
+edit to the constant edits the schema too — a maintainer changing one of these constants must
+update the matching schema block in the same commit, or `test_contract_lint.py` fails:
+
+- `completeness_tier` mirrors `sec_overlay.fix_disposition.TIERS`.
+- `judge_verdict` mirrors `sec_overlay.calibrate.JUDGE_VERDICTS`.
+- `reachability.blocker` mirrors `sec_overlay.reachability.BLOCKERS`.
+- `receipt_tier` mirrors the two-tier receipt scheme (`1`, `2`) `EVIDENCE_VOCABULARY` states.
+- `open_questions` and `affected_sites` item schemas mirror `sec_overlay.models.OPEN_QUESTION_KEYS`
+  and `AFFECTED_SITE_KEYS`; `history` items require an `event` string. None of the three nested
+  item schemas set `additionalProperties: false` — `history` extras vary by event kind and
+  `reachability` carries `chain` alongside future fields, so both stay open by design (ruling R-7).

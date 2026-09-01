@@ -27,6 +27,8 @@ _HIGH_IMPACT = {
 # textbook deviation that a real baseline accepts is not a high-risk finding.
 _BASELINE_CAP = 4
 _EXTERNAL_CAP = 3  # external-boundary leads cannot present as a confirmed medium (>=4)
+JUDGE_VERDICTS = frozenset({"uphold", "severity-inflated", "downgrade"})
+_DOWNGRADE_VERDICTS = frozenset({"severity-inflated", "downgrade"})
 _SCOREABLE = {FindingStatus.CONFIRMED, FindingStatus.NEEDS_DEPLOYMENT_TESTING}
 # A precondition lowers risk only when it is a real barrier an attacker must overcome.
 # Free conditions (unauthenticated/remote/default) are NOT mitigants and never lower risk
@@ -239,7 +241,7 @@ def calibrate_findings(ws: Workspace) -> int:
                 f.risk_score = max(derived, _severity_floor(f.severity))
                 if _is_baseline_standard(f):
                     f.risk_score = min(f.risk_score, _BASELINE_CAP)
-                if f.judge_verdict in ("severity-inflated", "downgrade"):
+                if f.judge_verdict in _DOWNGRADE_VERDICTS:
                     lowered = min(
                         f.risk_score, derived
                     )  # drop the severity-band floor; never raise

@@ -4,6 +4,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Fixed
+
+- `finding.schema.json`'s `completeness_tier`, `judge_verdict`, `receipt_tier`, and `reachability.blocker` now carry a schema `enum` derived from their code source (REQ-50): `sec_overlay.fix_disposition.TIERS`, a new `sec_overlay.calibrate.JUDGE_VERDICTS`, the literal `{1, 2}`, and `sec_overlay.reachability.BLOCKERS`. `calibrate.py`'s judge-downgrade branch now reads `f.judge_verdict in _DOWNGRADE_VERDICTS` instead of a literal tuple. The `open_questions`, `affected_sites`, and `history` item schemas gain typed `properties` mirroring `models.OPEN_QUESTION_KEYS`, `models.AFFECTED_SITE_KEYS`, and a required `event` string. None of the three nested item schemas gain `additionalProperties: false` — `history` extras vary by event kind and `reachability` carries `chain` alongside future fields, so both stay open by design.
+
 ### Added
 
 - `test_contract_lint.py::test_every_closed_vocabulary_matches_its_schema_enum` (REQ-50) now also checks `completeness_tier`, `judge_verdict`, `receipt_tier`, and `reachability.blocker` against `fix_disposition.TIERS`, a new `calibrate.JUDGE_VERDICTS`, `{1, 2}`, and `reachability.BLOCKERS`. New `test_nested_item_schemas_declare_their_published_keys` pins the `open_questions`, `affected_sites`, and `history` item schemas against `models.OPEN_QUESTION_KEYS`, `models.AFFECTED_SITE_KEYS`, and the `history` event key. Fails today: `calibrate.JUDGE_VERDICTS` does not exist yet, and none of the five fields carry a schema enum.

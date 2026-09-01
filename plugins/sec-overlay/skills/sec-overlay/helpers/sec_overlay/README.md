@@ -1554,3 +1554,19 @@ Closing the schema retired the `render_stale` lever `artifact-review.md` used to
 re-render: the key no property declares now fails validation, and no agent prompt writes it.
 `artifact-review.md`'s verdict vocabulary drops to `"clean" | "downgrades"`; the unreachable
 `"re-render"` value and its `forced_rerender` id list are gone.
+
+### `calibrate.py` publishes `JUDGE_VERDICTS` so the schema derives from it (REQ-50)
+
+`calibrate.py` gains `JUDGE_VERDICTS = frozenset({"uphold", "severity-inflated", "downgrade"})`
+beside `_EXTERNAL_CAP`, and a private `_DOWNGRADE_VERDICTS = frozenset({"severity-inflated",
+"downgrade"})`. The judge-downgrade branch in `calibrate_findings` now reads `f.judge_verdict in
+_DOWNGRADE_VERDICTS` instead of a literal tuple, so the two downgrading verdicts have one
+source. `finding.schema.json`'s `judge_verdict` enum, `completeness_tier` enum (from
+`fix_disposition.TIERS`), `receipt_tier` enum, and `reachability.blocker` enum (from
+`reachability.BLOCKERS`) now mirror their code constants, checked by
+`test_contract_lint.py::test_every_closed_vocabulary_matches_its_schema_enum`. The
+`open_questions`, `affected_sites`, and `history` item schemas gain typed `properties` matching
+`models.OPEN_QUESTION_KEYS`, `models.AFFECTED_SITE_KEYS`, and a required `event` string, checked
+by the new `test_nested_item_schemas_declare_their_published_keys`. None of the three nested item
+schemas set `additionalProperties: false` — `history` extras vary by event kind and
+`reachability` carries `chain` alongside future fields, so both stay open by design.
