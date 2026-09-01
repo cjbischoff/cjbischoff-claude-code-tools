@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-141 pytest files, 1809 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+141 pytest files, 1812 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -23,7 +23,11 @@ A prompt test asserts `agents/trace.md`'s reachability-decision bullet names `ex
 the closed taxonomy list, not only in the paragraph below it. Three `findings_gate` tests cover the
 new clause: an `external-boundary` finding with no `open_questions` entry is rejected, one whose
 entry is missing `who_to_ask_or_check` is rejected the same way, and one with all three
-`OPEN_QUESTION_KEYS` populated passes.
+`OPEN_QUESTION_KEYS` populated passes. Three further tests pin the shape `agents/trace.md`
+documents: an `external-boundary` verdict with no `reachable` key passes both
+`validate_reachability` and `stage_validate.validate_stage("reachability", ...)`, the same verdict
+with a non-bool `reachable` still errors, and a non-`external-boundary` verdict with `reachable`
+absent still errors.
 
 `test_contract_lint.py::test_every_closed_vocabulary_matches_its_schema_enum` (REQ-50) now also
 derives `completeness_tier`, `judge_verdict`, `receipt_tier`, and `reachability.blocker` from

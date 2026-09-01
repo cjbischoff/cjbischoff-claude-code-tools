@@ -96,7 +96,9 @@ class Finding:
             preconditions → lower risk), per the reference-tool severity-from-preconditions rule.
         reachability: Trace-phase verdict — ``{"reachable": bool, "blocker": str|None,
             "chain": [file:line]}``. ``blocker`` ∈ sanitizer|auth_check|input_validation|
-            dead_code|feature_flag|other. Feeds the red-team static-vs-runtime discrimination.
+            dead_code|feature_flag|external-boundary|other. ``external-boundary`` is the one
+            blocker that leaves ``reachable`` absent. Feeds the red-team static-vs-runtime
+            discrimination.
         judge_verdict: Cheap adjudicator's call after finder+critic (e.g. ``uphold`` /
             ``downgrade`` / ``severity-inflated``), a triage-ordering signal.
         runtime_dependent: True when the only barrier to confirmation is data not in the

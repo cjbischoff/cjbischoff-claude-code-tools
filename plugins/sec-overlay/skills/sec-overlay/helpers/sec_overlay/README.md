@@ -1614,3 +1614,11 @@ carry at least one `open_questions` entry with all three `OPEN_QUESTION_KEYS`
 (`question`/`why_it_matters`/`who_to_ask_or_check`) non-empty, or the gate reports it by id. The
 prose already asked an agent for this entry; the gate now makes the omission a build failure
 instead of a silent gap.
+
+`validate_reachability` accepts that shape. It required `reachable` to be present and a bool, so
+the verdict the trace prompt documents failed the reachability stage validator and the repair loop
+pushed the agent to guess the boolean the prompt forbids. An absent `reachable` is now valid when
+`blocker == "external-boundary"`; every other verdict still needs the bool, and a present
+`reachable` of a non-bool type stays an error. `is_reachable` keeps its recall-safe
+`r.get("reachable", True)` default, so an unassessed external-boundary finding still counts as
+reachable, and `blocker_of` still reports a blocker only for a finding proven unreachable.

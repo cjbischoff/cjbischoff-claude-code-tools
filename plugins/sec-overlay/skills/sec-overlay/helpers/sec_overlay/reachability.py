@@ -44,11 +44,17 @@ def partition(findings: list[Finding]) -> dict[str, list[Finding]]:
 
 
 def validate_reachability(r: dict | None) -> list[str]:
-    """Return schema problems with a reachability dict (empty == valid or absent)."""
+    """Return schema problems with a reachability dict (empty == valid or absent).
+
+    An ``external-boundary`` verdict may omit ``reachable``: the sink resolves into a
+    dependency whose source was never ingested, so the trace agent must not guess a
+    boolean (``agents/trace.md``). A present ``reachable`` still has to be a bool.
+    """
     if r is None:
         return []
     errs: list[str] = []
-    if "reachable" not in r or not isinstance(r["reachable"], bool):
+    unassessed_ok = "reachable" not in r and r.get("blocker") == "external-boundary"
+    if not unassessed_ok and not isinstance(r.get("reachable"), bool):
         errs.append("reachability.reachable must be a bool")
     if r.get("reachable") is False and r.get("blocker") not in BLOCKERS:
         errs.append(f"unreachable finding needs a blocker in {BLOCKERS}")

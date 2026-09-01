@@ -54,6 +54,7 @@ Include ANTI_MANIPULATION, EXHAUSTIVENESS, TOOL_TRUST, FIELD_OWNERSHIP from
      the same pass.
 4. Write the verdict onto the finding's `reachability` field:
    `{"reachable": true|false, "blocker": "<taxonomy>"|null, "chain": ["file:line", ...]}`.
+   Omit the `reachable` key entirely when you leave the verdict unset; never write `null` for it.
    A finding proven unreachable with a cited blocker should be demoted (`status: "rejected"`,
    history citing the blocker). If you cannot complete the trace, leave `reachable` absent
    (recall-safe: unassessed ≠ unreachable) and note it — never guess "unreachable".

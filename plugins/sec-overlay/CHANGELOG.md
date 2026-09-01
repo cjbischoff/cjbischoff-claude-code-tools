@@ -10,6 +10,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- `reachability.validate_reachability` accepts the `external-boundary` verdict shape `agents/trace.md` documents. It required `reachable` to be present and a bool, so a verdict that left `reachable` absent failed the `reachability` stage validator and the repair loop pushed the agent to guess the boolean the prompt forbids. An absent `reachable` is now valid when `blocker == "external-boundary"`; every other verdict still needs the bool, and a present non-bool `reachable` stays an error. `is_reachable` and `blocker_of` are unchanged. `agents/trace.md`'s step-4 shape literal now says to omit the key rather than write `null`.
+- `references/README.md`'s REQ-50 sentence said "five more schema enums, and two nested item shapes"; the real counts are four enums (`completeness_tier`, `judge_verdict`, `receipt_tier`, `reachability.blocker`) and three nested item shapes (`history`, `open_questions`, `affected_sites`), which is what the bullet list beneath it already enumerates.
+- The `Finding.reachability` docstring in `models.py` omitted `external-boundary` from the blocker taxonomy. `_MODELS_SHA256` in `test_frozen_contract.py` is re-pinned to the new bytes.
 - `references/README.md`'s note on `receipt_tier` no longer claims it "mirrors" `EVIDENCE_VOCABULARY` — that block names the tier labels, never the digits `1`/`2`. Reworded to state what each side actually pins. `helpers/tests/README.md`'s note on `evidence.is_tool_receipt("reproduction")` no longer cites the D-15 frozen-contract test as the reason the assertion stays False; the real reason is that `"reproduction"` is not a member of `_MECHANICAL`.
 
 ### Added

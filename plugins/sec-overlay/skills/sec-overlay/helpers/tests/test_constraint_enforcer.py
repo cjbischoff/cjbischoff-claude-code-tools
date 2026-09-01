@@ -161,6 +161,33 @@ def test_blocker_of_no_longer_coerces_external_boundary():
     assert blocker_of(f) == "external-boundary"
 
 
+def test_external_boundary_may_omit_reachable():
+    """REQ-52: the shape trace.md documents must pass both validators."""
+    from sec_overlay.reachability import validate_reachability
+    from sec_overlay.stage_validate import validate_stage
+
+    r = {"blocker": "external-boundary", "chain": ["app.py:18"]}
+    assert validate_reachability(r) == []
+    assert validate_stage("reachability", r) == []
+
+
+def test_external_boundary_still_rejects_a_non_bool_reachable():
+    """REQ-52: an absent ``reachable`` is allowed; a wrongly-typed one is not."""
+    from sec_overlay.reachability import validate_reachability
+
+    r = {"blocker": "external-boundary", "reachable": "maybe", "chain": []}
+    assert validate_reachability(r) == ["reachability.reachable must be a bool"]
+
+
+def test_other_blockers_still_require_reachable():
+    """REQ-52: only ``external-boundary`` may leave the verdict unset."""
+    from sec_overlay.reachability import validate_reachability
+
+    assert validate_reachability({"blocker": "sanitizer", "chain": []}) == [
+        "reachability.reachable must be a bool"
+    ]
+
+
 def test_trace_prompt_declares_external_boundary_in_the_taxonomy():
     """REQ-52: the prose taxonomy and the code taxonomy agree."""
     text = (SKILL / "agents" / "trace.md").read_text()

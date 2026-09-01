@@ -301,7 +301,7 @@ The `STE_PROSE` block's mandated front-matter statement is now three sentences: 
 enum of `entrypoint` and `slice`. `helpers/sec_overlay/prove.py` writes the object when a proof
 runs, and only an `entrypoint` proof of an oracle-able class promotes its finding.
 
-REQ-50 pins five more schema enums, and two nested item shapes, to their code source so a future
+REQ-50 pins four more schema enums, and three nested item shapes, to their code source so a future
 edit to the constant edits the schema too — a maintainer changing one of these constants must
 update the matching schema block in the same commit, or `test_contract_lint.py` fails:
 
