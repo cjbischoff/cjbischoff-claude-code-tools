@@ -6,6 +6,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- `to_sarif` emits a cluster's sites and a finding's id (REQ-57). A new `_related_locations`
+  helper turns each entry of `Finding.affected_sites` into a SARIF `relatedLocations` location, so
+  a systemic cluster no longer collapses to one location. Every result gains
+  `properties.findingId`. A needs-runtime suppression now carries `kind: "external"`, not
+  `"inSource"` — the prior kind claimed an in-file annotation the finding never carries.
+
 - Failing tests pin REQ-57: a systemic cluster's `affected_sites` must each become a SARIF
   `relatedLocations` entry, every result must carry `properties.findingId`, and a needs-runtime
   suppression must carry `kind: "external"`, not `"inSource"`.

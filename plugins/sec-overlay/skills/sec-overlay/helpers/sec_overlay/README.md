@@ -1696,3 +1696,11 @@ Detail` link line): it strips a leading lifecycle-status sentence from `Finding.
 words — before clipping, so the What cell never repeats the Status column's word.
 `artifact_consistency._check_truncated_titles` (clause f) now calls `triage_what` too, instead of
 recomputing its own status-stripped source string, so the two never drift.
+
+`sarif.py` gained `_related_locations(finding)` (REQ-57), called from the `to_sarif` result loop.
+It turns each entry of a cluster representative's `Finding.affected_sites` into its own SARIF
+`relatedLocations` location, in the finding's own site order, so a systemic cluster no longer
+reaches a SARIF consumer as a single location. Every result also gains `properties.findingId`, so
+a consumer can name the finding a result came from. The `suppressed` parameter's suppression entry
+now carries `kind: "external"`, not `"inSource"` — the prior kind asserted an in-file annotation
+that a needs-runtime finding never carries; the reason for the suppression sits outside the repo.
