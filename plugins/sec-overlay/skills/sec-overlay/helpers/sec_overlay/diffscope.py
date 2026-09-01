@@ -237,11 +237,20 @@ def changed_files(base: str, head: str = "HEAD", *, runner=subprocess.run) -> li
 
     Returns:
         Repo-relative changed file paths.
+
+    Raises:
+        ValueError: The diff failed. An empty result would read as "nothing changed".
     """
     completed = runner(
         # `--` separates revisions from paths so a ref that looks like a path can't be misparsed.
         ["git", "diff", "--name-only", base, head, "--"], capture_output=True, text=True, check=False
     )
+    if completed.returncode != 0:
+        detail = (completed.stderr or "").strip()
+        raise ValueError(
+            f"git diff --name-only failed between {base} and {head}"
+            + (f": {detail}" if detail else "")
+        )
     return [line for line in completed.stdout.splitlines() if line.strip()]
 
 

@@ -4,6 +4,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Fixed
+
+- `diffscope.changed_files` raises `ValueError` when `git diff --name-only` exits non-zero. The
+  message names the operation and both revisions. Before this change a failed diff returned an
+  empty list, and `postflight` kept every stale prior conclusion.
+
 ### Added
 
 - `tests/test_diffscope.py` pins fix round 1, finding I4. A non-zero `git diff --name-only` exit

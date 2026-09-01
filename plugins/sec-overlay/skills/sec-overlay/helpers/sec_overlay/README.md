@@ -348,7 +348,10 @@ run's own artifacts), `arch-gate` → `_act_arch_gate`, `tm-gate` → `_act_tm_g
 distills the finished scan into `kb/prior_context.json` and records its own stage — D-01). Passing
 `target` lets `run_postflight` derive its own drift set: it diffs the prior context's pinned SHA
 against this pass's SHA in `ctx.target`'s working tree, drops prior items on any file that moved,
-and keeps the rest — no caller computes `changed_files` by hand (REQ-45). Both `arch-gate`/`tm-gate`
+and keeps the rest — no caller computes `changed_files` by hand (REQ-45). `changed_files` raises
+`ValueError` when `git diff --name-only` exits non-zero, naming the operation and both revisions:
+a missing prior SHA would otherwise produce an empty drift set, and every stale prior conclusion
+would survive. Both `arch-gate`/`tm-gate`
 run `diagram_gate.run_diagram_gate` over `architecture/` (and `threat-model/` where present) plus
 `ste_lint.lint_prose` over their doc, write `{"passed", "errors", "warnings"}` to
 `kb/gates/<name>.json` via the shared `_write_gate` helper, and raise `PhaseHalt` naming every
