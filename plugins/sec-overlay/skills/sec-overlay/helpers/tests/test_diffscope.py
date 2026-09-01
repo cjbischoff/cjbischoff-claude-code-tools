@@ -29,6 +29,25 @@ def test_changed_files_parses_name_only(monkeypatch):
     assert changed_files("sha1", "HEAD", runner=fake_run) == ["app.py", "src/db.py"]
 
 
+def test_changed_files_raises_when_git_diff_fails():
+    """A failed diff must not read as an empty change set."""
+
+    class R:
+        stdout = ""
+        stderr = "fatal: bad object dead1\n"
+        returncode = 128
+
+    def fake_run(cmd, capture_output, text, check):
+        return R()
+
+    with pytest.raises(ValueError) as err:
+        changed_files("dead1", "beef2", runner=fake_run)
+    message = str(err.value)
+    assert "git diff --name-only" in message
+    assert "dead1" in message
+    assert "beef2" in message
+
+
 def test_head_sha_strips(monkeypatch):
     class R:
         stdout = "abc1234\n"

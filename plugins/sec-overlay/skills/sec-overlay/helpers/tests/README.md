@@ -1,6 +1,6 @@
 # `tests/` — the deterministic test suite
 
-140 pytest files, 1787 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+140 pytest files, 1788 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
@@ -46,6 +46,11 @@ Re-citing every entry moved `run.py:infer_role` and `run.py:synthesize_manifest`
 `DEAD_ALLOWLIST` into `PROMPT_ONLY` at `commands/audit.md`, moved `campaign.py:pass_report` and
 `detection_coverage.py:generate` the other way, and re-pointed `context.py:leads`,
 `githist.py:security_fix_commits`, `run.py:advance`, and `run.py:drive` at the file that runs them.
+
+`test_diffscope.py` gains `test_changed_files_raises_when_git_diff_fails`, which pins fix round 1,
+finding I4. A non-zero `git diff --name-only` exit must raise, and the message must name the
+operation and both revisions. It fails today: `changed_files` discards the return code, so a
+failed diff reads as an empty change set and `postflight` keeps every stale prior conclusion.
 
 `test_dead_lever.py`'s three REQ-47 tests now pass: `sec_overlay.scope` and `test_scope.py` are
 deleted (the module had no caller), `scanscope.py`'s `rel_to_root` is deleted along with its test

@@ -4,6 +4,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- `tests/test_diffscope.py` pins fix round 1, finding I4. A non-zero `git diff --name-only` exit
+  must raise, and the message must name the operation and both revisions. The test fails.
+  `changed_files` discards the return code, so a failed diff reads as an empty change set.
+
 ### Fixed
 
 - `tests/test_no_dead_helpers.py` requires a `PROMPT_ONLY` citation to prove an invocation. The
