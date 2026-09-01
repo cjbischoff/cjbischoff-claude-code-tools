@@ -4,6 +4,12 @@
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
+`test_dead_lever.py` gains three tests pinning REQ-46: `sec_overlay.cost` must expose only
+`record_timing` and `aggregate_timings_by_phase`, a bare workspace's rendered report must hold no
+"Tokens by" or "Estimated cost" line, and `SKILL.md` must never name `record_agent(`. Two fail:
+`cost` still exposes `record_agent`/`aggregate_by_phase`/`aggregate_by_model`/`estimate_cost_usd`,
+and `SKILL.md` still names `record_agent(` in its cost-recording convention.
+
 New `test_findings_overflow.py` (REQ-27, 5 tests) covers the load-and-save round trip through
 `read_findings`/`write_findings`: an unknown finding key survives the round trip, known fields
 stay unchanged, two insertion orders of the same unknown keys produce byte-identical output, a

@@ -6,6 +6,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- `tests/test_dead_lever.py` pins REQ-46: `sec_overlay.cost` must expose exactly `record_timing` and `aggregate_timings_by_phase`, a bare workspace's rendered report must hold no "Tokens by" or "Estimated cost" line, and `SKILL.md` must never name `record_agent(`. Two of three fail: `cost` still exposes `record_agent`, `aggregate_by_phase`, `aggregate_by_model`, and `estimate_cost_usd`, and `SKILL.md` still names `record_agent(` in its cost-recording convention.
+
 - `tests/test_phase_artifact_contract.py` gains a test pinning REQ-44: `verify_findings` must write back only the findings it read a verdict for, not the whole in-memory set. It fails: a concurrent writer's change to an untouched finding is overwritten with `verify`'s stale copy of that finding.
 
 - `tests/test_phase_artifact_contract.py` pins REQ-43: `validate-fix` must sit between `patch` and `verify` as an agent phase, `verify` must declare the gate file `kb/gates/validate-fix.json` as an input, `sec_overlay.verify` must export `apply_fix_gates`, and `apply_fix_gates` must record a scored verdict in a finding's history without changing its `status`. Four tests fail: `validate-fix` is absent from `PHASE_TABLE`, `verify` declares no such input, `apply_fix_gates` does not exist, and `verify.py` names `score_fix` nowhere.
