@@ -4,11 +4,10 @@
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
 
-`test_dead_lever.py` gains three tests pinning REQ-47: `sec_overlay.scope` must no longer import,
-`sec_overlay.scanscope` must expose only `ScanScope`, `resolve`, `write_scope`, and `load_scope`,
-and `SKILL.md` must source the scope tokens from `run.env` rather than restating the old
-`kb/scan-scope.json` sentence. All three fail: `sec_overlay.scope` still imports, `scanscope` still
-exposes `rel_to_root`, and `SKILL.md` names neither `run.env` nor the replacement wording.
+`test_dead_lever.py`'s three REQ-47 tests now pass: `sec_overlay.scope` and `test_scope.py` are
+deleted (the module had no caller), `scanscope.py`'s `rel_to_root` is deleted along with its test
+in `test_scanscope.py` (also no caller), and `SKILL.md`'s scope-token paragraph now points at
+`run.env` instead of restating the old `kb/scan-scope.json` sentence.
 
 `test_dead_lever.py` gains three tests pinning REQ-46: `sec_overlay.cost` must expose only
 `record_timing` and `aggregate_timings_by_phase`, a bare workspace's rendered report must hold no
@@ -582,9 +581,9 @@ All four fail: `validate-fix` is absent from `PHASE_TABLE`, `verify` declares no
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 
-The review-improvements test files (`test_cluster.py`, `test_scope.py`, `test_selfscore.py`,
-`test_sarif.py`, `test_calibrate.py`, `test_report.py`) are `ruff format`-clean; run `ruff format`
-before committing edits.
+The review-improvements test files (`test_cluster.py`, `test_selfscore.py`, `test_sarif.py`,
+`test_calibrate.py`, `test_report.py`) are `ruff format`-clean; run `ruff format` before
+committing edits. (`test_scope.py` is deleted — REQ-47.)
 
 `test_selfscore.py` gained `test_shipping_counts_full_set`, covering `build_self_score`'s new
 `shipping` count over `evidence.SHIPPING_STATUSES`.

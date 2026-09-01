@@ -226,10 +226,9 @@ that finding to `needs-deployment-testing` instead. `driver._act_findings_gate` 
 `PhaseHalt` when the gate returns any error, so a rejected finding now halts the phase
 instead of passing through silently.
 
-`scope.py` (new) checks `is_external_package(pkg, ws)` against `kb/scan-scope.json`'s
-`ingested_packages` list, so a sink that resolves into an un-ingested dependency can be flagged as
-outside the scanned source — returns `False` (not external) when no manifest exists, so the check
-never invents a boundary — see the module map entry.
+**REQ-47:** `scope.py` is deleted — `is_external_package` had no caller. `scanscope.py`'s
+`rel_to_root` helper is deleted too, for the same reason; the module now exposes only
+`ScanScope`, `resolve`, `write_scope`, and `load_scope` — see the module map entry.
 
 `calibrate.py` gained `_EXTERNAL_CAP` (3) and `_is_external_boundary`: a finding whose
 `reachability.blocker == "external-boundary"` has its `risk_score` capped at 3 (below the medium

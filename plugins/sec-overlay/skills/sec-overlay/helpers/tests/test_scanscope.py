@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sec_overlay.scanscope import ScanScope, load_scope, rel_to_root, resolve, write_scope
+from sec_overlay.scanscope import ScanScope, load_scope, resolve, write_scope
 from sec_overlay.workspace import Workspace
 
 
@@ -66,13 +66,3 @@ def test_load_missing_returns_none(tmp_path: Path):
     ws = Workspace(tmp_path / "ws")
     ws.ensure()
     assert load_scope(ws) is None
-
-
-def test_rel_to_root_absolute_and_subdir(tmp_path: Path):
-    scope = ScanScope(repo_root=str(tmp_path), scan_scope="internal/svc")
-    # absolute path under repo_root -> repo-root-relative
-    assert rel_to_root(tmp_path / "internal/svc/a.go", scope) == "internal/svc/a.go"
-    # scan-scope-relative path -> repo-root-relative
-    assert rel_to_root("a.go", scope) == "internal/svc/a.go"
-    # already repo-root-relative -> unchanged
-    assert rel_to_root("internal/svc/a.go", scope) == "internal/svc/a.go"

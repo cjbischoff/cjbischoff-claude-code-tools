@@ -202,12 +202,14 @@ paths, so a subagent reads the right file regardless of its CWD — substitute *
 these before spawning: `{{TARGET}}`, `{{WORKSPACE}}`, `{{ATTACK_CLASS}}`, `{{PHASE}}`,
 `{{ROUND}}`, the two path anchors `{{OVERLAY_ROOT}}` (absolute path to
 `skills/sec-overlay/`) and `{{HELPERS_DIR}}` (absolute path to
-`skills/sec-overlay/helpers`), and the two scope anchors `{{REPO_ROOT}}` (absolute
-git top-level of the scanned repo, read from `kb/scan-scope.json`) and `{{SCAN_SCOPE}}`
-(the audit target path relative to `{{REPO_ROOT}}`, also from `kb/scan-scope.json`).
-All agents cite paths **repo-root-relative**; all gates/dedupe/verify resolve against
-`{{REPO_ROOT}}` (read from `kb/scan-scope.json`). When this skill runs as the installed
-`sec-overlay` plugin, set `{{OVERLAY_ROOT}}` = `${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay`
+`skills/sec-overlay/helpers`), and the two scope anchors `{{REPO_ROOT}}` and `{{SCAN_SCOPE}}`.
+Neither is a dispatch token: `DISPATCH_TOKENS` does not carry them. The driver writes both
+into `{{WORKSPACE}}/run.env` (`run.py`'s `write_env`), and every agent reads that file.
+All agents cite paths **repo-root-relative**; all gates, dedupe, and verify resolve
+against `{{REPO_ROOT}}`. `kb/scan-scope.json` is the durable record the prefilter
+writes; `agents/context-ingest.md` reads it through `scanscope.load_scope`. When this
+skill runs as the installed `sec-overlay` plugin, set `{{OVERLAY_ROOT}}` =
+`${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay`
 and `{{HELPERS_DIR}}` = `${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay/helpers`. Record each phase
 with `record_stage(<WS>, "<phase>")` so passes advance. Persist each agent's final return with
 `workspace.record_agent_return(ws, "<agent-label>", <text>)` (→ `runs/<agent>.txt`) and

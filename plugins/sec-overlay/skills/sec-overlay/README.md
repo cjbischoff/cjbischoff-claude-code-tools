@@ -311,3 +311,6 @@ One coupling point to respect before editing:
 - **Prompt rendering is loud.** `helpers/sec_overlay/prompts.py`'s `render_prompt` substitutes
   `{{KEY}}` tokens and raises if any remain — CLAUDE.md §2 has the orchestrator render every
   dispatched agent prompt through it instead of hand-substituting tokens.
+- **Scope tokens are runtime-only.** `{{REPO_ROOT}}` and `{{SCAN_SCOPE}}` aren't in `driver.py`'s
+  `DISPATCH_TOKENS`; the driver writes both to `{{WORKSPACE}}/run.env` and every agent reads that
+  file — see `SKILL.md`.
