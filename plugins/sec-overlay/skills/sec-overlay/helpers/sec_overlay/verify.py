@@ -394,7 +394,7 @@ def verify_findings(
     findings = read_findings(ws)
     configs = resolve_configs(ws, config)
     fixed = 0
-    changed = False
+    touched: list[Finding] = []
     for f in findings:
         if f.status is not FindingStatus.CONFIRMED or not f.patch_diff:
             continue
@@ -425,11 +425,11 @@ def verify_findings(
                            f"explicitly said {last_validate_fix.get('event')!r} — leaving "
                            "status/verification as validate-fix left them for human review"),
             })
-            changed = True
+            touched.append(f)
             continue
         f.history.append({"event": f"verify:cause:{cause}"})
         f.verification = verification
-        changed = True
+        touched.append(f)
         if verification == "verified-static":
             f.status = FindingStatus.FIXED
             f.history.append({"event": "verify:fixed"})
@@ -437,8 +437,8 @@ def verify_findings(
         elif verification == "static-only":
             f.status = FindingStatus.NEEDS_DEPLOYMENT_TESTING
             f.history.append({"event": "verify:needs-deployment-testing"})
-    if changed:
-        write_findings(ws, findings)
+    if touched:
+        write_findings(ws, touched)
     record_stage(ws, "verify")
     return fixed
 

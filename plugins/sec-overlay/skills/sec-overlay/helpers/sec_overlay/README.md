@@ -1511,3 +1511,19 @@ touches `status`, leaving promotion to the deterministic `verify` phase that run
 `driver.py`'s `_act_verify` calls `apply_fix_gates` before `verify_findings`, as its own step, not
 a call inside `verify_findings` itself. `verify.py` was missing the `Finding` import
 `apply_fix_gates` needs; it is added alongside the existing `FindingStatus` one.
+
+### `verify_findings` writes back only the findings it touched (REQ-44)
+
+`verify_findings` read the whole finding set with `read_findings` at the top of the function, then
+wrote the whole in-memory list back with `write_findings` at the bottom, gated only on a `changed:
+bool` flag that recorded whether *any* finding in the set had changed — not which ones. A finding
+another writer mutated between that read and that write (for example `apply_fix_gates`, running in
+the same phase just before it) was overwritten with `verify`'s stale copy of that finding.
+
+The `changed` flag is replaced with a `touched: list[Finding]` accumulator. The two sites in
+`verify_findings` that used to set `changed = True` — the `verify:conflict` branch and the
+`verify:cause:<cause>` event after a verdict — now append the finding they just mutated to
+`touched` instead. The final write becomes `if touched: write_findings(ws, touched)`,
+so a finding `verify_findings` never looked at (no `CONFIRMED` status, or no `patch_diff`) is never
+part of the write-back. `write_findings` (`workspace.py`) writes one file per finding, so a subset
+write needs no additional locking or barrier — it is already the unit of atomicity.

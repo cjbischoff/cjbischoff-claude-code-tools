@@ -239,7 +239,7 @@ def test_verify_writes_back_only_the_findings_it_touched(tmp_path) -> None:
         write_findings(ws, [other])
         return "not-fixed"
 
-    verify_findings(ws, tmp_path, {}, verifier=_writer_races)
+    verify_findings(ws, tmp_path, "", verifier=_writer_races)
 
     survivor = next(f for f in read_findings(ws) if f.id == "U-1")
     assert survivor.message == "changed by another writer"

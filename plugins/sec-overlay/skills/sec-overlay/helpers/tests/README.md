@@ -1546,3 +1546,7 @@ concurrent writer's change to that same finding with the stale copy from its own
 writes two findings, has the injected verifier simulate a second writer changing the untouched
 one mid-run, then asserts the untouched finding keeps the concurrent writer's value after
 `verify_findings` returns. It fails: the untouched finding reverts to its pre-race value.
+
+The REQ-44 test's `config` argument reads `""`, not `{}`: `verify_findings`'s `config` parameter
+types as `str`, and the injected stub verifier ignores its `configs` argument entirely, so an
+empty string satisfies `ty check` with no change in what the test exercises.
