@@ -120,7 +120,7 @@ flowchart TD
     CLUS --> LAD(("8-9 · critic → judge → validate(opus refutes)"))
     LAD --> CAL["10 · calibrate<br/>risk_score 1-10 + citations"]
     CAL --> PAT(("11 · patch(opus)"))
-    PAT --> VF(("validate-fix(opus)<br/>architect + pentester score the patch"))
+    PAT --> VF(("11.5 · validate-fix(opus)<br/>architect + pentester score the patch"))
     VF --> VER["12 · verify<br/>apply_fix_gates scores validate-fix.json, then re-scan"]
     VER --> GATE["13 · findings_gate"]
     GATE --> RT(("14 · redteam → redteam-adversary"))
