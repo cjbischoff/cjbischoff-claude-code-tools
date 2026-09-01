@@ -1439,8 +1439,10 @@ exposes to a reader — a triage row, a `## Detail` link, or a `### <id> — ` s
 shape `report.py` uses for the external-leads section) — intersected with the ids `read_findings`
 confirms exist on disk. Part one flags a stated `Needs runtime proof: N` that disagrees with how
 many rendered ids carry `FindingStatus.NEEDS_DEPLOYMENT_TESTING`; part two flags a SARIF result
-count that disagrees with the total rendered id count, degrading to a pass when `report.sarif`
-does not exist. Part one additionally requires the report to contain a `## Triage` heading before
+count that disagrees with the total rendered id count — or, when a confirmed-only run recorded
+that in `state.budget.sarif_confirmed_only` (see the P4-15 fix below), the confirmed/fixed subset
+of it — degrading to a pass when `report.sarif` does not exist. Part one additionally requires the
+report to contain a `## Triage` heading before
 judging the count — every real `to_markdown()` output emits that heading unconditionally, so its
 absence marks the report body as an incomplete artifact (the synthetic bare-count-line fixture
 used by a pre-existing unit test), not a contradiction, matching every other check in this module.
@@ -1711,3 +1713,12 @@ a raw one does, so `postflight._merge` always has a fingerprint to key its prior
 on and never falls back to a `file:line:cls` key that collapses distinct findings sharing a
 site. The three grouping passes below the stamping loop still read `_ACTIVE` unchanged — only
 a `RAW` or `CONFIRMED` finding may be marked `DUPLICATE`.
+
+### Two artifact-consistency false halts, fixed (P4-15)
+
+Clause (g) part two halted every correct `confirmed_only=True` run. `write_report` writes SARIF
+from the reportable (confirmed/fixed) set only in that mode, but still renders needs-runtime rows
+into the Markdown, so the two counts always disagreed. `write_report` now records the mode at
+`state.budget["sarif_confirmed_only"]` — the same pattern `selfscore.py` uses for `self_score` —
+and clause (g) compares the SARIF count against the rendered ids filtered to confirmed/fixed
+status when that flag is set, and against every rendered id otherwise.

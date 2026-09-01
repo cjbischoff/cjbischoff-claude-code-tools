@@ -6,6 +6,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- Clause (g) of the artifact-consistency gate no longer halts a correct `confirmed_only=True`
+  run (P4-15). `write_report` now records the mode at `state.budget["sarif_confirmed_only"]`,
+  and the gate compares the SARIF result count against the confirmed/fixed subset of rendered
+  findings when that flag is set, matching what `write_report` actually wrote.
+
+### Fixed
+
 - `dedupe_findings` stamps a fingerprint on every finding, whatever its status (REQ-58). The
   three grouping passes still read `_ACTIVE`, so only a `RAW` or `CONFIRMED` finding can become
   a `DUPLICATE`. `postflight._merge` now always has a real fingerprint and never falls back to

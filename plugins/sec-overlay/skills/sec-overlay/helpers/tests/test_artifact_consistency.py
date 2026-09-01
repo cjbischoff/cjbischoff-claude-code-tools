@@ -5,6 +5,8 @@ from pathlib import Path
 
 from sec_overlay.artifact_consistency import run_artifact_consistency
 from sec_overlay.models import Finding, FindingStatus, Severity
+from sec_overlay.report import write_report
+from sec_overlay.selfscore import write_self_score
 from sec_overlay.state import load_state, save_state
 from sec_overlay.workspace import Workspace, write_findings
 
@@ -249,6 +251,37 @@ def test_gate_passes_when_the_report_states_the_external_split(tmp_path):
     ws.sarif_path.write_text(
         json.dumps({"runs": [{"results": [{"ruleId": "r"}, {"ruleId": "r"}]}]})
     )
+    assert run_artifact_consistency(ws) == []
+
+
+def test_confirmed_only_report_does_not_halt_the_gate(tmp_path):
+    """Check (g) part two: a correct confirmed-only run must not trip the gate.
+
+    P4-15. write_report(confirmed_only=True) writes SARIF from the reportable
+    set only but still renders needs-runtime rows into the markdown, so a
+    naive count comparison halts a run that did nothing wrong. Exercises the
+    real write_report + write_self_score pipeline end to end.
+    """
+    ws = _ws(tmp_path)
+    write_findings(
+        ws,
+        [
+            Finding(
+                id="F-1",
+                rule_id="r",
+                cls="authz",
+                status=FindingStatus.CONFIRMED,
+                severity=Severity.HIGH,
+                file="a.py",
+                line=1,
+                message="m",
+                risk_score=7,
+            ),
+            _ndt("N-2"),
+        ],
+    )
+    write_report(ws, confirmed_only=True)
+    write_self_score(ws)
     assert run_artifact_consistency(ws) == []
 
 

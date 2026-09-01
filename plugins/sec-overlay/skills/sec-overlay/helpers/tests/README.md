@@ -1742,3 +1742,13 @@ Two `REJECTED` findings share one file and line but carry different `rule_id` va
 asserts both end up with a 12-character fingerprint and that the two fingerprints differ. It
 fails before the fix because the stamping loop in `dedupe.py` only stamps findings whose status
 is `RAW` or `CONFIRMED`, so both rejected findings keep a `None` fingerprint.
+
+## Two artifact-consistency false halts, fixed (P4-15)
+
+`test_artifact_consistency.py` gains `test_confirmed_only_report_does_not_halt_the_gate`, pinning
+the fix to clause (g) part two. It drives the real pipeline end to end —
+`write_report(ws, confirmed_only=True)` then `write_self_score(ws)` — on a workspace holding one
+`CONFIRMED` finding and one needs-runtime finding, then asserts `run_artifact_consistency(ws) ==
+[]`. It fails before the fix: `write_report` in confirmed-only mode writes SARIF from the
+reportable set alone but still renders the needs-runtime row into the Markdown, so clause (g)
+always saw a SARIF/report count mismatch on an otherwise-correct run.

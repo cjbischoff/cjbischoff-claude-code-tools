@@ -19,7 +19,7 @@ from sec_overlay.redteam import discriminate
 from sec_overlay.render_util import signal_lines
 from sec_overlay.review_findings import ReviewFinding
 from sec_overlay.sarif import to_sarif
-from sec_overlay.state import load_state
+from sec_overlay.state import load_state, save_state
 from sec_overlay.workspace import (
     _OVERFLOW_ATTR,
     Workspace,
@@ -678,7 +678,9 @@ def write_report(
             checked (``git apply --check``) against the real working tree so the report never
             implies a still-vulnerable finding's patch is deployed.
         confirmed_only: When true, SARIF excludes needs-deployment-testing findings
-            entirely, matching the pre-suppression default output.
+            entirely, matching the pre-suppression default output. Persisted at
+            ``state.budget["sarif_confirmed_only"]`` so the artifact-consistency
+            gate knows which population SARIF was written from.
         dropped: Review-mode findings the position gate placed outside the diff; rendered
             into the markdown report and into ``artifacts/review_ledger.json`` from this one
             argument, so the two outputs cannot disagree (D-14, POS-03).
@@ -733,6 +735,8 @@ def write_report(
         sarif_findings, suppressed = reportable, None
     else:
         sarif_findings, suppressed = reportable + ndt, ndt
+    state.budget["sarif_confirmed_only"] = confirmed_only
+    save_state(ws, state)
     ws.sarif_path.write_text(json.dumps(to_sarif(sarif_findings, suppressed=suppressed), indent=2))
     ws.report_path.write_text(
         to_markdown(

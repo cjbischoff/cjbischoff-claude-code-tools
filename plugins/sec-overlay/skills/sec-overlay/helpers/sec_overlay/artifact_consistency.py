@@ -32,6 +32,9 @@ _ACTION_SECTIONS = {
     "see redteam-plan gaps": "## Runtime-validation gaps",
 }
 
+# Statuses write_report(confirmed_only=True) puts into SARIF (report.py's _REPORTABLE).
+_SARIF_REPORTABLE = {FindingStatus.CONFIRMED, FindingStatus.FIXED}
+
 
 def _section(md: str, heading: str) -> str:
     """Return the body under the first heading that starts with ``heading``."""
@@ -233,8 +236,10 @@ def _check_sarif_population(ws: Workspace, report_md: str) -> list[str]:
 
     Part one: the stated ``Needs runtime proof`` count equals the needs-runtime
     findings the report renders. Part two: the SARIF result count equals the
-    total finding count the report renders. A missing SARIF file degrades part
-    two to a pass.
+    total finding count the report renders — or, when
+    ``state.budget.sarif_confirmed_only`` is set, the confirmed/fixed subset of
+    it, matching what ``write_report(confirmed_only=True)`` actually wrote. A
+    missing SARIF file degrades part two to a pass.
 
     Args:
         ws: The finished-run workspace.
@@ -264,10 +269,14 @@ def _check_sarif_population(ws: Workspace, report_md: str) -> list[str]:
         doc = json.loads(ws.sarif_path.read_text())
         runs = doc.get("runs") or [{}]
         results = runs[0].get("results") or []
-        if len(results) != len(rendered):
+        if load_state(ws).budget.get("sarif_confirmed_only"):
+            population = {fid for fid in rendered if by_id[fid].status in _SARIF_REPORTABLE}
+        else:
+            population = rendered
+        if len(results) != len(population):
             errors.append(
                 f"artifact-consistency: SARIF holds {len(results)} result(s) "
-                f"but the report renders {len(rendered)} finding(s)"
+                f"but the report renders {len(population)} finding(s)"
             )
     return errors
 
