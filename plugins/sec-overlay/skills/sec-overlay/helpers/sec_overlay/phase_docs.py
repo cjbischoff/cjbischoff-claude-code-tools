@@ -72,7 +72,10 @@ DOCUMENTS: tuple[Path, ...] = (
 # DOCUMENTS but not here — see the module docstring.
 NOTE_DOCUMENTS: tuple[Path, ...] = (SKILL_ROOT / "SKILL.md",)
 
-_BEGIN = re.compile(r"^<!-- BEGIN GENERATED: phase-table(?P<attrs>[^>]*)-->$", re.MULTILINE)
+# ``\r?$`` so a document saved with Windows line endings still matches: the bare
+# ``$`` anchor sits after the ``\r``, so a CRLF marker line never matched and
+# ``regenerate`` returned the stale text with no error.
+_BEGIN = re.compile(r"^<!-- BEGIN GENERATED: phase-table(?P<attrs>[^>]*)-->\r?$", re.MULTILINE)
 _END = "<!-- END GENERATED: phase-table -->"
 
 _NOTES_BEGIN = "<!-- BEGIN PHASE NOTES -->"
@@ -172,6 +175,8 @@ def regenerate(text: str) -> str:
     """Return ``text`` with every phase-table block replaced by fresh output.
 
     Blocks are rewritten last-first, so an earlier match's offsets stay valid.
+    Every block is validated before any rewrite, so a malformed document raises
+    with nothing written.
 
     Args:
         text: A document's full text.
@@ -180,16 +185,25 @@ def regenerate(text: str) -> str:
         The same text with each block regenerated.
 
     Raises:
-        ValueError: A block has no end marker, or its marker declares no columns.
+        ValueError: A block has no end marker, a second BEGIN marker opens
+            before the current block's END, or a marker declares no columns.
     """
-    out = text
-    for m in reversed(list(_BEGIN.finditer(text))):
-        start = m.end()
-        stop = out.find(_END, start)
+    blocks = []
+    matches = list(_BEGIN.finditer(text))
+    for i, m in enumerate(matches):
+        stop = text.find(_END, m.end())
         if stop < 0:
             raise ValueError("phase-table block has no END marker")
+        if i + 1 < len(matches) and matches[i + 1].start() < stop:
+            # A nested BEGIN would be swallowed by the outer rewrite, silently
+            # deleting itself and everything between the two markers.
+            line = text.count("\n", 0, matches[i + 1].start()) + 1
+            raise ValueError(f"nested phase-table BEGIN marker at line {line}")
+        blocks.append((m, stop))
+    out = text
+    for m, stop in reversed(blocks):
         columns, kind = _attrs(m.group("attrs"))
-        out = out[:start] + "\n" + render_phase_table(columns, kind) + "\n" + out[stop:]
+        out = out[: m.end()] + "\n" + render_phase_table(columns, kind) + "\n" + out[stop:]
     return out
 
 

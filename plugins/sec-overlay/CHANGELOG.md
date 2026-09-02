@@ -16,6 +16,16 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- `phase_docs.regenerate` raises `nested phase-table BEGIN marker at line <n>` when a second
+  `BEGIN GENERATED: phase-table` marker opens before the current block's `END`. The outer rewrite
+  used to swallow the inner marker and every line between the two, deleting content with no error.
+  Every block is now validated before any rewrite, so a malformed document writes nothing.
+- `phase_docs`'s `_BEGIN` pattern anchors on `\r?$` instead of a bare `$`. A document saved with
+  Windows line endings put a `\r` between the marker and the newline, so no marker matched and
+  `--check` reported a stale document as current. `_BEGIN` is the only pattern in the module with a
+  line-end anchor.
+- The maintainer `CLAUDE.md` lists `phase_docs` among the CLI-callable modules. It was missing.
+
 - `verify_patch` runs its `rule-no-target-file` check AFTER the post-patch re-scan instead of
   before the repo copy. The guard now only downgrades a surviving hit, so a cross-file fix that a
   cross-file backend (`codeql:dataflow`, or `sca` where the finding cites the lockfile and the

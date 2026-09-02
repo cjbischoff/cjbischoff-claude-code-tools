@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+import pytest
+
 from sec_overlay import phase_docs
 from sec_overlay.phase_docs import DOCUMENTS, regenerate, render_phase_table
 from sec_overlay.phases import PHASE_TABLE
@@ -65,6 +67,37 @@ def test_claude_md_carries_no_generated_block():
 
 def test_note_documents_is_skill_md_only():
     assert phase_docs.NOTE_DOCUMENTS == (phase_docs.SKILL_ROOT / "SKILL.md",)
+
+
+_BEGIN_MARKER = "<!-- BEGIN GENERATED: phase-table columns=index,phase -->"
+_END = "<!-- END GENERATED: phase-table -->"
+
+
+def test_a_nested_begin_marker_raises_instead_of_deleting_the_text():
+    """A second BEGIN before the END must fail loudly, naming the line.
+
+    Without the guard the outer block swallows the inner marker and everything
+    between them, so a mis-edited document loses text on the next ``--write``.
+    """
+    lines = ("intro", _BEGIN_MARKER, "| # | Phase |", _BEGIN_MARKER, "| # | Phase |", _END, "out")
+    text = "\n".join(lines)
+    with pytest.raises(ValueError, match="line 4"):
+        regenerate(text)
+
+
+def test_a_crlf_document_regenerates():
+    """The BEGIN pattern must match a marker line that ends ``\\r\\n``.
+
+    A document saved with Windows line endings put a ``\\r`` between the marker
+    and the newline, so the ``$`` anchor never matched and ``regenerate``
+    silently returned the stale text.
+    """
+    lines = ("intro", _BEGIN_MARKER, "| stale |", _END, "outro")
+    text = "\r\n".join(lines)
+    out = regenerate(text)
+    assert out != text, "the CRLF marker never matched"
+    assert render_phase_table(("index", "phase")) in out
+    assert "| stale |" not in out
 
 
 def test_claude_md_is_in_documents_but_not_note_documents():

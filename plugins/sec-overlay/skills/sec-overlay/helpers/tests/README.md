@@ -37,6 +37,14 @@ of an invented one. A `PhaseSpec` rename in `phases.py` now fails this file's
 `test_every_generated_block_is_current` (plus two more phase_docs tests the rename also breaks), so
 a rename can no longer pass the suite with a stale document.
 
+Two more `test_phase_docs.py` tests pin `regenerate`'s failure modes, both on synthetic text so no
+real document carries a broken marker.
+`test_a_nested_begin_marker_raises_instead_of_deleting_the_text` builds a document whose second
+`BEGIN` opens before the first block's `END` and asserts the `ValueError` names line 4; before the
+guard, the outer rewrite swallowed the inner marker and every line between the two. `test_a_crlf_document_regenerates` joins the same document with `\r\n` and
+asserts the block is rewritten; before the `\r?$` anchor, the marker never matched and `--check`
+reported a stale document as current.
+
 `phase_docs.py` ships. `regenerate` rewrote the four generated documents from `PHASE_TABLE`, and
 `SKILL.md`'s old hand-numbered walkthrough became a five-item preface list (the steps
 `PHASE_TABLE` does not own) plus the generated table and a 28-entry Phase Notes region, one bullet

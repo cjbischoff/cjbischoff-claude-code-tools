@@ -41,7 +41,7 @@ uv run python -m sec_overlay.preflight             # tool availability
 - CLI-callable modules (`python -m sec_overlay.<module>`): `cli`, `preflight`, `postflight`,
   `calibrate`, `dedupe`, `verify`, `report`, `redteam`, `bugchain`, `astgrep`, `structural_index`,
   `citations`, `findings_gate`, `rule_gaps`, `redactor`, `graph`, `artifact_gate`, `diagram_gate`,
-  `ste_lint`, `route_census`, `dependency_sinks`, `pr_poster`.
+  `ste_lint`, `route_census`, `dependency_sinks`, `pr_poster`, `phase_docs`.
 
 ---
 ## Documentation — READMEs track code (enforced)

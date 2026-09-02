@@ -1798,3 +1798,13 @@ asserts exact set equality between the note keys and the `PHASE_TABLE` phase nam
 was unreachable and the constant was a configuration point nothing populated. The five non-table
 steps still open `SKILL.md`'s "Running a full audit" section as a numbered preface list; they
 simply carry no operator note.
+
+`regenerate` validates every block before it rewrites any of them. Two failures used to be
+silent. A second `BEGIN GENERATED: phase-table` marker opening before the current block's `END`
+was swallowed by the outer rewrite, which deleted the inner marker and everything between the
+two; `regenerate` now raises `nested phase-table BEGIN marker at line <n>`, naming the offending
+line, and writes nothing. And the `_BEGIN` pattern anchored on a bare `$`, which sits after the
+`\r` of a CRLF line ending, so a document saved with Windows line endings matched no marker at
+all and `--check` called it current; the anchor is now `\r?$`. `_BEGIN` is the only pattern in
+the module with a line-end anchor — `_NOTE_KEY` matches a bullet prefix and never anchors the
+line end — so no other pattern needed the same change.

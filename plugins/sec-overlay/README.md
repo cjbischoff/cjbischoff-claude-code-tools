@@ -57,6 +57,11 @@ Every agent prompt imports the same sixteen verbatim rule blocks from
 A dependency-sink catalog (`dependency_sinks.py`) names dependencies whose own code holds the
 sink. Run it directly with `python -m sec_overlay.dependency_sinks match --root <dir>`.
 
+The skill's documented phase order is generated, not hand-maintained. `phase_docs.py` renders it
+from `PHASE_TABLE` into every document that states it. Run
+`python -m sec_overlay.phase_docs --check` to fail on a stale document, or `--write` to regenerate
+each one in place.
+
 The dev benchmark ships a committed seed corpus (`skills/sec-overlay/helpers/bench/corpus_seed/`,
 public entries only), and `.github/workflows/sec-overlay-tests.yml` gates every pull request on
 the two `locked` fixtures staying detected by a deterministic scan.
