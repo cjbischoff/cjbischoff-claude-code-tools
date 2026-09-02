@@ -1810,3 +1810,31 @@ touches the record — and asserts the second finding's history entry carries no
 
 All four fail: `_file_has_hit` accepts no `detail` keyword yet, so `verify_patch` cannot compare
 pre-patch and post-patch evidence, and `sec_overlay.verify` has no `_LAST_LINES` attribute.
+
+## 2026-09-01 — REQ-60 green: `rule-no-discriminate` compares evidence text
+
+`_file_has_hit` and `_check` gain a keyword-only `detail` out-parameter. When given, every matching
+scanner finding is appended instead of returning `True` on the first match. `verify_patch` collects
+a `pre_detail` and a `post_detail` list this way, then calls a new `_post_verdict` helper. The
+helper compares stripped evidence text, never line numbers, since an inserted line shifts every
+later line and a same-line comparison would call an unfixed finding new. Disjoint non-empty
+evidence sets return `rule-no-discriminate`. Any other case returns `not-fixed`.
+
+`_post_verdict` records the pre-patch and post-patch line on a module-level `_LAST_LINES` dict,
+since the cause is a plain string that carries no line data on its own. `verify_findings` reads
+this dict right after calling `verifier` and adds a `reason` key to the history entry only when the
+dict is non-empty, so `test_verify_findings_records_the_cause`'s exact-dict membership check for
+causes with no evidence still holds.
+
+`verify_findings` clears `_LAST_LINES` immediately before every `verifier` call, not only inside
+`verify_patch`. A stub `verifier=` callable injected in a test bypasses `verify_patch` outright, so
+clearing only inside `verify_patch` would let one finding's real line numbers leak into a later
+finding's history entry that used a stub. The fourth test above pins this: two `verify_findings`
+calls in one process, the second with a stub verifier, and asserts the second's history entry
+carries no `reason` key.
+
+`tests/test_verify.py`'s `fake_hit` at line 126 widens from five fixed positional parameters to
+`(target_dir, config, file_path, cls, rules, **kw)`, so the new keyword-only `detail` argument
+still binds when a test's stub does not care about it.
+
+All 42 targeted tests pass. The full suite passes at 1843 tests (1839 plus these four).

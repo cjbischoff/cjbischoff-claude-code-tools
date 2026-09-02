@@ -6,6 +6,15 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- `verify.py` gains the `rule-no-discriminate` cause (REQ-60). A rule that still fires after a
+  patch, but on evidence text disjoint from the pre-patch match, no longer reports `not-fixed`.
+  `_file_has_hit` and `_check` gain a keyword-only `detail` out-parameter collecting every matching
+  scanner finding, so `verify_patch` can compare pre-patch and post-patch evidence text through a
+  new `_post_verdict` helper. Maps to `static-only`. The finding's history entry names the
+  pre-patch and post-patch line.
+
+### Added
+
 - Failing tests pin the `rule-no-discriminate` cause (REQ-60). `test_verify_paths.py` gains three
   tests. One asserts `verify_patch` returns `rule-no-discriminate` when a rule matches disjoint
   pre-patch and post-patch evidence text. One asserts `not-fixed` when the same construction

@@ -360,7 +360,14 @@ semgrep backend, running codeql/sca once regardless of the list; a scanner hit m
 when their paths share a suffix at a `/` boundary after `_rel_path` strips the scan root, so two
 same-named files in different directories no longer alias; `rule-no-target-file` — the patch
 writes no file the finding's rule fires in, so a re-scan cannot observe the fix. Maps to
-`static-only`, never to `not-fixed`),
+`static-only`, never to `not-fixed`; `rule-no-discriminate` — the rule still fires post-patch, but
+`_post_verdict` finds its matched evidence text disjoint from the pre-patch match, so the rule's
+sink list covers both the vulnerable and the safe construction rather than telling them apart.
+Maps to `static-only`; `_file_has_hit` and `_check` take an out-parameter `detail` list collecting
+every matching scanner finding, not only a boolean, so `verify_patch` can pass both scans' matches
+to `_post_verdict`, and `verify_findings` names the pre-patch and post-patch line in the finding's
+history via a module-level `_LAST_LINES` record cleared before every `verifier` call so a stub
+`verifier=` injection never inherits a prior finding's stale line numbers),
 `demote-noise` → `partition.demote_noise`, `report` → `report.write_report`, `selfscore` →
 `selfscore.write_self_score`, `artifact-gate` → `_act_artifact_gate` (calls
 `artifact_gate.run_artifact_gate`, raising `PhaseHalt` naming every error when the gate rejects the

@@ -195,6 +195,7 @@ def _path_matches(scanner_path: str, finding_path: str, root: str) -> bool:
 def _file_has_hit(
     target_dir: str, config: str, file_path: str, cls: str, rules: set[str],
     *, backend: str = "semgrep", language: str | None = None, db_dir: str | None = None,
+    detail: list[Finding] | None = None,
 ) -> bool | None:
     """Return True if the finding's signal is present in ``file_path``.
 
@@ -211,6 +212,10 @@ def _file_has_hit(
         backend: Which SAST backend to re-run (``"semgrep"``/``"codeql"``/``"sca"``).
         language: CodeQL language id — required for the ``codeql`` backend.
         db_dir: CodeQL database directory — required for the ``codeql`` backend.
+        detail: When given, every matching scanner finding is appended, so the
+            caller can compare pre-patch and post-patch matches rather than only
+            their presence. A monkeypatched stub that ignores it leaves it empty,
+            and the caller falls back to the boolean comparison.
 
     Returns:
         Whether at least one matching finding exists, or ``None`` if the
@@ -228,33 +233,39 @@ def _file_has_hit(
             findings = run_semgrep(target_dir, config)
     except (CodeQLError, ScaError):
         return None
+    matched = False
     for f in findings:
         if not _path_matches(f.file, file_path, target_dir):
             continue
         if f.rule_id in rules if rules else f.cls == cls:
-            return True
-    return False
+            matched = True
+            if detail is None:
+                return True
+            detail.append(f)
+    return matched
 
 
 def _check(
     target: str, configs: list[str], file_path: str, cls: str, rules: set[str],
     backend: str, language: str | None, db_dir: str | None,
+    *, detail: list[Finding] | None = None,
 ) -> bool | None:
     """Call ``_file_has_hit`` once per config, OR-combining the tri-state result.
 
     ``semgrep`` uses the original 5-positional-arg call (kept exact for
     backward compatibility with existing monkeypatches of ``_file_has_hit``);
     ``codeql``/``sca`` ignore ``configs`` entirely and run once, so a
-    multi-ruleset plan never re-runs a database build per ruleset.
+    multi-ruleset plan never re-runs a database build per ruleset. ``detail``
+    rides as a keyword so a 5-positional monkeypatch still binds.
     """
     if backend != "semgrep":
         return _file_has_hit(
             target, configs[0], file_path, cls, rules,
-            backend=backend, language=language, db_dir=db_dir,
+            backend=backend, language=language, db_dir=db_dir, detail=detail,
         )
     saw_none = False
     for config in configs:
-        hit = _file_has_hit(target, config, file_path, cls, rules)
+        hit = _file_has_hit(target, config, file_path, cls, rules, detail=detail)
         if hit:
             return True
         if hit is None:
@@ -318,6 +329,41 @@ def _patch_files(patch_diff: str) -> set[str]:
     return files
 
 
+def _post_verdict(pre: list[Finding], post: list[Finding]) -> str:
+    """Return ``not-fixed`` or ``rule-no-discriminate`` for a surviving hit.
+
+    Compares matched source text, never line numbers: a patch that inserts a
+    line shifts every later line, so a line comparison would call a genuinely
+    unfixed finding a new construction. Disjoint evidence sets mean the rule
+    fires on something the patch introduced — the rule does not separate the
+    vulnerable construction from the safe one (REQ-60). Overlapping sets mean the
+    original construction survives.
+
+    Args:
+        pre: Findings the pre-patch scan matched; empty when a stub supplied none.
+        post: Findings the post-patch scan matched; empty on the same condition.
+
+    Returns:
+        ``"rule-no-discriminate"`` when both sets are non-empty and share no
+        evidence text, else ``"not-fixed"``.
+    """
+    if not pre or not post:
+        return "not-fixed"
+    before = {f.evidence.strip() for f in pre if f.evidence}
+    after = {f.evidence.strip() for f in post if f.evidence}
+    _LAST_LINES.clear()
+    if before and after and not (before & after):
+        _LAST_LINES.update({"pre": pre[0].line, "post": post[0].line})
+        return "rule-no-discriminate"
+    return "not-fixed"
+
+
+# The lines the last ``verify_patch`` call matched, pre-patch and post-patch. The
+# cause is a plain string, so the numbers the register asks for cannot ride on the
+# return value; ``verify_findings`` reads them here immediately after the call.
+_LAST_LINES: dict[str, int] = {}
+
+
 def verify_patch(
     target: str, patch_diff: str, config: str | list[str], file: str, cls: str,
     evidence_sources: list[str] | None = None,
@@ -343,11 +389,13 @@ def verify_patch(
         A member of :data:`VERIFY_CAUSES`. ``"verified-static"`` (was flagged, now
         gone), ``"not-fixed"`` (still flagged after a clean apply),
         ``"rule-no-match"`` (not detectable pre-patch), ``"rule-no-target-file"``
-        (the patch touches no file the finding's rule fires in), ``"patch-not-applied"``
-        (the patch failed to apply to the copy), or ``"unconfirmed"`` (the
-        post-patch re-scan could not run). :func:`verify_findings` maps each
-        cause to a legal ``Finding.verification`` value.
+        (the patch touches no file the finding's rule fires in), ``"rule-no-discriminate"``
+        (the rule still fires, but on evidence text the pre-patch scan never matched),
+        ``"patch-not-applied"`` (the patch failed to apply to the copy), or
+        ``"unconfirmed"`` (the post-patch re-scan could not run). :func:`verify_findings`
+        maps each cause to a legal ``Finding.verification`` value.
     """
+    _LAST_LINES.clear()
     # Cheap string check first: a placeholder-version deps bump can never be a real fix, so
     # short-circuit before the pre-scan, the repo copy, and the patch apply.
     if cls == "deps" and _placeholder_version_bump(patch_diff):
@@ -356,7 +404,10 @@ def verify_patch(
     configs = [config] if isinstance(config, str) else list(config) or [""]
     backend = _pick_backend(evidence_sources)
     rules = _source_rules(f"{backend}:", evidence_sources)
-    pre = _check(target, configs, file, cls, rules, backend, language, db_dir)
+    pre_detail: list[Finding] = []
+    pre = _check(
+        target, configs, file, cls, rules, backend, language, db_dir, detail=pre_detail
+    )
     if not pre:
         return "rule-no-match"
 
@@ -373,10 +424,16 @@ def verify_patch(
         shutil.copytree(target, repo, ignore=_copy_ignore)
         if not apply_patch(repo, patch_diff):
             return "patch-not-applied"
-        post = _check(str(repo), configs, file, cls, rules, backend, language, db_dir)
+        post_detail: list[Finding] = []
+        post = _check(
+            str(repo), configs, file, cls, rules, backend, language, db_dir,
+            detail=post_detail,
+        )
         if post is None:
             return "unconfirmed"
-        return "not-fixed" if post else "verified-static"
+        if not post:
+            return "verified-static"
+        return _post_verdict(pre_detail, post_detail)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -485,6 +542,9 @@ def verify_findings(
             last_validate_fix is not None
             and last_validate_fix.get("event") != "validate-fix:fixed"
         )
+        # Cleared before every call: a stub ``verifier`` that never touches ``_LAST_LINES``
+        # must not inherit a prior finding's or a prior run's stale pre/post line numbers.
+        _LAST_LINES.clear()
         cause = verifier(
             target, f.patch_diff, configs, f.file, f.cls, f.evidence_sources,
             language=language, db_dir=db_dir,
@@ -503,7 +563,10 @@ def verify_findings(
             })
             touched.append(f)
             continue
-        f.history.append({"event": f"verify:cause:{cause}"})
+        entry = {"event": f"verify:cause:{cause}"}
+        if _LAST_LINES:
+            entry["reason"] = f"pre line {_LAST_LINES['pre']}, post line {_LAST_LINES['post']}"
+        f.history.append(entry)
         f.verification = verification
         touched.append(f)
         if verification == "verified-static":
