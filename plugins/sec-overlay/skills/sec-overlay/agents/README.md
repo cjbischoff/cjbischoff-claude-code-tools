@@ -6,9 +6,9 @@ one LLM subagent for one job in the audit. The harness itself (the Python in
 tools, moves files, and enforces rules. The *judgement* — "is this reachable? is this input
 attacker-controlled? is this fix correct?" — happens inside these prompts.
 
-Nothing here is code. A prompt is a text file with `{{PLACEHOLDER}}` tokens that the
-orchestrator fills in (target path, workspace path, which attack class, etc.) before
-spawning the subagent.
+Nothing here is code. A prompt is a text file with double-curly-brace tokens — for example
+`{{TARGET}}` or `{{WORKSPACE}}` — that the orchestrator fills in (target path, workspace path,
+which attack class, etc.) before spawning the subagent.
 
 ---
 

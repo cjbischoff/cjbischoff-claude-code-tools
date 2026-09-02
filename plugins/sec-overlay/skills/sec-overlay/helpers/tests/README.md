@@ -27,10 +27,13 @@ operator note in `SKILL.md` and no note names a step absent from the table (`NON
 excepted). `test_operator_notes_follow_the_table_order` checks the notes appear in the same order
 as `PHASE_TABLE`. `test_pipeline_documents_name_only_substitutable_tokens` checks every `{{TOKEN}}`
 in a `DOCUMENTS`/`NOTE_DOCUMENTS` file is in `driver.DISPATCH_TOKENS` or
-`phase_docs.ORCHESTRATOR_TOKENS` — the operator notes live in `SKILL.md`, not `CLAUDE.md`. A
-`PhaseSpec` rename in `phases.py` now fails this file's `test_operator_notes_name_every_phase_and_nothing_else`
-alongside `test_phase_docs.py`'s `test_every_generated_block_is_current`, so a rename can no longer
-pass the suite with a stale document.
+`phase_docs.ORCHESTRATOR_TOKENS` — the operator notes live in `SKILL.md`, not `CLAUDE.md`. Only the
+token test failed on the first run: `agents/README.md` named a literal `{{PLACEHOLDER}}` token that
+no producer substitutes; the sentence now shows real tokens (`{{TARGET}}`/`{{WORKSPACE}}`) instead
+of an invented one. A `PhaseSpec` rename in `phases.py` now fails this file's
+`test_operator_notes_name_every_phase_and_nothing_else` alongside `test_phase_docs.py`'s
+`test_every_generated_block_is_current` (plus two more phase_docs tests the rename also breaks), so
+a rename can no longer pass the suite with a stale document.
 
 `phase_docs.py` ships. `regenerate` rewrote the four generated documents from `PHASE_TABLE`, and
 `SKILL.md`'s old hand-numbered walkthrough became a five-item preface list (the steps

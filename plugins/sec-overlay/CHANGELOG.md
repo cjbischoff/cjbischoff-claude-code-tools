@@ -4,6 +4,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Fixed
+
+- `agents/README.md` no longer names `{{PLACEHOLDER}}` as if it were a substitutable token — no
+  producer fills it in. The sentence now shows two real tokens, `{{TARGET}}` and `{{WORKSPACE}}`,
+  as its examples. Caught by REQ-61's new `test_pipeline_documents_name_only_substitutable_tokens`.
+
 ### Added
 
 - Failing tests pin REQ-61's second half: every `PHASE_TABLE` phase must have an operator note in
