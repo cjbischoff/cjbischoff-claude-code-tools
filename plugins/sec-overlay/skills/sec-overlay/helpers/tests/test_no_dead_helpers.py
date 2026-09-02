@@ -61,6 +61,7 @@ DEAD_ALLOWLIST: dict[str, str] = {
     "kb.py:kb_status": "unreferenced at 2.1.11",
     "kb.py:write_profile": "unreferenced at 2.1.11",
     "parse.py:fallback_list": "unreferenced at 2.1.11",
+    "phase_docs.py:note_keys": "unreferenced at 2.8.0; test-only importer",
     "phase_gate.py:attack_surface_gate": "unreferenced at 2.1.11",
     "phase_gate.py:claims_from_markdown": "unreferenced at 2.1.11",
     "phase_gate.py:ref_resolves": "unreferenced at 2.1.11",

@@ -53,52 +53,10 @@ local semgrep ruleset.
 
 ### Phase order (one pass)
 
-```
-0  Preflight        python -m sec_overlay.preflight        # verify semgrep/codeql/ast-grep + CodeQL packs
-1  Begin pass       sec_overlay.state.begin_pass(ws: Workspace, sha: str | None) -> CampaignState  # pins SHA, increments only after a prior pass recorded a stage
-C1 Context-ingest   agents/context-ingest.md (sonnet) → context-adversary.md (opus)   # repo docs as UNTRUSTED
-T1 Tier-1 substrate  python -m sec_overlay.graph build --target <T> --workspace <WS> --sha <sha>
-                     # LLM-free: structural_index + regex call-edges + osv/secrets/crypto → kb/graph.json v1
-R0 Route census      driver phase `route-census` (`_act_route_census`)   # code-derived route inventory; runs BEFORE recon
-2  Recon            agents/recon.md (sonnet) → kb/scan-profile.json  # → PHASE GATE (opus)
-2.5 Recall gate       driver phase `recall-gate` (`_act_recall_gate`)   # records unmentioned census routes/catalog classes; runs right after recon
-3  Architecture     agents/architecture.md (sonnet) → architecture/ tree (C4 + arc42)  # → PHASE GATE
-3.5 Arch gate       python -m sec_overlay.diagram_gate + ste_lint  # caps/prose, halts on violation
-4  Threat model     agents/threat-model.md (sonnet) → threat-model/ tree  # STRIDE → PHASE GATE
-4.5 TM gate         diagram gate + ste_lint + duplication check
-0.5 Tune (optional) agents/tune-config.md — ratcheted rule/exclusion loop, ≤3 rounds
-5  Prefilter        sec_overlay.prefilter.run_prefilter(ws, target, profile) # semgrep+codeql+osv+secrets
-6  Investigate      agents/investigate.md (sonnet, PARALLEL per attack-class) → raw / rejected
-                    # loop-until-dry: waves until no-new or cap → kb/discovery-ledger.json; pass N>1 re-injects prior rejects as negative examples
-   Gate             python -m sec_overlay.findings_gate --workspace <WS>
-7  Dedupe           python -m sec_overlay.dedupe --workspace <WS>  # fingerprint: rule_id|cls|enclosing-symbol
-8  Critic           agents/critic.md (sonnet, PARALLEL) — production-viability filter
-   Judge            agents/judge.md (cheap, tool-free) — severity-inflation adjudicator
-9  Validate         agents/validate.md (opus, DIFFERENT family) — tries to REFUTE → confirmed / rejected
-   Trace            agents/trace.md (opus) — reachability verdict (static-settled vs needs-runtime)
-10 Calibrate        python -m sec_overlay.calibrate --workspace <WS>   # risk_score 1–10
-11 Patch            agents/patch.md (opus, PARALLEL) → patch_diff (throwaway copy only)
-   Validate-fix     agents/validate-fix.md (opus; personas: security-architect + penetration-tester)
-12 Verify           python -m sec_overlay.verify --workspace <WS> --target <T> --config <rules>
-13 Gate             python -m sec_overlay.findings_gate --workspace <WS>
-14 Red Team         agents/redteam.md (sonnet) → agents/redteam-adversary.md (opus)
-                    # PHASE_TABLE-wired (D-01): the driver dispatches this automatically after
-                    # demote-noise, before report — report.py declares reports/redteam-plan.md
-                    # as an input, so the report never links a file the run has not written yet.
-                    # `python -m sec_overlay.redteam --workspace <WS> [--min-risk N]` remains
-                    # available for a standalone manual re-run.
-14.2 Report         python -m sec_overlay.report --workspace <WS>   → report.sarif + report.md
-14.4 Selfscore      python -m sec_overlay.selfscore --workspace <WS>
-                    # post-gate finding counts written back to state — a run-quality signal
-                    # (reported vs needs-runtime, clusters, rejects), not a re-score
-14.5 Artifact gate  python -m sec_overlay.artifact_gate --workspace <WS>   # deterministic self-check (runs first)
-                    # artifact_gate.run_artifact_gate still hard-requires redteam-plan.md to exist.
-14.6 Artifact review agents/artifact-review.md (opus, DIFFERENT family) — claim↔evidence, cannot delete a receipt-backed finding
-15 Postflight       PHASE_TABLE-wired (D-01) as the driver's DETERMINISTIC_ACTIONS["postflight"] entry —
-                    the final phase, dispatched automatically after artifact-review. `python -m
-                    sec_overlay.postflight --workspace <WS> --sha <sha>` remains available for a
-                    standalone manual re-run.
-```
+The generated table and the per-phase operator notes both live in [`SKILL.md`](SKILL.md) — read
+its "Running a full audit" section for the full phase order, one row per `PHASE_TABLE` entry, and
+the command or prompt each phase runs. This file stays a maintainer quick-map and does not
+duplicate either.
 
 ### Quick deterministic scan (no agents)
 

@@ -1746,3 +1746,44 @@ Clause (f)'s docstring overclaimed a word-boundary check of the source message; 
 itself already compares against `triage_what`'s own output and stays unchanged (rewriting it risks
 turning a dead check into a false halt) — only the docstring was corrected to say it detects a
 hand-edited or stale report, not a defect in `triage_what`.
+
+### Phase-table doc generation (REQ-61)
+
+New module `phase_docs.py` closes the doc-drift gap the four narrative-generator changes above
+never touched: a hand-maintained phase list in a Markdown file has no compiler tying it to
+`phases.py`'s `PHASE_TABLE`, so a renamed, reordered, or dropped phase leaves the prose wrong with
+no test to catch it. This is the fix.
+
+`render_phase_table(columns)` walks `PHASE_TABLE` and renders one Markdown table row per
+`PhaseSpec`, in table order, choosing columns from `index`, `phase`, `kind`, `prompt`, and
+`paths` (each `PathOf` callable evaluated against a throwaway in-memory `Workspace` so the
+rendered path is real and no file is touched). `regenerate(path)` finds every
+`<!-- BEGIN GENERATED: phase-table columns=... --> ... <!-- END GENERATED: phase-table -->`
+marker pair in a document, re-renders each one from its own `columns=`/`kind=` attributes, and
+reports whether the file changed — so one function serves every document, and each document
+picks its own column set and phase-kind filter without touching the generator. `note_keys(text)`
+extracts the ordered list of `**phase-key**` entries from a `<!-- BEGIN PHASE NOTES -->` region
+(dash/star bullets only — a numbered list item does not match, which is what lets `SKILL.md`
+keep a short preface list of non-`PHASE_TABLE` steps immediately above the generated table
+without those items polluting the key list). `main()` is the CLI: `--check` (used in CI/lint)
+exits 1 and names every stale document without writing; `--write` regenerates every document
+in `DOCUMENTS` in place.
+
+`DOCUMENTS` lists four targets (`SKILL.md`, `README.md`, `agents/README.md`, `helpers/README.md`)
+that each carry a generated phase-table block. `NOTE_DOCUMENTS` is `(SKILL.md,)` only — the
+per-phase prose notes live in one place, not four, since the note text is long-form and would
+drift across copies faster than it would stay in sync. `skills/sec-overlay/CLAUDE.md` carries
+neither: it is the maintainer quick-map, and now just points at `SKILL.md`'s generated table and
+notes instead of keeping its own copy.
+
+`ORCHESTRATOR_TOKENS` is a fixed tuple of every `{{TOKEN}}` name substituted into an agent prompt
+anywhere in this skill *other than* `driver.render_dispatch`'s own `DISPATCH_TOKENS`
+(`TARGET`/`WORKSPACE`/`SHA`/`ATTACK_CLASS`/`OVERLAY_ROOT`/`HELPERS_DIR`/`FP_FEEDBACK`) — tokens
+the orchestrator or a phase's own prompt fills by hand rather than through `render_dispatch`.
+`NON_TABLE_STEPS` names six steps (`preflight`, `begin-pass`, `context-ingest`,
+`tier1-substrate`, `tune`, `cluster`) that run alongside `PHASE_TABLE` but are not phase-table
+entries themselves — the first five precede the driver or dispatch outside the table, and
+`tune` is the optional Phase 0.5 adaptive tool-tuning loop, documented on its own and never a
+`SKILL.md` "Running a full audit" list item. The constant is a lint-facing catalog (so an
+operator-note check can accept these keys beside real phase names); `SKILL.md`'s preface list
+carries the first five verbatim from the walkthrough it replaced.

@@ -40,8 +40,26 @@ flowchart LR
 
 ## The pipeline, as prompts
 
-Read this top-to-bottom — it is the order the orchestrator spawns them (the full driver is
-in [`../SKILL.md`](../SKILL.md); the phase legend in the skill [`CLAUDE.md`](../CLAUDE.md)).
+<!-- BEGIN GENERATED: phase-table columns=index,phase,prompt kind=agent -->
+| # | Phase | Prompt |
+|---|---|---|
+| 2 | `recon` | `agents/recon.md` |
+| 4 | `architecture` | `agents/architecture.md` |
+| 6 | `threat_model` | `agents/threat-model.md` |
+| 9 | `investigate` | `agents/investigate.md` |
+| 12 | `critic` | `agents/critic.md` |
+| 13 | `judge` | `agents/judge.md` |
+| 14 | `validate` | `agents/validate.md` |
+| 15 | `trace` | `agents/trace.md` |
+| 17 | `patch` | `agents/patch.md` |
+| 18 | `validate-fix` | `agents/validate-fix.md` |
+| 21 | `redteam` | `agents/redteam.md` |
+| 24 | `prove` | `agents/prove.md` |
+| 26 | `artifact-review` | `agents/artifact-review.md` |
+<!-- END GENERATED: phase-table -->
+
+Read this top-to-bottom — it is the order the orchestrator spawns them (the full driver and the
+phase legend are both in [`../SKILL.md`](../SKILL.md)).
 
 ```mermaid
 flowchart TD

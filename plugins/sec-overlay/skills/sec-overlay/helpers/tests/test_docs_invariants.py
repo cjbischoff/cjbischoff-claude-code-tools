@@ -181,54 +181,18 @@ def test_evidence_vocabulary_block_lists_all_values():
         assert value in block, f"{value} missing from EVIDENCE_VOCABULARY block"
 
 
-# The CLAUDE.md phase-order block is a condensed operator view: it deliberately omits
-# some PHASE_TABLE rows (demote-noise), so the enforced invariant
-# is relative order — every doc-labelled phase must appear in PHASE_TABLE order (T-06-02-06).
+# CLAUDE.md's "Phase order (one pass)" section no longer duplicates PHASE_TABLE — it points at
+# SKILL.md's generated table and Phase Notes region instead (phase_docs.py, REQ-61). The
+# doc-drift invariant this test used to guard now lives in test_phase_docs.py, which checks the
+# generated block against PHASE_TABLE directly and fails the build on any staleness.
 _CLAUDE_MD = Path(__file__).resolve().parents[2] / "CLAUDE.md"
-_PHASE_DOC_LABELS = {
-    "route-census": "Route census",
-    "recon": "Recon",
-    "recall-gate": "Recall gate",
-    "architecture": "Architecture",
-    "arch-gate": "Arch gate",
-    "threat_model": "Threat model",
-    "tm-gate": "TM gate",
-    "prefilter": "Prefilter",
-    "investigate": "Investigate",
-    "dedupe": "Dedupe",
-    "critic": "Critic",
-    "judge": "Judge",
-    "validate": "Validate",
-    "trace": "Trace",
-    "calibrate": "Calibrate",
-    "patch": "Patch",
-    "verify": "Verify",
-    "report": "Report",
-    "selfscore": "Selfscore",
-    "redteam": "Red Team",
-    "artifact-gate": "Artifact gate",
-    "artifact-review": "Artifact review",
-    "postflight": "Postflight",
-}
 
 
-def test_claude_md_phase_order_tracks_phase_table():
-    from sec_overlay.phases import PHASE_TABLE
-
+def test_claude_md_points_at_skill_md_for_the_phase_order():
     text = _CLAUDE_MD.read_text()
     assert "### Phase order (one pass)" in text
     block = text.split("### Phase order (one pass)", 1)[1].split("\n### ", 1)[0]
-    pos = -1
-    for spec in PHASE_TABLE:
-        label = _PHASE_DOC_LABELS.get(spec.name)
-        if label is None:
-            continue
-        found = block.find(label, pos + 1)
-        assert found > pos, (
-            f"phase '{spec.name}' (doc label '{label}') is missing from, or out of order in, "
-            "CLAUDE.md's phase-order block relative to PHASE_TABLE"
-        )
-        pos = found
+    assert "SKILL.md" in block, "CLAUDE.md's phase-order section must point readers at SKILL.md"
 
 
 _ATTACK_CLASSES = Path(__file__).resolve().parents[2] / "references" / "attack-classes.md"

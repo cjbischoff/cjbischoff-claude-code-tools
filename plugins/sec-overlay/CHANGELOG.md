@@ -9,6 +9,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - Failing tests pin REQ-61: every document that states the pipeline's phase order must render it
   from `PHASE_TABLE`, not a hand-maintained list. `test_phase_docs.py` expects a
   `sec_overlay.phase_docs` module that does not exist yet, so all nine tests fail at collection.
+- `sec_overlay.phase_docs` (REQ-61) renders the pipeline's phase order from `PHASE_TABLE` into
+  marked `<!-- BEGIN GENERATED: phase-table --> ... <!-- END GENERATED: phase-table -->` blocks in
+  `SKILL.md`, the skill root `README.md`, `agents/README.md`, and `helpers/README.md`, so a
+  renamed, reordered, or dropped phase can no longer leave a hand-maintained list wrong with no
+  test to catch it. `python -m sec_overlay.phase_docs --check` fails the build on a stale block;
+  `--write` regenerates every block in place. `SKILL.md` also carries a `<!-- BEGIN PHASE NOTES
+  -->` region with one prose note per `PHASE_TABLE` phase, in table order; the skill root
+  `CLAUDE.md` no longer duplicates the phase order and instead points readers at `SKILL.md`.
 
 ### Added
 

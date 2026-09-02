@@ -18,6 +18,17 @@ phase table and its operator notes instead of duplicating them, and
 `test_every_table_phase_has_a_note_in_skill_md` checks `SKILL.md`'s `<!-- BEGIN PHASE NOTES -->`
 region names every phase in `PHASE_TABLE`, in table order, with none skipped.
 
+`phase_docs.py` ships. `regenerate` rewrote the four generated documents from `PHASE_TABLE`, and
+`SKILL.md`'s old hand-numbered walkthrough became a five-item preface list (the steps
+`PHASE_TABLE` does not own) plus the generated table and a 28-entry Phase Notes region, one bullet
+per `PHASE_TABLE` name, in order. `test_docs_invariants.py`'s old
+`test_claude_md_phase_order_tracks_phase_table` guarded a hand-maintained phase-order block in the
+skill `CLAUDE.md` that no longer exists — that file now points at `SKILL.md` instead of duplicating
+`PHASE_TABLE` (REQ-61), so the test is replaced with
+`test_claude_md_points_at_skill_md_for_the_phase_order`, which checks the pointer instead of a
+label list. `test_no_dead_helpers.py`'s `DEAD_ALLOWLIST` gains `phase_docs.py:note_keys`
+(test-only importer, no production caller).
+
 New `test_redteam.py::test_directive_falls_back_to_the_finding_preconditions` pins REQ-55: a
 finding with no `runtime_test` still shows its own `preconditions` in the directive body, in the
 same "Code-settled" block the heading already names.
@@ -582,7 +593,8 @@ the regression guard for the CLI no longer calling `state.begin_pass` on every i
 | `test_finding_schema.py` | The `Finding` record stays consistent with `references/finding.schema.json`. |
 | `test_contract_lint.py` | REQ-32: a closed vocabulary's code constant matches its schema `enum`, verbatim. |
 | `test_wiring.py` | Silent-backend / clsmap / dead-link regressions and attack-class routing. |
-| `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules, the `EVIDENCE_VOCABULARY` block listing every `sec_overlay.evidence` tier/status/disposition value verbatim, the `CLAUDE.md` phase-order block tracking `PHASE_TABLE`'s relative order, (06-06, WR-01) that no live doc wrongly denies review's --workspace support — premise pinned against `run_review`'s real signature; the matcher covers three denial wordings, with pattern tests pinning both denial and corrected phrasing — and that every `dependency-sinks.json` catalog entry's `sink`/`indicators` tokens appear inside the specific table row named by its `cls` value in `attack-classes.md` — not merely anywhere in the file — so recon's class table never drifts from the catalog, in the row `reconcile_plan` actually routes by. Two more guards pin the class-file side of that routing: every catalogued `cls` value (`ssrf`, `expr-eval-rce`, `ssti`) has a matching `agents/classes/<cls>.md` file, and `expr-eval-rce.md` carries all five required section headings — so `reconcile_plan` can never select a class with no class prompt behind it. |
+| `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules, the `EVIDENCE_VOCABULARY` block listing every `sec_overlay.evidence` tier/status/disposition value verbatim, the `CLAUDE.md` phase-order section pointing at `SKILL.md` instead of duplicating `PHASE_TABLE`
+(REQ-61), (06-06, WR-01) that no live doc wrongly denies review's --workspace support — premise pinned against `run_review`'s real signature; the matcher covers three denial wordings, with pattern tests pinning both denial and corrected phrasing — and that every `dependency-sinks.json` catalog entry's `sink`/`indicators` tokens appear inside the specific table row named by its `cls` value in `attack-classes.md` — not merely anywhere in the file — so recon's class table never drifts from the catalog, in the row `reconcile_plan` actually routes by. Two more guards pin the class-file side of that routing: every catalogued `cls` value (`ssrf`, `expr-eval-rce`, `ssti`) has a matching `agents/classes/<cls>.md` file, and `expr-eval-rce.md` carries all five required section headings — so `reconcile_plan` can never select a class with no class prompt behind it. |
 | `test_frozen_contract.py` | Byte-identity: `models.py`/`evidence.py` are frozen mirrors of a separate Go port (D-15) — a sha256 pin fails loudly on any edit. `fingerprint()` golden-value pins (fully-populated, minimally-populated, field-order-permuted) prove its behavior independent of that byte check. REL-03: `pyproject.toml`'s `[project] dependencies` stays `[]`. |
 | `test_absence_rules.py` | The `rules/absence` semgrep pack against `fixtures/absence_repo`: it flags the missing-safe-option site, stays silent on the fixed site, and every rule's own block carries a `cls:` line after its `metadata:` line — not just a raw count of `cls:` occurrences in the file. One test per rule now covers all five. Each asserts the vulnerable site by `(file, rule, line)` and the hardened site's silence. The three added pairs are `engines_unsafe.go`/`engines_safe.go` for `cel.NewEnv` and `lua.NewState`, plus `fetch.py`'s two `requests.get` lines. Skips when `semgrep` is absent from `PATH`. |
 | `test_astgrep.py` (4 new) | `build_rule()` emits a `not:`-wrapped relational rule; `run_astgrep_rule()` passes the rule inline via `--inline-rules` and returns parsed matches; the live case runs `fixtures/absence_repo/rego-absence.yaml` and asserts the Go absence rule flags `vulnerable.go` and stays silent on `safe.go`. Skips when `ast-grep` is absent from `PATH`. |

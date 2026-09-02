@@ -222,35 +222,155 @@ prompts carry the `OUTPUT_WRITE_FALLBACK` rule (write the KB/findings artifact v
 `python3 shutil.copy` from a temp file instead), so a blocked Write never silently loses a
 finding. When dispatching, keep that fallback in the agent's instructions.
 
+These five run alongside `PHASE_TABLE` but are not phase-table entries themselves
+(`phase_docs.NON_TABLE_STEPS`):
+
 0. **Preflight** — `python -m sec_overlay.preflight`; run any printed install/vendor commands before scanning (missing backends are skipped + logged). The report lists which **CodeQL query packs** are installed — the `codeql` binary being present does NOT mean the per-language packs exist, and a missing pack silently drops all of that language's dataflow coverage. If a language you will scan is not listed, run `codeql pack download codeql/<lang>-queries` first. CodeQL runs only on a trusted config (`codeql_config_trusted`); unsupported or untrusted configs are skipped and logged in the prefilter `failed` list.
 1. **Begin pass** — `from sec_overlay.state import begin_pass; begin_pass(ws: Workspace, sha: str | None) -> CampaignState` (pins the SHA; increments the pass counter only after a prior pass recorded a stage). Note the import path: `begin_pass` lives in `sec_overlay.state`; `record_stage`/`pass_report` live in `sec_overlay.campaign`.
 C1. **Context-ingest** (sonnet) — `agents/context-ingest.md` → `kb/context.json`; `agents/context-adversary.md` (opus) pressure-checks it. Runs here, BEFORE recon, so its leads can feed recon's `attack_surface`. See **Context ingestion (C1/C2)** below.
 T1. **Tier-1 substrate** (no LLM) — `python -m sec_overlay.graph build --target <T> --workspace <WS> --sha <sha>`; structural_index + a regex call-edge heuristic + osv/secrets/crypto facts → `kb/graph.json` v1, consumed by recon, architecture, and threat-model.
-2. **Recon** (sonnet) — `agents/recon.md` → `kb/scan-profile.json`. Validate with `load_profile`. **→ phase gate** (`agents/phase-adversary.md`, opus). The `route-census` phase runs before recon and writes `kb/route-census.json` from `sec_overlay.route_census.census`. The inventory comes from source, not from recon's output, so an unnamed route still appears as a gap. `route_control` prefers the census over the scan profile and falls back only when the census is empty.
-3. **Architecture** (sonnet) — `agents/architecture.md` → `architecture/` tree (C4 diagrams,
-   runtime-view sequences, `arc42.md`). **→ arch-gate** (`sec_overlay.diagram_gate` + `ste_lint`;
-   deterministic, halts on cap/prose violation).
-4. **Threat model** (sonnet) — `agents/threat-model.md` → `threat-model/` tree (`dfd.mmd` derived
-   from the container diagram, `attack-sequences/`, `threat-model.md` with STRIDE findings + hunt
-   list). **→ tm-gate** (same checks plus a duplication check against `arc42.md`). Both gates halt
-   the pipeline on cap/prose/derivation violations; the producer re-scopes (group → split →
-   promote) and regenerates once.
-5. **Prefilter** (no LLM) — `from sec_overlay.prefilter import run_prefilter; run_prefilter(ws, target, profile)` (args: `Workspace`, target path, the `ScanProfile` from recon — NOT the raw `sast_plan` dict). Backends run concurrently (one unit per semgrep ruleset / codeql language); results are merged deterministically (sorted, `C-####` ids) so serial and concurrent runs are byte-identical. Returns `{candidates, backends_run, skipped, failed, excluded, dropped_nonsecurity, skipped_reasons}`: `skipped_reasons` maps each backend that did NOT run to a reason (`disabled`/`absent`/`untrusted`/`pack-missing`); `dropped_nonsecurity` counts non-security semgrep lint dropped by the security-only filter; `failed` lists backends that errored. **A scan is only clean if every PLANNED backend ran. STOP and surface a setup error if `backends_run` is empty OR any planned backend appears in `failed` / `skipped_reasons` (e.g. `codeql: pack-missing` = a missing query pack → zero dataflow for that language). A partial scan (semgrep ran, codeql failed) is a coverage hole, not "no findings" — do NOT report it as clean.** Then `demote_noise(ws)` and `agents = reconcile_plan(ws, profile.agents_to_spawn, target_root=target)` (both from `sec_overlay.partition`) — `demote_noise` moves log-injection/clear-text-logging/unknown candidates to `informational`, `reconcile_plan` routes real-security classes recon omitted. `reconcile_plan(ws, agents_to_spawn, target_root=<T>)` also merges the attack class of every `references/dependency-sinks.json` entry the target declares in a manifest. A dependency whose own code holds the sink (OPA's `http.send`) leaves no first-party pattern, so recon can omit the class; the catalog match restores it. The call never removes a planned class. Then `agents = merge_custom_check_classes(agents, discover_custom_checks(target))` (from `sec_overlay.custom_checks`; adds any in-repo `.sec-overlay/checks/` bundles the target declares). Spawn investigate agents over the reconciled `agents`; for any class that is a custom-check id, append `custom_check_instructions(check)` to the standard `agents/investigate.md` prompt after the shared `prompt-constants.md` blocks, per its check's own bundle. The general-triage `security-other` agent handles any residual unrouted classes.
-6. **Investigate** (sonnet, parallel over `scan-profile.agents_to_spawn`) — `agents/investigate.md` per class → `raw`/`rejected`/new `A-####`.
-7. **Dedupe** (no LLM) — `python -m sec_overlay.dedupe --workspace <WS>`.
-7.5 **Cluster** (no LLM) — `python -m sec_overlay.cluster --workspace <WS>` groups ≥3
+7.5. **Cluster** (no LLM) — `python -m sec_overlay.cluster --workspace <WS>` groups ≥3
     same-class, same-sink `raw` findings into one systemic cluster (`cluster_id` +
     primary `affected_sites`) before the critic/gate ladder sees them.
-8. **Critic** (sonnet) — `agents/critic.md` (production viability) → rejects non-shipping.
-9. **Adversarial validate** (opus, DIFFERENT family) — `agents/validate.md` → `confirmed`/`rejected`.
-10. **Calibrate** (no LLM) — `python -m sec_overlay.calibrate --workspace <WS>` → `risk_score`.
-11. **Patch** (opus) — `agents/patch.md` → `patch_diff` on confirmed findings.
-12. **Verify** (no LLM) — `python -m sec_overlay.verify --workspace <WS> --target <T> --config <rules>` → `fixed`/`verified-static`.
-13. **Gate** (no LLM) — `python -m sec_overlay.findings_gate --workspace <WS>`.
-13.5 **Red Team** (sonnet + opus adversary) — `agents/redteam.md` sets `runtime_disposition` +
-    `runtime_test` on confirmed findings; `agents/redteam-adversary.md` pressure-checks the plan;
-    `python -m sec_overlay.redteam --workspace <WS>` renders `redteam-plan.md`. See **Phase 5.5**.
-14. **Report** (no LLM) — `python -m sec_overlay.report --workspace <WS>` → final `report.sarif` + `report.md` (confirmed/fixed only, with risk + verification); points at `redteam-plan.md`. Report auto-builds `kb/coverage-ledger.json` from `attack_surface × finding status` when absent (`coverage_ledger.build_coverage_ledger`); a class with no confirmed/NDT finding blocks `completeness==complete`. `findings.json` now carries confirmed/fixed **and** needs-deployment-testing findings (distinguished by `status`).
+
+Every other step is a `PHASE_TABLE` phase, generated below in table order; the notes carry each
+phase's own detail (unchanged from the walkthrough above, split one phase per bullet):
+
+<!-- BEGIN GENERATED: phase-table columns=index,phase,kind,prompt -->
+| # | Phase | Kind | Prompt |
+|---|---|---|---|
+| 1 | `route-census` | deterministic | — |
+| 2 | `recon` | agent | `agents/recon.md` |
+| 3 | `recall-gate` | deterministic | — |
+| 4 | `architecture` | agent | `agents/architecture.md` |
+| 5 | `arch-gate` | deterministic | — |
+| 6 | `threat_model` | agent | `agents/threat-model.md` |
+| 7 | `tm-gate` | deterministic | — |
+| 8 | `prefilter` | deterministic | — |
+| 9 | `investigate` | agent | `agents/investigate.md` |
+| 10 | `findings-gate` | deterministic | — |
+| 11 | `dedupe` | deterministic | — |
+| 12 | `critic` | agent | `agents/critic.md` |
+| 13 | `judge` | agent | `agents/judge.md` |
+| 14 | `validate` | agent | `agents/validate.md` |
+| 15 | `trace` | agent | `agents/trace.md` |
+| 16 | `calibrate` | deterministic | — |
+| 17 | `patch` | agent | `agents/patch.md` |
+| 18 | `validate-fix` | agent | `agents/validate-fix.md` |
+| 19 | `verify` | deterministic | — |
+| 20 | `demote-noise` | deterministic | — |
+| 21 | `redteam` | agent | `agents/redteam.md` |
+| 22 | `report` | deterministic | — |
+| 23 | `selfscore` | deterministic | — |
+| 24 | `prove` | agent | `agents/prove.md` |
+| 25 | `artifact-gate` | deterministic | — |
+| 26 | `artifact-review` | agent | `agents/artifact-review.md` |
+| 27 | `artifact-consistency` | deterministic | — |
+| 28 | `postflight` | deterministic | — |
+<!-- END GENERATED: phase-table -->
+
+<!-- BEGIN PHASE NOTES -->
+- **route-census** — driver phase `route-census` (`_act_route_census`) runs before recon and
+  writes `kb/route-census.json` from `sec_overlay.route_census.census`. The inventory comes from
+  source, not from recon's output, so an unnamed route still appears as a gap. `route_control`
+  prefers the census over the scan profile and falls back only when the census is empty.
+- **recon** — (sonnet) `agents/recon.md` → `kb/scan-profile.json`. Validate with `load_profile`.
+  **→ phase gate** (`agents/phase-adversary.md`, opus).
+- **recall-gate** — driver phase `recall-gate` (`_act_recall_gate`); records unmentioned census
+  routes/catalog classes; runs right after recon.
+- **architecture** — (sonnet) `agents/architecture.md` → `architecture/` tree (C4 diagrams,
+  runtime-view sequences, `arc42.md`). **→ arch-gate** (`sec_overlay.diagram_gate` + `ste_lint`;
+  deterministic, halts on cap/prose violation).
+- **arch-gate** — `sec_overlay.diagram_gate` + `ste_lint` (deterministic, halts on cap/prose
+  violation) over `architecture`'s output.
+- **threat_model** — (sonnet) `agents/threat-model.md` → `threat-model/` tree (`dfd.mmd` derived
+  from the container diagram, `attack-sequences/`, `threat-model.md` with STRIDE findings + hunt
+  list). **→ tm-gate** (same checks plus a duplication check against `arc42.md`).
+- **tm-gate** — same checks as `arch-gate` plus a duplication check against `arc42.md`. Both
+  gates halt the pipeline on cap/prose/derivation violations; the producer re-scopes (group →
+  split → promote) and regenerates once.
+- **prefilter** — (no LLM) `from sec_overlay.prefilter import run_prefilter; run_prefilter(ws, target, profile)` (args: `Workspace`, target path, the `ScanProfile` from recon — NOT the raw `sast_plan` dict). Backends run concurrently (one unit per semgrep ruleset / codeql language); results are merged deterministically (sorted, `C-####` ids) so serial and concurrent runs are byte-identical. Returns `{candidates, backends_run, skipped, failed, excluded, dropped_nonsecurity, skipped_reasons}`: `skipped_reasons` maps each backend that did NOT run to a reason (`disabled`/`absent`/`untrusted`/`pack-missing`); `dropped_nonsecurity` counts non-security semgrep lint dropped by the security-only filter; `failed` lists backends that errored. **A scan is only clean if every PLANNED backend ran. STOP and surface a setup error if `backends_run` is empty OR any planned backend appears in `failed` / `skipped_reasons` (e.g. `codeql: pack-missing` = a missing query pack → zero dataflow for that language). A partial scan (semgrep ran, codeql failed) is a coverage hole, not "no findings" — do NOT report it as clean.** Then `demote_noise(ws)` and `agents = reconcile_plan(ws, profile.agents_to_spawn, target_root=target)` (both from `sec_overlay.partition`) — `demote_noise` moves log-injection/clear-text-logging/unknown candidates to `informational`, `reconcile_plan` routes real-security classes recon omitted. `reconcile_plan(ws, agents_to_spawn, target_root=<T>)` also merges the attack class of every `references/dependency-sinks.json` entry the target declares in a manifest. A dependency whose own code holds the sink (OPA's `http.send`) leaves no first-party pattern, so recon can omit the class; the catalog match restores it. The call never removes a planned class. Then `agents = merge_custom_check_classes(agents, discover_custom_checks(target))` (from `sec_overlay.custom_checks`; adds any in-repo `.sec-overlay/checks/` bundles the target declares). Spawn investigate agents over the reconciled `agents`; for any class that is a custom-check id, append `custom_check_instructions(check)` to the standard `agents/investigate.md` prompt after the shared `prompt-constants.md` blocks, per its check's own bundle. The general-triage `security-other` agent handles any residual unrouted classes.
+- **investigate** — (sonnet, parallel over `scan-profile.agents_to_spawn`) `agents/investigate.md`
+  per class → `raw`/`rejected`/new `A-####`.
+- **findings-gate** — `python -m sec_overlay.findings_gate --workspace <WS>` (no LLM); the
+  `PHASE_TABLE` phase runs right after `investigate`, before `dedupe`, validating every finding
+  record's shape (`_act_findings_gate`). The same command re-runs later in the manual audit
+  walkthrough — once at the end of the FP-reduction ladder (Phase 4 step 5) and once at the end
+  of patch verification (Phase 5 step 4) — as a repeated structural-validity check, not a second
+  `PHASE_TABLE` phase.
+- **dedupe** — (no LLM) `python -m sec_overlay.dedupe --workspace <WS>`.
+- **critic** — (sonnet) `agents/critic.md` (production viability) → rejects non-shipping.
+- **judge** — `agents/judge.md` (no tools, token-cheap) reads only the finder + critic texts and
+  sets `judge_verdict` (`uphold`/`severity-inflated`/`downgrade`) — a cheap inflation-catcher that
+  never hard-rejects (no source access). Judge must complete and persist its write before validate
+  starts: never dispatch judge and validate concurrently against the same finding file — the last
+  writer wins and silently drops the other's field (ISSUE-017).
+- **validate** — (opus, DIFFERENT family) `agents/validate.md` → `confirmed`/`rejected`.
+- **trace** — before the red-team phase, optionally run `agents/trace.md` (opus) on confirmed
+  findings: it backward-traces sink→entry, writes a `reachability` verdict
+  (`{reachable, blocker, chain}`; blocker taxonomy in `sec_overlay.reachability`), and demotes
+  findings proven unreachable with a cited blocker. `reachability` is the primary
+  static-settled-vs-needs-runtime discriminator the red-team phase reads. Recall-safe: unassessed
+  ≠ unreachable.
+- **calibrate** — (no LLM) `python -m sec_overlay.calibrate --workspace <WS>` → `risk_score`.
+- **patch** — (opus) `agents/patch.md` → `patch_diff` on confirmed findings.
+- **validate-fix** — (model: opus, personas: `security-architect` + `penetration-tester`) spawn a
+  subagent with `agents/validate-fix.md` to assess patch viability and exploit resistance. This
+  is a `PHASE_TABLE` phase between `patch` and `verify`; it writes `kb/gates/validate-fix.json`
+  (per-gate statuses, never a verdict). The deterministic `verify.apply_fix_gates` scores each
+  patch with `sec_overlay.scoring.score_fix` — the agent supplies gate statuses only, never a
+  fixed/not-fixed verdict.
+- **verify** — (no LLM) `python -m sec_overlay.verify --workspace <WS> --target <T> --config <rules>` → `fixed`/`verified-static`.
+- **demote-noise** — the audit walkthrough's original step here read: "**Gate** (no LLM) —
+  `python -m sec_overlay.findings_gate --workspace <WS>`." The current `PHASE_TABLE`
+  `demote-noise` phase in this slot instead runs `partition.demote_noise`
+  (`driver._act_demote_noise`), re-applying the same NOISE_CLASS→informational demotion
+  `prefilter` already ran once, over any finding that reached candidate status later in the
+  pipeline, before red team sees it.
+- **redteam** — (sonnet + opus adversary) `agents/redteam.md` sets `runtime_disposition` +
+  `runtime_test` on confirmed findings; `agents/redteam-adversary.md` pressure-checks the plan;
+  `python -m sec_overlay.redteam --workspace <WS>` renders `redteam-plan.md`. See **Phase 5.5**.
+- **report** — (no LLM) `python -m sec_overlay.report --workspace <WS>` → final `report.sarif` + `report.md` (confirmed/fixed only, with risk + verification); points at `redteam-plan.md`. Report auto-builds `kb/coverage-ledger.json` from `attack_surface × finding status` when absent (`coverage_ledger.build_coverage_ledger`); a class with no confirmed/NDT finding blocks `completeness==complete`. `findings.json` now carries confirmed/fixed **and** needs-deployment-testing findings (distinguished by `status`).
+- **selfscore** — (no LLM) `python -m sec_overlay.selfscore --workspace <WS>`. Per-run self-score:
+  post-gate finding counts written back to state, matching `findings` exactly since it reads
+  records after the gate — a run-quality signal (reported vs needs-runtime, cluster count,
+  rejected count, external-boundary count), not a re-score.
+- **prove** — (opus, opt-in) `agents/prove.md`; the one phase that executes target-derived code,
+  and only when `scan_options.prove_findings` is true in `kb/scan-profile.json` (absent by
+  default, so a normal audit never runs it). All building and running happen out of tree under
+  `ws.repro`, so the target working tree stays untouched. A proof promotes a finding to
+  `confirmed` only when the agent drove a real entrypoint (`scope: entrypoint`), the class has a
+  wrapper-decidable oracle, and the oracle observed the effect; anything weaker records a
+  degradation and leaves the finding where it was.
+- **artifact-gate** — (no LLM) `python -m sec_overlay.artifact_gate --workspace <WS>`; a
+  deterministic self-check that runs first in the artifact-review phase, before the opus
+  adversary — `artifact_gate.run_artifact_gate` still hard-requires `redteam-plan.md` to exist.
+  It is a cheap mechanical check that the rendered report, per-finding detail files, and red-team
+  plan are internally consistent: no leftover constant/placeholder section, no truncated triage
+  cell, every shipping finding has a detail file and a red-team directive, every triage ID
+  resolves to a finding, and the context diagram obeys the 10-node style cap (ISSUE-022). It
+  never judges exploitability — that is the adversary's job — and it never deletes a finding.
+- **artifact-review** — (opus, DIFFERENT family) `agents/artifact-review.md`. The deterministic
+  `artifact-gate` already ran and passed; this is the final adversary's judgment the gate cannot
+  make: does the rendered report tell the truth about what the run found? READ-MOSTLY: updates
+  finding metadata and writes one verdict file; it can never delete a receipt-backed finding, and
+  it never executes the target.
+- **artifact-consistency** — (no LLM) deterministic terminal artifact-consistency gate (REQ-31);
+  runs after `artifact-review` and before AUDIT COMPLETE. It reconciles a finished run's own
+  artifacts against each other: every cross-reference resolves, every next-action names a
+  section that contains its finding, the coverage claim matches the ledger, the self-score does
+  not contradict the report, no "(measured)" header sits above an empty body, and no rendered
+  title cuts its source message inside a word. It never judges a finding and never deletes one;
+  a missing artifact is not a contradiction — an incomplete workspace degrades to a silent pass.
+- **postflight** — (no LLM) `python -m sec_overlay.postflight --workspace <WS> --sha <sha>`; the
+  final phase, dispatched automatically after `artifact-review`, distilling a finished scan into
+  durable cross-scan context (Phase C2). Preflight context is volatile (regenerated each scan);
+  postflight is what STICKS: it writes `kb/prior_context.json` (accretes across scans,
+  drift-keyed by SHA) that the NEXT scan's context-ingest reads as higher-trust prior context —
+  confirmed findings, rejected-with-rationale (so the harness doesn't re-litigate settled
+  non-findings), and a short codebase security profile. Our own conclusions are higher-trust than
+  repo docs, but still re-validated on drift (changed files re-open; unchanged files persist).
+<!-- END PHASE NOTES -->
 
 For repeat passes see **Phase 6** (incremental scoping + carry-forward). The per-phase
 sections below detail each step.

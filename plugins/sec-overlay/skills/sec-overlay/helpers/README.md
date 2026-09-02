@@ -40,7 +40,17 @@ uv run ruff check sec_overlay/ bench/ tests/     # lint
 uv run ruff format sec_overlay/ bench/ tests/    # format
 uv run ty check                                  # static types
 uv run python -m sec_overlay.preflight           # check which SAST backends/packs are installed
+uv run python -m sec_overlay.phase_docs --check  # fail if a phase-table doc is stale
+uv run python -m sec_overlay.phase_docs --write  # regenerate every phase-table doc in place
 ```
+
+Run `phase_docs --write` any time `sec_overlay/phases.py`'s `PHASE_TABLE` changes — a rename,
+reorder, or added/removed phase. It rewrites the generated table in `SKILL.md`, `README.md`,
+`agents/README.md`, and `helpers/README.md` (`skill CLAUDE.md` is not one of them — it points at
+`SKILL.md` instead of carrying its own copy). `--check` exits 1 and names every stale document
+without writing; `tests/test_phase_docs.py` calls the same regeneration code inside `uv run
+pytest`, so a `PHASE_TABLE` change that skips `--write` fails the normal test run, not just a
+manual `--check`.
 
 The quick end-to-end smoke scan (no agents, deterministic only):
 
@@ -53,6 +63,26 @@ uv run python -m sec_overlay.cli scan \
 ---
 
 ## The pipeline these modules implement
+
+<!-- BEGIN GENERATED: phase-table columns=index,phase,reads,writes kind=deterministic -->
+| # | Phase | Reads | Writes |
+|---|---|---|---|
+| 1 | `route-census` | — | `kb/route-census.json` |
+| 3 | `recall-gate` | `kb/scan-profile.json`<br>`kb/route-census.json` | `kb/gates/recall-gate.json` |
+| 5 | `arch-gate` | `architecture/arc42.md`<br>`architecture/container-diagram.mmd` | `kb/gates/arch-gate.json` |
+| 7 | `tm-gate` | `threat-model/threat-model.md`<br>`threat-model/dfd.mmd` | `kb/gates/tm-gate.json` |
+| 8 | `prefilter` | `kb/scan-profile.json` | `findings` |
+| 10 | `findings-gate` | `findings` | `findings` |
+| 11 | `dedupe` | `findings` | `findings` |
+| 16 | `calibrate` | `findings` | `findings` |
+| 19 | `verify` | `findings`<br>`kb/gates/validate-fix.json` | `findings` |
+| 20 | `demote-noise` | `findings` | `findings` |
+| 22 | `report` | `findings`<br>`redteam-plan.md` | `report.md`<br>`report.sarif` |
+| 23 | `selfscore` | `report.md` | `findings` |
+| 25 | `artifact-gate` | `report.md`<br>`report.sarif` | `kb/gates/artifact-gate.json` |
+| 27 | `artifact-consistency` | `report.md` | `kb/gates/artifact-consistency.json` |
+| 28 | `postflight` | `kb/gates/artifact-review.json` | `kb/prior_context.json` |
+<!-- END GENERATED: phase-table -->
 
 The modules are not a flat bag of utilities — they run in a definite order during an audit.
 This is the deterministic spine; the LLM agents plug in between the deterministic steps.

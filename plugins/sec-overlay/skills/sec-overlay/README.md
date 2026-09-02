@@ -100,6 +100,39 @@ step, spawns an agent, records the phase, calls the next Python step.
 
 ## The pipeline
 
+<!-- BEGIN GENERATED: phase-table columns=index,phase,kind -->
+| # | Phase | Kind |
+|---|---|---|
+| 1 | `route-census` | deterministic |
+| 2 | `recon` | agent |
+| 3 | `recall-gate` | deterministic |
+| 4 | `architecture` | agent |
+| 5 | `arch-gate` | deterministic |
+| 6 | `threat_model` | agent |
+| 7 | `tm-gate` | deterministic |
+| 8 | `prefilter` | deterministic |
+| 9 | `investigate` | agent |
+| 10 | `findings-gate` | deterministic |
+| 11 | `dedupe` | deterministic |
+| 12 | `critic` | agent |
+| 13 | `judge` | agent |
+| 14 | `validate` | agent |
+| 15 | `trace` | agent |
+| 16 | `calibrate` | deterministic |
+| 17 | `patch` | agent |
+| 18 | `validate-fix` | agent |
+| 19 | `verify` | deterministic |
+| 20 | `demote-noise` | deterministic |
+| 21 | `redteam` | agent |
+| 22 | `report` | deterministic |
+| 23 | `selfscore` | deterministic |
+| 24 | `prove` | agent |
+| 25 | `artifact-gate` | deterministic |
+| 26 | `artifact-review` | agent |
+| 27 | `artifact-consistency` | deterministic |
+| 28 | `postflight` | deterministic |
+<!-- END GENERATED: phase-table -->
+
 One audit pass, in order. Deterministic (Python) steps are rectangles; agent (LLM) steps are
 rounded. `<T>` = target, `<WS>` = workspace.
 
