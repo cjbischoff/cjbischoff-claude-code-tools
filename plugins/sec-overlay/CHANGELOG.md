@@ -6,6 +6,20 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- `verify_patch` runs its `rule-no-target-file` check AFTER the post-patch re-scan instead of
+  before the repo copy. The guard now only downgrades a surviving hit, so a cross-file fix that a
+  cross-file backend (`codeql:dataflow`, or `sca` where the finding cites the lockfile and the
+  patch edits the manifest) proves clean reaches `verified-static` again. Ruling P5-9.
+- `_check` runs every planned semgrep ruleset when the caller asks for `detail`, instead of
+  returning on the first config that hits. Stopping early drew the pre-patch and post-patch detail
+  from different rulesets, and comparing disjoint evidence reported a false `rule-no-discriminate`
+  where the truth was `not-fixed`.
+- `_path_matches` rejects an empty path on either side. An empty path made the suffix test true for
+  any counterpart ending in `/`.
+- `_rel_path`'s docstring no longer claims the result always uses `/` separators. On POSIX
+  `os.sep` is already `/`, so a Windows-style input passes through unchanged; the code is correct
+  and the promise was not.
+
 - `agents/README.md` no longer names `{{PLACEHOLDER}}` as if it were a substitutable token — no
   producer fills it in. The sentence now shows two real tokens, `{{TARGET}}` and `{{WORKSPACE}}`,
   as its examples. Caught by REQ-61's new `test_pipeline_documents_name_only_substitutable_tokens`.

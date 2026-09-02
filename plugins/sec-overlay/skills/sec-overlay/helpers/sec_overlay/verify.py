@@ -163,7 +163,10 @@ def _rel_path(path: str, root: str) -> str:
 
     Returns:
         ``path`` relative to ``root`` when ``root`` prefixes it, else ``path``
-        unchanged, always with ``/`` separators and no leading ``./``.
+        unchanged, with ``os.sep`` rewritten to ``/`` and no leading ``./``. On
+        POSIX ``os.sep`` is already ``/``, so a Windows-style input passes
+        through with its backslashes — a backslash is a legal POSIX filename
+        character, and rewriting it would corrupt a real path.
     """
     q = path.replace(os.sep, "/").removeprefix("./")
     r = root.replace(os.sep, "/").rstrip("/")
@@ -184,11 +187,16 @@ def _path_matches(scanner_path: str, finding_path: str, root: str) -> bool:
         finding_path: The path the finding cites.
         root: The directory the re-scan ran against.
 
+    An empty path names no file, so it never matches: without the guard, an empty
+    ``b`` makes ``a.endswith("/")`` true for every directory-like counterpart.
+
     Returns:
         Whether both paths name one file.
     """
     a = _rel_path(scanner_path, root)
     b = _rel_path(finding_path, root)
+    if not a or not b:
+        return False
     return a == b or a.endswith("/" + b) or b.endswith("/" + a)
 
 
@@ -257,6 +265,11 @@ def _check(
     ``codeql``/``sca`` ignore ``configs`` entirely and run once, so a
     multi-ruleset plan never re-runs a database build per ruleset. ``detail``
     rides as a keyword so a 5-positional monkeypatch still binds.
+
+    When the caller asked for ``detail``, every config runs even after one hits:
+    stopping early leaves the pre-patch and post-patch detail drawn from
+    different rulesets, and comparing disjoint evidence yields a false
+    ``rule-no-discriminate``. The detail-free path keeps the early return.
     """
     if backend != "semgrep":
         return _file_has_hit(
@@ -264,12 +277,17 @@ def _check(
             backend=backend, language=language, db_dir=db_dir, detail=detail,
         )
     saw_none = False
+    saw_hit = False
     for config in configs:
         hit = _file_has_hit(target, config, file_path, cls, rules, detail=detail)
         if hit:
-            return True
-        if hit is None:
+            if detail is None:
+                return True
+            saw_hit = True
+        elif hit is None:
             saw_none = True
+    if saw_hit:
+        return True
     return None if saw_none else False
 
 
@@ -411,13 +429,6 @@ def verify_patch(
     if not pre:
         return "rule-no-match"
 
-    # A cross-file fix — a sanitizer added beside the sink — leaves the sink line
-    # byte-identical, so OSS semgrep's intra-file taint reports the identical hit
-    # after the patch. That is not evidence the patch failed (REQ-59).
-    touched = _patch_files(patch_diff)
-    if touched and not any(_path_matches(t, file, target) for t in touched):
-        return "rule-no-target-file"
-
     tmp = tempfile.mkdtemp(prefix="sec-overlay-verify-")
     try:
         repo = Path(tmp) / "repo"
@@ -433,6 +444,14 @@ def verify_patch(
             return "unconfirmed"
         if not post:
             return "verified-static"
+        # A cross-file fix — a sanitizer added beside the sink — leaves the sink line
+        # byte-identical, so OSS semgrep's intra-file taint reports the identical hit
+        # after the patch. That is not evidence the patch failed (REQ-59). This runs
+        # AFTER the re-scan so it can only downgrade a surviving hit: a cross-file
+        # backend that proves the patch clean still reaches ``verified-static``.
+        touched = _patch_files(patch_diff)
+        if touched and not any(_path_matches(t, file, target) for t in touched):
+            return "rule-no-target-file"
         return _post_verdict(pre_detail, post_detail)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

@@ -41,6 +41,13 @@ def test_path_matches_rejects_a_same_named_file_in_another_directory():
     assert not V._path_matches("/repo/b/util.py", "a/util.py", "/repo")
 
 
+def test_path_matches_rejects_an_empty_path():
+    """An empty path names no file: the suffix test must not treat it as a wildcard."""
+    assert not V._path_matches("", "a/util.py", "/repo")
+    assert not V._path_matches("/repo/a/util.py", "", "/repo")
+    assert not V._path_matches("", "", "/repo")
+
+
 def test_file_has_hit_rejects_an_aliased_same_named_file(monkeypatch):
     monkeypatch.setattr(V, "run_semgrep", lambda t, c: [_hit("/repo/b/util.py")])
     assert V._file_has_hit("/repo", "cfg", "a/util.py", "sqli", set()) is False
@@ -65,8 +72,33 @@ def test_patch_files_reads_the_post_image_paths():
 def test_a_cross_file_fix_is_not_reported_as_not_fixed(monkeypatch):
     monkeypatch.setattr(V, "_file_has_hit", lambda *a, **k: True)
     monkeypatch.setattr(V, "apply_patch", lambda d, p, **k: True)
+    monkeypatch.setattr(V.shutil, "copytree", lambda *a, **k: None)
     out = V.verify_patch("/repo", _CROSS_FILE_DIFF, "cfg", "src/PackageSetup.ts", "path-traversal")
     assert out == "rule-no-target-file"
+
+
+def test_a_cross_file_fix_with_a_clean_re_scan_is_verified(monkeypatch):
+    """P5-9: the cross-file guard may only downgrade a surviving hit.
+
+    A cross-file backend (``codeql:dataflow``, or an ``sca`` finding whose file is
+    the lockfile while the patch edits the manifest) can prove such a patch clean.
+    Returning before the copy, the apply, and the re-scan denies it that proof.
+    """
+    calls = {"n": 0}
+
+    def fake_hit(*a, **k):
+        calls["n"] += 1
+        return calls["n"] == 1
+
+    monkeypatch.setattr(V, "_file_has_hit", fake_hit)
+    monkeypatch.setattr(V, "apply_patch", lambda d, p, **k: True)
+    monkeypatch.setattr(V.shutil, "copytree", lambda *a, **k: None)
+    out = V.verify_patch(
+        "/repo", _CROSS_FILE_DIFF, "cfg", "src/PackageSetup.ts", "path-traversal",
+        ["codeql:dataflow"],
+    )
+    assert calls["n"] == 2, "the post-patch scan never ran"
+    assert out == "verified-static"
 
 
 def test_the_new_cause_maps_to_a_legal_verification():
@@ -123,6 +155,32 @@ def test_a_surviving_construction_still_reports_not_fixed(monkeypatch):
     monkeypatch.setattr(V, "apply_patch", lambda d, p, **k: True)
     monkeypatch.setattr(V.shutil, "copytree", lambda *a, **k: None)
     out = V.verify_patch("/repo", _INSERTING_DIFF, "cfg", "app.py", "path-traversal")
+    assert out == "not-fixed"
+
+
+def test_detail_accumulates_across_every_planned_ruleset(monkeypatch):
+    """A detail request must run every config, not stop at the first that hits.
+
+    One ruleset firing pre-patch only and another firing on both sides otherwise
+    yields disjoint pre/post evidence drawn from different rulesets, which
+    ``_post_verdict`` reads as ``rule-no-discriminate``. The truth is
+    ``not-fixed``: the second ruleset's construction survives byte-identical.
+    """
+    def fake_hit(target_dir, config, file_path, cls, rules, *, detail=None, **kw):
+        pre_phase = target_dir == "/repo"
+        if config == "c1.yaml" and not pre_phase:
+            return False
+        text = "c1-pre-only" if config == "c1.yaml" else "c2-survives"
+        if detail is not None:
+            detail.append(_evidence_hit("app.py", 10, text))
+        return True
+
+    monkeypatch.setattr(V, "_file_has_hit", fake_hit)
+    monkeypatch.setattr(V, "apply_patch", lambda d, p, **k: True)
+    monkeypatch.setattr(V.shutil, "copytree", lambda *a, **k: None)
+    out = V.verify_patch(
+        "/repo", _INSERTING_DIFF, ["c1.yaml", "c2.yaml"], "app.py", "path-traversal"
+    )
     assert out == "not-fixed"
 
 

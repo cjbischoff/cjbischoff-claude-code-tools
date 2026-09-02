@@ -356,11 +356,17 @@ which `verify_findings` maps to a legal `Finding.verification` value through
 before the loop, so every finding is re-scanned against the semgrep rulesets `recon` planned in
 `kb/scan-profile.json`, not an unrelated caller-supplied path; `verify_patch`'s `config` parameter
 now accepts a list too, and `_check` OR-combines a `_file_has_hit` call per config for the
-semgrep backend, running codeql/sca once regardless of the list; a scanner hit matches a finding
-when their paths share a suffix at a `/` boundary after `_rel_path` strips the scan root, so two
-same-named files in different directories no longer alias; `rule-no-target-file` — the patch
-writes no file the finding's rule fires in, so a re-scan cannot observe the fix. Maps to
-`static-only`, never to `not-fixed`; `rule-no-discriminate` — the rule still fires post-patch, but
+semgrep backend, running codeql/sca once regardless of the list. `_check` returns on the first
+config that hits only when the caller wants no `detail`; with a `detail` list it runs every
+config, because stopping early draws the pre-patch and post-patch detail from different rulesets
+and comparing disjoint evidence reports a false `rule-no-discriminate`. A scanner hit matches a
+finding when their paths share a suffix at a `/` boundary after `_rel_path` strips the scan root,
+so two same-named files in different directories no longer alias, and an empty path on either
+side never matches; `rule-no-target-file` — the patch writes no file the finding's rule fires in,
+so a re-scan cannot observe the fix. The check runs AFTER the post-patch re-scan, so it only
+downgrades a surviving hit: a cross-file backend whose re-scan comes back clean still reaches
+`verified-static`. Maps to `static-only`, never to `not-fixed`; `rule-no-discriminate` — the rule
+still fires post-patch, but
 `_post_verdict` finds its matched evidence text disjoint from the pre-patch match, so the rule's
 sink list covers both the vulnerable and the safe construction rather than telling them apart.
 Maps to `static-only`; `_file_has_hit` and `_check` take an out-parameter `detail` list collecting

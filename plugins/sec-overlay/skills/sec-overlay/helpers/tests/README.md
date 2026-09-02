@@ -1881,3 +1881,28 @@ carries no `reason` key.
 still binds when a test's stub does not care about it.
 
 All 42 targeted tests pass. The full suite passes at 1843 tests (1839 plus these four).
+
+## 2026-09-01 — P5-9 and F2: the cross-file guard and the multi-config loop
+
+`test_verify_paths.py` gains three tests and updates one.
+
+`test_a_cross_file_fix_with_a_clean_re_scan_is_verified` pins ruling P5-9. The
+`rule-no-target-file` guard used to return before the copy, the apply, and the post-patch
+re-scan, so a cross-file fix a cross-file backend (`codeql:dataflow`, or `sca` where the
+finding cites the lockfile and the patch edits the manifest) would prove clean could no
+longer reach `verified-static`. The test counts `_file_has_hit` calls and asserts the second
+one ran. It failed with `assert 1 == 2` before the guard moved after the re-scan.
+
+`test_a_cross_file_fix_is_not_reported_as_not_fixed` now monkeypatches `shutil.copytree`.
+The guard no longer short-circuits the copy, so the test's fictional `/repo` target would
+otherwise raise from `copytree`. Its assertion is unchanged: a surviving post-patch hit on a
+patch that writes no file the rule fires in still returns `rule-no-target-file`.
+
+`test_detail_accumulates_across_every_planned_ruleset` pins the multi-config loop. Two
+configs, one firing pre-patch only and one firing on both sides with identical evidence text,
+used to yield `pre_detail` and `post_detail` drawn from different rulesets and a false
+`rule-no-discriminate`. `_check` now runs every config when the caller passes a `detail` list
+and keeps the early return only on the detail-free path.
+
+`test_path_matches_rejects_an_empty_path` pins the `_path_matches` guard. An empty `a` or `b`
+made `a.endswith("/" + b)` true for any counterpart ending in `/`.
