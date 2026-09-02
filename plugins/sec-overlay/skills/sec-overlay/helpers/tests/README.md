@@ -1766,3 +1766,14 @@ check against the uncollapsed count and flagged a contradiction that was never r
 assertions are unchanged; only the input shape moved off the legacy path the fix above now
 degrades instead of checks, so the test still exercises a genuine mismatch under clause (d)'s
 current logic.
+
+## 2026-09-01 — REQ-59 red: a verify hit matches by base filename, not by path
+
+`test_verify_paths.py` pins the fix. Two tests assert `_rel_path` strips a scan root from a path
+and leaves an unprefixed path untouched. Three assert `_path_matches`: it accepts two paths naming
+the same file, accepts a repo-relative finding path under a scoped scan target, and rejects a
+same-named file in another directory. One drives `_file_has_hit` end to end: a hit reported for
+`b/util.py` must not satisfy a finding filed against `a/util.py`.
+
+All six fail: `sec_overlay.verify` has no `_rel_path` or `_path_matches` attribute, and
+`_file_has_hit`'s basename comparison treats `a/util.py` and `b/util.py` as the same file.

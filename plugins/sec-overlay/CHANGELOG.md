@@ -4,6 +4,13 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- Failing tests pin path-aware verify matching (REQ-59). `helpers/tests/test_verify_paths.py`
+  asserts `_rel_path` strips a scan root and `_path_matches` accepts a same-file suffix match
+  while rejecting a same-named file in another directory. All six fail: `_rel_path` and
+  `_path_matches` do not exist, and `_file_has_hit` aliases two files sharing a base filename.
+
 ### Fixed
 
 - Clause (f)'s docstring in the artifact-consistency gate overclaimed a word-boundary check of
