@@ -13,6 +13,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Fixed
 
+- A verify hit no longer matches a same-named file in another directory (REQ-59).
+  `_file_has_hit` compared only `os.path.basename`, so `a/util.py` and `b/util.py` aliased.
+  It now calls new helper `_path_matches`, which compares paths by segment suffix after
+  `_rel_path` strips the scan root. `_file_has_hit`'s third parameter is renamed `file_path`
+  and now receives the finding's full path, not its base filename.
+
+### Fixed
+
 - Clause (f)'s docstring in the artifact-consistency gate overclaimed a word-boundary check of
   the source message (P4-16). The assertion already compares a truncated triage title against
   `triage_what`'s own output, so it detects a hand-edited or stale report, not a defect in

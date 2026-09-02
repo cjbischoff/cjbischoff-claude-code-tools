@@ -146,11 +146,54 @@ def _pick_backend(evidence_sources: list[str] | None) -> str:
     return "semgrep"
 
 
+def _rel_path(path: str, root: str) -> str:
+    """Return ``path`` in POSIX form with ``root``'s prefix removed.
+
+    Pure string work on purpose: a CodeQL SARIF URI is already repo-relative and
+    does not exist relative to this process's CWD, so a ``realpath`` round-trip
+    would corrupt it. semgrep prefixes the scan target, osv-scanner reports an
+    absolute source path, and CodeQL reports neither.
+
+    Args:
+        path: A scanner-reported or finding-reported file path.
+        root: The directory the scan ran against; may be empty.
+
+    Returns:
+        ``path`` relative to ``root`` when ``root`` prefixes it, else ``path``
+        unchanged, always with ``/`` separators and no leading ``./``.
+    """
+    q = path.replace(os.sep, "/").removeprefix("./")
+    r = root.replace(os.sep, "/").rstrip("/")
+    return q[len(r) + 1 :] if r and q.startswith(r + "/") else q
+
+
+def _path_matches(scanner_path: str, finding_path: str, root: str) -> bool:
+    """Return True when two paths name the same file after normalization.
+
+    Matches on a path-segment suffix in both directions rather than on equality.
+    ``verify_patch``'s ``target`` may be the scan scope while the finding cites a
+    repo-root-relative path, and no helper reconciles the two prefixes. A suffix
+    match survives that difference and still separates ``a/util.py`` from
+    ``b/util.py``, which a base-filename match could not.
+
+    Args:
+        scanner_path: The path the re-scan reported.
+        finding_path: The path the finding cites.
+        root: The directory the re-scan ran against.
+
+    Returns:
+        Whether both paths name one file.
+    """
+    a = _rel_path(scanner_path, root)
+    b = _rel_path(finding_path, root)
+    return a == b or a.endswith("/" + b) or b.endswith("/" + a)
+
+
 def _file_has_hit(
-    target_dir: str, config: str, file_basename: str, cls: str, rules: set[str],
+    target_dir: str, config: str, file_path: str, cls: str, rules: set[str],
     *, backend: str = "semgrep", language: str | None = None, db_dir: str | None = None,
 ) -> bool | None:
-    """Return True if the finding's signal is present in ``file_basename``.
+    """Return True if the finding's signal is present in ``file_path``.
 
     Matches on the finding's own rule ids when known (``rules``); falls back to
     attack-class match when the finding carries no receipt for the backend.
@@ -158,7 +201,8 @@ def _file_has_hit(
     Args:
         target_dir: Directory to scan.
         config: SAST rules config path (semgrep only).
-        file_basename: Base filename to match (e.g. ``app.py``).
+        file_path: The finding's own file path, matched by path segment (e.g.
+            ``src/app.py``); a bare filename still matches as a one-segment suffix.
         cls: Attack-class key (fallback matcher).
         rules: The finding's own rule ids (precise matcher); empty → class.
         backend: Which SAST backend to re-run (``"semgrep"``/``"codeql"``/``"sca"``).
@@ -182,7 +226,7 @@ def _file_has_hit(
     except (CodeQLError, ScaError):
         return None
     for f in findings:
-        if os.path.basename(f.file) != file_basename:
+        if not _path_matches(f.file, file_path, target_dir):
             continue
         if f.rule_id in rules if rules else f.cls == cls:
             return True
@@ -190,7 +234,7 @@ def _file_has_hit(
 
 
 def _check(
-    target: str, configs: list[str], basename: str, cls: str, rules: set[str],
+    target: str, configs: list[str], file_path: str, cls: str, rules: set[str],
     backend: str, language: str | None, db_dir: str | None,
 ) -> bool | None:
     """Call ``_file_has_hit`` once per config, OR-combining the tri-state result.
@@ -202,12 +246,12 @@ def _check(
     """
     if backend != "semgrep":
         return _file_has_hit(
-            target, configs[0], basename, cls, rules,
+            target, configs[0], file_path, cls, rules,
             backend=backend, language=language, db_dir=db_dir,
         )
     saw_none = False
     for config in configs:
-        hit = _file_has_hit(target, config, basename, cls, rules)
+        hit = _file_has_hit(target, config, file_path, cls, rules)
         if hit:
             return True
         if hit is None:
@@ -262,7 +306,7 @@ def verify_patch(
         target: Path to the (unmodified) target repo.
         patch_diff: Unified diff proposed for the finding.
         config: SAST rules config path, or a list of them (semgrep only).
-        file: Finding's file path (only the basename is matched).
+        file: Finding's file path, matched by path segment against the re-scan hit.
         cls: Finding's attack class.
         evidence_sources: The finding's evidence sources — picks the re-run backend.
         language: CodeQL language id, if the backend is codeql.
@@ -282,12 +326,9 @@ def verify_patch(
         return "not-fixed"
 
     configs = [config] if isinstance(config, str) else list(config) or [""]
-    basename = os.path.basename(file)
     backend = _pick_backend(evidence_sources)
     rules = _source_rules(f"{backend}:", evidence_sources)
-    # ponytail: basename match is fine for distinct filenames; a repo with two
-    # same-named files in different dirs could alias — revisit with full paths then.
-    pre = _check(target, configs, basename, cls, rules, backend, language, db_dir)
+    pre = _check(target, configs, file, cls, rules, backend, language, db_dir)
     if not pre:
         return "rule-no-match"
 
@@ -297,7 +338,7 @@ def verify_patch(
         shutil.copytree(target, repo, ignore=_copy_ignore)
         if not apply_patch(repo, patch_diff):
             return "patch-not-applied"
-        post = _check(str(repo), configs, basename, cls, rules, backend, language, db_dir)
+        post = _check(str(repo), configs, file, cls, rules, backend, language, db_dir)
         if post is None:
             return "unconfirmed"
         return "not-fixed" if post else "verified-static"
