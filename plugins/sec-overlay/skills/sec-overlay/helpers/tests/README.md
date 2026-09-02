@@ -21,6 +21,17 @@ region names every phase in `PHASE_TABLE`, in table order, with none skipped.
 member (so Task 5's contract lint, which iterates `DOCUMENTS`, covers it) while staying out of
 `NOTE_DOCUMENTS` — a fix-round finding: `CLAUDE.md` had been left out of `DOCUMENTS` entirely.
 
+`test_contract_lint.py` gains three more REQ-61 tests.
+`test_operator_notes_name_every_phase_and_nothing_else` checks every `PHASE_TABLE` phase has an
+operator note in `SKILL.md` and no note names a step absent from the table (`NON_TABLE_STEPS`
+excepted). `test_operator_notes_follow_the_table_order` checks the notes appear in the same order
+as `PHASE_TABLE`. `test_pipeline_documents_name_only_substitutable_tokens` checks every `{{TOKEN}}`
+in a `DOCUMENTS`/`NOTE_DOCUMENTS` file is in `driver.DISPATCH_TOKENS` or
+`phase_docs.ORCHESTRATOR_TOKENS` — the operator notes live in `SKILL.md`, not `CLAUDE.md`. A
+`PhaseSpec` rename in `phases.py` now fails this file's `test_operator_notes_name_every_phase_and_nothing_else`
+alongside `test_phase_docs.py`'s `test_every_generated_block_is_current`, so a rename can no longer
+pass the suite with a stale document.
+
 `phase_docs.py` ships. `regenerate` rewrote the four generated documents from `PHASE_TABLE`, and
 `SKILL.md`'s old hand-numbered walkthrough became a five-item preface list (the steps
 `PHASE_TABLE` does not own) plus the generated table and a 28-entry Phase Notes region, one bullet

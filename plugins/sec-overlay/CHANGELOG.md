@@ -4,6 +4,15 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- Failing tests pin REQ-61's second half: every `PHASE_TABLE` phase must have an operator note in
+  `SKILL.md`'s notes region, no note names a phase absent from the table, the notes follow table
+  order, and every `{{TOKEN}}` in a pipeline document is in `DISPATCH_TOKENS` or
+  `ORCHESTRATOR_TOKENS`. Two of the three pass immediately — Task 4's notes transcription already
+  covered coverage and order — but the token test fails: `agents/README.md` names a literal
+  `{{PLACEHOLDER}}` token that no producer substitutes.
+
 ### Fixed
 
 - `phase_docs.ORCHESTRATOR_TOKENS` now lists exactly the 14 tokens the five skill documents

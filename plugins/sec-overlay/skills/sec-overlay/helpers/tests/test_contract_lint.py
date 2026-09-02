@@ -208,3 +208,37 @@ def test_dispatch_tokens_are_a_single_source(tmp_path):
         f"the substitute line and DISPATCH_TOKENS disagree: {rendered ^ set(DISPATCH_TOKENS)}"
     )
     assert all(re.fullmatch(r"[A-Z][A-Z0-9_]*", t) for t in DISPATCH_TOKENS)
+
+
+def test_operator_notes_name_every_phase_and_nothing_else():
+    """Every PHASE_TABLE phase has an operator note; no note names a stranger."""
+    from sec_overlay.phase_docs import NON_TABLE_STEPS, NOTE_DOCUMENTS, note_keys
+    from sec_overlay.phases import PHASE_TABLE
+
+    phases = {p.name for p in PHASE_TABLE}
+    known = phases | set(NON_TABLE_STEPS)
+    for doc in NOTE_DOCUMENTS:
+        keys = set(note_keys(doc.read_text()))
+        assert keys <= known, f"{doc.name} names steps absent from the table: {keys - known}"
+        assert keys >= phases, f"{doc.name} omits phases: {phases - keys}"
+
+
+def test_operator_notes_follow_the_table_order():
+    """A reorder in PHASE_TABLE must fail until the notes follow it."""
+    from sec_overlay.phase_docs import NOTE_DOCUMENTS, note_keys
+    from sec_overlay.phases import PHASE_TABLE
+
+    order = [p.name for p in PHASE_TABLE]
+    for doc in NOTE_DOCUMENTS:
+        keys = [k for k in note_keys(doc.read_text()) if k in order]
+        assert keys == sorted(keys, key=order.index), f"{doc.name} is out of table order"
+
+
+def test_pipeline_documents_name_only_substitutable_tokens():
+    """Every {{TOKEN}} in a pipeline document has a substituter."""
+    from sec_overlay.phase_docs import DOCUMENTS, NOTE_DOCUMENTS, ORCHESTRATOR_TOKENS
+
+    known = set(DISPATCH_TOKENS) | set(ORCHESTRATOR_TOKENS)
+    for doc in dict.fromkeys((*DOCUMENTS, *NOTE_DOCUMENTS)):
+        found = set(re.findall(r"\{\{([A-Z][A-Z0-9_]*)\}\}", doc.read_text()))
+        assert found <= known, f"{doc.name} names tokens nothing substitutes: {found - known}"
