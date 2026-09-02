@@ -11,10 +11,11 @@ The marker's own ``columns`` and optional ``kind`` attributes select what that
 block holds, so one renderer serves every document and no per-document column
 registry can drift from the document it describes.
 
-The skill root ``CLAUDE.md`` is deliberately not one of ``DOCUMENTS``. It is the
-maintainer's quick map, capped at 200 lines by repo governance; the full table
-and the per-phase operator notes live in ``SKILL.md`` (``NOTE_DOCUMENTS``) and
-``CLAUDE.md`` points there instead of duplicating either.
+The skill root ``CLAUDE.md`` is one of ``DOCUMENTS`` but stays markerless: it is
+the maintainer's quick map, capped at 200 lines by repo governance, and points
+at ``SKILL.md`` for the full table and the per-phase operator notes
+(``NOTE_DOCUMENTS``) instead of carrying either itself. ``regenerate`` is a
+no-op on a markerless document, so ``--write`` never touches it.
 
 ``python -m sec_overlay.phase_docs --check`` fails when a block is stale;
 ``--write`` rewrites every stale block. The contract lint calls the same code, so
@@ -44,29 +45,25 @@ NON_TABLE_STEPS: tuple[str, ...] = (
     "cluster",
 )
 
-# Tokens a prompt may name that DISPATCH_TOKENS does not cover, because they are
-# substituted somewhere other than `driver.render_dispatch`: the diff-review
-# pipeline's own renderers (`review_agent.render_review_prompt`,
-# `review_agent.render_plan_prompt`, `reflection.render_reflection_prompt`), or
-# a value `sec_overlay.prompts.render_prompt` fills per-call from a caller-built
-# `subs` dict (census/catalog/claim payloads, the phase/round labels, the repo
-# and scan-scope anchors `run.py` writes to `run.env`). Keeping these listed
-# separately from `DISPATCH_TOKENS` lets Task 5's contract lint tell "known,
-# supplied elsewhere" apart from "genuinely unfilled".
+# Every token a skill document names that some producer other than
+# `driver.render_dispatch` substitutes:
+# - `review_agent.py` supplies BACKGROUND, CHANGE_FILES, CURRENT_FILE_PATH, DIFF,
+#   PLAN_GUIDANCE, SIBLING_DIFFS, SYSTEM_RULE, REPO_ROOT
+# - `reflection.py` supplies COMMENTS, PATH, DIFF
+# - `prompts.py` supplies KEY
+# - the orchestrator supplies PHASE, ROUND, SCAN_SCOPE
+# Keeping these listed separately from `DISPATCH_TOKENS` lets Task 5's contract
+# lint tell "known, supplied elsewhere" apart from "genuinely unfilled".
 ORCHESTRATOR_TOKENS: tuple[str, ...] = (
     "BACKGROUND",
-    "CATALOG_MATCHES",
-    "CENSUS",
     "CHANGE_FILES",
-    "CLAIMS",
     "COMMENTS",
     "CURRENT_FILE_PATH",
     "DIFF",
-    "FINDING_ID",
+    "KEY",
     "PATH",
     "PHASE",
     "PLAN_GUIDANCE",
-    "PROFILE",
     "REPO_ROOT",
     "ROUND",
     "SCAN_SCOPE",
@@ -81,10 +78,11 @@ DOCUMENTS: tuple[Path, ...] = (
     SKILL_ROOT / "README.md",
     SKILL_ROOT / "agents" / "README.md",
     SKILL_ROOT / "helpers" / "README.md",
+    SKILL_ROOT / "CLAUDE.md",
 )
 
-# The document that also holds per-phase operator notes. The skill CLAUDE.md
-# points here rather than carrying its own copy — see the module docstring.
+# The document that also holds per-phase operator notes. CLAUDE.md is in
+# DOCUMENTS but not here — see the module docstring.
 NOTE_DOCUMENTS: tuple[Path, ...] = (SKILL_ROOT / "SKILL.md",)
 
 _BEGIN = re.compile(r"^<!-- BEGIN GENERATED: phase-table(?P<attrs>[^>]*)-->$", re.MULTILINE)

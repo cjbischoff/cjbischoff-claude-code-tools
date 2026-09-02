@@ -4,6 +4,17 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Fixed
+
+- `phase_docs.ORCHESTRATOR_TOKENS` now lists exactly the 14 tokens the five skill documents
+  actually name (adds `KEY`, drops `CATALOG_MATCHES`, `CENSUS`, `CLAIMS`, `FINDING_ID`, `PROFILE`,
+  none of which appear in any document), with the preceding comment naming each token's real
+  producer (`review_agent.py`, `reflection.py`, `prompts.py`, the orchestrator) instead of the
+  stale census/catalog/claim wording. `phase_docs.DOCUMENTS` gains the skill root `CLAUDE.md`,
+  which stays markerless — `regenerate` is a no-op on it and `--write` still prints exactly four
+  `rewrote:` lines — so Task 5's contract lint, which iterates `DOCUMENTS`, covers `CLAUDE.md` too.
+  `test_phase_docs.py` gains a test pinning `CLAUDE.md` in `DOCUMENTS` and out of `NOTE_DOCUMENTS`.
+
 ### Added
 
 - Failing tests pin REQ-61: every document that states the pipeline's phase order must render it

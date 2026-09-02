@@ -1769,17 +1769,21 @@ without those items polluting the key list). `main()` is the CLI: `--check` (use
 exits 1 and names every stale document without writing; `--write` regenerates every document
 in `DOCUMENTS` in place.
 
-`DOCUMENTS` lists four targets (`SKILL.md`, `README.md`, `agents/README.md`, `helpers/README.md`)
-that each carry a generated phase-table block. `NOTE_DOCUMENTS` is `(SKILL.md,)` only — the
-per-phase prose notes live in one place, not four, since the note text is long-form and would
-drift across copies faster than it would stay in sync. `skills/sec-overlay/CLAUDE.md` carries
-neither: it is the maintainer quick-map, and now just points at `SKILL.md`'s generated table and
-notes instead of keeping its own copy.
+`DOCUMENTS` lists five targets: `SKILL.md`, `README.md`, `agents/README.md`, `helpers/README.md`,
+and `skills/sec-overlay/CLAUDE.md`. The first four carry a generated phase-table block; `CLAUDE.md`
+is in the set but stays markerless — it is the maintainer quick-map and now just points at
+`SKILL.md`'s generated table and notes instead of keeping its own copy, so `regenerate` is a
+no-op on it and `--write` still prints exactly four `rewrote:` lines. `NOTE_DOCUMENTS` is
+`(SKILL.md,)` only — the per-phase prose notes live in one place, not five, since the note text
+is long-form and would drift across copies faster than it would stay in sync.
 
-`ORCHESTRATOR_TOKENS` is a fixed tuple of every `{{TOKEN}}` name substituted into an agent prompt
-anywhere in this skill *other than* `driver.render_dispatch`'s own `DISPATCH_TOKENS`
-(`TARGET`/`WORKSPACE`/`SHA`/`ATTACK_CLASS`/`OVERLAY_ROOT`/`HELPERS_DIR`/`FP_FEEDBACK`) — tokens
-the orchestrator or a phase's own prompt fills by hand rather than through `render_dispatch`.
+`ORCHESTRATOR_TOKENS` is a fixed tuple of the 14 tokens the five skill documents actually name
+*other than* `driver.render_dispatch`'s own `DISPATCH_TOKENS`
+(`TARGET`/`WORKSPACE`/`SHA`/`ATTACK_CLASS`/`OVERLAY_ROOT`/`HELPERS_DIR`/`FP_FEEDBACK`):
+`BACKGROUND`, `CHANGE_FILES`, `COMMENTS`, `CURRENT_FILE_PATH`, `DIFF`, `KEY`, `PATH`, `PHASE`,
+`PLAN_GUIDANCE`, `REPO_ROOT`, `ROUND`, `SCAN_SCOPE`, `SIBLING_DIFFS`, `SYSTEM_RULE` — each filled
+by `review_agent.py`, `reflection.py`, `prompts.py`, or the orchestrator rather than through
+`render_dispatch`.
 `NON_TABLE_STEPS` names six steps (`preflight`, `begin-pass`, `context-ingest`,
 `tier1-substrate`, `tune`, `cluster`) that run alongside `PHASE_TABLE` but are not phase-table
 entries themselves — the first five precede the driver or dispatch outside the table, and

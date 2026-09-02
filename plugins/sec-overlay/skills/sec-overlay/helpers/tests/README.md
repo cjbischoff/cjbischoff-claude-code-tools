@@ -17,6 +17,9 @@ not just an absent block. `test_claude_md_carries_no_generated_block` and
 phase table and its operator notes instead of duplicating them, and
 `test_every_table_phase_has_a_note_in_skill_md` checks `SKILL.md`'s `<!-- BEGIN PHASE NOTES -->`
 region names every phase in `PHASE_TABLE`, in table order, with none skipped.
+`test_claude_md_is_in_documents_but_not_note_documents` pins that `CLAUDE.md` is a `DOCUMENTS`
+member (so Task 5's contract lint, which iterates `DOCUMENTS`, covers it) while staying out of
+`NOTE_DOCUMENTS` — a fix-round finding: `CLAUDE.md` had been left out of `DOCUMENTS` entirely.
 
 `phase_docs.py` ships. `regenerate` rewrote the four generated documents from `PHASE_TABLE`, and
 `SKILL.md`'s old hand-numbered walkthrough became a five-item preface list (the steps

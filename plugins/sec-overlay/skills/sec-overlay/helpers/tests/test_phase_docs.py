@@ -11,6 +11,8 @@ from sec_overlay.phases import PHASE_TABLE
 
 def test_every_document_carries_a_generated_block():
     for doc in DOCUMENTS:
+        if doc.name == "CLAUDE.md":
+            continue  # markerless by design — see test_claude_md_carries_no_generated_block
         assert "<!-- BEGIN GENERATED: phase-table" in doc.read_text(), doc.name
 
 
@@ -63,6 +65,12 @@ def test_claude_md_carries_no_generated_block():
 
 def test_note_documents_is_skill_md_only():
     assert phase_docs.NOTE_DOCUMENTS == (phase_docs.SKILL_ROOT / "SKILL.md",)
+
+
+def test_claude_md_is_in_documents_but_not_note_documents():
+    claude_md = phase_docs.SKILL_ROOT / "CLAUDE.md"
+    assert claude_md in DOCUMENTS
+    assert claude_md not in phase_docs.NOTE_DOCUMENTS
 
 
 def test_every_table_phase_has_a_note_in_skill_md():
