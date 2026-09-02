@@ -1790,3 +1790,23 @@ file. `test_the_new_cause_maps_to_a_legal_verification` asserts the cause is a m
 
 All three fail: `sec_overlay.verify` has no `_patch_files` attribute, and `VERIFY_CAUSES`
 has no `rule-no-target-file` member.
+
+## 2026-09-01 — REQ-60 red: a rule that fires on both constructions reads as `not-fixed`
+
+`test_verify_paths.py` pins the `rule-no-discriminate` cause. `_evidence_hit` builds a `Finding`
+with a chosen `line` and `evidence` string. `test_a_rule_that_matches_both_constructions_reports_no_discriminate`
+stubs `_file_has_hit` to append a pre-patch hit then a distinct post-patch hit to its new
+`detail` list, and asserts `verify_patch` returns `rule-no-discriminate`, not `not-fixed`.
+`test_a_surviving_construction_still_reports_not_fixed` stubs the same hit twice and asserts
+`not-fixed` — the same construction surviving is a real miss, not a discrimination failure.
+`test_the_history_reason_names_both_lines` drives `verify_findings` end to end and asserts the
+`verify:cause:rule-no-discriminate` history entry carries a `reason` naming both matched lines.
+
+A fourth test, `test_a_stale_last_lines_record_does_not_leak_into_the_next_verification`, guards
+a module-level pitfall: the line-carrying record a later fix introduces must be scoped per
+`verify_findings` call, not per process. It runs two verifications back to back — the first with
+a stubbed `_file_has_hit` that populates evidence, the second with a stub verifier that never
+touches the record — and asserts the second finding's history entry carries no leftover `reason`.
+
+All four fail: `_file_has_hit` accepts no `detail` keyword yet, so `verify_patch` cannot compare
+pre-patch and post-patch evidence, and `sec_overlay.verify` has no `_LAST_LINES` attribute.

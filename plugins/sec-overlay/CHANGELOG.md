@@ -6,6 +6,14 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Failing tests pin the `rule-no-discriminate` cause (REQ-60). `test_verify_paths.py` gains three
+  tests. One asserts `verify_patch` returns `rule-no-discriminate` when a rule matches disjoint
+  pre-patch and post-patch evidence text. One asserts `not-fixed` when the same construction
+  survives. One asserts the finding's history names both matched lines. `_file_has_hit` and
+  `verify_patch` do not compare evidence text yet, so all three fail.
+
+### Added
+
 - `verify.py` gains the `rule-no-target-file` cause (REQ-59). A patch that never touches
   the file a finding's rule fires in — a cross-file fix, such as a sanitizer added beside
   the sink — no longer reports `not-fixed`. New helper `_patch_files` reads a diff's
