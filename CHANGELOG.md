@@ -14,6 +14,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 ### Added
 
 - Add `.github/workflows/sec-overlay-tests.yml`: on every pull request it runs the sec-overlay pytest suite and an offline detection-regression gate that smoke-scans the committed fixtures and asserts the two `locked` seed-corpus entries stay detected.
+- Add the sec-overlay parked-findings spec (`docs/superpowers/specs/2026-09-02-sec-overlay-parked-findings-design.md`): ten requirements (REQ-62 to REQ-71) that repair the eleven findings the five defect-repair plans parked in their git-ignored ledgers, so the rulings survive outside `.superpowers/sdd/`. The spec groups them as declarations that cannot fail on drift (REQ-62 to REQ-64), a mutating reducer and a duplicated SARIF location (REQ-65, REQ-66), two behaviours an earlier specification mandated (REQ-67, REQ-68), a git-quoted diff path and a wall-clock concurrency test (REQ-69, REQ-70), and a whole-file STE100 rewrite of `sec_overlay/README.md` (REQ-71). It records that `models.py` and `evidence.py` stay byte-frozen, which decides the shape of three requirements, and it states three residual gaps the corrections do not close.
 
 ### Changed
 
