@@ -71,9 +71,3 @@ def test_claude_md_is_in_documents_but_not_note_documents():
     claude_md = phase_docs.SKILL_ROOT / "CLAUDE.md"
     assert claude_md in DOCUMENTS
     assert claude_md not in phase_docs.NOTE_DOCUMENTS
-
-
-def test_every_table_phase_has_a_note_in_skill_md():
-    (skill_md,) = phase_docs.NOTE_DOCUMENTS
-    keys = phase_docs.note_keys(skill_md.read_text())
-    assert keys == [p.name for p in PHASE_TABLE]

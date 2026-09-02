@@ -1790,10 +1790,11 @@ is long-form and would drift across copies faster than it would stay in sync.
 `PLAN_GUIDANCE`, `REPO_ROOT`, `ROUND`, `SCAN_SCOPE`, `SIBLING_DIFFS`, `SYSTEM_RULE` — each filled
 by `review_agent.py`, `reflection.py`, `prompts.py`, or the orchestrator rather than through
 `render_dispatch`.
-`NON_TABLE_STEPS` names six steps (`preflight`, `begin-pass`, `context-ingest`,
-`tier1-substrate`, `tune`, `cluster`) that run alongside `PHASE_TABLE` but are not phase-table
-entries themselves — the first five precede the driver or dispatch outside the table, and
-`tune` is the optional Phase 0.5 adaptive tool-tuning loop, documented on its own and never a
-`SKILL.md` "Running a full audit" list item. The constant is a lint-facing catalog (so an
-operator-note check can accept these keys beside real phase names); `SKILL.md`'s preface list
-carries the first five verbatim from the walkthrough it replaced.
+There is no `NON_TABLE_STEPS` constant. It once listed six steps that run alongside
+`PHASE_TABLE` without being phase-table entries (`preflight`, `begin-pass`, `context-ingest`,
+`tier1-substrate`, `tune`, `cluster`), as slack the operator-note lint would accept beside real
+phase names. Ruling P5-10 deleted it: `test_operator_notes_name_every_phase_and_nothing_else`
+asserts exact set equality between the note keys and the `PHASE_TABLE` phase names, so the slack
+was unreachable and the constant was a configuration point nothing populated. The five non-table
+steps still open `SKILL.md`'s "Running a full audit" section as a numbered preface list; they
+simply carry no operator note.

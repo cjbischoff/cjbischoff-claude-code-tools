@@ -14,17 +14,19 @@ pin `render_phase_table`'s column and kind-filter contract directly against `PHA
 `test_renaming_a_phase_makes_a_block_stale` proves the staleness check actually detects a rename,
 not just an absent block. `test_claude_md_carries_no_generated_block` and
 `test_note_documents_is_skill_md_only` pin that the skill `CLAUDE.md` points at `SKILL.md` for the
-phase table and its operator notes instead of duplicating them, and
-`test_every_table_phase_has_a_note_in_skill_md` checks `SKILL.md`'s `<!-- BEGIN PHASE NOTES -->`
-region names every phase in `PHASE_TABLE`, in table order, with none skipped.
-`test_claude_md_is_in_documents_but_not_note_documents` pins that `CLAUDE.md` is a `DOCUMENTS`
+phase table and its operator notes instead of duplicating them.
+`test_every_table_phase_has_a_note_in_skill_md` is gone: ruling P5-10 removed it because it and
+`test_contract_lint.py`'s `test_operator_notes_name_every_phase_and_nothing_else` stated two
+contradictory contracts for the same `<!-- BEGIN PHASE NOTES -->` region. The contract-lint test is
+the surviving one. `test_claude_md_is_in_documents_but_not_note_documents` pins that `CLAUDE.md` is a `DOCUMENTS`
 member (so Task 5's contract lint, which iterates `DOCUMENTS`, covers it) while staying out of
 `NOTE_DOCUMENTS` — a fix-round finding: `CLAUDE.md` had been left out of `DOCUMENTS` entirely.
 
 `test_contract_lint.py` gains three more REQ-61 tests.
-`test_operator_notes_name_every_phase_and_nothing_else` checks every `PHASE_TABLE` phase has an
-operator note in `SKILL.md` and no note names a step absent from the table (`NON_TABLE_STEPS`
-excepted). `test_operator_notes_follow_the_table_order` checks the notes appear in the same order
+`test_operator_notes_name_every_phase_and_nothing_else` asserts exact set equality: the note keys in
+`SKILL.md` and the `PHASE_TABLE` phase names are one set, and the failure message names both the
+missing and the extra keys. There is no `NON_TABLE_STEPS` exception — ruling P5-10 deleted that
+constant. `test_operator_notes_follow_the_table_order` checks the notes appear in the same order
 as `PHASE_TABLE`. `test_pipeline_documents_name_only_substitutable_tokens` checks every `{{TOKEN}}`
 in a `DOCUMENTS`/`NOTE_DOCUMENTS` file is in `driver.DISPATCH_TOKENS` or
 `phase_docs.ORCHESTRATOR_TOKENS` — the operator notes live in `SKILL.md`, not `CLAUDE.md`. Only the

@@ -4,6 +4,16 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Removed
+
+- `phase_docs.NON_TABLE_STEPS` and `test_phase_docs.py`'s
+  `test_every_table_phase_has_a_note_in_skill_md`. The two tests stated contradictory contracts for
+  the same `<!-- BEGIN PHASE NOTES -->` region: one required a note for every `PHASE_TABLE` phase
+  and nothing else, the other allowed extra notes drawn from `NON_TABLE_STEPS`. The surviving
+  `test_operator_notes_name_every_phase_and_nothing_else` now asserts exact set equality and names
+  both the missing and the extra keys on failure, which left `NON_TABLE_STEPS` unreachable — a
+  configuration point nothing populated. Ruling P5-10.
+
 ### Fixed
 
 - `verify_patch` runs its `rule-no-target-file` check AFTER the post-patch re-scan instead of

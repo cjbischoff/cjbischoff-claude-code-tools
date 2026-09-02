@@ -222,8 +222,8 @@ prompts carry the `OUTPUT_WRITE_FALLBACK` rule (write the KB/findings artifact v
 `python3 shutil.copy` from a temp file instead), so a blocked Write never silently loses a
 finding. When dispatching, keep that fallback in the agent's instructions.
 
-These five run alongside `PHASE_TABLE` but are not phase-table entries themselves
-(`phase_docs.NON_TABLE_STEPS`):
+These five run alongside `PHASE_TABLE` but are not phase-table entries themselves, so they carry
+no operator note in the generated notes region below:
 
 0. **Preflight** — `python -m sec_overlay.preflight`; run any printed install/vendor commands before scanning (missing backends are skipped + logged). The report lists which **CodeQL query packs** are installed — the `codeql` binary being present does NOT mean the per-language packs exist, and a missing pack silently drops all of that language's dataflow coverage. If a language you will scan is not listed, run `codeql pack download codeql/<lang>-queries` first. CodeQL runs only on a trusted config (`codeql_config_trusted`); unsupported or untrusted configs are skipped and logged in the prefilter `failed` list.
 1. **Begin pass** — `from sec_overlay.state import begin_pass; begin_pass(ws: Workspace, sha: str | None) -> CampaignState` (pins the SHA; increments the pass counter only after a prior pass recorded a stage). Note the import path: `begin_pass` lives in `sec_overlay.state`; `record_stage`/`pass_report` live in `sec_overlay.campaign`.

@@ -211,16 +211,17 @@ def test_dispatch_tokens_are_a_single_source(tmp_path):
 
 
 def test_operator_notes_name_every_phase_and_nothing_else():
-    """Every PHASE_TABLE phase has an operator note; no note names a stranger."""
-    from sec_overlay.phase_docs import NON_TABLE_STEPS, NOTE_DOCUMENTS, note_keys
+    """The note keys and the PHASE_TABLE phase names are one set (ruling P5-10)."""
+    from sec_overlay.phase_docs import NOTE_DOCUMENTS, note_keys
     from sec_overlay.phases import PHASE_TABLE
 
     phases = {p.name for p in PHASE_TABLE}
-    known = phases | set(NON_TABLE_STEPS)
     for doc in NOTE_DOCUMENTS:
         keys = set(note_keys(doc.read_text()))
-        assert keys <= known, f"{doc.name} names steps absent from the table: {keys - known}"
-        assert keys >= phases, f"{doc.name} omits phases: {phases - keys}"
+        assert keys == phases, (
+            f"{doc.name} note keys drifted from PHASE_TABLE — "
+            f"missing: {sorted(phases - keys)}; extra: {sorted(keys - phases)}"
+        )
 
 
 def test_operator_notes_follow_the_table_order():
@@ -230,7 +231,7 @@ def test_operator_notes_follow_the_table_order():
 
     order = [p.name for p in PHASE_TABLE]
     for doc in NOTE_DOCUMENTS:
-        keys = [k for k in note_keys(doc.read_text()) if k in order]
+        keys = note_keys(doc.read_text())
         assert keys == sorted(keys, key=order.index), f"{doc.name} is out of table order"
 
 

@@ -32,19 +32,6 @@ from pathlib import Path
 from sec_overlay.phases import PHASE_TABLE, PathOf, PhaseSpec
 from sec_overlay.workspace import Workspace
 
-# Steps the orchestrator runs that PHASE_TABLE does not own: they either precede
-# the driver (preflight, begin-pass) or are dispatched by the skill outside the
-# table (context-ingest, the tier-1 substrate build, the optional tune loop, the
-# cluster pass). The operator-note lint accepts these keys beside phase names.
-NON_TABLE_STEPS: tuple[str, ...] = (
-    "preflight",
-    "begin-pass",
-    "context-ingest",
-    "tier1-substrate",
-    "tune",
-    "cluster",
-)
-
 # Every token a skill document names that some producer other than
 # `driver.render_dispatch` substitutes:
 # - `review_agent.py` supplies BACKGROUND, CHANGE_FILES, CURRENT_FILE_PATH, DIFF,
