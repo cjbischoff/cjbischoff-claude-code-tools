@@ -1,8 +1,22 @@
 # `tests/` — the deterministic test suite
 
-141 pytest files, 1821 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+142 pytest files, 1830 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_phase_docs.py` pins REQ-61: every document that states the pipeline's phase order must
+carry a `<!-- BEGIN GENERATED: phase-table -->` block rendered from `PHASE_TABLE`, not a
+hand-maintained list that can drift from the code. `test_every_document_carries_a_generated_block`
+and `test_every_generated_block_is_current` check the four generated documents (`SKILL.md`, the
+skill root `README.md`, `agents/README.md`, `helpers/README.md`) against `phase_docs.regenerate`.
+`test_the_table_states_every_phase_in_order` and `test_a_kind_filter_keeps_the_full_table_index`
+pin `render_phase_table`'s column and kind-filter contract directly against `PHASE_TABLE`.
+`test_renaming_a_phase_makes_a_block_stale` proves the staleness check actually detects a rename,
+not just an absent block. `test_claude_md_carries_no_generated_block` and
+`test_note_documents_is_skill_md_only` pin that the skill `CLAUDE.md` points at `SKILL.md` for the
+phase table and its operator notes instead of duplicating them, and
+`test_every_table_phase_has_a_note_in_skill_md` checks `SKILL.md`'s `<!-- BEGIN PHASE NOTES -->`
+region names every phase in `PHASE_TABLE`, in table order, with none skipped.
 
 New `test_redteam.py::test_directive_falls_back_to_the_finding_preconditions` pins REQ-55: a
 finding with no `runtime_test` still shows its own `preconditions` in the directive body, in the

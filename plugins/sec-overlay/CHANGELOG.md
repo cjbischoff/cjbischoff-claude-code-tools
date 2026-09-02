@@ -6,6 +6,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Failing tests pin REQ-61: every document that states the pipeline's phase order must render it
+  from `PHASE_TABLE`, not a hand-maintained list. `test_phase_docs.py` expects a
+  `sec_overlay.phase_docs` module that does not exist yet, so all nine tests fail at collection.
+
+### Added
+
 - `verify.py` gains the `rule-no-discriminate` cause (REQ-60). A rule that still fires after a
   patch, but on evidence text disjoint from the pre-patch match, no longer reports `not-fixed`.
   `_file_has_hit` and `_check` gain a keyword-only `detail` out-parameter collecting every matching
