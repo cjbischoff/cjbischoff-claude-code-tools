@@ -358,7 +358,9 @@ before the loop, so every finding is re-scanned against the semgrep rulesets `re
 now accepts a list too, and `_check` OR-combines a `_file_has_hit` call per config for the
 semgrep backend, running codeql/sca once regardless of the list; a scanner hit matches a finding
 when their paths share a suffix at a `/` boundary after `_rel_path` strips the scan root, so two
-same-named files in different directories no longer alias),
+same-named files in different directories no longer alias; `rule-no-target-file` — the patch
+writes no file the finding's rule fires in, so a re-scan cannot observe the fix. Maps to
+`static-only`, never to `not-fixed`),
 `demote-noise` → `partition.demote_noise`, `report` → `report.write_report`, `selfscore` →
 `selfscore.write_self_score`, `artifact-gate` → `_act_artifact_gate` (calls
 `artifact_gate.run_artifact_gate`, raising `PhaseHalt` naming every error when the gate rejects the

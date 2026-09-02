@@ -23,6 +23,7 @@ from pathlib import Path
 # by ``verify_patch``, mapped below, and recorded in the finding's history.
 VERIFY_CAUSES = frozenset({
     "verified-static", "not-fixed", "patch-not-applied", "rule-no-match", "unconfirmed",
+    "rule-no-target-file", "rule-no-discriminate",
 })
 
 _CAUSE_TO_VERIFICATION = {
@@ -31,6 +32,8 @@ _CAUSE_TO_VERIFICATION = {
     "patch-not-applied": "static-only",
     "rule-no-match": "static-only",
     "unconfirmed": "static-only",
+    "rule-no-target-file": "static-only",
+    "rule-no-discriminate": "static-only",
 }
 
 
@@ -291,6 +294,30 @@ def _placeholder_version_bump(patch_diff: str) -> bool:
     return False
 
 
+def _patch_files(patch_diff: str) -> set[str]:
+    """Return the post-image paths a unified diff writes to.
+
+    Reads ``+++ b/<path>`` headers only. ``/dev/null`` (a deletion) contributes
+    nothing, and a diff with no header at all yields an empty set, which the
+    caller reads as "unknown" and skips the check.
+
+    Args:
+        patch_diff: The unified diff text.
+
+    Returns:
+        The set of POSIX paths the diff writes, with a ``b/`` prefix stripped.
+    """
+    files = set()
+    for line in patch_diff.splitlines():
+        if not line.startswith("+++ "):
+            continue
+        path = line[4:].split("\t", 1)[0].strip()
+        if path == "/dev/null":
+            continue
+        files.add(_rel_path(path.removeprefix("b/"), ""))
+    return files
+
+
 def verify_patch(
     target: str, patch_diff: str, config: str | list[str], file: str, cls: str,
     evidence_sources: list[str] | None = None,
@@ -315,7 +342,8 @@ def verify_patch(
     Returns:
         A member of :data:`VERIFY_CAUSES`. ``"verified-static"`` (was flagged, now
         gone), ``"not-fixed"`` (still flagged after a clean apply),
-        ``"rule-no-match"`` (not detectable pre-patch), ``"patch-not-applied"``
+        ``"rule-no-match"`` (not detectable pre-patch), ``"rule-no-target-file"``
+        (the patch touches no file the finding's rule fires in), ``"patch-not-applied"``
         (the patch failed to apply to the copy), or ``"unconfirmed"`` (the
         post-patch re-scan could not run). :func:`verify_findings` maps each
         cause to a legal ``Finding.verification`` value.
@@ -331,6 +359,13 @@ def verify_patch(
     pre = _check(target, configs, file, cls, rules, backend, language, db_dir)
     if not pre:
         return "rule-no-match"
+
+    # A cross-file fix — a sanitizer added beside the sink — leaves the sink line
+    # byte-identical, so OSS semgrep's intra-file taint reports the identical hit
+    # after the patch. That is not evidence the patch failed (REQ-59).
+    touched = _patch_files(patch_diff)
+    if touched and not any(_path_matches(t, file, target) for t in touched):
+        return "rule-no-target-file"
 
     tmp = tempfile.mkdtemp(prefix="sec-overlay-verify-")
     try:

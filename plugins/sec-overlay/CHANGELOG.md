@@ -6,6 +6,16 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- `verify.py` gains the `rule-no-target-file` cause (REQ-59). A patch that never touches
+  the file a finding's rule fires in — a cross-file fix, such as a sanitizer added beside
+  the sink — no longer reports `not-fixed`. New helper `_patch_files` reads a diff's
+  `+++ b/<path>` headers; `verify_patch` returns the new cause when none of those paths
+  match the finding's file. The cause maps to `static-only`, never to `not-fixed`.
+  `VERIFY_CAUSES` and `_CAUSE_TO_VERIFICATION` also gain `rule-no-discriminate`, reachable
+  starting in a later change.
+
+### Added
+
 - Failing tests pin a cross-file-fix cause (REQ-59). `helpers/tests/test_verify_paths.py`
   asserts `_patch_files` reads a diff's `+++ b/<path>` headers, and that `verify_patch`
   returns `rule-no-target-file` — not `not-fixed` — when a patch never touches the file the
