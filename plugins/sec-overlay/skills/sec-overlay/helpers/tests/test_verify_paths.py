@@ -46,3 +46,29 @@ def test_file_has_hit_rejects_an_aliased_same_named_file(monkeypatch):
     assert V._file_has_hit("/repo", "cfg", "a/util.py", "sqli", set()) is False
     monkeypatch.setattr(V, "run_semgrep", lambda t, c: [_hit("/repo/a/util.py")])
     assert V._file_has_hit("/repo", "cfg", "a/util.py", "sqli", set()) is True
+
+
+_CROSS_FILE_DIFF = (
+    "--- a/src/file-name-sanitize.ts\n"
+    "+++ b/src/file-name-sanitize.ts\n"
+    "@@ -1 +1,2 @@\n"
+    "+export const sanitize = (s: string) => s.replace(/\\.\\./g, '');\n"
+)
+
+
+def test_patch_files_reads_the_post_image_paths():
+    assert V._patch_files(_CROSS_FILE_DIFF) == {"src/file-name-sanitize.ts"}
+    assert V._patch_files("--- a/app.py\n+++ b/app.py\n") == {"app.py"}
+    assert V._patch_files("no diff here") == set()
+
+
+def test_a_cross_file_fix_is_not_reported_as_not_fixed(monkeypatch):
+    monkeypatch.setattr(V, "_file_has_hit", lambda *a, **k: True)
+    monkeypatch.setattr(V, "apply_patch", lambda d, p, **k: True)
+    out = V.verify_patch("/repo", _CROSS_FILE_DIFF, "cfg", "src/PackageSetup.ts", "path-traversal")
+    assert out == "rule-no-target-file"
+
+
+def test_the_new_cause_maps_to_a_legal_verification():
+    assert "rule-no-target-file" in V.VERIFY_CAUSES
+    assert V._CAUSE_TO_VERIFICATION["rule-no-target-file"] == "static-only"

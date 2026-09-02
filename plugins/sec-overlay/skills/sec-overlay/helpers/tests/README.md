@@ -1777,3 +1777,16 @@ same-named file in another directory. One drives `_file_has_hit` end to end: a h
 
 All six fail: `sec_overlay.verify` has no `_rel_path` or `_path_matches` attribute, and
 `_file_has_hit`'s basename comparison treats `a/util.py` and `b/util.py` as the same file.
+
+## 2026-09-01 — REQ-59 red: a cross-file fix reads as `not-fixed`
+
+`test_verify_paths.py` gains three more tests. `test_patch_files_reads_the_post_image_paths`
+asserts `_patch_files` returns the `+++ b/<path>` paths a diff writes, skips a `/dev/null`
+deletion header, and returns an empty set for text with no diff header at all.
+`test_a_cross_file_fix_is_not_reported_as_not_fixed` asserts `verify_patch` returns the new
+cause `rule-no-target-file`, not `not-fixed`, when the patch never touches the finding's own
+file. `test_the_new_cause_maps_to_a_legal_verification` asserts the cause is a member of
+`VERIFY_CAUSES` and maps to `static-only`.
+
+All three fail: `sec_overlay.verify` has no `_patch_files` attribute, and `VERIFY_CAUSES`
+has no `rule-no-target-file` member.

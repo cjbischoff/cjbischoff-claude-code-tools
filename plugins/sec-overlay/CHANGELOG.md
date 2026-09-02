@@ -6,6 +6,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Failing tests pin a cross-file-fix cause (REQ-59). `helpers/tests/test_verify_paths.py`
+  asserts `_patch_files` reads a diff's `+++ b/<path>` headers, and that `verify_patch`
+  returns `rule-no-target-file` — not `not-fixed` — when a patch never touches the file the
+  finding's rule fires in. `_patch_files` does not exist yet and `VERIFY_CAUSES` lacks the
+  new cause, so all three tests fail.
+
 - Failing tests pin path-aware verify matching (REQ-59). `helpers/tests/test_verify_paths.py`
   asserts `_rel_path` strips a scan root and `_path_matches` accepts a same-file suffix match
   while rejecting a same-named file in another directory. All six fail: `_rel_path` and
