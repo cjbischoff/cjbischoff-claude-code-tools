@@ -19,6 +19,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - Rewrite the last part of the `sec_overlay` package README to ASD-STE100. The whole file now passes
   `ste_lint` with no error and no warning, so `test_package_readme_ste_lint_clean` passes. Part 6 of
   6 for REQ-71. Closes F-9 and F-11.
+- Derive the `receipt_tier` contract-lint bar from `TIER1_RECEIPTS | TIER2_RECEIPTS` instead of a
+  `frozenset({1, 2})` literal, so a new receipt tier cannot pass the schema check. Closes F-4.
+- Assert the observed peak of concurrent git fetches in the review concurrency test, instead of
+  a wall-clock bound that a loaded machine could fail. Closes F-13.
+- Derive `test_backend_receipt_prefixes_are_mechanical` from `TIER1_RECEIPTS | TIER2_RECEIPTS`
+  and drop the tautological `_MECHANICAL` membership assertion. Closes F-6.
 
 ### Removed
 
@@ -679,10 +685,6 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   `class_ext.py` gap, never a rejection: validity and coverage stay separate.
 
 ### Changed
-- Derive the `receipt_tier` contract-lint bar from `TIER1_RECEIPTS | TIER2_RECEIPTS` instead of a
-  `frozenset({1, 2})` literal, so a new receipt tier cannot pass the schema check. Closes F-4.
-- Assert the observed peak of concurrent git fetches in the review concurrency test, instead of
-  a wall-clock bound that a loaded machine could fail. Closes F-13.
 
 - Parity plan tracking: marked Task 22 (REQ-T3c/T3h), Task 23 (REQ-T3d), and
   Task 24 (REQ-T3e) complete in `docs/superpowers/plans/2026-08-23-ocr-parity.md`
@@ -690,8 +692,6 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - Parity plan tracking: marked all four Task 25 sub-steps complete in
   `docs/superpowers/plans/2026-08-23-ocr-parity.md` (test suite + PARITY-AUDIT.md
   + zero-loss re-read + completion report). Closes the OCR-parity milestone.
-- Derive `test_backend_receipt_prefixes_are_mechanical` from `TIER1_RECEIPTS | TIER2_RECEIPTS`
-  and drop the tautological `_MECHANICAL` membership assertion. Closes F-6.
 
 ### Fixed
 
