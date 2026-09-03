@@ -1213,7 +1213,7 @@ which is the scope delimiter, not a version separator).
 
 `astgrep.py` gained `build_rule()` and `run_astgrep_rule()`, plus a `run --not <pattern>` flag
 and a `rule --file <path>` subcommand — a relational-query wrapper for the absence idiom (a
-construction present, its safe option absent). Go needs hand-written `kind`/`has` anchoring;
+construction present, its safe option absent). Go needs hand-written `kind`/`has` anchoring.
 `build_rule()` does not generate it, because a bare selector-call pattern such as
 `rego.New($ARGS)` matches nothing in Go. See the module map entry in [`../README.md`](../README.md)
 for the full contract.
@@ -1246,11 +1246,11 @@ the inverse of `_SEVERITY_FLOOR`), with a `calibrate:severity-downgraded` histor
 event recording `from`/`to`. Severity is never raised by this path.
 
 `diffscope.py`/`cli.py` (REQ-P5): `sec-overlay review` gained two scope flags beside
-`--base`. `--commit <sha>` reviews one commit alone (`sha^..sha`); `--workspace-dirty`
+`--base`. `--commit <sha>` reviews one commit alone (`sha^..sha`). `--workspace-dirty`
 reviews uncommitted changes (staged, unstaged, untracked) against `HEAD`. Exactly one
-of `--base`/`--commit`/`--workspace-dirty` is required (else exit 2); a resumed run
+of `--base`/`--commit`/`--workspace-dirty` is required (else exit 2). A resumed run
 reads its scope from the sealed manifest and ignores the flags. `dirty_file_records(*,
-runner)` parses `git status --porcelain` (untracked lines become status `"?"`);
+runner)` parses `git status --porcelain` (untracked lines become status `"?"`).
 `file_diff_line_count`/`binary_paths`/`file_diff_text` accept `head=None` to diff the
 base against the working tree. Dirty mode fetches serially and synthesizes an all-add
 hunk for untracked files read from disk. `validate_ref`'s allowlist now permits `^`
@@ -1264,7 +1264,7 @@ distinct from `agent_label`), and `plan_guidance_from_return(text)` (parses the 
 JSON `{"issues":[{"severity","guidance"}]}`, orders issues most-severe-first, and raises `ValueError`
 on invalid JSON, an unknown severity, a non-list `issues`, or a missing/empty `guidance`).
 `render_review_prompt` gains a keyword-only `plan_guidance=""` that fills the review prompt's new
-`{{PLAN_GUIDANCE}}` token. `cli.run_review` gains `plan: bool`; `--plan --prepare` writes plan
+`{{PLAN_GUIDANCE}}` token. `cli.run_review` gains `plan: bool`. `--plan --prepare` writes plan
 prompts for over-threshold units to `runs/plan_prompts/<plan_agent_label>.md` plus a
 `runs/plan_manifest.json` and returns early (0), for `SKILL.md` to dispatch. A subsequent normal
 `--prepare` reads each over-threshold unit's recorded plan return under `plan_agent_label`, injects
@@ -1292,7 +1292,7 @@ surfaces agree.
 `calibrate.py` gained `PRECONDITION_CAPS` (a `(threshold, cap)` tuple) and
 `PRECONDITION_CAP_FLOOR` (REQ-32): `_precondition_cap` now loops over the table instead of four
 hardcoded branches. `../references/prompt-constants.md`'s `SEVERITY_PRECONDITION` block states
-the same cap-by-weight table. `driver.py` gained `DISPATCH_TOKENS`; `render_dispatch` builds its
+the same cap-by-weight table. `driver.py` gained `DISPATCH_TOKENS`. `render_dispatch` builds its
 `substitute:` line from that tuple, so `{{ATTACK_CLASS}}` now sits on the same line as the other
 three tokens instead of its own trailing line. `../tests/test_contract_lint.py` checks both
 constants agree with the document. `render_dispatch` now renders `{{ATTACK_CLASS}}` as a compact
@@ -1303,7 +1303,7 @@ fan-out list and `investigate.md`'s single-key `{{ATTACK_CLASS}}` never collide 
 `FP_FEEDBACK`. `_overlay_root` returns the skill root, the directory holding `agents/` and
 `helpers/`. `_write_fp_feedback` writes the prior-rejection block to `<workspace>/kb/fp-feedback.md`
 and returns that path, because the block's `<untrusted>` envelope cannot ride the space-joined
-`substitute:` line. `{{FP_FEEDBACK}}` now names a file path; `critic.md` and `investigate.md` read
+`substitute:` line. `{{FP_FEEDBACK}}` now names a file path. `critic.md` and `investigate.md` read
 it instead of inlining it. `../tests/test_prompt_tokens.py` scans every `PHASE_TABLE` prompt and
 fails if a token has no entry in `DISPATCH_TOKENS`.
 
@@ -1311,7 +1311,7 @@ fails if a token has no entry in `DISPATCH_TOKENS`.
 `normalize`: an absolute `Finding.file` under the scanned `target` becomes repo-root-relative, an
 already-relative path is left alone, and a path outside `target` stays verbatim instead of being
 rewritten into something that does not resolve. `PATH_BASE` in `../references/prompt-constants.md`
-requires every cited path to resolve from the repo root; the four backends (`sast.py`,
+requires every cited path to resolve from the repo root. The four backends (`sast.py`,
 `secrets.py`, `sca.py`, `codeql.py`) each set `Finding.file` from raw tool output with no such
 guarantee, so the fix normalizes once at the `run_prefilter` boundary instead of in all four.
 
@@ -1327,7 +1327,7 @@ publisher of an attack-class key: the universal and F2-companion tables in
 (`security-other`, `unknown`), `review_findings.GENERAL_DEFECT_CLASSES` (a local import, so
 `clsmap` stays a leaf at import time), every `../agents/classes/*.md` stem except `README.md`,
 and `context.py`'s own `manual-review` pseudo-class. 51 keys observed. `findings_gate.py` now
-rejects any finding whose `cls` is not in that set; a missing `agents/classes/*.md` file stays a
+rejects any finding whose `cls` is not in that set. A missing `agents/classes/*.md` file stays a
 `class_ext.py` gap (`needs_follow_up`), never a rejection — REQ-09 is validity, not coverage.
 
 `calibrate.py` gained `_evidence_adjust` (REQ-20), called from `_derived_score` before the
@@ -1342,9 +1342,9 @@ reversed, so an additive patch that has not landed can never read as live.
 `coverage.py` is gone (REQ-04). `prefilter.py` no longer computes a per-language dataflow
 percentage or writes `kb/coverage.json`, and `report.py` no longer reads that file or renders
 a "Coverage & limitations" section from it. `kb/coverage-ledger.json` is now the single coverage
-source; `report.py` renders it through `coverage_ledger.render_markdown` unchanged.
+source. `report.py` renders it through `coverage_ledger.render_markdown` unchanged.
 `review_coverage.py`'s and `coverage_ledger.py`'s module docstrings no longer name the deleted
-module; `test_frozen_contract.py` pins only `models.py` and `evidence.py`.
+module. `test_frozen_contract.py` pins only `models.py` and `evidence.py`.
 
 `route_summary` is a derived field, not a recon output (REQ-11). `profile.py` carries it as an
 optional object on `ScanProfile`, and `validate_profile` rejects any non-object value, so the
@@ -1375,14 +1375,14 @@ per `findings-gate` run: it loads the ledger (or starts a fresh one), records ev
 finding's fingerprint, and saves it back. It runs before the gate's own validation, so a wave
 whose findings the gate then rejects still counts as a wave — otherwise a repeatedly-rejected
 wave would loop forever. `driver._investigate_is_saturated` reads the ledger back in the dispatch
-loop; once `terminal_reason` is set, the driver records the `investigate` stage and continues
+loop. Once `terminal_reason` is set, the driver records the `investigate` stage and continues
 instead of printing another dispatch block, so `next_actionable_phase` cannot return the phase
 again. A missing or unreadable ledger reads as not-saturated, so a wave that has not run yet is
 never skipped.
 
 The granularity is one wave per `findings-gate` run, not one per investigate agent. The gate is
 the first deterministic phase after `investigate`, so it is the only mechanical hook the loop
-has; a per-agent wave would need the agents to report back through a channel that does not exist.
+has. A per-agent wave would need the agents to report back through a channel that does not exist.
 The cost is a coarser ledger: a fan-out of six classes that adds one new fingerprint counts as
 one productive wave, the same as a fan-out of one. `new_ledger()`'s defaults (`k=2`,
 `max_waves=5`) are used as-is — `profile.py:42` documents `scan_options.wave_k` and
@@ -1427,12 +1427,12 @@ R-43's "No X" half is not built here. The word-boundary truncation clause needs 
 `artifact_consistency.py` is a new terminal gate. `run_artifact_consistency(ws)` reconciles a
 finished run's own artifacts against each other and returns one string per contradiction:
 
-1. every `findings/<id>.md` link in the report resolves to a file on disk;
-2. every triage next-action names a `redteam-plan.md` section that contains its finding;
-3. the report's `Completeness:` claim matches `kb/coverage-ledger.json`;
+1. Every `findings/<id>.md` link in the report resolves to a file on disk.
+2. Every triage next-action names a `redteam-plan.md` section that contains its finding.
+3. The report's `Completeness:` claim matches `kb/coverage-ledger.json`.
 4. `state.budget.self_score` exists and its needs-runtime count equals the report's (REQ-54:
-   exact equality, not a one-sided tolerance — both sides collapse clusters);
-5. no `(measured):` header stands above an empty body;
+   exact equality, not a one-sided tolerance — both sides collapse clusters).
+5. No `(measured):` header stands above an empty body.
 6. a truncated triage title matches `report._short_title` of its source message.
 
 The gate writes `kb/gates/artifact-consistency.json` with `passed` and `errors` on every run, so
@@ -1460,7 +1460,7 @@ the report actually renders. `_rendered_ids(ws, report_md)` collects every findi
 exposes to a reader — a triage row, a `## Detail` link, or a `### <id> — ` section heading (the
 shape `report.py` uses for the external-leads section) — intersected with the ids `read_findings`
 confirms exist on disk. Part one flags a stated `Needs runtime proof: N` that disagrees with how
-many rendered ids carry `FindingStatus.NEEDS_DEPLOYMENT_TESTING`; part two flags a SARIF result
+many rendered ids carry `FindingStatus.NEEDS_DEPLOYMENT_TESTING`. Part two flags a SARIF result
 count that disagrees with the total rendered id count — or, when a confirmed-only run recorded
 that in `state.budget.sarif_confirmed_only` (see the P4-15 fix below), the confirmed/fixed subset
 of it — degrading to a pass when `report.sarif` does not exist. Part one additionally requires the
