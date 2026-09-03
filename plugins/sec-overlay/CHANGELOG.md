@@ -13,6 +13,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   `test_operator_notes_name_every_phase_and_nothing_else` now asserts exact set equality and names
   both the missing and the extra keys on failure, which left `NON_TABLE_STEPS` unreachable — a
   configuration point nothing populated. Ruling P5-10.
+- Remove the `asvs:` and `codeguard:` entries from `_RULE_ORIGINS`. No evidence source
+  carries either prefix, so both were unreachable. Closes F-5.
 
 ### Fixed
 

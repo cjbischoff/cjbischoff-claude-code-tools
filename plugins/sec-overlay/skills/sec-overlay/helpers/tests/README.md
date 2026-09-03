@@ -1927,3 +1927,10 @@ The expected set now comes from `receipt_tier` applied to every prefix in
 
 `evidence.py` is byte-frozen, so no red run is possible. A stubbed tier-3 receipt shows
 the derived set becomes `{1, 2, 3}` while the literal stays `{1, 2}`. Closes F-4.
+
+## 2026-09-02 — REQ-63 red: two rule-origin prefixes could never match
+
+`_RULE_ORIGINS` listed `asvs:` and `codeguard:`. Neither prefix appears in
+`evidence._MECHANICAL`, so no evidence source could ever start with either one.
+`test_every_rule_origin_is_a_mechanical_receipt_prefix` failed with `AssertionError: asvs:`
+before the fix and passes after it. Closes F-5.

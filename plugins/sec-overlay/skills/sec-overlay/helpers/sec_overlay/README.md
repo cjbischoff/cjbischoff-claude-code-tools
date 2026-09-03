@@ -1817,3 +1817,16 @@ TIER2_RECEIPTS`. Previously it compared against a literal `frozenset(1, 2})`. A 
 tier added to `evidence.py` would have satisfied the literal and the test would have
 stayed green. Now the expected set comes from the tier constants, so the assertion
 follows the code. `evidence.py` is byte-frozen, so no independent red run is possible.
+
+### Rule origins are mechanical receipt prefixes (REQ-63)
+
+`_RULE_ORIGINS` in `rule_gaps.py` decides whether a detection rule surfaced a finding, or
+whether an agent found it by hunting. Every entry must be a receipt prefix that
+`evidence._MECHANICAL` also holds. The tuple previously listed `asvs:` and `codeguard:`,
+which no evidence source ever carries. Those two entries could never match, so they made the
+rule-gap ledger read as broader than it was. The tuple now holds `semgrep:`, `codeql:`,
+`sca:`, and `secrets:` only. A test in `tests/test_phase1_extras.py` pins the property.
+
+The test constrains `_RULE_ORIGINS` to a subset of `_MECHANICAL`, not to an equal set.
+`ripgrep:`, `ast-grep:`, `structural-index:`, `tree-sitter:`, and `dependency-catalog:` are
+mechanical receipts that are navigation aids rather than detectors, so they stay out.

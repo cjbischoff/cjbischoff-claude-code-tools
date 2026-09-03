@@ -16,7 +16,9 @@ from sec_overlay.models import Finding, FindingStatus
 from sec_overlay.workspace import Workspace, read_findings
 
 # Sources that mean "a detection RULE surfaced this" (vs agent navigation/claims).
-_RULE_ORIGINS = ("semgrep:", "codeql:", "sca:", "secrets:", "asvs:", "codeguard:")
+# Every entry must be a receipt prefix in evidence._MECHANICAL. An `asvs:`/`codeguard:`
+# identifier reaches a finding through its own field, never through an evidence source.
+_RULE_ORIGINS = ("semgrep:", "codeql:", "sca:", "secrets:")
 
 
 def is_rule_originated(f: Finding) -> bool:
