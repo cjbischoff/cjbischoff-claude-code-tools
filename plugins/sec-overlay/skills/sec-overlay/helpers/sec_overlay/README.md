@@ -1852,3 +1852,16 @@ The function now skips a site whose `id` equals the finding's own id.
 A site with no `id` is kept. Only a site written by the clustering step carries an `id`, so
 the check cannot silently drop a hand-built entry. The report's sites table in `report.py`
 still lists every site, including the primary one.
+
+### An empty preconditions list means none are needed (REQ-67)
+
+`_directive_block` in `redteam.py` renders three cases for a runtime test's preconditions:
+
+1. The `preconditions` key is absent. The directive falls back to `Finding.preconditions`.
+2. The key holds a non-empty value. The directive renders that value.
+3. The key holds an empty value. The directive renders `_(none needed)_`.
+
+Case 3 used to fall through to case 1, because the code read
+`rt.get('preconditions') or f.preconditions`. An author who deliberately stated that a test
+needs no preconditions saw the finding's stale list instead. The distinct wording tells a
+reader that the author answered the question, and did not leave it open.

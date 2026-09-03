@@ -367,3 +367,16 @@ def test_directive_falls_back_to_the_finding_preconditions():
     block = md.split("Code-settled, runtime-impact-pending")[1]
     assert "low-privilege token in tenant A" in block
     assert "_not specified_" not in block.split("**Payload")[0]
+
+
+def test_an_explicit_empty_preconditions_list_renders_none_needed():
+    """REQ-67: an author who states "no preconditions" must not read as "unknown"."""
+    from sec_overlay.redteam import _directive_block
+
+    f = _f("F-1", runtime_test={"objective": "hit the endpoint", "preconditions": []})
+    f.preconditions = ["a stale fallback nobody asked for"]
+
+    out = _directive_block(f)
+
+    assert "_(none needed)_" in out
+    assert "stale fallback" not in out

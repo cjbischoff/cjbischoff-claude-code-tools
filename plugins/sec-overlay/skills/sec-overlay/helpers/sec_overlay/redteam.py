@@ -169,6 +169,10 @@ def _directive_block(f: Finding, patch_status: PatchStatus | None = None) -> str
     receipts = [s for s in f.evidence_sources if is_tool_receipt(s)]
     payloads = rt.get("payloads") or []
     payload_md = "\n".join(f"  - `{p}`" for p in payloads) if payloads else "  - _(none supplied)_"
+    if "preconditions" in rt:
+        precond_md = _bullets(rt["preconditions"]) if rt["preconditions"] else "  - _(none needed)_"
+    else:
+        precond_md = _bullets(f.preconditions)
     lines = [
         f"### {f.id} — {f.cls} — risk {f.risk_score if f.risk_score is not None else '-'}",
         "",
@@ -179,7 +183,7 @@ def _directive_block(f: Finding, patch_status: PatchStatus | None = None) -> str
             lines += [caution, ""]
     lines += [
         f"- **Objective:** {rt.get('objective', f.message)}",
-        f"- **Preconditions / access:**\n{_bullets(rt.get('preconditions') or f.preconditions)}",
+        f"- **Preconditions / access:**\n{precond_md}",
         "- **Payload(s)** (shell vars only — export before use):",
         payload_md,
         f"- **Expected signal:**{_signal(rt.get('expected_signal'))}",

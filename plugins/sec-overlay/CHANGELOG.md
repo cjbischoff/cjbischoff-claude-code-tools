@@ -49,6 +49,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   assigning `affected_sites` onto a caller's `Finding` in place. Closes F-7.
 - Skip the finding's own site when building SARIF related locations, so a cluster
   representative no longer repeats its primary location. Closes F-10.
+- Render `_(none needed)_` when a runtime test declares an empty `preconditions` list, instead of
+  falling back to the finding's own preconditions. Closes F-8.
 
 ### Added
 

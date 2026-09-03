@@ -1962,3 +1962,11 @@ representative appears in its own site list, so its primary location repeated as
 location. `test_related_locations_skip_the_findings_own_site` asserted
 `["other.py", "nameless.py"]` and saw `["app.py", "other.py", "nameless.py"]` before the fix.
 Closes F-10.
+
+## 2026-09-02 — REQ-67 red: an empty preconditions list fell through
+
+`_directive_block` used `rt.get('preconditions') or f.preconditions`, which cannot tell an
+absent key from an explicit empty list. A runtime test that stated "no preconditions" rendered
+the finding's stale preconditions instead.
+`test_an_explicit_empty_preconditions_list_renders_none_needed` failed on
+`assert "stale fallback" not in out` before the fix. Closes F-8.
