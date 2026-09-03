@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict, is_dataclass, replace
 from pathlib import Path
 
 from sec_overlay import cost
@@ -614,6 +614,8 @@ def collapse_clusters(findings: list[Finding]) -> list[Finding]:
 
     Returns:
         One representative per cluster plus every un-clustered finding.
+
+    The input findings are never mutated — a synthesized representative is a copy.
     """
     singletons = [f for f in findings if not f.cluster_id]
     groups: dict[str, list[Finding]] = {}
@@ -624,8 +626,10 @@ def collapse_clusters(findings: list[Finding]) -> list[Finding]:
     for members in groups.values():
         primary = next((m for m in members if m.affected_sites), None)
         if primary is None:
-            primary = min(members, key=_risk_sort_key)
-            primary.affected_sites = [{"id": m.id, "file": m.file, "line": m.line} for m in members]
+            primary = replace(
+                min(members, key=_risk_sort_key),
+                affected_sites=[{"id": m.id, "file": m.file, "line": m.line} for m in members],
+            )
         reps.append(primary)
     return reps
 

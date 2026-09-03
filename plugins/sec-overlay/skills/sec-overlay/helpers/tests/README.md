@@ -1947,3 +1947,10 @@ A probe over `declared | {"nosuch"}` shows the loop rejects an undeclared prefix
 Residual gap: the test cannot catch a new backend whose prefix is never added to
 `evidence.py`. No constant enumerates the backends — `prefilter.py` names the four inline.
 Closes F-6.
+
+## 2026-09-02 — REQ-65 red: collapse_clusters mutated its input
+
+`collapse_clusters` assigned onto `primary.affected_sites` in place. A caller that kept its
+own list saw one element change. `test_collapse_clusters_does_not_mutate_the_input_findings`
+failed on `assert all(m.affected_sites == [] for m in members)` before the fix. The function
+now returns a `dataclasses.replace` copy. Closes F-7.

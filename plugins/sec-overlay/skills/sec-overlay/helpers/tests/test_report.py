@@ -1304,3 +1304,28 @@ def test_triage_row_carries_no_status_word_in_the_what_column():
     row = next(l for l in out.splitlines() if l.startswith(f"| {f.id} "))
     assert "Provenance unresolved" not in row
     assert "Sink reads user input." in row
+
+
+def test_collapse_clusters_does_not_mutate_the_input_findings():
+    """REQ-65: the synthesized representative is a copy, so the caller's list is untouched."""
+    members = [
+        Finding(
+            id=f"F-{i}",
+            rule_id="r",
+            cls="authz",
+            status=FindingStatus.CONFIRMED,
+            severity=Severity.MEDIUM,
+            file=f"route_{i}.py",
+            line=i,
+            message="missing owner check",
+            cluster_id="cluster:F-1",
+        )
+        for i in (1, 2, 3)
+    ]
+
+    reps = collapse_clusters(members)
+
+    assert len(reps) == 1
+    assert len(reps[0].affected_sites) == 3
+    assert all(m.affected_sites == [] for m in members)
+    assert all(reps[0] is not m for m in members)

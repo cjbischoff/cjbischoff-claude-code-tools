@@ -45,6 +45,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - `agents/README.md` no longer names `{{PLACEHOLDER}}` as if it were a substitutable token — no
   producer fills it in. The sentence now shows two real tokens, `{{TARGET}}` and `{{WORKSPACE}}`,
   as its examples. Caught by REQ-61's new `test_pipeline_documents_name_only_substitutable_tokens`.
+- Build the cluster representative in `collapse_clusters` with `dataclasses.replace` instead of
+  assigning `affected_sites` onto a caller's `Finding` in place. Closes F-7.
 
 ### Added
 

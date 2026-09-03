@@ -1830,3 +1830,14 @@ rule-gap ledger read as broader than it was. The tuple now holds `semgrep:`, `co
 The test constrains `_RULE_ORIGINS` to a subset of `_MECHANICAL`, not to an equal set.
 `ripgrep:`, `ast-grep:`, `structural-index:`, `tree-sitter:`, and `dependency-catalog:` are
 mechanical receipts that are navigation aids rather than detectors, so they stay out.
+
+### collapse_clusters returns a copy (REQ-65)
+
+`collapse_clusters` picks one representative per cluster. When no member already carries
+`affected_sites`, it synthesizes the site list from the whole group. It used to assign that
+list onto the lowest-risk member in place, so a caller's own `Finding` changed underneath
+it. The function now builds the representative with `dataclasses.replace`.
+
+`replace` makes a shallow copy. The copy shares the member's other mutable list fields with
+the original. That is acceptable because every consumer of a representative renders it and
+does not write to it. `selfscore.py` and `report.py` are the only two callers.
