@@ -499,14 +499,21 @@ def test_review_default_bounds_are_8_600_and_16(tmp_path, monkeypatch):
 
 
 def test_review_fetches_files_concurrently_bounded_by_max_git_procs(tmp_path):
-    """A serial per-file fetch loop takes ``len(paths) * SLEEP``; a pool sized to
-    fit every file collapses that to roughly one ``SLEEP`` regardless of file count."""
+    """REQ-70: a pool runs more than one per-file fetch at once. A serial loop cannot.
+
+    Asserts the observed peak of concurrent fetches, not elapsed time. A wall-clock
+    bound turns a loaded machine into a test failure and only proves overlap
+    indirectly.
+    """
+    import threading
     import time
 
     from sec_overlay import cli
 
     paths = ["a.py", "b.py", "c.py"]
     sleep_seconds = 0.05
+    lock = threading.Lock()
+    state = {"live": 0, "peak": 0}
 
     def runner(cmd, capture_output, text, check):
         if cmd[1] == "rev-parse":
@@ -514,18 +521,22 @@ def test_review_fetches_files_concurrently_bounded_by_max_git_procs(tmp_path):
         if cmd[1] == "diff" and "--name-status" in cmd:
             return _FakeResult("".join(f"M\t{p}\n" for p in paths))
         if cmd[1] == "diff" and ("--unified=3" in cmd or "--unified=0" in cmd):
+            with lock:
+                state["live"] += 1
+                state["peak"] = max(state["peak"], state["live"])
             time.sleep(sleep_seconds)
+            with lock:
+                state["live"] -= 1
             path = cmd[-1]
             return _FakeResult(f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n-old\n+new\n")
         return _FakeResult("")
 
-    start = time.monotonic()
     rc = cli.run_review(
         "main", "develop", str(tmp_path), runner=runner, max_git_procs=len(paths)
     )
-    elapsed = time.monotonic() - start
+
     assert rc == 0
-    assert elapsed < len(paths) * sleep_seconds
+    assert state["peak"] > 1, state
 
 
 def test_review_manifest_entries_preserve_file_order_despite_uneven_fetch_delay(tmp_path):

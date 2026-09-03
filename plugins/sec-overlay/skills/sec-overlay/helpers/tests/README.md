@@ -1990,3 +1990,17 @@ patch-scope check passed a patch that touched the wrong file.
 Four tests pin `_unquote_path` — an octal-escaped UTF-8 path, an unquoted path, a quoted path
 holding a space, and a body that does not decode. A fifth test runs a quoted path through
 `_patch_files`. All five failed before the fix. Closes F-14.
+
+## 2026-09-02 — REQ-70 red: the concurrency test asserted wall-clock time
+
+`test_review_fetches_files_concurrently_bounded_by_max_git_procs` asserted
+`elapsed < len(paths) * sleep_seconds`. A loaded machine could fail the test with correct
+code, and the bound proved overlap only indirectly. The fake runner now counts its own
+concurrent calls under a lock and the test asserts the peak is above 1.
+
+Setting `max_git_procs=1` drops the peak to 1 and fails the assertion, which is the proof the
+assertion is live.
+
+Trade-off: the test no longer covers the value of the bound. `test_review_default_bounds_are_8_600_and_16`
+at line 475 already asserts `{"concurrency": 8, "timeout": 600, "max_git_procs": 16}`, so the
+bound stays pinned elsewhere. Closes F-13.
