@@ -1881,3 +1881,19 @@ cuts a single long word with no boundary available.
 Residual gap: `find` returns the first match. A prefix that also appears earlier in the message
 at a position where the next character is not a space could report a false mid-word cut. No
 message in the current corpus has that shape.
+
+### Quoted diff paths are decoded (REQ-69)
+
+`_patch_files` collects the post-image path of every file a patch touches. `verify.py` then
+checks that the patch stayed inside the finding's file. Git quotes a diff path when the path
+holds a non-ASCII byte, a space, or a control character, and escapes each byte in octal. The
+raw field therefore never matched the target file, and the scope check passed a patch that
+touched a different file.
+
+`_unquote_path` decodes the quoting in two steps. `unicode_escape` turns each octal escape
+into a code point below U+0100, and a re-encode through `latin-1` recovers the original bytes
+for a UTF-8 decode. A body that does not decode keeps its bytes and loses only its quotes, so
+the path stays usable and the check stays conservative.
+
+Unquoting happens before the `b/` prefix is stripped, because git's quotes wrap the whole
+field.

@@ -323,6 +323,29 @@ def _placeholder_version_bump(patch_diff: str) -> bool:
     return False
 
 
+def _unquote_path(path: str) -> str:
+    """Decode git's C-style quoting on a diff path (see ``core.quotePath``).
+
+    Git wraps a path in double quotes and escapes its bytes when the path holds a
+    non-ASCII byte, a space, or a control character. Each byte becomes an octal
+    escape, so the quoted form is pure ASCII.
+
+    Args:
+        path: One path field from a diff header, quotes included if git added them.
+
+    Returns:
+        The decoded path. An unquoted path comes back unchanged. A quoted body that
+        does not decode comes back with its quotes stripped and nothing else changed.
+    """
+    if len(path) < 2 or not (path.startswith('"') and path.endswith('"')):
+        return path
+    try:
+        body = path[1:-1].encode("utf-8").decode("unicode_escape")
+        return body.encode("latin-1").decode("utf-8")
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        return path[1:-1]
+
+
 def _patch_files(patch_diff: str) -> set[str]:
     """Return the post-image paths a unified diff writes to.
 
@@ -340,7 +363,7 @@ def _patch_files(patch_diff: str) -> set[str]:
     for line in patch_diff.splitlines():
         if not line.startswith("+++ "):
             continue
-        path = line[4:].split("\t", 1)[0].strip()
+        path = _unquote_path(line[4:].split("\t", 1)[0].strip())
         if path == "/dev/null":
             continue
         files.add(_rel_path(path.removeprefix("b/"), ""))

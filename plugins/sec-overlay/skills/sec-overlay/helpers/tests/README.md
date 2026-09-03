@@ -1980,3 +1980,13 @@ produced the cell under test. The comparison could not fail on a renderer bug, a
 `test_gate_flags_a_hand_edited_truncated_title` asserts `not a prefix` and failed before the
 fix. Two further tests guard the accepted cases: a correct word-boundary cut and a single long
 word with no boundary. `test_gate_flags_a_title_truncated_mid_word` still passes. Closes F-12.
+
+## 2026-09-02 — REQ-69 red: a quoted diff path never matched
+
+`_patch_files` read the raw `+++` field. A path git had quoted and octal-escaped entered the
+set with its quotes and escapes intact, so `_path_matches` never matched it and the
+patch-scope check passed a patch that touched the wrong file.
+
+Four tests pin `_unquote_path` — an octal-escaped UTF-8 path, an unquoted path, a quoted path
+holding a space, and a body that does not decode. A fifth test runs a quoted path through
+`_patch_files`. All five failed before the fix. Closes F-14.

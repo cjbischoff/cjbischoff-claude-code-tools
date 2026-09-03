@@ -258,3 +258,26 @@ def test_a_stale_last_lines_record_does_not_leak_into_the_next_verification(
         if h.get("event") == "verify:cause:not-fixed"
     )
     assert entry == {"event": "verify:cause:not-fixed"}
+
+
+def test_unquote_path_decodes_an_octal_escaped_utf8_path():
+    """REQ-69: git escapes each non-ASCII byte in octal inside a quoted path."""
+    assert V._unquote_path('"src/caf\\303\\251.py"') == "src/café.py"
+
+
+def test_unquote_path_leaves_an_unquoted_path_alone():
+    assert V._unquote_path("src/app.py") == "src/app.py"
+
+
+def test_unquote_path_keeps_a_quoted_path_with_a_space():
+    assert V._unquote_path('"src/my file.py"') == "src/my file.py"
+
+
+def test_unquote_path_falls_back_to_stripping_the_quotes():
+    """A body that does not decode still loses its quotes, so the path stays usable."""
+    assert V._unquote_path('"src/bad\\"') == "src/bad\\"
+
+
+def test_patch_files_reads_a_quoted_post_image_path():
+    diff = '--- a/src/caf\\303\\251.py\n+++ "b/src/caf\\303\\251.py"\n'
+    assert V._patch_files(diff) == {"src/café.py"}
