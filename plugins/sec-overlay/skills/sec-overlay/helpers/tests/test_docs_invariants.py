@@ -286,6 +286,7 @@ def test_plan_line_threshold_is_pinned():
 
 
 _ASSURANCE = Path(__file__).resolve().parents[2] / "ASSURANCE_CASE.md"
+_PKG_README = Path(__file__).resolve().parents[1] / "sec_overlay" / "README.md"
 _CITATION = re.compile(r"`([A-Za-z0-9_./-]+\.py):(\d+)`")
 
 
@@ -326,3 +327,12 @@ def test_assurance_case_ste_lint_clean():
 
     errors, _ = lint_prose(_ASSURANCE.read_text())
     assert errors == [], errors
+
+
+def test_package_readme_ste_lint_clean():
+    """REQ-71 acceptance: the package README passes the STE structural lint."""
+    from sec_overlay.ste_lint import lint_prose
+
+    errors, warnings = lint_prose(_PKG_README.read_text())
+    assert errors == [], errors
+    assert warnings == [], warnings

@@ -58,6 +58,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ### Added
 
+- Add `test_package_readme_ste_lint_clean`, which asserts the `sec_overlay` package README passes
+  `ste_lint` with no error and no warning. The test is committed failing: the rewrite that satisfies
+  it lands in the six commits that follow. Part of REQ-71.
 - Failing tests pin REQ-61's second half: every `PHASE_TABLE` phase must have an operator note in
   `SKILL.md`'s notes region, no note names a phase absent from the table, the notes follow table
   order, and every `{{TOKEN}}` in a pipeline document is in `DISPATCH_TOKENS` or

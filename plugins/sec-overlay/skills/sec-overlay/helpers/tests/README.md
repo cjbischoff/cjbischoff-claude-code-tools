@@ -2004,3 +2004,18 @@ assertion is live.
 Trade-off: the test no longer covers the value of the bound. `test_review_default_bounds_are_8_600_and_16`
 at line 475 already asserts `{"concurrency": 8, "timeout": 600, "max_git_procs": 16}`, so the
 bound stays pinned elsewhere. Closes F-13.
+
+## 2026-09-02 — REQ-71 red: the package README is STE-linted
+
+`sec_overlay/README.md` held semicolon-joined clauses and over-long sentences throughout, and
+nothing checked it. `test_package_readme_ste_lint_clean` now asserts `lint_prose` returns no
+error and no warning for the file.
+
+The test is committed red on purpose. The file is too large to rewrite in one commit, so the
+rewrite lands in six parts and the test stays red until the last part. The spec authorises the
+departure from red-green-per-commit. Each rewrite commit must reduce the reported error count,
+and no other test may fail during that window.
+
+The test asserts errors and warnings, while the model test `test_assurance_case_ste_lint_clean`
+asserts errors only. The README's baseline warning count is zero, so asserting both is free and
+catches a buried sequence or a noun cluster the model test would let through. Closes F-9 and F-11.
