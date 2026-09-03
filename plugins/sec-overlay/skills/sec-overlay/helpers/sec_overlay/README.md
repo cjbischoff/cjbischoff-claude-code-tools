@@ -1865,3 +1865,19 @@ Case 3 used to fall through to case 1, because the code read
 `rt.get('preconditions') or f.preconditions`. An author who deliberately stated that a test
 needs no preconditions saw the finding's stale list instead. The distinct wording tells a
 reader that the author answered the question, and did not leave it open.
+
+### The truncated-title gate checks a word boundary (REQ-68)
+
+Check (f) of the artifact-consistency gate used to rebuild the expected triage cell with
+`triage_what` and compare it against the cell in the report. The gate therefore asserted that
+a helper agrees with itself. It could detect a hand-edited or stale report, and nothing else.
+
+The check now tests a property the renderer does not define. It normalises the finding's
+message, strips the trailing ellipsis from the cell, and locates the remaining prefix in the
+message. An absent prefix is a stale or hand-edited report. A prefix followed immediately by a
+non-space character is a mid-word cut, unless the prefix holds no space at all — `_short_title`
+cuts a single long word with no boundary available.
+
+Residual gap: `find` returns the first match. A prefix that also appears earlier in the message
+at a position where the next character is not a space could report a false mid-word cut. No
+message in the current corpus has that shape.

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from sec_overlay.artifact_consistency import run_artifact_consistency
 from sec_overlay.models import Finding, FindingStatus, Severity
-from sec_overlay.report import write_report
+from sec_overlay.report import triage_what, write_report
 from sec_overlay.selfscore import write_self_score
 from sec_overlay.state import load_state, save_state
 from sec_overlay.workspace import Workspace, write_findings
@@ -172,6 +172,47 @@ def test_gate_flags_a_title_truncated_mid_word(tmp_path):
     )
     errors = run_artifact_consistency(ws)
     assert any("mid-word" in e for e in errors)
+
+
+def test_gate_flags_a_hand_edited_truncated_title(tmp_path):
+    """REQ-68: a truncated cell that is not a prefix of its message is a stale report."""
+    ws = _ws(tmp_path)
+    write_findings(ws, [_ndt(message="owner check may be advisory")])
+    _selfscore(ws, {"confirmed": 0, "needs_runtime": 1})
+    ws.report_path.write_text(
+        _REPORT_HEAD + _triage("N-1", "something nobody rendered…", "see redteam-plan gaps")
+    )
+
+    errors = run_artifact_consistency(ws)
+
+    assert any("not a prefix" in e for e in errors), errors
+
+
+def test_gate_accepts_a_title_truncated_at_a_word_boundary(tmp_path):
+    """REQ-68: the renderer's own word-boundary cut is not a contradiction."""
+    ws = _ws(tmp_path)
+    long_message = "the owner check is advisory " * 4
+    write_findings(ws, [_ndt(message=long_message)])
+    _selfscore(ws, {"confirmed": 0, "needs_runtime": 1})
+    ws.report_path.write_text(
+        _REPORT_HEAD
+        + _triage("N-1", triage_what(_ndt(message=long_message)), "see redteam-plan gaps")
+    )
+
+    assert not any("N-1" in e for e in run_artifact_consistency(ws))
+
+
+def test_gate_accepts_a_single_long_word_cut_mid_word(tmp_path):
+    """REQ-68: _short_title's no-space fallback cuts inside the only word — allowed."""
+    ws = _ws(tmp_path)
+    word = "A" * 90
+    write_findings(ws, [_ndt(message=word)])
+    _selfscore(ws, {"confirmed": 0, "needs_runtime": 1})
+    ws.report_path.write_text(
+        _REPORT_HEAD + _triage("N-1", word[:72] + "…", "see redteam-plan gaps")
+    )
+
+    assert not any("N-1" in e for e in run_artifact_consistency(ws))
 
 
 def test_gate_writes_its_audit_trail(tmp_path):

@@ -18,7 +18,6 @@ import re
 from pathlib import Path
 
 from sec_overlay.models import FindingStatus
-from sec_overlay.report import triage_what
 from sec_overlay.state import load_state
 from sec_overlay.workspace import Workspace, read_findings
 
@@ -200,11 +199,12 @@ def _check_measured_sections(report_md: str) -> list[str]:
 
 
 def _check_truncated_titles(ws: Workspace, report_md: str) -> list[str]:
-    """Check (f): a truncated triage title matches the renderer's own truncation.
+    """Check (f): a truncated triage title must cut its message at a word boundary.
 
-    Detects a hand-edited or stale report, not a defect in ``triage_what`` —
-    the expected cell is built with that same helper, so the comparison
-    cannot catch a bug inside it.
+    Compares the cell against the finding's own message, not against
+    ``triage_what``'s output. The old comparison built the expected cell with the
+    same helper that produced it, so it could not catch a bug inside that helper.
+    A prefix absent from the message means a stale or hand-edited report.
     """
     by_id = {f.id: f for f in read_findings(ws)}
     errors: list[str] = []
@@ -213,7 +213,17 @@ def _check_truncated_titles(ws: Workspace, report_md: str) -> list[str]:
         finding = by_id.get(row[0])
         if not what.endswith("…") or finding is None:
             continue
-        if what != triage_what(finding):
+        message = " ".join((finding.message or "").split())
+        prefix = what[:-1]
+        at = message.find(prefix)
+        if at < 0:
+            errors.append(
+                f"artifact-consistency: triage title for {row[0]} is not a prefix of its "
+                f"message: {what!r}"
+            )
+            continue
+        rest = message[at + len(prefix) :]
+        if rest and not rest.startswith(" ") and " " in prefix:
             errors.append(
                 f"artifact-consistency: triage title for {row[0]} is truncated mid-word: {what!r}"
             )

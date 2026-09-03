@@ -1970,3 +1970,13 @@ absent key from an explicit empty list. A runtime test that stated "no precondit
 the finding's stale preconditions instead.
 `test_an_explicit_empty_preconditions_list_renders_none_needed` failed on
 `assert "stale fallback" not in out` before the fix. Closes F-8.
+
+## 2026-09-02 — REQ-68 red: the truncated-title check was tautological
+
+`_check_truncated_titles` built its expected cell with `triage_what`, the same helper that
+produced the cell under test. The comparison could not fail on a renderer bug, and it reported
+`is truncated mid-word` for a hand-edited cell that was not a cut at all.
+
+`test_gate_flags_a_hand_edited_truncated_title` asserts `not a prefix` and failed before the
+fix. Two further tests guard the accepted cases: a correct word-boundary cut and a single long
+word with no boundary. `test_gate_flags_a_title_truncated_mid_word` still passes. Closes F-12.
