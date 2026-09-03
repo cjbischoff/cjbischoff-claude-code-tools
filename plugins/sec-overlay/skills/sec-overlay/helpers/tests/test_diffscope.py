@@ -23,10 +23,27 @@ def test_changed_files_parses_name_only(monkeypatch):
         returncode = 0
 
     def fake_run(cmd, capture_output, text, check):
-        assert cmd[:3] == ["git", "diff", "--name-only"]
+        assert cmd[:5] == ["git", "-c", "core.quotePath=false", "diff", "--name-only"]
         return R()
 
     assert changed_files("sha1", "HEAD", runner=fake_run) == ["app.py", "src/db.py"]
+
+
+def test_changed_files_disables_git_quote_path():
+    """A non-ASCII filename must not come back C-quoted and unmatched on disk."""
+    captured = {}
+
+    def fake_run(cmd, capture_output, text, check):
+        captured["cmd"] = cmd
+
+        class R:
+            stdout = ""
+            returncode = 0
+
+        return R()
+
+    changed_files("base", "head", runner=fake_run)
+    assert captured["cmd"][:4] == ["git", "-c", "core.quotePath=false", "diff"]
 
 
 def test_changed_files_raises_when_git_diff_fails():
@@ -107,6 +124,23 @@ def test_validate_ref_rejects_leading_dash_even_with_allowlisted_rest():
 def test_validate_ref_rejects_shell_metacharacters(ref):
     with pytest.raises(ValueError):
         validate_ref(ref)
+
+
+def test_changed_file_records_disables_git_quote_path():
+    """A non-ASCII filename must not come back C-quoted and unmatched on disk."""
+    captured = {}
+
+    def fake_run(cmd, capture_output, text, check):
+        captured["cmd"] = cmd
+
+        class R:
+            stdout = ""
+            returncode = 0
+
+        return R()
+
+    changed_file_records("base", "head", runner=fake_run)
+    assert captured["cmd"][:4] == ["git", "-c", "core.quotePath=false", "diff"]
 
 
 def test_changed_file_records_empty_diff_returns_empty_list():

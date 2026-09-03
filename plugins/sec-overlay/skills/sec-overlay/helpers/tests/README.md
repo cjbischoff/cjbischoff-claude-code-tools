@@ -2019,3 +2019,18 @@ and no other test may fail during that window.
 The test asserts errors and warnings, while the model test `test_assurance_case_ste_lint_clean`
 asserts errors only. The README's baseline warning count is zero, so asserting both is free and
 catches a buried sequence or a noun cluster the model test would let through. Closes F-9 and F-11.
+
+## 2026-09-03 — final-review finding 1: three git calls still read quoted paths
+
+`_unquote_path` only covered `_patch_files`. Three call sites still read raw git output:
+`diffscope.changed_file_records`, `diffscope.changed_files`, and `githist.files_in_commit`. A
+non-ASCII filename came back quoted, so it dropped out of incremental scope and git-history
+mining.
+
+Three new tests assert each call's argv carries `-c core.quotePath=false` before the subcommand.
+All three failed before the fix. The fix stops the quoting at the source, so `_unquote_path`
+stays unchanged.
+
+The new flag shifted argv positions. Fake runners in `test_cli.py`, `test_rule_glob.py`, and
+`test_dead_lever.py` matched the old positions. Their matches now check `"diff" in cmd` or the
+shifted index.

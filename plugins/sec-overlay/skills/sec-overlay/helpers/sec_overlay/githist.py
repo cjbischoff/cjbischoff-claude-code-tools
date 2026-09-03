@@ -47,7 +47,8 @@ def files_in_commit(target: str, sha: str, *, runner=subprocess.run) -> list[str
     """Return the files a commit touched (seeds for sibling hunting)."""
     try:
         completed = runner(
-            ["git", "-C", target, "show", "--name-only", "--pretty=format:", sha],
+            ["git", "-c", "core.quotePath=false", "-C", target, "show",
+             "--name-only", "--pretty=format:", sha],
             capture_output=True, text=True, check=False,
         )
     except OSError:

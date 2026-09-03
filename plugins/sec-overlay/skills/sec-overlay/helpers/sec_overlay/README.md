@@ -1902,3 +1902,12 @@ the path stays usable and the check stays conservative.
 
 Unquoting happens before the `b/` prefix is stripped, because git's quotes wrap the whole
 field.
+
+`_unquote_path` covered only `_patch_files`. Three more git calls read a diff or a commit's
+files without it: `diffscope.changed_file_records`, `diffscope.changed_files`, and
+`githist.files_in_commit`. Each now passes `-c core.quotePath=false` to git, so the same
+non-ASCII path no longer comes back quoted from those calls either. This stops the quoting
+at the source instead of decoding it downstream, so `_unquote_path` needed no change.
+
+Residual gap: `core.quotePath=false` still quotes a path holding a double quote, a
+backslash, or a control character.

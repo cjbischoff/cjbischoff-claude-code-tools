@@ -44,7 +44,7 @@ def test_postflight_drops_prior_items_on_changed_files(tmp_path: Path):
     assert total == 0
     assert merged.items == []
     assert seen and seen[0]["cwd"] == "/repo"
-    assert seen[0]["cmd"][:4] == ["git", "diff", "--name-only", "aaa"]
+    assert seen[0]["cmd"][:6] == ["git", "-c", "core.quotePath=false", "diff", "--name-only", "aaa"]
 
 
 def test_postflight_keeps_prior_items_on_unchanged_files(tmp_path: Path):

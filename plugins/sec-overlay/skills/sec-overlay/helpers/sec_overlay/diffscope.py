@@ -78,7 +78,7 @@ def changed_file_records(base: str, head: str, *, runner=subprocess.run) -> list
         ``old_path``.
     """
     completed = runner(
-        ["git", "diff", "--name-status", base, head, "--"],
+        ["git", "-c", "core.quotePath=false", "diff", "--name-status", base, head, "--"],
         capture_output=True, text=True, check=False,
     )
     records: list[ChangedFile] = []
@@ -243,7 +243,8 @@ def changed_files(base: str, head: str = "HEAD", *, runner=subprocess.run) -> li
     """
     completed = runner(
         # `--` separates revisions from paths so a ref that looks like a path can't be misparsed.
-        ["git", "diff", "--name-only", base, head, "--"], capture_output=True, text=True, check=False
+        ["git", "-c", "core.quotePath=false", "diff", "--name-only", base, head, "--"],
+        capture_output=True, text=True, check=False,
     )
     if completed.returncode != 0:
         detail = (completed.stderr or "").strip()

@@ -76,6 +76,20 @@ def test_githist_empty_on_error():
     assert githist.files_in_commit("/t", "sha", runner=_runner("a.py\nb.py\n")) == ["a.py", "b.py"]
 
 
+def test_files_in_commit_disables_git_quote_path():
+    """A non-ASCII filename must not come back C-quoted and unmatched on disk."""
+    captured = {}
+
+    def fake_run(cmd, capture_output=True, text=True, check=False):
+        captured["cmd"] = cmd
+        return SimpleNamespace(stdout="", returncode=0)
+
+    githist.files_in_commit("/t", "sha", runner=fake_run)
+    cmd = captured["cmd"]
+    assert cmd[:5] == ["git", "-c", "core.quotePath=false", "-C", "/t"]
+    assert cmd[5] == "show"
+
+
 # ---- rule emission (B5) ----
 
 def test_emit_semgrep_rule():

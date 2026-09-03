@@ -134,9 +134,9 @@ def _review_runner(paths: list[str]):
     def runner(cmd, capture_output, text, check):
         if cmd[1] == "rev-parse":
             return _FakeResult(f"sha-{cmd[-1]}\n")
-        if cmd[1] == "diff" and "--name-status" in cmd:
+        if "diff" in cmd and "--name-status" in cmd:
             return _FakeResult("".join(f"M\t{p}\n" for p in paths))
-        if cmd[1] == "diff" and "--unified=3" in cmd:
+        if "diff" in cmd and "--unified=3" in cmd:
             path = cmd[-1]
             return _FakeResult(f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n-old\n+new\n")
         return _FakeResult("")

@@ -129,9 +129,9 @@ def _make_review_runner(paths):
     def runner(cmd, capture_output, text, check, **kwargs):
         if cmd[1] == "rev-parse":
             return _FakeResult(f"sha-{cmd[-1]}\n")
-        if cmd[1] == "diff" and "--name-status" in cmd:
+        if "diff" in cmd and "--name-status" in cmd:
             return _FakeResult("".join(f"M\t{p}\n" for p in paths))
-        if cmd[1] == "diff" and "--unified=3" in cmd:
+        if "diff" in cmd and "--unified=3" in cmd:
             path = cmd[-1]
             return _FakeResult(f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n-old\n+new\n")
         return _FakeResult("")
@@ -185,9 +185,9 @@ def test_review_excludes_oversized_diff_via_wired_diff_line_counts(tmp_path, mon
     def runner(cmd, capture_output, text, check):
         if cmd[1] == "rev-parse":
             return _FakeResult(f"sha-{cmd[-1]}\n")
-        if cmd[1] == "diff" and "--name-status" in cmd:
+        if "diff" in cmd and "--name-status" in cmd:
             return _FakeResult("M\tbig.py\n")
-        if cmd[1] == "diff" and "--unified=0" in cmd:
+        if "diff" in cmd and "--unified=0" in cmd:
             return _FakeResult("\n".join(f"+line{i}" for i in range(5001)))
         return _FakeResult("")
 
@@ -518,9 +518,9 @@ def test_review_fetches_files_concurrently_bounded_by_max_git_procs(tmp_path):
     def runner(cmd, capture_output, text, check):
         if cmd[1] == "rev-parse":
             return _FakeResult(f"sha-{cmd[-1]}\n")
-        if cmd[1] == "diff" and "--name-status" in cmd:
+        if "diff" in cmd and "--name-status" in cmd:
             return _FakeResult("".join(f"M\t{p}\n" for p in paths))
-        if cmd[1] == "diff" and ("--unified=3" in cmd or "--unified=0" in cmd):
+        if "diff" in cmd and ("--unified=3" in cmd or "--unified=0" in cmd):
             with lock:
                 state["live"] += 1
                 state["peak"] = max(state["peak"], state["live"])
@@ -556,9 +556,9 @@ def test_review_manifest_entries_preserve_file_order_despite_uneven_fetch_delay(
     def runner(cmd, capture_output, text, check):
         if cmd[1] == "rev-parse":
             return _FakeResult(f"sha-{cmd[-1]}\n")
-        if cmd[1] == "diff" and "--name-status" in cmd:
+        if "diff" in cmd and "--name-status" in cmd:
             return _FakeResult("".join(f"M\t{p}\n" for p in paths))
-        if cmd[1] == "diff" and "--unified=3" in cmd:
+        if "diff" in cmd and "--unified=3" in cmd:
             path = cmd[-1]
             time.sleep(delays.get(path, 0.0))
             return _FakeResult(f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n-old\n+new\n")
@@ -607,9 +607,9 @@ def test_review_unit_timeout_fails_every_member_with_timeout_note(tmp_path):
     def runner(cmd, capture_output, text, check):
         if cmd[1] == "rev-parse":
             return _FakeResult(f"sha-{cmd[-1]}\n")
-        if cmd[1] == "diff" and "--name-status" in cmd:
+        if "diff" in cmd and "--name-status" in cmd:
             return _FakeResult("".join(f"M\t{p}\n" for p in paths))
-        if cmd[1] == "diff" and "--unified=3" in cmd:
+        if "diff" in cmd and "--unified=3" in cmd:
             time.sleep(1.2)
             path = cmd[-1]
             return _FakeResult(f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n-old\n+new\n")
@@ -653,9 +653,9 @@ def test_review_returns_before_hung_unit_fetch_completes(tmp_path):
     def runner(cmd, capture_output, text, check):
         if cmd[1] == "rev-parse":
             return _FakeResult(f"sha-{cmd[-1]}\n")
-        if cmd[1] == "diff" and "--name-status" in cmd:
+        if "diff" in cmd and "--name-status" in cmd:
             return _FakeResult("".join(f"M\t{p}\n" for p in paths))
-        if cmd[1] == "diff" and "--unified=3" in cmd:
+        if "diff" in cmd and "--unified=3" in cmd:
             time.sleep(1.2)
             path = cmd[-1]
             return _FakeResult(f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n-old\n+new\n")
@@ -689,9 +689,9 @@ def test_review_abandoned_unit_fetch_stops_at_the_unit_deadline(tmp_path):
     def runner(cmd, capture_output, text, check):
         if cmd[1] == "rev-parse":
             return _FakeResult(f"sha-{cmd[-1]}\n")
-        if cmd[1] == "diff" and "--name-status" in cmd:
+        if "diff" in cmd and "--name-status" in cmd:
             return _FakeResult("".join(f"M\t{p}\n" for p in paths))
-        if cmd[1] == "diff" and "--unified=3" in cmd:
+        if "diff" in cmd and "--unified=3" in cmd:
             calls.append(cmd[-1])
             time.sleep(0.6)
             path = cmd[-1]
@@ -718,9 +718,9 @@ def test_review_production_git_calls_carry_subprocess_timeout(tmp_path, monkeypa
         captured_timeouts.append(kwargs.get("timeout"))
         if cmd[1] == "rev-parse":
             return _FakeResult(f"sha-{cmd[-1]}\n")
-        if cmd[1] == "diff" and "--name-status" in cmd:
+        if "diff" in cmd and "--name-status" in cmd:
             return _FakeResult("M\ta.py\n")
-        if cmd[1] == "diff" and "--unified=3" in cmd:
+        if "diff" in cmd and "--unified=3" in cmd:
             return _FakeResult("diff --git a/a.py b/a.py\n@@ -1 +1 @@\n-old\n+new\n")
         return _FakeResult("")
 
@@ -759,10 +759,10 @@ def test_review_resume_reads_at_persisted_head_sha_despite_moved_head(tmp_path):
                 # never land on this value.
                 return _FakeResult("sha-develop-MOVED\n")
             return _FakeResult(f"{ref}\n" if ref.startswith("sha-") else f"sha-{ref}\n")
-        if cmd[1] == "diff" and "--name-status" in cmd:
-            captured["diff_refs"] = (cmd[3], cmd[4])
+        if "diff" in cmd and "--name-status" in cmd:
+            captured["diff_refs"] = (cmd[5], cmd[6])
             return _FakeResult("M\ta.py\n")
-        if cmd[1] == "diff" and "--unified=3" in cmd:
+        if "diff" in cmd and "--unified=3" in cmd:
             path = cmd[-1]
             return _FakeResult(f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n-old\n+new\n")
         return _FakeResult("")
