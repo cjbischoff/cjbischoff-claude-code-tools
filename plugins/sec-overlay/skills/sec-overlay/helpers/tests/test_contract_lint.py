@@ -26,6 +26,7 @@ from sec_overlay.evidence import (
     TIER1_RECEIPTS,
     TIER2_RECEIPTS,
     VERIFICATION_VALUES,
+    receipt_tier,
 )
 from sec_overlay.fix_disposition import TIERS
 from sec_overlay.models import AFFECTED_SITE_KEYS, OPEN_QUESTION_KEYS, RUNTIME_TEST_KEYS, Finding
@@ -40,12 +41,13 @@ AGENTS = SKILL / "agents"
 def test_every_closed_vocabulary_matches_its_schema_enum():
     """Each code constant with a schema counterpart must equal that enum (REQ-50)."""
     props = json.loads(SCHEMA.read_text())["properties"]
+    receipt_tiers = frozenset(receipt_tier(f"{p}:x") for p in TIER1_RECEIPTS | TIER2_RECEIPTS)
     for field, allowed in (
         ("verification", VERIFICATION_VALUES),
         ("runtime_disposition", RUNTIME_DISPOSITIONS),
         ("completeness_tier", frozenset(TIERS)),
         ("judge_verdict", JUDGE_VERDICTS),
-        ("receipt_tier", frozenset({1, 2})),
+        ("receipt_tier", receipt_tiers),
     ):
         assert "enum" in props[field], f"{field} has no schema enum"
         assert set(props[field]["enum"]) == allowed | {None}, f"{field} drifted"

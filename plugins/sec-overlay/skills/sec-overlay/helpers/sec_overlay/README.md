@@ -1808,3 +1808,12 @@ line, and writes nothing. And the `_BEGIN` pattern anchored on a bare `$`, which
 all and `--check` called it current; the anchor is now `\r?$`. `_BEGIN` is the only pattern in
 the module with a line-end anchor — `_NOTE_KEY` matches a bullet prefix and never anchors the
 line end — so no other pattern needed the same change.
+
+### Receipt-tier bar derived from tier constants (REQ-62)
+
+`test_every_closed_vocabulary_matches_its_schema_enum` compares the schema enum for
+`receipt_tier` against `receipt_tier` applied to every prefix in `TIER1_RECEIPTS |
+TIER2_RECEIPTS`. Previously it compared against a literal `frozenset(1, 2})`. A third
+tier added to `evidence.py` would have satisfied the literal and the test would have
+stayed green. Now the expected set comes from the tier constants, so the assertion
+follows the code. `evidence.py` is byte-frozen, so no independent red run is possible.

@@ -1916,3 +1916,14 @@ and keeps the early return only on the detail-free path.
 
 `test_path_matches_rejects_an_empty_path` pins the `_path_matches` guard. An empty `a` or `b`
 made `a.endswith("/" + b)` true for any counterpart ending in `/`.
+
+## 2026-09-02 — REQ-62 red: the receipt-tier bar was a literal
+
+`test_every_closed_vocabulary_matches_its_schema_enum` compared the schema enum for
+`receipt_tier` against the literal `frozenset({1, 2})`. A third tier added to
+`evidence.py` would have satisfied the literal and the test would have stayed green.
+The expected set now comes from `receipt_tier` applied to every prefix in
+`TIER1_RECEIPTS | TIER2_RECEIPTS`, so the assertion follows the code.
+
+`evidence.py` is byte-frozen, so no red run is possible. A stubbed tier-3 receipt shows
+the derived set becomes `{1, 2, 3}` while the literal stays `{1, 2}`. Closes F-4.

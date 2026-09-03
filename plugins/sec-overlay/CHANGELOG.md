@@ -641,6 +641,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   `class_ext.py` gap, never a rejection: validity and coverage stay separate.
 
 ### Changed
+- Derive the `receipt_tier` contract-lint bar from `TIER1_RECEIPTS | TIER2_RECEIPTS` instead of a
+  `frozenset({1, 2})` literal, so a new receipt tier cannot pass the schema check. Closes F-4.
 
 - Parity plan tracking: marked Task 22 (REQ-T3c/T3h), Task 23 (REQ-T3d), and
   Task 24 (REQ-T3e) complete in `docs/superpowers/plans/2026-08-23-ocr-parity.md`
