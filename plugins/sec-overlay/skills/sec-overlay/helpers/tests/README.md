@@ -1954,3 +1954,11 @@ Closes F-6.
 own list saw one element change. `test_collapse_clusters_does_not_mutate_the_input_findings`
 failed on `assert all(m.affected_sites == [] for m in members)` before the fix. The function
 now returns a `dataclasses.replace` copy. Closes F-7.
+
+## 2026-09-02 — REQ-66 red: SARIF repeated the primary location
+
+`_related_locations` mapped every entry of `affected_sites` to a related location. A cluster
+representative appears in its own site list, so its primary location repeated as a related
+location. `test_related_locations_skip_the_findings_own_site` asserted
+`["other.py", "nameless.py"]` and saw `["app.py", "other.py", "nameless.py"]` before the fix.
+Closes F-10.

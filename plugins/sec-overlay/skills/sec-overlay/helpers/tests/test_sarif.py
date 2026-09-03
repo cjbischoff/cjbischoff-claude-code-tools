@@ -216,3 +216,18 @@ def test_unicode_normalized_equivalent_evidence_produces_different_fingerprints(
     doc = to_sarif([combining, precomposed])
     fp1, fp2 = (r["partialFingerprints"][FINGERPRINT_KEY] for r in doc["runs"][0]["results"])
     assert fp1 != fp2
+
+
+def test_related_locations_skip_the_findings_own_site():
+    """REQ-66: the primary location must not repeat as a related location."""
+    from sec_overlay.sarif import _related_locations
+
+    f = _f(Severity.HIGH)
+    f.affected_sites = [
+        {"id": "F-0001", "file": "app.py", "line": 18},
+        {"id": "F-0002", "file": "other.py", "line": 4},
+        {"file": "nameless.py", "line": 9},
+    ]
+
+    uris = [loc["physicalLocation"]["artifactLocation"]["uri"] for loc in _related_locations(f)]
+    assert uris == ["other.py", "nameless.py"]

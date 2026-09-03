@@ -47,6 +47,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   as its examples. Caught by REQ-61's new `test_pipeline_documents_name_only_substitutable_tokens`.
 - Build the cluster representative in `collapse_clusters` with `dataclasses.replace` instead of
   assigning `affected_sites` onto a caller's `Finding` in place. Closes F-7.
+- Skip the finding's own site when building SARIF related locations, so a cluster
+  representative no longer repeats its primary location. Closes F-10.
 
 ### Added
 

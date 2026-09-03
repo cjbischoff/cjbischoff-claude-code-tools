@@ -83,12 +83,15 @@ def _related_locations(finding: Finding) -> list[dict]:
 
     Returns:
         One location dict per site, in the order the finding records them. An
-        entry missing ``file`` is skipped; ``line`` defaults to 1.
+        entry missing ``file`` is skipped, and ``line`` defaults to 1. An
+        entry whose ``id`` is the finding's own id is skipped, because SARIF
+        already carries it as the primary location. An entry with no ``id``
+        is kept.
     """
     out: list[dict] = []
     for site in finding.affected_sites or []:
         uri = site.get("file")
-        if not uri:
+        if not uri or site.get("id") == finding.id:
             continue
         out.append(
             {

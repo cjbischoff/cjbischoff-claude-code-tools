@@ -1841,3 +1841,14 @@ it. The function now builds the representative with `dataclasses.replace`.
 `replace` makes a shallow copy. The copy shares the member's other mutable list fields with
 the original. That is acceptable because every consumer of a representative renders it and
 does not write to it. `selfscore.py` and `report.py` are the only two callers.
+
+### SARIF related locations exclude the primary site (REQ-66)
+
+A cluster representative's `affected_sites` list includes the representative itself, because
+`cluster.py` builds the list from every member. `_related_locations` mapped each site to a
+SARIF related location, so a SARIF consumer saw the primary location twice on one result.
+The function now skips a site whose `id` equals the finding's own id.
+
+A site with no `id` is kept. Only a site written by the clustering step carries an `id`, so
+the check cannot silently drop a hand-built entry. The report's sites table in `report.py`
+still lists every site, including the primary one.
