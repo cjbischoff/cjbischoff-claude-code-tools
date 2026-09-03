@@ -39,6 +39,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - Add `-c core.quotePath=false` to three more git calls, in `diffscope.py` and `githist.py`. A
   non-ASCII filename no longer comes back quoted, so it no longer drops out of incremental diff
   scope or git-history mining.
+- A runtime test's explicit `"preconditions": null` now falls back to the finding's own
+  preconditions, instead of rendering `_(none needed)_`. JSON `null` means "not supplied".
 - Check a truncated triage title against its finding's message and a word boundary, instead of
   against the renderer's own output. The old comparison could not fail. Closes F-12.
 - `phase_docs.regenerate` raises `nested phase-table BEGIN marker at line <n>` when a second

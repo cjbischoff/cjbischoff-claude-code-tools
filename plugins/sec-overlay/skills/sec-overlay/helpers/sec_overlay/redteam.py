@@ -169,7 +169,7 @@ def _directive_block(f: Finding, patch_status: PatchStatus | None = None) -> str
     receipts = [s for s in f.evidence_sources if is_tool_receipt(s)]
     payloads = rt.get("payloads") or []
     payload_md = "\n".join(f"  - `{p}`" for p in payloads) if payloads else "  - _(none supplied)_"
-    if "preconditions" in rt:
+    if rt.get("preconditions") is not None:
         precond_md = _bullets(rt["preconditions"]) if rt["preconditions"] else "  - _(none needed)_"
     else:
         precond_md = _bullets(f.preconditions)

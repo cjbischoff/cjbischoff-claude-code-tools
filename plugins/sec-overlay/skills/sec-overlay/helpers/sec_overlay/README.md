@@ -1871,6 +1871,11 @@ Case 3 used to fall through to case 1, because the code read
 needs no preconditions saw the finding's stale list instead. The distinct wording tells a
 reader that the author answered the question, and did not leave it open.
 
+A fourth case surfaced later: an explicit JSON `null`. The REQ-67 fix's `"preconditions" in
+rt` guard read `null` as case 3, because the key is present. `null` means "not supplied", the
+same as an absent key, so it now takes case 1's path too. The guard reads
+`rt.get('preconditions') is not None`.
+
 ### The truncated-title gate checks a word boundary (REQ-68)
 
 Check (f) of the artifact-consistency gate used to rebuild the expected triage cell with

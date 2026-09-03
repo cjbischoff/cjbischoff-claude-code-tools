@@ -2034,3 +2034,11 @@ stays unchanged.
 The new flag shifted argv positions. Fake runners in `test_cli.py`, `test_rule_glob.py`, and
 `test_dead_lever.py` matched the old positions. Their matches now check `"diff" in cmd` or the
 shifted index.
+
+## 2026-09-03 — final-review finding 3: a null preconditions value read as "none needed"
+
+REQ-67's `"preconditions" in rt` guard treats an explicit JSON `null` the same as an
+empty list, so it renders `_(none needed)_` instead of falling back to
+`Finding.preconditions`. `test_a_null_preconditions_value_falls_back_to_the_finding` asserts
+the fallback and failed before the fix. The guard now reads
+`rt.get('preconditions') is not None`.

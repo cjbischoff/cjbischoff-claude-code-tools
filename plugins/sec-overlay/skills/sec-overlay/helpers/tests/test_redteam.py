@@ -380,3 +380,16 @@ def test_an_explicit_empty_preconditions_list_renders_none_needed():
 
     assert "_(none needed)_" in out
     assert "stale fallback" not in out
+
+
+def test_a_null_preconditions_value_falls_back_to_the_finding():
+    """A JSON null means "not supplied", not "explicitly none" — it must fall back."""
+    from sec_overlay.redteam import _directive_block
+
+    f = _f("F-1", runtime_test={"objective": "hit the endpoint", "preconditions": None})
+    f.preconditions = ["low-priv token in tenant A"]
+
+    out = _directive_block(f)
+
+    assert "low-priv token in tenant A" in out
+    assert "_(none needed)_" not in out
