@@ -620,7 +620,7 @@ before its stage counts as done (O-67 ordering).
 `run.py`'s baseline is now persisted at `<ws.kb>/fence-baseline` via the private
 `_load_baseline(ws, target, runner)`, captured once at pass start and read back on every resume —
 so a resumed `drive` fences against the pre-audit tree, not a fresh snapshot that would already
-contain an agent phase's write; `drive` also now stays pinned to `state.active_sha` on resume
+contain an agent phase's write. `drive` also now stays pinned to `state.active_sha` on resume
 instead of re-reading HEAD. `run.py` gained `advance(target, phase, *, workspace=None,
 runner=subprocess.run) -> Path`, the closing call for the six agent phases (`drive` never
 auto-advances past them): it loads the persisted baseline, fences, writes a receipt, and calls
@@ -642,8 +642,8 @@ rather than sealing over a `pending`/`in_review` entry). `diffscope.py` (additiv
 pre-existing symbol in both is unchanged. `cli.py` gained the `review` subparser and
 `run_review`, matching the existing `scan`/`memory`/`audit` structure. Tracer scope only:
 batching, exit codes 2/3, the full extension allowlist, and the diff-line size cap land in a
-later plan. `models.py` and `evidence.py` — the frozen milestone contracts — are untouched; no
-new runtime dependency. See the module map entries.
+later plan. `models.py` and `evidence.py` — the frozen milestone contracts — are untouched. No
+new runtime dependency exists. See the module map entries.
 
 `diffscope.py` and `cli.py` reached full ref-validation behavior: the allowlist pattern now
 also permits `~` (so `HEAD~1`-style ancestor refs validate), `changed_file_records` parses the
@@ -661,7 +661,7 @@ open-code-review's `supported_file_types.json`, and a new `DEFAULT_EXCLUDE_GLOBS
 fnmatch-compatible patterns, brace-expanded from the OCR source's 34) drives a new
 `_is_generated(path)` check. `partition` now normalizes a git-quoted non-ASCII path
 (`_normalize_path`) before matching, lowercases the extension, and orders its checks deleted →
-generated → not-allowlisted; binary detection and the diff-line size cap land in a later task
+generated → not-allowlisted. Binary detection and the diff-line size cap land in a later task
 of the same plan. `fnmatch` approximates `doublestar`'s `**` (no true zero-or-more-segment
 matching) — the parametrised glob test in `tests/test_file_select.py` holds that gap honest.
 
@@ -669,7 +669,7 @@ matching) — the parametrised glob test in `tests/test_file_select.py` holds th
 raises `ValueError` in `__post_init__` for any reason outside the closed set. `partition` gained
 `diff_line_counts`, `binary_paths`, and `max_diff_lines` (default `DEFAULT_MAX_DIFF_LINES` =
 5000, D-11) keyword parameters, all defaulting to no-op values so a caller that omits them still
-works. The full check order is now deleted → binary → generated → not-allowlisted → too-large; a
+works. The full check order is now deleted → binary → generated → not-allowlisted → too-large. A
 file at exactly the cap is reviewable. No `--max-diff-lines` CLI flag exists — a cap override is
 deferred to Phase 4.
 
@@ -698,7 +698,7 @@ bug where a diff ending in a newline produced a spurious trailing empty context 
 four-rung ladder in order — hunk match in the claimed file (`exact`), whole-file match in the
 claimed file (`relocated`/`whole-file-match`), match in exactly one other changed file
 (`relocated`/`cross-file-match`), else decline (`needs-position-review`/`no-hunk-match`) — and
-stops at the first rung producing exactly one match; two or more matches at any rung decline
+stops at the first rung producing exactly one match. Two or more matches at any rung decline
 (`ambiguous-multiple-matches` or `cross-file-ambiguous`) instead of picking one. An absent or
 whitespace-only snippet declines (`no-snippet`) before any rung runs. `PositionResult` gained a
 `snippet` field (default `None`, backward-compatible), carried on every result including
@@ -712,7 +712,7 @@ five-argument signature — a Rule 3 fix for the signature this same plan's earl
 `render_position_review_section(results: list[PositionResult]) -> str` renders one
 `## Position review required` markdown table, one row per declined result (claimed path,
 claimed line, snippet, reason), with pipe characters escaped and newlines collapsed in the
-snippet cell so a decline can never corrupt the table into a hidden row; an empty list still
+snippet cell so a decline can never corrupt the table into a hidden row. An empty list still
 renders the heading plus an explicit none-required line.
 `write_review_ledger(ws, *, position_reviews, dropped) -> Path` writes
 `artifacts/review_ledger.json` (via the same `_atomic_write` shape as `review_coverage.py`)
@@ -724,12 +724,12 @@ break the Go port's byte mirror. Both functions ship in plan 02-04, task 3.
 Plan 02-05, task 1 replaced `phase_gate.py`'s `review_position_gate` with the shape POS-03
 needs: a three-way split into `(kept, dropped, declines)` instead of the earlier two-way
 `(kept, dropped)`. A finding declines (`needs-position-review`) when the ladder cannot resolve
-it at all; every other finding is checked against `diffhunks.hunk_for_line` at its RESOLVED
+it at all. Every other finding is checked against `diffhunks.hunk_for_line` at its RESOLVED
 position (not its claimed one, since a relocated match can land outside every hunk's range) —
 inside a hunk keeps the finding at that resolved position, outside drops it with reason
 `outside-diff`. `DroppedFinding` now carries `path`, `line`, `rule_id`, and `reason` instead of
 a bare `finding_id`, and `DROP_REASONS` is a frozen set of the reason(s) the gate can emit —
-currently just `outside-diff`; `UNRESOLVED_POSITION_REASON` was removed (WR-01) since the gate
+currently just `outside-diff`. `UNRESOLVED_POSITION_REASON` was removed (WR-01) since the gate
 never assigned it — a decline goes to `declines`, never `dropped`, so there was no second reason
 to reserve. The gate never mutates an input finding: a relocated keep copies the finding to its resolved
 position with `copy.copy`, so calling the gate twice on the same input is idempotent. `declines`
@@ -748,10 +748,10 @@ never disagree about what was dropped in one run.
 
 Plan 02-05, task 3 wires the coverage manifest's seal to `run_review`'s exit code (D-15). The
 per-file loop now wraps `parse_hunks(file_diff_text(...))` in a `try`/`except`: on success the
-file transitions `pending` -> `in_review` -> `done` as before; on any exception the file
+file transitions `pending` -> `in_review` -> `done` as before. On any exception the file
 transitions to `failed` with the exception text as its `note`, and the loop moves to the next
 file rather than aborting the run. A `complete` seal (including a diff with zero reviewable
-files) returns 0; a `partial` seal — one or more `failed` files — prints one "unfinished file"
+files) returns 0. A `partial` seal — one or more `failed` files — prints one "unfinished file"
 line per non-`done` entry, read through `manifest.entries()`, naming its path, state, and note,
 then returns 3. The pre-existing exit-2 ref-validation path is unaffected — it runs before the
 manifest exists at all. No `--max-diff-lines` override flag and no `logging` import: both stay
@@ -765,7 +765,7 @@ did not exist at that ref) — every pre-existing symbol in the module is unchan
 now builds `file_text_by_path` alongside `hunks_by_path`/`diff_text_by_path` in its per-file loop,
 then, before calling `review_position_gate`, sets each live finding's `evidence` field itself from
 the real file text at the finding's claimed line — never from the agent's own claim (the
-`code_comment` tool has no snippet field at all; D-13's tool-receipt discipline never trusts an
+`code_comment` tool has no snippet field at all. D-13's tool-receipt discipline never trusts an
 LLM's claim of code content). This makes the position gate's whole-file "relocated" rung reachable
 for the first time in a live run, so a finding claimed outside every diff hunk is now correctly
 dropped with reason `outside-diff` instead of declining earlier as `no-snippet`. The gate chain
@@ -786,7 +786,7 @@ exit-2 ref-validation path returns before the gate runs at all and is unaffected
 Two new modules wire rule-doc resolution and reflection into the review tracer (Phase 3 plan
 01). `rule_glob.py` (`expand_braces`, `glob_match`, `resolve_rule_doc`, `builtin_rule_docs_dir`)
 ports OCR's brace-expansion + `**`-aware segment matcher to stdlib-only Python (case-insensitive,
-first-match-wins over `BUILTIN_PATH_RULE_MAP`, falling back to `rules/rule_docs/default.md`); the
+first-match-wins over `BUILTIN_PATH_RULE_MAP`, falling back to `rules/rule_docs/default.md`). The
 docs dir resolves from `Path(__file__)`, never cwd. `reflection.py` (`apply_verdict`,
 `build_payload`) is a retract-only LLM-verdict filter mirroring `evidence.py`'s "code decides, not
 the LLM's claim" discipline — a verdict can only remove a finding the code submitted, never add or
@@ -814,7 +814,7 @@ Phase 3 plan 05 (Task 2) closes the never-silent ledger's markdown-rendering hal
 `render_reflection_retractions_section`'s pattern — a table of `path`/`reason`/`error` per
 `ReflectionSkip`, or "No file was skipped." when empty, rendered unconditionally so a run with
 zero skips still shows the section rather than omitting it. `to_markdown` gains a
-`reflection_skips` keyword param and now calls both retraction and skip renderers back to back;
+`reflection_skips` keyword param and now calls both retraction and skip renderers back to back.
 `write_report` passes `reflection_skips` through to `to_markdown` (it already reached
 `write_review_ledger`). SKILL.md's "Diff-scoped review" section documents the dispatch: a
 `review-filter` subagent renders `render_reflection_prompt`, returns a verdict `validate_verdict`
@@ -829,7 +829,7 @@ mismatch, or a non-dict `verdict` all raise `ValueError`, so a stale verdict can
 run's finding. `cli.py`'s `run_review` gained `reflection_source` (defaults to
 `recorded_verdict_source`) and a `--prepare-reflection` mode that, after the profile runs, renders
 one `review-filter` prompt per file with kept findings under `runs/reflection_prompts/<label>.md`
-and writes `runs/reflection_plan.json`. The consume run applies each file's recorded verdict; any
+and writes `runs/reflection_plan.json`. The consume run applies each file's recorded verdict. Any
 `ValueError` lands in the existing per-file `ReflectionSkip` fail-open path (D-15) — never a silent
 keep-all.
 
@@ -842,7 +842,7 @@ and the empty intersection, so a sixth class added there without a matching entr
 at import time rather than silently landing in neither set. `disposition_without_receipt`
 maps a general-defect class with no Tier-1 receipt to `unconfirmed` or
 `needs-deployment-testing` and raises `ValueError` on anything else — it never touches
-`FindingStatus`; `unconfirmed` stays a plain `review_findings` string, not a member of the
+`FindingStatus`. `unconfirmed` stays a plain `review_findings` string, not a member of the
 frozen enum `models.py` byte-mirrors for the Go port.
 
 Phase 3 plan 02 (Task 1) expands `rule_glob.py`'s built-in-only resolution into RULE-02's four-layer
@@ -855,7 +855,7 @@ an ordered `entries` list (`path` glob, `rule` text, `merge_system_rule` bool) p
 path)` is the per-path fallthrough building block — first entry in JSON array order whose pattern
 matches wins. `resolve_rule_doc` now takes an optional `RuleResolution` and walks
 `[custom, project, global]` before falling back to the built-in map, deciding independently per
-path; an entry with `merge_system_rule` routes through `merge_with_system_rule(builtin_text,
+path. An entry with `merge_system_rule` routes through `merge_with_system_rule(builtin_text,
 user_text)`, which reproduces OCR's `## System-Specific Rules (Mandatory)` /
 `## User-Specific Rules (Mandatory)` header format across all three empty-input cases. Per-path
 fallthrough and Task 2's whole-layer filter selection are deliberately separate functions with
@@ -864,7 +864,7 @@ separate loops — the phase's single highest-risk mis-implementation is collaps
 Task 2 adds the whole-layer filter and the two CLI flags it powers. `build_file_filter(layers)`
 walks `[custom, project, global]` and returns the first layer whose `include` or `exclude` is
 non-empty — lower-cased at build time (D-04) — skipping a layer where both are empty rather than
-selecting it as an empty filter; `None` when no layer qualifies. It shares no loop or helper with
+selecting it as an empty filter. It returns `None` when no layer qualifies. It shares no loop or helper with
 `match_project_rule_entry`: one answers per-path, the other picks one whole layer, and the two
 never call each other. `build_resolution(rule_path, excludes, repo_root)` assembles all three
 layers — mirroring OCR's `NewResolver`, the custom (`--rule`) and global layers resolve a relative
@@ -872,7 +872,7 @@ layers — mirroring OCR's `NewResolver`, the custom (`--rule`) and global layer
 .parent`), while only the project layer resolves against `repo_root` — then calls
 `build_file_filter` and appends the lower-cased CLI `--exclude` values to whichever filter comes
 back (or builds an excludes-only `FileFilter` when no layer had one). `cli.py`'s `review`
-subparser gained `--rule` (single path) and `--exclude` (repeatable); `run_review` calls
+subparser gained `--rule` (single path) and `--exclude` (repeatable). `run_review` calls
 `build_resolution` once, passes the `RuleResolution` into `resolve_rule_doc` for each reviewable
 file, and narrows `selection.reviewable` by the resulting `FileFilter` before the manifest loop —
 `dataclasses.replace` rebuilds the frozen `Selection` rather than mutating it — so an excluded
@@ -886,7 +886,7 @@ the resolved `repo_root`, then a capped `open("rb")` read of at most `MAX_RULE_F
 (524288 + 1) bytes rejecting anything over the cap before any UTF-8 decode — and raises
 `RuleSafetyError` naming the path and reason on any violation, never falling through to another
 layer. `_entry_rule_path(rule, repo_root)` joins a layer's relative `rule` field the same way
-`build_resolution` already did in Task 2; `read_rule_file_safe` itself does no relative-path
+`build_resolution` already did in Task 2. `read_rule_file_safe` itself does no relative-path
 resolution, only symlink resolution. Three deliberate divergences from OCR's `system_rules.go`,
 documented in the function's docstring: the boundary check runs against the RESOLVED path
 (stronger than OCR's pre-resolution check, closing a symlink-escape gap OCR has), a violation is

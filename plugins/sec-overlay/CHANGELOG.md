@@ -10,6 +10,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   identifier, path, or fact changed. Part 1 of 6 for REQ-71.
 - Rewrite the second part of the `sec_overlay` package README to ASD-STE100. Prose only — no code,
   identifier, path, or fact changed. Part 2 of 6 for REQ-71.
+- Rewrite the third part of the `sec_overlay` package README to ASD-STE100. Prose only — no code,
+  identifier, path, or fact changed. Part 3 of 6 for REQ-71.
 
 ### Removed
 
