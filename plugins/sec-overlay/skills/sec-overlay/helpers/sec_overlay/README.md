@@ -306,7 +306,7 @@ durable cross-scan distillation that closes the pipeline.
 whether the run produced one. `render_ndt`, `_ndt_next_actions`, `write_finding_details`, and
 `write_report` all take a `has_redteam_plan` keyword — `render_ndt`/`_ndt_next_actions`/
 `write_finding_details` default it `True` (the common case), `write_report` defaults it `False`
-(the review-mode case with no redteam phase); `write_report` no longer needs a probe because
+(the review-mode case with no redteam phase). `write_report` no longer needs a probe because
 `driver._act_report` passes `has_redteam_plan=True`, guaranteed by `report`'s new
 `_redteam_plan` input declaration. `cli.py`'s two review-mode call sites (`run_semgrep`,
 `run_review`) keep the `False` default, correctly, since neither runs a redteam phase.
@@ -336,7 +336,7 @@ carries the workspace,
 target, config, pinned SHA, and lazily-loaded `ScanProfile` an action needs. `render_dispatch`
 returns the printable block for an agent phase — prompt file plus `{{TARGET}}`/`{{WORKSPACE}}`/
 `{{SHA}}` substitutions, plus an optional `{{ATTACK_CLASS}}` line — a compact JSON array of
-class keys — when called with `classes=` — with no side effects; the orchestrator runs the
+class keys — when called with `classes=` — with no side effects. The orchestrator runs the
 model. It raises if called on a deterministic
 phase (`prompt is None`). `_act_route_census` calls `route_census.census(ctx.target)` and
 `write_census` to persist `kb/route-census.json`. This action registers under `"route-census"`
@@ -353,28 +353,28 @@ reconciled class list passed to `render_dispatch(classes=...)` (no triage block,
 `findings-gate` → `findings_gate.validate_findings`, `dedupe` → `dedupe.dedupe_findings`,
 `calibrate` → `calibrate.calibrate_findings`, `verify` → `verify.verify_findings`
 (a `static-only` re-verify routes the finding to `needs-deployment-testing`, never leaves it
-`confirmed` implying a dynamic check passed; only `verified-static` promotes to `fixed`;
+`confirmed` implying a dynamic check passed. Only `verified-static` promotes to `fixed`.
 `verify_patch` returns a named cause from `VERIFY_CAUSES` — not a verification value —
 which `verify_findings` maps to a legal `Finding.verification` value through
-`_CAUSE_TO_VERIFICATION`, recording `verify:cause:<cause>` in the finding's history;
+`_CAUSE_TO_VERIFICATION`, recording `verify:cause:<cause>` in the finding's history.
 `verify_findings` resolves its own `config` scalar through `verify.resolve_configs(ws, config)`
 before the loop, so every finding is re-scanned against the semgrep rulesets `recon` planned in
-`kb/scan-profile.json`, not an unrelated caller-supplied path; `verify_patch`'s `config` parameter
+`kb/scan-profile.json`, not an unrelated caller-supplied path. `verify_patch`'s `config` parameter
 now accepts a list too, and `_check` OR-combines a `_file_has_hit` call per config for the
 semgrep backend, running codeql/sca once regardless of the list. `_check` returns on the first
-config that hits only when the caller wants no `detail`; with a `detail` list it runs every
+config that hits only when the caller wants no `detail`. With a `detail` list it runs every
 config, because stopping early draws the pre-patch and post-patch detail from different rulesets
 and comparing disjoint evidence reports a false `rule-no-discriminate`. A scanner hit matches a
 finding when their paths share a suffix at a `/` boundary after `_rel_path` strips the scan root,
 so two same-named files in different directories no longer alias, and an empty path on either
-side never matches; `rule-no-target-file` — the patch writes no file the finding's rule fires in,
+side never matches. `rule-no-target-file` — the patch writes no file the finding's rule fires in,
 so a re-scan cannot observe the fix. The check runs AFTER the post-patch re-scan, so it only
 downgrades a surviving hit: a cross-file backend whose re-scan comes back clean still reaches
-`verified-static`. Maps to `static-only`, never to `not-fixed`; `rule-no-discriminate` — the rule
+`verified-static`. Maps to `static-only`, never to `not-fixed`. `rule-no-discriminate` — the rule
 still fires post-patch, but
 `_post_verdict` finds its matched evidence text disjoint from the pre-patch match, so the rule's
 sink list covers both the vulnerable and the safe construction rather than telling them apart.
-Maps to `static-only`; `_file_has_hit` and `_check` take an out-parameter `detail` list collecting
+Maps to `static-only`. `_file_has_hit` and `_check` take an out-parameter `detail` list collecting
 every matching scanner finding, not only a boolean, so `verify_patch` can pass both scans' matches
 to `_post_verdict`, and `verify_findings` names the pre-patch and post-patch line in the finding's
 history via a module-level `_LAST_LINES` record cleared before every `verifier` call so a stub
@@ -394,7 +394,7 @@ would survive. Both `arch-gate`/`tm-gate`
 run `diagram_gate.run_diagram_gate` over `architecture/` (and `threat-model/` where present) plus
 `ste_lint.lint_prose` over their doc, write `{"passed", "errors", "warnings"}` to
 `kb/gates/<name>.json` via the shared `_write_gate` helper, and raise `PhaseHalt` naming every
-error; `_act_tm_gate` additionally runs `artifact_gate.check_duplication` against `arc42.md` and
+error. `_act_tm_gate` additionally runs `artifact_gate.check_duplication` against `arc42.md` and
 calls `run_diagram_gate(..., require_threat_model=True)` so a missing `dfd.mmd` is a gate error
 instead of the silently-optional default. `redteam` and `artifact-review` are agent phases with no
 registered action — each auto-advances once its declared output artifact exists
@@ -403,7 +403,7 @@ phase. `run_audit(ctx)` walks `PHASE_TABLE` from the first phase not yet
 `done`: runs deterministic phases in place, and for an agent phase auto-advances only when it has
 an output path that is *not also* one of its inputs (several agent phases — `investigate`,
 `critic`, `judge`, `validate`, `trace`, `patch` — declare the same `findings_dir` callable as both
-input and output, so the dir's mere presence never counts as "this phase ran"); otherwise it
+input and output, so the dir's mere presence never counts as "this phase ran"). Otherwise it
 returns `render_dispatch(...)` and stops. Returns `"AUDIT COMPLETE"` once every phase is `done`.
 `cli.py` exposes this as its `audit` subcommand (`python -m sec_overlay.cli audit --target <T>
 --config <rules> [--workspace <WS>] [--sha <sha>]`): resolves the workspace the same way `scan`
@@ -428,11 +428,11 @@ rendering `_no tool receipt (verify carefully)_` in the directive block). The de
 
 `redteam.py`'s `discriminate` now gates payloads on reachability (ISSUE-056): a new
 `payload_runnable(f)` returns `True` only when a finding carries a non-empty `dataflow` trace or a
-`reachability` dict with `reachable is True`; an above-bar needs-runtime finding that fails this
+`reachability` dict with `reachable is True`. An above-bar needs-runtime finding that fails this
 check routes to a new `"unrunnable"` bucket instead of the manual plan — an untraceable payload is
 a precondition to test for, not a live directive. `render_plan` renders this bucket as its own
 `## Unrunnable preconditions (payload not traceable)` plan section (and folds its `open_questions`
-into "Questions to ask") so these findings are surfaced, never silently dropped; `write_plan`'s
+into "Questions to ask") so these findings are surfaced, never silently dropped. `write_plan`'s
 returned summary carries an `"unrunnable"` count alongside the other buckets.
 
 `redactor.py` is wired into the driver (ISSUE-051). `render_dispatch` passes its composed block
@@ -453,7 +453,7 @@ no colon-line, or a colon whose first tail token isn't numeric, still returns `(
 
 `phase_gate.py`'s new `attack_surface_gate` (ISSUE-026) rejects a recon `attack_surface` key
 whose evidence refs are absent, unresolved, or resolve only to comment lines — a comment is a
-claim about code, not proof it executes. Reuses `resolve_ref`/`is_comment_line`; kept separate
+claim about code, not proof it executes. Reuses `resolve_ref`/`is_comment_line`. Kept separate
 from `run_phase_checks` so architecture/context claims citing a comment aren't over-rejected.
 
 `prompts.py` (new, ISSUE-040) adds `render_prompt(template, subs)`, substituting `{{KEY}}` tokens
@@ -463,7 +463,7 @@ fails before the model runs instead of silently reaching it.
 
 `coverage_ledger.py`'s `build_coverage_ledger` now stamps its own `needs_follow_up` surfaces with
 a `reason`/`next_step` too (previously bare), matching the shape `route_control.py`'s gap dicts
-already used; `validate_coverage_ledger` rejects a `needs_follow_up` surface missing either field.
+already used. `validate_coverage_ledger` rejects a `needs_follow_up` surface missing either field.
 
 `route_control.py` (new, ISSUE-027/029/036) derives one route-to-control table
 (`build_route_control_table`) and checks recon, architecture, and threat-model output against it
@@ -514,7 +514,7 @@ holds invalid JSON. The module map entry in [`../README.md`](../README.md) has t
 CLI-callable.
 
 `class_ext.py` (new) provides `class_extension_status(classes, classes_dir)` to check which
-investigate/patch extension files exist; absent classes are logged as gaps so coverage is never
+investigate/patch extension files exist. Absent classes are logged as gaps so coverage is never
 silently lost. Uses an alias map (e.g., sqli/cmdi/xss → injection.md) to count coarse files.
 
 `sast.py` now excludes `.sec-overlay`, `.git`, `.venv`, and `node_modules` directories from
@@ -527,8 +527,8 @@ sequence, so ids carry the class and never collide across rulesets (ISSUE-013).
 
 `mermaid_index.py` (new) — `index_mermaid(text)` line-oriented parser for Mermaid flowchart,
 sequence, and C4 diagrams, returning a `DiagramIndex` (nodes, edges, subgraphs, participants,
-messages, store_ids, has_style). Not a grammar: extracts only what the diagram gate checks;
-raises `ValueError` on an unrecognized diagram header. Feeds the upcoming diagram gate (Task 2).
+messages, store_ids, has_style). Not a grammar: extracts only what the diagram gate checks.
+It raises `ValueError` on an unrecognized diagram header. Feeds the upcoming diagram gate (Task 2).
 
 New module `diagram_gate.py` — deterministic hard gate over generated Mermaid diagrams
 (`check_diagram`, `run_diagram_gate`, `CAPS`, `SEQ_CAPS`): per-type node/participant/message
@@ -548,7 +548,7 @@ shapes and missed multi-char forms like `q{{Queue}}` — widened to one bracket-
 covering `[[`, `((`, `{{`, `[(`, `([`, and bare `[`/`(`/`{`. In `diagram_gate.py`, `_provenance`
 crashed with `FileNotFoundError` when the derived-from source file didn't exist (a missing
 `container-diagram.mmd`, or an attack sequence whose header names an unknown parent, hitting
-`_attack_parent`'s `MISSING-PARENT` placeholder); it now reports `"derived-from source ... not
+`_attack_parent`'s `MISSING-PARENT` placeholder). It now reports `"derived-from source ... not
 found"` and returns instead of calling `read_bytes()`. `check_diagram`'s parse of the source
 diagram (for element/participant-diff checks) is now wrapped in `try/except ValueError`, reporting
 `"source ... unparseable: ..."` instead of an uncaught traceback.
@@ -558,11 +558,11 @@ before the piped-label `_FLOW_EDGE` regex, fixing a defect where the label text 
 misread as a phantom source node and `a`/`b` were silently dropped from `nodes`.
 
 New module `ste_lint.py` — a deterministic linter for the checkable structural subset of
-ASD-STE100: sentence >25 words, semicolon in prose, and paragraph >6 sentences are errors; a
+ASD-STE100: sentence >25 words, semicolon in prose, and paragraph >6 sentences are errors. A
 4+ word capitalized run mid-sentence (noun-cluster suspicion) and a sentence repeating " then "
 are warnings. Fenced code blocks, mermaid blocks, headings, table separator rows, inline code
-spans, and URLs are exempt; table free-text cells are linted. `lint_prose(text) -> (errors,
-warnings)` is the entry point; the CLI (`python -m sec_overlay.ste_lint <files...>
+spans, and URLs are exempt. Table free-text cells are linted. `lint_prose(text) -> (errors,
+warnings)` is the entry point. The CLI (`python -m sec_overlay.ste_lint <files...>
 [--require-frontmatter]`) exits 1 on any error and additionally requires the literal
 `ASD-STE100` string somewhere in the file when `--require-frontmatter` is passed.
 
@@ -587,7 +587,7 @@ bracket label over 4 words is now an error (bare-id nodes with no bracket label 
 `dfd.mmd` becomes a gate error instead of a silently-skipped optional diagram (CLI:
 `--require-threat-model`).
 
-New module `run.py` — driver helpers for a sec-overlay audit run; first addition is `fence(target,
+New module `run.py` — driver helpers for a sec-overlay audit run. First addition is `fence(target,
 baseline, *, runner=subprocess.run)`, which raises `WorkingTreeFenceError` naming the delta lines
 when `git status --porcelain` output differs from the captured baseline.
 
