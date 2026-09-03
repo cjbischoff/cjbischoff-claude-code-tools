@@ -1934,3 +1934,16 @@ the derived set becomes `{1, 2, 3}` while the literal stays `{1, 2}`. Closes F-4
 `evidence._MECHANICAL`, so no evidence source could ever start with either one.
 `test_every_rule_origin_is_a_mechanical_receipt_prefix` failed with `AssertionError: asvs:`
 before the fix and passes after it. Closes F-5.
+
+## 2026-09-02 — REQ-64 red: the receipt-prefix test restated its own premise
+
+`test_backend_receipt_prefixes_are_mechanical` hardcoded six prefixes and asserted
+`prefix in _MECHANICAL`. `is_tool_receipt` is defined by that same membership, so the
+assertion could not fail, and the hardcoded list missed any newly declared prefix. The test
+now iterates `TIER1_RECEIPTS | TIER2_RECEIPTS` and asserts the gate result and the tier.
+
+A probe over `declared | {"nosuch"}` shows the loop rejects an undeclared prefix.
+
+Residual gap: the test cannot catch a new backend whose prefix is never added to
+`evidence.py`. No constant enumerates the backends — `prefilter.py` names the four inline.
+Closes F-6.

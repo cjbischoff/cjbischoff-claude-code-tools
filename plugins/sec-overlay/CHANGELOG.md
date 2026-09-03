@@ -652,6 +652,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - Parity plan tracking: marked all four Task 25 sub-steps complete in
   `docs/superpowers/plans/2026-08-23-ocr-parity.md` (test suite + PARITY-AUDIT.md
   + zero-loss re-read + completion report). Closes the OCR-parity milestone.
+- Derive `test_backend_receipt_prefixes_are_mechanical` from `TIER1_RECEIPTS | TIER2_RECEIPTS`
+  and drop the tautological `_MECHANICAL` membership assertion. Closes F-6.
 
 ### Fixed
 

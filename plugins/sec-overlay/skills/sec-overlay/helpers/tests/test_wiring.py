@@ -7,7 +7,7 @@ import inspect
 
 from sec_overlay import driver, fp_feedback
 from sec_overlay.clsmap import _RULE_ID_CLS, CWE_CLS
-from sec_overlay.evidence import _MECHANICAL, is_tool_receipt
+from sec_overlay.evidence import TIER1_RECEIPTS, TIER2_RECEIPTS, is_tool_receipt, receipt_tier
 from sec_overlay.exclusions import Exclusions
 from sec_overlay.prefilter import run_prefilter
 from sec_overlay.profile import ScanProfile
@@ -52,11 +52,12 @@ def test_all_clsmap_targets_are_known_classes():
 
 
 def test_backend_receipt_prefixes_are_mechanical():
-    # secrets/sca findings carry secrets:/sca: receipts — these MUST be recognized as
-    # mechanical, or the receipt gate would reject their confirmed findings.
-    for prefix in ("secrets", "sca", "semgrep", "codeql", "ast-grep", "ripgrep"):
-        assert prefix in _MECHANICAL
+    # Every receipt prefix the harness declares must pass the gate and carry a tier.
+    # A prefix that fails either check would make its backend's confirmed findings
+    # unrecordable. Deriving the list from the tier sets covers a newly added backend.
+    for prefix in sorted(TIER1_RECEIPTS | TIER2_RECEIPTS):
         assert is_tool_receipt(f"{prefix}:x") is True
+        assert receipt_tier(f"{prefix}:x") in (1, 2)
 
 
 def test_hunting_companion_docs_exist_and_referenced():
