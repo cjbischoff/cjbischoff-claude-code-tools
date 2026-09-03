@@ -1522,7 +1522,7 @@ schema in `references/finding.schema.json` rather than by the dataclass.
 ### Multi-channel expected signals (REQ-34)
 
 `render_util.signal_lines` now accepts three shapes, not two. A list of channel objects renders
-one block per channel; a `{secure, insecure}` dict and a bare string render as before. A channel
+one block per channel. A `{secure, insecure}` dict and a bare string render as before. A channel
 object is `{"name", "needs_egress", "secure", "insecure"}`. `_channel_lines` renders the name and
 the egress marker on a header bullet, then indents the secure and insecure lines under it.
 
@@ -1540,11 +1540,11 @@ rather than reported.
 
 `ste_lint._prose_blocks` folded every list item into its own block and then let an indented continuation line fall through to the paragraph buffer. A hard-wrapped bullet therefore became two blocks, and a sentence spread across the wrap had its words counted twice — once per half. Neither half could exceed the 25-word cap on its own, so the linter passed prose it should reject.
 
-The splitter now keeps a separate `item` buffer. A list marker starts it, an indented continuation line appends to it, and a shared `_flush()` closes it on a blank line, a heading, a table row, a code fence, a new list item, or the end of the text. An unindented line after a list item flushes the item and starts a paragraph, so a paragraph that follows a list stays its own block.
+The splitter now keeps a separate `item` buffer. A list marker starts it, and an indented continuation line appends to it. A shared `_flush()` closes it on a blank line, a heading, a table row, a code fence, or a new list item. It also closes the item at the end of the text. An unindented line after a list item flushes the item and starts a paragraph, so a paragraph that follows a list stays its own block.
 
-`_flush()` also runs on a heading, a table row, and a fence line, which the old loop did not do. Those lines used to leave the paragraph buffer open, so prose before and after a heading merged into one block and could exceed the six-sentence paragraph cap without a report. The full suite stays green, so no existing document changes its verdict.
+`_flush()` also runs on a heading, a table row, and a fence line, which the old loop did not do. Those lines used to leave the paragraph buffer open. As a result, prose before and after a heading merged into one block and could exceed the six-sentence paragraph cap without a report. The full suite stays green, so no existing document changes its verdict.
 
-`references/prompt-constants.md` also carried a sentence its own linter rejects: the mandated front-matter statement used a semicolon, which the `STE_PROSE` block forbids. It now reads as three sentences. Trade-off: the rest of `prompt-constants.md` still carries pre-existing violations that no gate checks — the file is a rule book, not a generated run artifact, and REQ-12 does not ask for a full-file cleanup.
+`references/prompt-constants.md` also carried a sentence its own linter rejects: the mandated front-matter statement used a semicolon, which the `STE_PROSE` block forbids. It now reads as three sentences. Trade-off: the rest of `prompt-constants.md` still carries pre-existing violations that no gate checks. The file is a rule book, not a generated run artifact, and REQ-12 does not ask for a full-file cleanup.
 
 ### A Go CodeQL database builds without a build (REQ-14)
 
@@ -1552,7 +1552,7 @@ The splitter now keeps a separate `item` buffer. A list marker starts it, an ind
 
 Trade-off: `--build-mode=none` extracts without compiling, so CodeQL resolves fewer cross-package references on a Go target. Some dataflow that an autobuilt database would find is lost. A build that writes into the reviewed tree is the worse cost.
 
-`prefilter.run_prefilter` records that cost when it applies. The CodeQL work unit now returns its result tagged `codeql:<lang>` instead of the bare `codeql`, so the result fold can tell a Go failure from any other. The fold branches on `backend.startswith("codeql")`, and a failing Go unit adds `skipped_reasons["codeql-go"] = "build-unfenceable"`. The `failed` entry still carries the bare name `codeql`, so no external consumer sees the tag. `codeql-go` is a reason key, not a backend: it never joins `backends_run`, and the never-silent contract loop still checks the four real backend names only.
+`prefilter.run_prefilter` records that cost when it applies. The CodeQL work unit now returns its result tagged `codeql:<lang>` instead of the bare `codeql`. This lets the result fold tell a Go failure from any other. The fold branches on `backend.startswith("codeql")`, and a failing Go unit adds `skipped_reasons["codeql-go"] = "build-unfenceable"`. The `failed` entry still carries the bare name `codeql`, so no external consumer sees the tag. `codeql-go` is a reason key, not a backend: it never joins `backends_run`, and the never-silent contract loop still checks the four real backend names only.
 
 ### The opt-in proof-by-execution lane (REQ-30)
 
@@ -1569,7 +1569,7 @@ the effect. `_reject_reason` checks them in one order and returns the first fail
 `cmdi`, `path-traversal`, `deserialization`, and `expr-eval-rce`. `HARNESS_ONLY` holds `sqli` and
 `authz`, whose oracles need a provisioned backend, so a proof for them attaches a record and never
 promotes. A proof that ran attaches a `reproduction` object to the finding even when it does not
-promote; a `toolchain-absent` rejection attaches nothing, because nothing ran.
+promote. A `toolchain-absent` rejection attaches nothing, because nothing ran.
 
 `loopback_collector` is the in-band oracle. It binds a stdlib `ThreadingHTTPServer` on
 `127.0.0.1:0` and records each request path, so an egress proof needs no network egress and no new
@@ -1582,13 +1582,13 @@ phase between `redteam` and `artifact-gate`, driven by `agents/prove.md` and dec
 lane is off — a declared output plus the auto-advance rule would otherwise cost one wasted model
 dispatch on every default run. `findings_gate` accepts a `reproduction` receipt in place of a
 Tier-1 tool receipt. `preflight_report` adds a `prove_toolchains` map for `opa`, `go`, `node`, and
-`python3`; a missing toolchain degrades the lane and never blocks preflight.
+`python3`. A missing toolchain degrades the lane and never blocks preflight.
 
 `evidence.py` stays byte-identical. It is pinned by the D-15 frozen-contract test, so the
 reproduction receipt vocabulary lives in `prove.py`, and `findings_gate` consults both modules.
 Trade-offs: a `reproduction`-only confirmed finding leaves `receipt_tier` null, because the tier
-map lives in the pinned file; `_promote` writes `runtime_disposition` as `static-settled`, because
-the pinned `RUNTIME_DISPOSITIONS` set carries no proven value; and `run_prove` skips a proof whose
+map lives in the pinned file. `_promote` writes `runtime_disposition` as `static-settled`, because
+the pinned `RUNTIME_DISPOSITIONS` set carries no proven value. `run_prove` skips a proof whose
 named finding file is absent without recording a degradation.
 
 ### `validate-fix` is wired as a phase, and `score_fix` gets a caller (REQ-43)
@@ -1599,7 +1599,7 @@ checks a finding's history for a `validate-fix:` event, was dead code for the sa
 event never got written.
 
 `phases.py` adds a `validate-fix` agent row between `patch` and `verify`, naming
-`agents/validate-fix.md`. Its output is `kb/gates/validate-fix.json`; `verify` declares that same
+`agents/validate-fix.md`. Its output is `kb/gates/validate-fix.json`. `verify` declares that same
 path as an input, so the deterministic re-check never runs ahead of the scored gate. `verify.py`
 gains `apply_fix_gates(ws)`: it reads the gate file, calls `score_fix` on each finding's four
 gate statuses, appends a `validate-fix:<verdict>` history event, and sets `verification` to
@@ -1607,7 +1607,7 @@ gate statuses, appends a `validate-fix:<verdict>` history event, and sets `verif
 touches `status`, leaving promotion to the deterministic `verify` phase that runs next.
 `driver.py`'s `_act_verify` calls `apply_fix_gates` before `verify_findings`, as its own step, not
 a call inside `verify_findings` itself. `verify.py` was missing the `Finding` import
-`apply_fix_gates` needs; it is added alongside the existing `FindingStatus` one.
+`apply_fix_gates` needs. It is added alongside the existing `FindingStatus` one.
 
 ### `verify_findings` writes back only the findings it touched (REQ-44)
 
@@ -1631,8 +1631,8 @@ write needs no additional locking or barrier — it is already the unit of atomi
 never looked at a key `data` carried that no `properties` entry named — the validator accepted any
 overflow silently. `finding.schema.json` now sets `additionalProperties: false` at its root
 object, so an undeclared key on a finding is a validation error (`"<path>.<key>: unknown field"`)
-at the findings gate instead of silent overflow. Only the boolean-`false` form closes the object;
-a schema-form `additionalProperties` (a subschema for undeclared keys) leaves it open and
+at the findings gate instead of silent overflow. Only the boolean-`false` form closes the object.
+A schema-form `additionalProperties` (a subschema for undeclared keys) leaves it open and
 unchecked, matching the module docstring's stated support. Nested object schemas
 (`reachability`, `runtime_test`, `reproduction`, `history`/`open_questions`/`affected_sites`
 items) stay open — only the root closes, so a Part D or REQ-27-overflow field arriving on a
@@ -1640,7 +1640,7 @@ nested object still round-trips.
 
 Closing the schema retired the `render_stale` lever `artifact-review.md` used to force a
 re-render: the key no property declares now fails validation, and no agent prompt writes it.
-`artifact-review.md`'s verdict vocabulary drops to `"clean" | "downgrades"`; the unreachable
+`artifact-review.md`'s verdict vocabulary drops to `"clean" | "downgrades"`. The unreachable
 `"re-render"` value and its `forced_rerender` id list are gone.
 
 ### `calibrate.py` publishes `JUDGE_VERDICTS` so the schema derives from it (REQ-50)
@@ -1669,7 +1669,7 @@ there instead of defining them. `evidence.py`'s D-15 frozen-contract digest chan
 file's *contents* would never change, only that a change there is deliberate and mirrored to the
 Go port by hand. The rest of the REQ-30 note (`receipt_tier` null on a reproduction-only finding,
 `runtime_disposition` written as `static-settled`, silent skip on a missing finding file) still
-holds; only the "vocabulary lives in `prove.py`" claim is superseded.
+holds. Only the "vocabulary lives in `prove.py`" claim is superseded.
 
 `_MECHANICAL` was an independently-maintained literal that happened to equal
 `TIER1_RECEIPTS | TIER2_RECEIPTS`, checked by a module-load `assert`. It is now derived directly
@@ -1700,13 +1700,13 @@ now says so explicitly, and to leave `reachable` absent rather than guessed. `fi
 gained a matching clause: a finding whose `reachability.blocker` is `"external-boundary"` must
 carry at least one `open_questions` entry with all three `OPEN_QUESTION_KEYS`
 (`question`/`why_it_matters`/`who_to_ask_or_check`) non-empty, or the gate reports it by id. The
-prose already asked an agent for this entry; the gate now makes the omission a build failure
+prose already asked an agent for this entry. The gate now makes the omission a build failure
 instead of a silent gap.
 
 `validate_reachability` accepts that shape. It required `reachable` to be present and a bool, so
 the verdict the trace prompt documents failed the reachability stage validator and the repair loop
 pushed the agent to guess the boolean the prompt forbids. An absent `reachable` is now valid when
-`blocker == "external-boundary"`; every other verdict still needs the bool, and a present
+`blocker == "external-boundary"`. Every other verdict still needs the bool, and a present
 `reachable` of a non-bool type stays an error. `is_reachable` keeps its recall-safe
 `r.get("reachable", True)` default, so an unassessed external-boundary finding still counts as
 reachable, and `blocker_of` still reports a blocker only for a finding proven unreachable.
@@ -1728,7 +1728,7 @@ It turns each entry of a cluster representative's `Finding.affected_sites` into 
 reaches a SARIF consumer as a single location. Every result also gains `properties.findingId`, so
 a consumer can name the finding a result came from. The `suppressed` parameter's suppression entry
 now carries `kind: "external"`, not `"inSource"` — the prior kind asserted an in-file annotation
-that a needs-runtime finding never carries; the reason for the suppression sits outside the repo.
+that a needs-runtime finding never carries. The reason for the suppression sits outside the repo.
 
 `dedupe.py`'s stamping loop now runs over every finding, not only `RAW` and `CONFIRMED` ones
 (REQ-58). A rejected, duplicate, or stale finding now carries the same 12-character fingerprint
@@ -1753,10 +1753,10 @@ plugin upgraded mid-campaign supplies only that uncollapsed count, so a needs-ru
 skewed the comparison and halted a correct run. Clause (d) now mirrors clause (h)'s legacy degrade:
 when `needs_runtime_collapsed` is absent, the clause returns no error instead of falling back.
 
-Clause (f)'s docstring overclaimed a word-boundary check of the source message; the assertion
-itself already compares against `triage_what`'s own output and stays unchanged (rewriting it risks
-turning a dead check into a false halt) — only the docstring was corrected to say it detects a
-hand-edited or stale report, not a defect in `triage_what`.
+Clause (f)'s docstring overclaimed a word-boundary check of the source message. The assertion
+itself already compares against `triage_what`'s own output and stays unchanged, because rewriting
+it risks turning a dead check into a false halt. Only the docstring was corrected to say it
+detects a hand-edited or stale report, not a defect in `triage_what`.
 
 ### Phase-table doc generation (REQ-61)
 
@@ -1777,11 +1777,11 @@ extracts the ordered list of `**phase-key**` entries from a `<!-- BEGIN PHASE NO
 (dash/star bullets only — a numbered list item does not match, which is what lets `SKILL.md`
 keep a short preface list of non-`PHASE_TABLE` steps immediately above the generated table
 without those items polluting the key list). `main()` is the CLI: `--check` (used in CI/lint)
-exits 1 and names every stale document without writing; `--write` regenerates every document
+exits 1 and names every stale document without writing. `--write` regenerates every document
 in `DOCUMENTS` in place.
 
 `DOCUMENTS` lists five targets: `SKILL.md`, `README.md`, `agents/README.md`, `helpers/README.md`,
-and `skills/sec-overlay/CLAUDE.md`. The first four carry a generated phase-table block; `CLAUDE.md`
+and `skills/sec-overlay/CLAUDE.md`. The first four carry a generated phase-table block. `CLAUDE.md`
 is in the set but stays markerless — it is the maintainer quick-map and now just points at
 `SKILL.md`'s generated table and notes instead of keeping its own copy, so `regenerate` is a
 no-op on it and `--write` still prints exactly four `rewrote:` lines. `NOTE_DOCUMENTS` is
@@ -1801,16 +1801,16 @@ There is no `NON_TABLE_STEPS` constant. It once listed six steps that run alongs
 phase names. Ruling P5-10 deleted it: `test_operator_notes_name_every_phase_and_nothing_else`
 asserts exact set equality between the note keys and the `PHASE_TABLE` phase names, so the slack
 was unreachable and the constant was a configuration point nothing populated. The five non-table
-steps still open `SKILL.md`'s "Running a full audit" section as a numbered preface list; they
+steps still open `SKILL.md`'s "Running a full audit" section as a numbered preface list. They
 simply carry no operator note.
 
 `regenerate` validates every block before it rewrites any of them. Two failures used to be
 silent. A second `BEGIN GENERATED: phase-table` marker opening before the current block's `END`
 was swallowed by the outer rewrite, which deleted the inner marker and everything between the
-two; `regenerate` now raises `nested phase-table BEGIN marker at line <n>`, naming the offending
+two. `regenerate` now raises `nested phase-table BEGIN marker at line <n>`, naming the offending
 line, and writes nothing. And the `_BEGIN` pattern anchored on a bare `$`, which sits after the
 `\r` of a CRLF line ending, so a document saved with Windows line endings matched no marker at
-all and `--check` called it current; the anchor is now `\r?$`. `_BEGIN` is the only pattern in
+all and `--check` called it current. The anchor is now `\r?$`. `_BEGIN` is the only pattern in
 the module with a line-end anchor — `_NOTE_KEY` matches a bullet prefix and never anchors the
 line end — so no other pattern needed the same change.
 

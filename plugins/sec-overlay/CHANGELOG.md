@@ -16,6 +16,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   identifier, path, or fact changed. Part 4 of 6 for REQ-71.
 - Rewrite the fifth part of the `sec_overlay` package README to ASD-STE100. Prose only — no code,
   identifier, path, or fact changed. Part 5 of 6 for REQ-71.
+- Rewrite the last part of the `sec_overlay` package README to ASD-STE100. The whole file now passes
+  `ste_lint` with no error and no warning, so `test_package_readme_ste_lint_clean` passes. Part 6 of
+  6 for REQ-71. Closes F-9 and F-11.
 
 ### Removed
 
