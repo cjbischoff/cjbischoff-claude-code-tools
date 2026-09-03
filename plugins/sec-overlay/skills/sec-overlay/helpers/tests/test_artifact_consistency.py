@@ -185,7 +185,7 @@ def test_gate_flags_a_hand_edited_truncated_title(tmp_path):
 
     errors = run_artifact_consistency(ws)
 
-    assert any("not a prefix" in e for e in errors), errors
+    assert any("does not appear in its message" in e for e in errors), errors
 
 
 def test_gate_accepts_a_title_truncated_at_a_word_boundary(tmp_path):

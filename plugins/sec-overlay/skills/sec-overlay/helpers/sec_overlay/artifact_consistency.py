@@ -218,7 +218,7 @@ def _check_truncated_titles(ws: Workspace, report_md: str) -> list[str]:
         at = message.find(prefix)
         if at < 0:
             errors.append(
-                f"artifact-consistency: triage title for {row[0]} is not a prefix of its "
+                f"artifact-consistency: triage title for {row[0]} does not appear in its "
                 f"message: {what!r}"
             )
             continue

@@ -1892,6 +1892,10 @@ Residual gap: `find` returns the first match. A prefix that also appears earlier
 at a position where the next character is not a space could report a false mid-word cut. No
 message in the current corpus has that shape.
 
+The absent-prefix error used to say the cell "is not a prefix of its message". The check is a
+substring search, not a prefix test, so the wording was wrong. The error now says the cell
+"does not appear in its message", which matches what `find` actually checks.
+
 ### Quoted diff paths are decoded (REQ-69)
 
 `_patch_files` collects the post-image path of every file a patch touches. `verify.py` then

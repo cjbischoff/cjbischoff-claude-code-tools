@@ -43,6 +43,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
   preconditions, instead of rendering `_(none needed)_`. JSON `null` means "not supplied".
 - Check a truncated triage title against its finding's message and a word boundary, instead of
   against the renderer's own output. The old comparison could not fail. Closes F-12.
+- Correct the truncated-title error message. It said the cell "is not a prefix of its message",
+  but the check is a substring search, not a prefix test.
 - `phase_docs.regenerate` raises `nested phase-table BEGIN marker at line <n>` when a second
   `BEGIN GENERATED: phase-table` marker opens before the current block's `END`. The outer rewrite
   used to swallow the inner marker and every line between the two, deleting content with no error.

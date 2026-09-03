@@ -2042,3 +2042,11 @@ empty list, so it renders `_(none needed)_` instead of falling back to
 `Finding.preconditions`. `test_a_null_preconditions_value_falls_back_to_the_finding` asserts
 the fallback and failed before the fix. The guard now reads
 `rt.get('preconditions') is not None`.
+
+## 2026-09-03 — final-review finding 6: a substring check called itself a prefix check
+
+`_check_truncated_titles` finds the triage cell's prefix anywhere in the finding's message with
+`message.find(prefix)`, a substring search. The absent-prefix error said the cell "is not a
+prefix of its message", which claims a stricter check than the code runs.
+`test_gate_flags_a_hand_edited_truncated_title` now asserts the error says the cell "does not
+appear in its message" and failed before the fix. The check itself is unchanged.
