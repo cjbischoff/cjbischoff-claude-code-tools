@@ -914,7 +914,7 @@ entry per built-in language plus a trailing `"**/*": "default.md"` catch-all, so
 a reachable, testable map value like every other doc instead of a fallback living outside the
 map (`_resolve_builtin_or_default`'s post-loop fallback keeps working unchanged, since the
 catch-all matches everything the fallback did). `REQUIRED_RULE_SECTIONS` names the five defect
-families every built-in doc must cover, in the fixed order `python.md` established; a sibling
+families every built-in doc must cover, in the fixed order `python.md` established. A sibling
 `RULE_SECTION_SYNONYMS` dict carries the accepted per-language heading wording for each family
 (a Rust doc says panic/unwrap where a Java doc says null pointer) as data, not scattered test
 logic — `tests/test_rule_docs.py` drives every assertion from these two constants and the map
@@ -926,7 +926,7 @@ exact order: manifests (`pom.xml`, `package.json`, `Cargo.toml`, ...), config (`
 `.json`, `.yaml`, `.github/**`), templates (FreeMarker, Astro, MyBatis mapper/DAO XML), and the
 remaining languages (C/C++, Protobuf, GraphQL, Prisma, Terraform, Bicep, Nix, Haskell, Julia,
 Nim, ArkTS, gettext `.po`/`.pot`). Each new doc under `rules/rule_docs/` was adapted from OCR's
-Apache-2.0 sources and carries an `Adapted from open-code-review (Apache-2.0)` attribution line;
+Apache-2.0 sources and carries an `Adapted from open-code-review (Apache-2.0)` attribution line.
 `tests/test_rule_glob.py` asserts the 27 ported docs are mapped, attributed, and resolve for a
 representative path each (first-match order matters: `.github/workflows/**` before `.github/**`,
 `pom.xml`/`package.json`/... before the generic `**/*.{json,json5}`).
@@ -934,7 +934,7 @@ representative path each (first-match order matters: `.github/workflows/**` befo
 Phase 3 plan 06 (Task 1) adds the review-file agent seam, mirroring `reflection.py`'s
 render/parse-only discipline (no subprocess, no network client, no model SDK — `SKILL.md` owns
 dispatch, D-13). `review_agent.py`'s `render_review_prompt` renders `agents/review-file.md`
-(Task 2's file, not this one's) for a single file's review pass; `parse_review_response` is the
+(Task 2's file, not this one's) for a single file's review pass. `parse_review_response` is the
 REV-03 elevation-of-privilege backstop — every finding it builds carries `REVIEW_AGENT_CLAIM`
 (`evidence.as_llm_claim("review-agent")`) as its only evidence source and `FindingStatus.RAW`,
 both fixed in code rather than read from the model's response, so `evidence.confirms_alone` is
@@ -980,7 +980,7 @@ directly, so a passing test proves the production path, not the bug.
 
 Phase 4 plan 01 (Task 1, tracer) adds two new modules and extends `sarif.py`, wired end to end
 through `cli.run_review` — see the module map entries in [`../README.md`](../README.md) for the
-full contract. `bundle.py` is SCALE-01's grouping unit (`ReviewUnit`, `group_bundles`); this
+full contract. `bundle.py` is SCALE-01's grouping unit (`ReviewUnit`, `group_bundles`). This
 plan's grouping is the degenerate one-unit-per-file case only, called on `selection.reviewable`
 downstream of `file_select.partition`. `review_comments.py` is OUT-01's diff-anchored comment
 writer (`DiffComment`, `comment_from_finding`, `write_review_comments`), called once after
@@ -995,7 +995,7 @@ Phase 4 plan 01 (Task 2) gives `group_bundles` its real grouping semantics, repl
 degenerate one-unit-per-file placeholder: an impl/test pair (`foo.py`/`test_foo.py`,
 `foo.go`/`foo_test.go`, `foo.ts`/`foo.test.ts` or `foo.spec.ts`) and locale/config siblings in the
 same directory (`en.json`/`fr.json`, `config.dev.yaml`/`config.prod.yaml`) now share one
-`ReviewUnit`; every file a rule does not claim still falls back to its own single-member unit, so
+`ReviewUnit`. Every file a rule does not claim still falls back to its own single-member unit, so
 no path is ever dropped. The fallback key strips a `test`/`tests` directory segment before
 comparing, so this repo's own `tests/test_foo.py` convention pairs with a root-level `foo.py`.
 `parse_review_response` gained a keyword-only `bundle_paths: frozenset[str] | None = None`
@@ -1007,7 +1007,7 @@ this task. `recorded_return_source` gained a matching `bundle_paths_by_path: dic
 frozenset[str]] | None = None` parameter, looked up per file and passed through unchanged.
 `cli.run_review` now builds that map from `group_bundles(selection.reviewable)`'s output and
 passes it to the default `recorded_return_source` call — the per-file dispatch loop shape is
-unchanged; only the membership each file's parse call sees is widened. Known heuristic scope
+unchanged. Only the membership each file's parse call sees is widened. Known heuristic scope
 limit: the `test`/`tests` segment strip only matches a literal directory component, so a
 non-conventional parallel source/test tree (e.g. `sec_overlay/bundle.py` vs
 `tests/test_bundle.py`, this very codebase's own layout) does not pair under this rule — both
@@ -1021,7 +1021,7 @@ Phase 4 plan 02 (task 1, SCALE-02) gave `cli.py`'s `review` subcommand three bou
 shared value, because a worker-count ceiling sized for `--concurrency`/`--max-git-procs` would
 reject `--timeout`'s own, much larger, order of magnitude (seconds, not workers). A new
 `_bounded_int(value, *, flag, ceiling)` helper rejects (never clamps) a value outside `[1,
-ceiling]`, raising `ValueError` with a message naming the flag and its range; `run_review` calls
+ceiling]`, raising `ValueError` with a message naming the flag and its range. `run_review` calls
 it on all three kwonly params as its first executable statement, before any git subprocess call,
 and `main()` maps the `ValueError` to exit 2 exactly like an unknown profile or bad ref.
 `--concurrency` has no enforcement point in `cli.py` itself — the Python core never dispatches a
@@ -1061,7 +1061,7 @@ grows two pairing rules — C/C++ header-impl (`.h/.c`, `.hpp/.cpp`, same direct
 interface/impl stem pairs (`svc.ts`/`svc.impl.ts`) — and a token-cap split: `group_bundles` now
 takes keyword-only `diffs` and `max_unit_tokens` (`MAX_UNIT_TOKENS = 50_000`), and when `diffs`
 is supplied a grouped unit whose members' estimated diffs exceed the cap is split into
-first-fit runs (an oversized single member becomes its own run, never dropped); `diffs=None`
+first-fit runs (an oversized single member becomes its own run, never dropped). `diffs=None`
 leaves every existing caller byte-identical. `review_agent.render_review_prompt` gains keyword-only
 `sibling_diffs` and `cap_tokens` (`DEFAULT_SIBLING_CAP_TOKENS = 2_000`): siblings render into the
 new `{{SIBLING_DIFFS}}` token largest-first as fenced diffs, each over the cap replaced by an
@@ -1069,19 +1069,19 @@ new `{{SIBLING_DIFFS}}` token largest-first as fenced diffs, each over the cap r
 `{{CHANGE_FILES}}`. `cli.run_review`'s prepare path passes each file its unit-mates' diffs as
 `sibling_diffs`. Deferred (recorded in `docs/parity/EXTRACTION.md`): single-file units do not yet
 receive non-mate sibling diffs (gated on REQ-P4's budget, Task 12), and `import_adjacency
-(graph_json)` grouping is not built (SPEC-optional; review mode must not require `kb/graph.json`).
+(graph_json)` grouping is not built (SPEC-optional, and review mode must not require `kb/graph.json`).
 
 Parity plan Task 12 (REQ-P4) adds a hard token budget over the same size primitive.
 `review_budget.py` keeps `estimate_tokens` as the raw `len(text) // 4` primitive and adds
 `estimate_review_cost(diff_text)`, which projects OCR's plan-loop cost for one file:
 `diff_tokens + (PLAN_PROMPT + PLAN_OUT) + ROUNDS * (diff_tokens + PLAN_PROMPT) + ROUNDS * ROUND_OUT`
-(constants `PLAN_PROMPT=2000`, `PLAN_OUT=400`, `ROUNDS=7`, `ROUND_OUT=700`; an empty diff costs
+(constants `PLAN_PROMPT=2000`, `PLAN_OUT=400`, `ROUNDS=7`, `ROUND_OUT=700`, and an empty diff costs
 21300). `BudgetGate(budget)` is a latching admission gate: a budget of 0 admits every file
-(unlimited); otherwise `admit(estimate)` commits the spend when `spent + estimate <= budget`, and
+(unlimited). Otherwise `admit(estimate)` commits the spend when `spent + estimate <= budget`, and
 the first projected breach latches the gate closed so it refuses every later file. `cli.run_review`
 gains a keyword-only `token_budget` parameter (CLI `--token-budget`, default 0). After fetch, a file
 whose `estimate_review_cost` exceeds `FILE_BUDGET_FRACTION` (0.8) of the budget is excluded as
-`too-large-tokens` before review; each remaining file passes through the gate, and a refused file is
+`too-large-tokens` before review. Each remaining file passes through the gate, and a refused file is
 sealed `partial` with the `BUDGET_SKIP_NOTE = "skipped(budget)"` note at exit 0 (a budget stop is a
 planned outcome, not the fetch-failure `partial` at exit 3). `ReviewPlanEntry` carries a
 `token_estimate` field surfaced in `--prepare`, and `CoverageManifest` records a `budget_exceeded`
@@ -1093,7 +1093,7 @@ Phase 4 plan 03 (Task 2, SCALE-03) adds a resume-identity gate. `review_coverage
 round-tripped through `to_dict`/`load` (a version-1 manifest, or a version-2 one written before
 either was ever supplied, loads both as `None`). A new `check_resume_identity(prior, *, model,
 profile)` raises `ResumeIdentityError` — naming both the prior and current value — when the
-current run's `model` or `profile` differs from `prior`'s recorded value; a `None` prior value
+current run's `model` or `profile` differs from `prior`'s recorded value. A `None` prior value
 permits any current one, so identity pinning starts from the run that first supplies it, never
 enforced retroactively. `cli.py`'s `run_review` gained a keyword-only `model` parameter and now
 loads any existing `coverage_manifest.json` and runs this check immediately after resolving the
@@ -1141,24 +1141,24 @@ Phase 4 plan 04 (Task 3, SCALE-02 gap closure) bounds `run_review`'s wall-clock 
 hung unit fetch to `--timeout`. Two prior gaps combined to leave the process open past the
 declared timeout: the unit-fetch block's `with ThreadPoolExecutor(...) as ex:` blocked on
 exit until every submitted worker finished, even one `future.result(timeout=timeout)`
-already reported as timed out; and the production runner default was a bare
+already reported as timed out. The production runner default was also a bare
 `subprocess.run`, so a hung git child inside that abandoned worker was never killed, only
 orphaned. Both are now fixed together: the executor is built directly (not as a context
 manager) and shut down via `ex.shutdown(wait=False)` in a `finally`, so `run_review` returns
-without waiting for an abandoned worker; and the production runner default is
+without waiting for an abandoned worker. The production runner default is also
 `partial(subprocess.run, timeout=timeout)`, so every git call the review path makes — every
 unit fetch, `_bounded_map`'s line-count prefetch and binary-path detection, `resolve_ref_sha`,
 `RepoMemory.for_target` — inherits a kill deadline equal to the declared `--timeout` through
 the shared runner `r`, with no change needed to `_bounded_map` itself. `shutdown(wait=False)`
 alone would still leave the process open at interpreter exit (`concurrent.futures.thread`
-registers an atexit hook that joins every worker thread); killing the child closes that gap
+registers an atexit hook that joins every worker thread). Killing the child closes that gap
 too, since a killed `subprocess.run` call returns (raising `TimeoutExpired`, caught by
 `_fetch_file_review_inputs`'s existing exception-return path) instead of blocking forever.
 `_fetch_review_unit_files` also gained its own `timeout` parameter: it computes a monotonic
 deadline at its own entry (not at submit time, so a queued unit's wait in the pool never
 consumes its own budget) and, once past that deadline, records a unit's remaining members as
 timed out instead of fetching them — an abandoned worker stops doing pointless work rather
-than working through every member. An injected `runner` (tests) is untouched; only the
+than working through every member. An injected `runner` (tests) is untouched. Only the
 bare-`subprocess.run` default changed.
 
 Phase 5 plan 01 (D-05-01-01, discovered running the tracer end to end against a live target
@@ -1184,15 +1184,15 @@ not a directory before any workspace or git subprocess call, exiting 2 with `err
 must be an existing directory (got ...)` — the same shape as the `_bounded_int` exit-2
 convention. Pre-fix, the three cases each crashed differently depending on where
 `Workspace.ensure()`'s `mkdir(parents=True)` landed: a missing root was silently
-auto-vivified and the run failed later with an unrelated "unresolvable ref" message; an
-empty-string root reached a real `subprocess.run(cwd="")` and raised `FileNotFoundError`; a
+auto-vivified and the run failed later with an unrelated "unresolvable ref" message. An
+empty-string root reached a real `subprocess.run(cwd="")` and raised `FileNotFoundError`. A
 file-as-root raised `NotADirectoryError` from `Workspace.ensure()`'s own `mkdir`. The guard is
 a single `if not root or not Path(root).is_dir():` — `Path("").is_dir()` normalizes to `"."`
 and reports `True` (the CWD exists), so the empty-string case needs the explicit `not root`
 check rather than relying on `is_dir()` alone.
 
 Phase 6 plan 01 adds D-03: a `--workspace` override on `review`, mirroring `audit`'s existing
-flag. `run_review` gained a keyword-only `workspace: str | None = None` parameter; when truthy
+flag. `run_review` gained a keyword-only `workspace: str | None = None` parameter. When truthy,
 it resolves via `workspace.load_paths(workspace=workspace)` in place of the unconditional
 `RepoMemory.for_target(root, runner=r)` / `memory.ensure(target=root)` / `memory.workspace`
 sequence, matching `audit`'s own `if args.workspace: ws = load_paths(...)` shape exactly
