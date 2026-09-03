@@ -4,6 +4,11 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Changed
+
+- Rewrite the first part of the `sec_overlay` package README to ASD-STE100. Prose only — no code,
+  identifier, path, or fact changed. Part 1 of 6 for REQ-71.
+
 ### Removed
 
 - `phase_docs.NON_TABLE_STEPS` and `test_phase_docs.py`'s

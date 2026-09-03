@@ -5,7 +5,7 @@ scoring, reporting, campaign state, and per-repo memory. Stdlib-only (no runtime
 
 **The authoritative, grouped module map lives in [`../README.md`](../README.md#sec_overlay--module-map-grouped-by-job)** — that
 table lists every module by job and is kept current with the code. This file is the in-package
-entry point; read the parent map for the full inventory.
+entry point. Read the parent map for the full inventory.
 
 - Package layout: ~73 modules at the top level, plus the `correlate/` subpackage (cross-repo
   correlation — see the parent map's `sec_overlay/correlate/` section).
@@ -26,7 +26,7 @@ even when the finding's own `preconditions` field held real access requirements.
 `workspace.py`'s `read_findings`/`write_findings` now round-trip a finding's unknown JSON keys
 (REQ-27): `read_findings` stashes any key absent from `Finding.__dataclass_fields__` on the
 returned instance (in sorted order, for a deterministic merge) and warns on stderr naming the
-preserved keys; `write_findings` merges them back into the dumped record before writing. This
+preserved keys. `write_findings` merges them back into the dumped record before writing. This
 never touches `models.py`, so the frozen Go-port mirror (D-15) and its sha256 pin are unaffected.
 
 `workspace.py` gains `finding_counts(ws)` (REQ-13, folds in REQ-23), returning
@@ -55,7 +55,7 @@ entry, relative to the target root, so a recall claim can cite a ref the reader 
 the full contract and the CLI-callable list for its `list`/`match` subcommands.
 
 `review_findings.py` (new, REV-01) adds the review-profile gate `apply_profile` — see the
-module map entry in [`../README.md`](../README.md) for the full contract; `cli.py`'s
+module map entry in [`../README.md`](../README.md) for the full contract. `cli.py`'s
 `run_review` and `report.py`'s `write_report`/`write_review_ledger` now thread its
 `ReviewFinding` output through, both documented at the same map entries.
 
@@ -83,7 +83,7 @@ map entry in [`../README.md`](../README.md).
 `background.py` (new, REQ-P8) adds `load_background`, sanitizing developer-supplied background
 context before it enters a review prompt — a 1 MB `BACKGROUND_MAX_BYTES` cap, control-character
 strip, envelope-delimiter neutralization, a hard secret abort, then `redactor.safe_for_prompt`.
-`review_agent.render_review_prompt` gains a `background` kwarg; `cli.py`'s `review` gains
+`review_agent.render_review_prompt` gains a `background` kwarg. `cli.py`'s `review` gains
 `--background`/`--background-file`. See the module map entry in [`../README.md`](../README.md).
 
 `workspace.py`'s `Workspace` now coerces `str` path arguments via a hand-written `__init__`
@@ -93,7 +93,7 @@ type-checks under `ty` as well as running correctly. No behavior change.
 
 `kb.py` gained the arc42/threat-model tree path helpers (`arch_dir`/`arc42_path`/
 `container_diagram_path`, `threat_dir`/`threat_model_path`/`dfd_path`), replacing the old
-`kb/architecture.md` and `kb/THREAT_MODEL.md` single-file paths; `kb_status` now reports
+`kb/architecture.md` and `kb/THREAT_MODEL.md` single-file paths. `kb_status` now reports
 `arc42_path`/`threat_model_path` existence. `workspace.py`'s `Workspace.ensure()` now also
 creates `architecture/runtime-view/` and `threat-model/attack-sequences/` under the workspace
 root. `kb.py`'s now-dead `entities_dir` (no remaining callers once the prompts stopped reading
@@ -105,29 +105,32 @@ tables (`MAX_COMPOSED`, `MAX_SEVERITY`), vendored verbatim from FIRST's official
 
 `cvss.py` rewritten to CVSS v4.0: `cvss40_base(vector)` ports the MacroVector/interpolation
 algorithm from `cvss_score.js` against `cvss4_data.py`'s tables (base metrics only — E/CR/IR/AR
-fixed at their spec worst-case defaults, no environmental/threat support); `offensive_priority`
+fixed at their spec worst-case defaults, no environmental/threat support). `offensive_priority`
 keeps its 3.1 branch order verbatim. `CVSS:3.x` input now raises `ValueError`.
 
 `calibrate.py` re-pointed to `cvss40_base` (was `cvss31_base`, removed in the v4.0 migration) at
-its import and both call sites; `risk_score`/`priority` derivation shape is unchanged. The
+its import and both call sites. `risk_score`/`priority` derivation shape is unchanged. The
 `Finding.cvss_vector` docstring in `models.py` now says "CVSS v4.0" to match.
 
 `cvss.py`'s `_parse` now raises `ValueError` when a Threat (`E`) or Environmental (`CR`/`IR`/`AR`/
 `M*`) metric is present with a value other than `X` (Not Defined) — this engine scores base
-metrics only; `calibrate.py` records a `calibrate:cvss-unparseable` history event before falling
+metrics only. `calibrate.py` records a `calibrate:cvss-unparseable` history event before falling
 back to the heuristic score on any unparseable vector.
 
 New module `artifact_gate.py` (§4.8): `run_artifact_gate(ws)` checks a finished run's own
 artifacts — report.md free of stale constant sections and over-long triage cells, every shipping
 finding has a `findings/<ID>.md` detail file and a red-team directive, every triage-table ID
 resolves to a finding, and `CONTEXT.md`'s mermaid diagram stays at ≤10 nodes (ISSUE-022). Writes
-`kb/gates/artifact-gate.json`; runs before the opus artifact-review adversary, never deletes
+`kb/gates/artifact-gate.json`. Runs before the opus artifact-review adversary, never deletes
 findings. `check_duplication(arc42_text, tm_text)` flags a threat-model heading that restates an
 arc42 heading, or a structure heading (e.g. "Building Block View") appearing in the threat-model
-doc at all; `run_artifact_gate` calls it only when both `architecture/arc42.md` and
+doc at all. `run_artifact_gate` calls it only when both `architecture/arc42.md` and
 `threat-model/threat-model.md` exist.
 
-`context.py` gained `doc_coverage()` to compare documents discovered vs read and flag a low read ratio. The `load()` function now accepts optional `repo_root` and `scan_scope` parameters to populate `provenance["docs_discovered"]` at load time (wiring by downstream caller) — see the module map entry.
+`context.py` gained `doc_coverage()` to compare documents discovered vs read and flag a low read
+ratio. The `load()` function now accepts optional `repo_root` and `scan_scope` parameters to
+populate `provenance["docs_discovered"]` at load time (wiring by downstream caller). See the
+module map entry.
 
 `stage_validate.py`'s `validate_stage` now raises `ValueError` for a stage with no registered
 validator instead of silently passing, and `prefilter.py`'s `run_prefilter` gained a
@@ -137,12 +140,14 @@ silent partial result (ISSUE-034). Pass `strict=False` only for a deliberately p
 `"disabled"` skip reason is excluded from the raise — a profile turning a backend off on purpose
 is a planning decision, not a coverage hole (R14).
 
-`context.py` also gained `cited_source_docs()` (every `source_doc` an item or its history cites); `stage_validate.py`'s `_validate_context` now appends an error when a cited doc is absent from `provenance["docs_read"]` (ISSUE-021).
+`context.py` also gained `cited_source_docs()` (every `source_doc` an item or its history cites).
+`stage_validate.py`'s `_validate_context` now appends an error when a cited doc is absent from
+`provenance["docs_read"]` (ISSUE-021).
 
 `stage_validate.py`'s `_VALIDATORS` dict now routes every entry through `_adapt_dict`/
 `_adapt_optional_dict`, two small factories that isinstance-check the stage payload before
 delegating to the real validator. Previously only `_validate_runtime_test` guarded against a
-non-dict stage output; the other validators would raise `AttributeError` on malformed subagent
+non-dict stage output. The other validators would raise `AttributeError` on malformed subagent
 JSON instead of returning a validation error. No behavior change for well-formed input.
 
 `findings_gate.py` gained `validate_citations(ws, root, *, statuses=None)`, a resolver-backed
@@ -160,7 +165,7 @@ seconds recorded in `CampaignState.budget["timings"]` (ISSUE-014) — see the mo
 and `to_markdown` renders it as a "Wall-clock by phase, seconds" list in "Run economics" when
 present. Token and USD accounting was removed at REQ-46: the harness never surfaced a
 subagent's usage, so those tables always rendered empty. REQ-46 left `to_markdown` a
-`token_spend` parameter and a "Token spend by phase" branch that no caller could reach; this
+`token_spend` parameter and a "Token spend by phase" branch that no caller could reach. This
 task deleted both.
 
 `models.py`'s `Finding` gained `cluster_id` (systemic-cluster id) and `affected_sites` (member
@@ -200,29 +205,29 @@ the colon would read as a receipt with no real entry behind it.
 
 `models.py`'s `Finding` gained `receipt_tier: int | None` — an additive, nullable field that
 round-trips through `to_dict`/`from_dict`. It holds the value `evidence.receipt_tier()` derives
-once a gate stamps it; `None` before that.
+once a gate stamps it. It holds `None` before that.
 
 `models.py`'s `Finding` also gained `impact: str = ""` — the concrete consequence of exploitation,
 rendered as the report's Impact section. `findings_gate.validate_findings` rejects a
-`SHIPPING_STATUSES` finding whose `impact` is blank; non-shipping findings may stay blank.
+`SHIPPING_STATUSES` finding whose `impact` is blank. Non-shipping findings may stay blank.
 
 `report.py`'s `render_finding` §4 Impact now renders that real `f.impact` text (falling back to
 `"(impact not recorded)"` when blank) instead of a boilerplate sentence. The constant §6 Confirmed
 Attack Scenario and §8 Testing blocks are deleted — both always emitted identical fixed prose
-regardless of the finding (ISSUE-052); section numbering (`sev_no`/`fix_no`) is unchanged.
+regardless of the finding (ISSUE-052). Section numbering (`sev_no`/`fix_no`) is unchanged.
 
 `cluster.py` (new) groups ≥3 same-class, same-sink `raw` findings into one systemic cluster,
 run after dedupe and before the critic/gate ladder — see the module map entry.
 
 `dedupe.py`'s same-line pass now keys on `(file, line, cls)` alone when `dataflow` is empty,
 so two dataflow-less findings at the same site collapse regardless of message wording
-(ISSUE-042); a non-empty `dataflow` still extends the key. `correlate/edges.py`'s
+(ISSUE-042). A non-empty `dataflow` still extends the key. `correlate/edges.py`'s
 `_RECURRENCE_STATUSES` is now `evidence.SHIPPING_STATUSES` rather than a separate literal
 (ISSUE-005).
 
 `report.py` gained `collapse_clusters`, which reduces each systemic cluster to one representative
 finding (highest-risk member, or the elected primary if present) before the confirmed and
-needs-runtime buckets are counted and rendered; `render_ndt` renders an affected-sites table when
+needs-runtime buckets are counted and rendered. `render_ndt` renders an affected-sites table when
 the finding carries `affected_sites`.
 
 `report.py`'s bottom-line `Confirmed:` line now renders counts in words (`"1 critical, 1 high, 2
@@ -238,13 +243,13 @@ old "any mechanical receipt confirms" rule. It stamps `Finding.receipt_tier` (th
 strongest — tier among `evidence_sources`, via `evidence.receipt_tier`), rejects a
 `confirmed`/`fixed` finding unless `evidence.confirms_alone` is true (a Tier-1 receipt), and
 rejects any `runtime_disposition` outside `evidence.RUNTIME_DISPOSITIONS`. A ripgrep-only
-receipt — previously sufficient for SAST-unsupported languages — now fails the gate; route
+receipt — previously sufficient for SAST-unsupported languages — now fails the gate. Route
 that finding to `needs-deployment-testing` instead. `driver._act_findings_gate` raises
 `PhaseHalt` when the gate returns any error, so a rejected finding now halts the phase
 instead of passing through silently.
 
 **REQ-47:** `scope.py` is deleted — `is_external_package` had no caller. `scanscope.py`'s
-`rel_to_root` helper is deleted too, for the same reason; the module now exposes only
+`rel_to_root` helper is deleted too, for the same reason. The module now exposes only
 `ScanScope`, `resolve`, `write_scope`, and `load_scope` — see the module map entry.
 
 `calibrate.py` gained `_EXTERNAL_CAP` (3) and `_is_external_boundary`: a finding whose
@@ -275,11 +280,11 @@ unchanged — see the module map entry.
 [{"kind": "external", "justification": "needs runtime proof"}]` entry on their SARIF result, others
 carry none. `report.write_report` now defaults to passing all reportable findings plus
 `needs-deployment-testing` findings as `suppressed` (behavior change on upgrade — SARIF used to
-carry confirmed/fixed only); `confirmed_only=True` (CLI: `--confirmed-only`) restores the prior
+carry confirmed/fixed only). `confirmed_only=True` (CLI: `--confirmed-only`) restores the prior
 confirmed/fixed-only SARIF with no suppressions.
 
 `calibrate.py`, `selfscore.py`, `sarif.py`, and `report.py` are `ruff format`-clean as of the
-review-improvements branch; keep them that way (run `ruff format` before committing edits here).
+review-improvements branch. Keep them that way (run `ruff format` before committing edits here).
 
 `phases.py` (new) is the ordered phase table (`PhaseSpec`, `PHASE_TABLE`) plus pure sequencer
 helpers (`missing_inputs`, `outputs_present`, `next_actionable_phase`) the audit driver walks —
@@ -297,7 +302,7 @@ on it existing before `report` may start. `selfscore` and `prove` still follow `
 `_artifact_review_json`, output `context.prior_context_path` — `kb/prior_context.json`), the
 durable cross-scan distillation that closes the pipeline.
 
-`report.py` (REQ-40) no longer probes the filesystem for `redteam-plan.md`; the caller now states
+`report.py` (REQ-40) no longer probes the filesystem for `redteam-plan.md`. The caller now states
 whether the run produced one. `render_ndt`, `_ndt_next_actions`, `write_finding_details`, and
 `write_report` all take a `has_redteam_plan` keyword — `render_ndt`/`_ndt_next_actions`/
 `write_finding_details` default it `True` (the common case), `write_report` defaults it `False`
