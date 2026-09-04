@@ -14,8 +14,9 @@ from sec_overlay.evidence import (
     SHIPPING_STATUSES,
     confirms_alone,
     receipt_tier,
+    unknown_receipts,
 )
-from sec_overlay.models import Finding
+from sec_overlay.models import OPEN_QUESTION_KEYS, Finding
 from sec_overlay.phase_gate import resolve_ref
 from sec_overlay.prove import is_reproduction_receipt
 from sec_overlay.review_findings import (
@@ -125,6 +126,13 @@ def validate_findings(ws: Workspace) -> list[str]:
             data["receipt_tier"] = stamped_tier
             p.write_text(json.dumps(data))
 
+        for source in unknown_receipts(f.evidence_sources):
+            errors.append(
+                f"{f.id}: evidence source {source!r} names a receipt prefix outside the "
+                f"closed set (see references/prompt-constants.md, EVIDENCE_VOCABULARY); "
+                f"use a declared receipt or namespace the claim llm-claimed:"
+            )
+
         # A dependency-catalog receipt names a real catalog entry, or it is free text
         # dressed as a receipt (Task 4 added the receipt kind; this makes it falsifiable).
         for source in f.evidence_sources:
@@ -167,6 +175,17 @@ def validate_findings(ws: Workspace) -> list[str]:
             errors.append(
                 f"{f.id}: impact must be non-empty for a shipping finding "
                 f"(status {f.status.value})"
+            )
+
+        if (f.reachability or {}).get("blocker") == "external-boundary" and not any(
+            isinstance(q, dict) and all(str(q.get(k, "")).strip() for k in OPEN_QUESTION_KEYS)
+            for q in f.open_questions
+        ):
+            errors.append(
+                f"{f.id}: reachability.blocker is 'external-boundary' but the finding "
+                f"carries no complete open_questions entry (keys "
+                f"{list(OPEN_QUESTION_KEYS)}); name the person, team, or system that can "
+                f"settle the external fact"
             )
     record_stage(ws, "findings-gate")
     return errors

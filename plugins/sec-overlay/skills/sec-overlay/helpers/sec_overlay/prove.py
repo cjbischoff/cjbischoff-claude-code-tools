@@ -22,9 +22,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+from sec_overlay.evidence import REPRODUCTION_RECEIPT, is_reproduction_receipt
 from sec_overlay.workspace import Workspace
-
-REPRODUCTION_RECEIPT = "reproduction"
 
 # Classes whose oracle a wrapper can decide without provisioning a live service.
 AUTO_CONFIRMABLE = frozenset(
@@ -52,22 +51,6 @@ _PROOF_FIELDS = (
     "resolved_version",
     "scope",
 )
-
-
-def is_reproduction_receipt(source: str) -> bool:
-    """Report whether an evidence source is a reproduction receipt.
-
-    Args:
-        source: One entry of a finding's ``evidence_sources``.
-
-    Returns:
-        True for ``reproduction`` and for its colon form ``reproduction:<tool>``.
-
-    Example:
-        >>> is_reproduction_receipt("reproduction")
-        True
-    """
-    return source == REPRODUCTION_RECEIPT or source.startswith(REPRODUCTION_RECEIPT + ":")
 
 
 def prove_enabled(ws: Workspace) -> bool:

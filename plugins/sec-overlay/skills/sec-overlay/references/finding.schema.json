@@ -1,6 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
+  "additionalProperties": false,
   "required": ["id", "rule_id", "cls", "status", "severity", "file", "line", "message"],
   "properties": {
     "id": {"type": "string"},
@@ -25,18 +26,25 @@
     "evidence_sources": {"type": "array", "items": {"type": "string"}},
     "risk_score": {"type": ["integer", "number", "null"]},
     "verification": {
-      "enum": ["verified-static", "static-only", "not-fixed", "verify-error", "fact-checked", null]
+      "enum": ["verified-static", "static-only", "not-fixed", "verify-error", null]
     },
     "patch_diff": {"type": ["string", "null"]},
     "discovery_sha": {"type": ["string", "null"]},
     "duplicate_of": {"type": ["string", "null"]},
-    "history": {"type": "array", "items": {"type": "object"}},
+    "history": {"type": "array", "items": {
+      "type": "object",
+      "required": ["event"],
+      "properties": {"event": {"type": "string"}}
+    }},
     "fingerprint": {"type": ["string", "null"]},
     "priority": {"type": ["string", "null"]},
     "cvss_vector": {"type": ["string", "null"]},
     "asvs_ids": {"type": "array", "items": {"type": "string"}},
     "codeguard_ids": {"type": "array", "items": {"type": "string"}},
-    "completeness_tier": {"type": ["string", "null"]},
+    "completeness_tier": {
+      "type": ["string", "null"],
+      "enum": ["FULL", "MITIGATION", "WORKAROUND", null]
+    },
     "attacker": {"type": ["string", "null"]},
     "privilege": {"type": ["string", "null"]},
     "exact_request": {"type": ["string", "null"]},
@@ -55,13 +63,41 @@
       }
     },
     "preconditions": {"type": "array", "items": {"type": "string"}},
-    "reachability": {"type": ["object", "null"]},
-    "judge_verdict": {"type": ["string", "null"]},
+    "reachability": {
+      "type": ["object", "null"],
+      "properties": {
+        "reachable": {"type": "boolean"},
+        "blocker": {
+          "type": ["string", "null"],
+          "enum": ["sanitizer", "auth_check", "input_validation", "dead_code",
+                   "feature_flag", "external-boundary", "other", null]
+        },
+        "chain": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "judge_verdict": {
+      "type": ["string", "null"],
+      "enum": ["uphold", "severity-inflated", "downgrade", null]
+    },
     "runtime_dependent": {"type": "boolean"},
-    "open_questions": {"type": "array", "items": {"type": "object"}},
+    "open_questions": {"type": "array", "items": {
+      "type": "object",
+      "properties": {
+        "question": {"type": "string"},
+        "why_it_matters": {"type": "string"},
+        "who_to_ask_or_check": {"type": "string"}
+      }
+    }},
     "cluster_id": {"type": ["string", "null"]},
-    "affected_sites": {"type": "array", "items": {"type": "object"}},
-    "receipt_tier": {"type": ["integer", "null"]},
+    "affected_sites": {"type": "array", "items": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string"},
+        "file": {"type": "string"},
+        "line": {"type": "integer"}
+      }
+    }},
+    "receipt_tier": {"type": ["integer", "null"], "enum": [1, 2, null]},
     "reproduction": {
       "type": "object",
       "properties": {

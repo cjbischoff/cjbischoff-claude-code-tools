@@ -1,9 +1,8 @@
-"""Tests for F8 factcheck, F10 baseline cap, F15 envelope hardening."""
+"""Tests for F10 baseline cap, F15 envelope hardening."""
 from dataclasses import replace
 
 from sec_overlay.calibrate import calibrate_score
 from sec_overlay.envelope import attribution_banner, neutralize_markers, wrap_untrusted
-from sec_overlay.factcheck import apply_verdict, validate_verdict
 from sec_overlay.models import Finding, FindingStatus, Severity
 
 
@@ -11,22 +10,6 @@ def _f(**kw):
     base = Finding(id="F1", rule_id="r", cls="xss", status=FindingStatus.CONFIRMED,
                     severity=Severity.HIGH, file="a.py", line=5, message="m")
     return replace(base, **kw) if kw else base
-
-
-# F8
-def test_factcheck_verified_corrected_rejected():
-    v = _f(); apply_verdict(v, {"verdict": "VERIFIED"})
-    assert v.verification == "fact-checked"
-    c = _f(); apply_verdict(c, {"verdict": "CORRECTED", "field": "line", "value": 42})
-    assert c.line == 42 and c.verification == "fact-checked"
-    r = _f(); apply_verdict(r, {"verdict": "REJECTED", "reasoning": "not there"})
-    assert r.status is FindingStatus.REJECTED
-
-
-def test_factcheck_validation():
-    assert validate_verdict({"verdict": "NOPE"})
-    assert validate_verdict({"verdict": "CORRECTED"})            # missing field/value
-    assert validate_verdict({"verdict": "VERIFIED"}) == []
 
 
 # F10

@@ -263,29 +263,18 @@ def test_aggregate_scorecards_ignores_none_metrics():
 # ---- cost/latency columns (REQ-M6) ----
 def test_scorecard_carries_cost_columns():
     corpus = Corpus([_entry("V1")])
-    cost = {"tokens": 120_000, "wall_time_s": 42.5, "usd_estimate": 0.5}
+    cost = {"wall_time_s": 42.5}
     sc = tally([_jr("V1", "positive", True)], corpus, cost=cost)
     d = sc.to_dict()["cost"]
-    assert d["tokens"] == 120_000
     assert abs(d["wall_time_s"] - 42.5) < 1e-9
-    # one real-confirmed TP → $/TP == usd_estimate / 1
-    assert abs(d["usd_per_confirmed_tp"] - 0.5) < 1e-9
-
-
-def test_scorecard_cost_none_per_tp_when_no_tp():
-    corpus = Corpus([_entry("V1")])
-    cost = {"tokens": 5, "wall_time_s": 1.0, "usd_estimate": 0.5}
-    sc = tally([_jr("V1", "positive", False)], corpus, cost=cost)  # missed → 0 TP
-    assert sc.to_dict()["cost"]["usd_per_confirmed_tp"] is None
 
 
 def test_scorecard_markdown_renders_cost_and_per_class_fp():
     corpus = Corpus([_entry("V1"), _entry("N1", kind="negative", cls="sqli", file="s.js")])
-    cost = {"tokens": 120_000, "wall_time_s": 42.5, "usd_estimate": 0.5}
+    cost = {"wall_time_s": 42.5}
     md = tally([_jr("V1", "positive", True), _jr("N1", "negative", True, cls="sqli")],
                corpus, cost=cost).to_markdown().lower()
-    assert "tokens" in md and "wall-time" in md
-    assert "estimate" in md  # $/TP labeled estimate
+    assert "wall-time" in md
     assert "## by class" in md and "fp-rate" in md
 
 

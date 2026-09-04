@@ -106,6 +106,10 @@ def _recall_gate_json(ws: Workspace) -> Path:
     return ws.kb / "gates" / "recall-gate.json"
 
 
+def _validate_fix_json(ws: Workspace) -> Path:
+    return ws.kb / "gates" / "validate-fix.json"
+
+
 PHASE_TABLE: tuple[PhaseSpec, ...] = (
     # No inputs: the census reads the target's source, never recon's output —
     # that is what lets it catch a route recon never named.
@@ -129,17 +133,22 @@ PHASE_TABLE: tuple[PhaseSpec, ...] = (
     PhaseSpec("judge", "agent", (_findings_dir,), (_findings_dir,), prompt="judge.md"),
     PhaseSpec("validate", "agent", (_findings_dir,), (_findings_dir,), prompt="validate.md"),
     PhaseSpec("trace", "agent", (_findings_dir,), (_findings_dir,), prompt="trace.md"),
-    # No inputs/outputs declared: kb/verdicts.json is optional (Plan B emits the
-    # fact-check agent that writes it) and a hard input gate would halt every run
-    # until then. _act_factcheck no-ops silently when the file is absent.
-    PhaseSpec("factcheck", "deterministic", (), ()),
     PhaseSpec("calibrate", "deterministic", (_findings_dir,), (_findings_dir,)),
     PhaseSpec("patch", "agent", (_findings_dir,), (_findings_dir,), prompt="patch.md"),
-    PhaseSpec("verify", "deterministic", (_findings_dir,), (_findings_dir,)),
+    PhaseSpec(
+        "validate-fix",
+        "agent",
+        (_findings_dir,),
+        (_validate_fix_json,),
+        prompt="validate-fix.md",
+    ),
+    PhaseSpec(
+        "verify", "deterministic", (_findings_dir, _validate_fix_json), (_findings_dir,)
+    ),
     PhaseSpec("demote-noise", "deterministic", (_findings_dir,), (_findings_dir,)),
-    PhaseSpec("report", "deterministic", (_findings_dir,), (_report, _sarif)),
-    PhaseSpec("selfscore", "deterministic", (_report,), (_findings_dir,)),
     PhaseSpec("redteam", "agent", (_findings_dir,), (_redteam_plan,), prompt="redteam.md"),
+    PhaseSpec("report", "deterministic", (_findings_dir, _redteam_plan), (_report, _sarif)),
+    PhaseSpec("selfscore", "deterministic", (_report,), (_findings_dir,)),
     PhaseSpec("prove", "agent", (_findings_dir,), (_prove_json,), prompt="prove.md"),
     PhaseSpec("artifact-gate", "deterministic", (_report, _sarif), (_artifact_gate_json,)),
     PhaseSpec(

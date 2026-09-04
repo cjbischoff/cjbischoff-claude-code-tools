@@ -123,7 +123,7 @@ def test_verify_patch_does_not_choke_on_git_dir(tmp_path, monkeypatch):
     (target / "app.php").write_text("<?php echo 1;")
     calls = {"n": 0}
 
-    def fake_hit(target_dir, config, basename, cls, rules):
+    def fake_hit(target_dir, config, file_path, cls, rules, **kw):
         calls["n"] += 1
         return calls["n"] == 1  # flagged pre-patch, gone post-patch
 

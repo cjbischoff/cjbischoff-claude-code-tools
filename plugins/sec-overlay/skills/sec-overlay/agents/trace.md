@@ -31,8 +31,9 @@ Include ANTI_MANIPULATION, EXHAUSTIVENESS, TOOL_TRUST, FIELD_OWNERSHIP from
      reaches the sink. Record the chain as `file:line` hops.
    - **not reachable**: a control on EVERY path blocks it OR no untrusted entry reaches it. You
      MUST cite the specific `file:line` blocker and classify it: `sanitizer` | `auth_check` |
-     `input_validation` | `dead_code` | `feature_flag` | `other`. An INCOMPLETE sanitizer is NOT
-     a blocker — only a control effective on every path counts.
+     `input_validation` | `dead_code` | `feature_flag` | `external-boundary` | `other`. An
+     INCOMPLETE sanitizer is NOT a blocker — only a control effective on every path counts.
+     `external-boundary` is the one blocker that does not assert `reachable: false`; see below.
    - **not reachable, but the reason is an external fact (not a code control)**: if
      the only thing standing between "reachable" and "not reachable" is something
      this repo cannot answer (an org policy, a runtime config value, a version range
@@ -45,12 +46,15 @@ Include ANTI_MANIPULATION, EXHAUSTIVENESS, TOOL_TRUST, FIELD_OWNERSHIP from
      Conditional Access enforces group X" is).
 
      When a sink resolves into a dependency whose source is not in the ingested set
-     (check `kb/scan-scope.json`), set `reachability.blocker = "external-boundary"` and
-     record the package name in `preconditions` (e.g. "ownership check in
-     @lume/account-portal-core"). Do not mark the finding reachable or confirmed from
-     source you cannot read.
+     (check `kb/scan-scope.json`), set `reachability.blocker = "external-boundary"`, leave
+     `reachable` absent, and record the package name in `preconditions` (e.g. "ownership
+     check in @lume/account-portal-core"). Do not mark the finding reachable or confirmed
+     from source you cannot read. The findings gate rejects an `external-boundary` finding
+     that carries no complete `open_questions` entry, so add the entry described above in
+     the same pass.
 4. Write the verdict onto the finding's `reachability` field:
    `{"reachable": true|false, "blocker": "<taxonomy>"|null, "chain": ["file:line", ...]}`.
+   Omit the `reachable` key entirely when you leave the verdict unset; never write `null` for it.
    A finding proven unreachable with a cited blocker should be demoted (`status: "rejected"`,
    history citing the blocker). If you cannot complete the trace, leave `reachable` absent
    (recall-safe: unassessed ≠ unreachable) and note it — never guess "unreachable".

@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict, is_dataclass, replace
 from pathlib import Path
 
 from sec_overlay import cost
@@ -19,7 +19,7 @@ from sec_overlay.redteam import discriminate
 from sec_overlay.render_util import signal_lines
 from sec_overlay.review_findings import ReviewFinding
 from sec_overlay.sarif import to_sarif
-from sec_overlay.state import load_state
+from sec_overlay.state import load_state, save_state
 from sec_overlay.workspace import (
     _OVERFLOW_ATTR,
     Workspace,
@@ -30,6 +30,23 @@ from sec_overlay.workspace import (
 
 _ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 _REPORTABLE = {FindingStatus.CONFIRMED, FindingStatus.FIXED}
+
+# A message may open with the finding's lifecycle state. The triage "What" column
+# describes the defect, so a leading status sentence is dropped, not rendered.
+_STATUS_LEAD = frozenset(
+    {
+        "candidate",
+        "confirmed",
+        "duplicate",
+        "fixed",
+        "needs runtime proof",
+        "provenance unresolved",
+        "rejected",
+        "stale",
+        "unconfirmed",
+        "verified",
+    }
+)
 
 
 def _risk_sort_key(f: Finding) -> tuple[int, int, str]:
@@ -222,16 +239,18 @@ def render_finding(f: Finding, patch_status: PatchStatus | None = None) -> str:
     return "\n".join(out)
 
 
-def render_ndt(f: Finding) -> str:
+def render_ndt(f: Finding, *, has_redteam_plan: bool = True) -> str:
     """Render a needs-deployment-testing finding as a foregrounded, needs-runtime-labeled view.
 
     Populated from the fields an NDT finding actually carries — ``message`` (what/why),
     ``dataflow`` (source-side chain), ``preconditions``, and ``runtime_test`` (objective +
     secure/insecure signal). Always labeled needs-runtime and never described as confirmed; the
-    runnable payloads/telemetry live in ``redteam-plan.md``.
+    runnable payloads/telemetry live in ``redteam-plan.md``, when the run produced one.
 
     Args:
         f: A needs-deployment-testing finding.
+        has_redteam_plan: True when the run produced ``redteam-plan.md``. When
+            False, the pointer to that file is omitted, because it does not exist.
 
     Returns:
         A Markdown section string for the finding.
@@ -267,7 +286,8 @@ def render_ndt(f: Finding) -> str:
         ]
         out += [f"| {s['id']} | `{s['file']}:{s['line']}` |" for s in f.affected_sites]
         out += [""]
-    out += ["_Runnable payloads + telemetry: see `redteam-plan.md`._", ""]
+    if has_redteam_plan:
+        out += ["_Runnable payloads + telemetry: see `redteam-plan.md`._", ""]
     return "\n".join(out)
 
 
@@ -289,7 +309,33 @@ def _short_title(text: str, limit: int = 72) -> str:
     return (cut or text[:limit].rstrip()) + "…"
 
 
-def _ndt_next_actions(ndt: list[Finding]) -> dict[str, str]:
+def triage_what(f: Finding) -> str:
+    """Return the triage "What" cell for a finding.
+
+    The cell describes the defect. A message that opens with the finding's
+    lifecycle state ("Confirmed. ", "Provenance unresolved. ") has that sentence
+    dropped, because the row already carries a Status column. ``Finding`` has no
+    ``title`` field, so ``message`` is the only source.
+
+    Args:
+        f: The finding to describe.
+
+    Returns:
+        The first non-status sentence of the message, clipped by ``_short_title``.
+
+    Example:
+        >>> triage_what(Finding(message="Confirmed. Sink reads user input."))
+        'Sink reads user input.'
+    """
+    parts = (f.message or "").split("|", 1)[0].strip().split(". ")
+    while len(parts) > 1 and parts[0].strip().rstrip(".").lower() in _STATUS_LEAD:
+        parts = parts[1:]
+    return _short_title(parts[0].strip())
+
+
+def _ndt_next_actions(
+    ndt: list[Finding], *, has_redteam_plan: bool = True
+) -> dict[str, str]:
     """Map each needs-runtime finding id to the ``redteam-plan.md`` section that holds it.
 
     The plan files a needs-runtime finding into one of three sections, so a single
@@ -298,6 +344,8 @@ def _ndt_next_actions(ndt: list[Finding]) -> dict[str, str]:
 
     Args:
         ndt: The needs-deployment-testing findings the report renders.
+        has_redteam_plan: True when the run produced ``redteam-plan.md``. When
+            False the actions name no file, because none exists.
 
     Returns:
         A dict of finding id to next-action phrase. A finding the plan files
@@ -308,6 +356,8 @@ def _ndt_next_actions(ndt: list[Finding]) -> dict[str, str]:
         {}
     """
     disc = discriminate(ndt)
+    if not has_redteam_plan:
+        return {f.id: "no runtime plan produced" for f in ndt}
     actions = {f.id: "see redteam-plan gaps" for f in disc["below_bar"]}
     actions.update({f.id: "see redteam-plan preconditions" for f in disc["unrunnable"]})
     actions.update({f.id: "run redteam-plan directive" for f in disc["needs_runtime"]})
@@ -325,57 +375,34 @@ def _triage_row(f: Finding, status_label: str, action: str) -> str:
     Returns:
         A single Markdown table row string (pipe-delimited).
     """
-    what = _short_title((f.message or "").split("|", 1)[0].split(". ")[0].strip())
+    what = triage_what(f)
     risk = f.risk_score if f.risk_score is not None else "-"
     return f"| {f.id} | {risk} | {what} | {f.file}:{f.line} | {status_label} | {action} |"
 
 
 def _render_economics(economics: dict) -> list[str]:
-    """Render the run-economics section, omitting every measurement that is absent.
-
-    A "(measured)" header above an empty body claims a measurement the run never
-    took. Each group renders only when it holds data, and the section itself
-    disappears when no group does (REQ-05).
+    """Render the run-economics section, omitting it when nothing was measured.
 
     Args:
-        economics: Cost aggregate with optional ``by_phase``, ``by_model``,
-            ``by_phase_seconds``, and ``usd_estimate`` keys.
+        economics: Cost aggregate with an optional ``by_phase_seconds`` key.
 
     Returns:
         Markdown lines for the section, or ``[]`` when nothing was measured.
 
     Example:
-        >>> _render_economics({"by_phase": {}, "by_model": {}})
+        >>> _render_economics({"by_phase_seconds": {}})
         []
     """
-    groups = (
-        (
-            "**Tokens by phase** (measured):",
-            [f"- **{k}**: {v}" for k, v in (economics.get("by_phase") or {}).items()],
-        ),
-        (
-            "**Tokens by model** (measured):",
-            [f"- **{k}**: {v}" for k, v in (economics.get("by_model") or {}).items()],
-        ),
-        (
-            "**Wall-clock by phase, seconds** (measured):",
-            [f"- **{k}**: {v:.2f}" for k, v in (economics.get("by_phase_seconds") or {}).items()],
-        ),
-    )
-    body: list[str] = []
-    for header, items in groups:
-        if items:
-            body += ([""] if body else []) + [header] + items
-    usd = economics.get("usd_estimate")
-    if usd is not None:
-        cost = f"**Estimated cost:** ${usd:.4f} (estimate, not a billed figure)."
-        body += ([""] if body else []) + [cost]
-    return ["", "## Run economics", ""] + body if body else []
+    seconds = economics.get("by_phase_seconds") or {}
+    if not seconds:
+        return []
+    body = ["**Wall-clock by phase, seconds** (measured):"]
+    body += [f"- **{k}**: {v:.2f}" for k, v in seconds.items()]
+    return ["", "## Run economics", ""] + body
 
 
 def to_markdown(
     findings: list[Finding],
-    token_spend: dict[str, int] | None = None,
     needs_deployment: list[Finding] | None = None,
     coverage_ledger: dict | None = None,
     has_redteam_plan: bool = False,
@@ -397,7 +424,6 @@ def to_markdown(
 
     Args:
         findings: Confirmed/fixed findings to render.
-        token_spend: Optional per-phase token totals.
         needs_deployment: Findings real-but-unprovable from source alone. Reported
             separately, never counted as confirmed.
         coverage_ledger: Optional coverage-completeness ledger (``kb/coverage-ledger.json``);
@@ -406,9 +432,8 @@ def to_markdown(
             "Manual runtime testing" section pointing the engineer at it (O-022).
         patch_statuses: Optional ``finding.id`` → :class:`PatchStatus`, from
             :func:`check_patch_applied` against the real target, for ``fixed`` findings.
-        economics: Optional ``{"by_phase": dict, "by_model": dict, "by_phase_seconds": dict,
-            "usd_estimate": float}`` from :func:`sec_overlay.cost`; renders a "Run economics"
-            section and takes priority over ``token_spend`` when both are given.
+        economics: Optional ``{"by_phase_seconds": dict}`` from :func:`sec_overlay.cost`;
+            renders a "Run economics" section.
         dropped: Review-mode findings the position gate placed outside the diff
             (``phase_gate.DroppedFinding``); rendered under ``DROPPED_FINDINGS_HEADING``
             unconditionally, so an empty run states none-dropped rather than omitting the
@@ -437,13 +462,18 @@ def to_markdown(
     high = conf_counts.get("high", 0)
     med = conf_counts.get("medium", 0)
     low = conf_counts.get("low", 0)
-    total_conf = sum(conf_counts.values())
-    if total_conf == 0:
-        summary_sentence = "No source-provable findings."
-    elif crit or high:
-        summary_sentence = f"{'Critical' if crit else 'High'}-severity source-provable findings require immediate remediation."
+    triage_counts = Counter(f.severity.value for f in list(ndt) + list(conf))
+    t_crit = triage_counts.get("critical", 0)
+    t_high = triage_counts.get("high", 0)
+    if sum(triage_counts.values()) == 0:
+        summary_sentence = "No reportable findings."
+    elif t_crit or t_high:
+        summary_sentence = (
+            f"{'Critical' if t_crit else 'High'}-severity findings require "
+            "immediate remediation."
+        )
     else:
-        summary_sentence = "Source-provable findings at medium/low severity."
+        summary_sentence = "Reportable findings at medium/low severity."
     counts_phrase = (
         ", ".join(
             f"{n} {label}"
@@ -457,14 +487,19 @@ def to_markdown(
         "",
         f"**Bottom line.** {summary_sentence}  ",
         f"Confirmed: {counts_phrase}",
-        f"Needs runtime proof: {len(ndt)}",
+        f"Needs runtime proof: {len(ndt_all)}",
+    ]
+    if external:
+        lines.append(f"Leads pending external verification: {len(external)}")
+    lines += [
         "",
     ]
 
     # Triage table — all findings merged, risk-ordered desc
-    ndt_actions = _ndt_next_actions(ndt)
+    ndt_actions = _ndt_next_actions(ndt, has_redteam_plan=has_redteam_plan)
+    default_action = "see redteam-plan gaps" if has_redteam_plan else "no runtime plan produced"
     all_triage = [
-        (f, "needs-runtime", ndt_actions.get(f.id, "see redteam-plan gaps")) for f in ndt
+        (f, "needs-runtime", ndt_actions.get(f.id, default_action)) for f in ndt
     ] + [
         (f, "confirmed", "bump" if f.cls == "deps" else "apply fix (§ below)") for f in conf
     ]
@@ -492,7 +527,7 @@ def to_markdown(
             )
             lines.append(
                 f"- [{f.id}](findings/{f.id}.md) — risk {risk} — {label} — "
-                f"{_short_title((f.message or '').split('|', 1)[0].split('. ')[0].strip())}"
+                f"{triage_what(f)}"
             )
         lines.append("")
         lines += [
@@ -519,7 +554,7 @@ def to_markdown(
             ),
         ]
         for f in external:
-            lines += ["", render_ndt(f)]
+            lines += ["", render_ndt(f, has_redteam_plan=has_redteam_plan)]
 
     if has_redteam_plan:
         lines += [
@@ -532,14 +567,15 @@ def to_markdown(
         lines += ["", render_coverage_ledger(coverage_ledger)]
     if economics:
         lines += _render_economics(economics)
-    elif token_spend:
-        lines += ["", "## Token spend by phase", ""]
-        lines += [f"- **{phase}**: {n}" for phase, n in token_spend.items()]
     return "\n".join(lines) + "\n"
 
 
 def write_finding_details(
-    ws: Workspace, findings: list[Finding], patch_statuses: dict | None = None
+    ws: Workspace,
+    findings: list[Finding],
+    patch_statuses: dict | None = None,
+    *,
+    has_redteam_plan: bool = True,
 ) -> list[str]:
     """Write one Markdown detail file per finding to ``ws.findings_dir/<ID>.md``.
 
@@ -547,6 +583,8 @@ def write_finding_details(
         ws: Workspace whose ``findings_dir`` receives the ``<ID>.md`` files.
         findings: Confirmed/fixed/NDT findings to render in full.
         patch_statuses: Optional ``id -> PatchStatus`` for fixed findings.
+        has_redteam_plan: True when the run produced ``redteam-plan.md``; passed
+            through to :func:`render_ndt` for each NDT finding.
 
     Returns:
         The finding ids written, in input order.
@@ -555,7 +593,7 @@ def write_finding_details(
     written: list[str] = []
     for f in findings:
         if f.status is FindingStatus.NEEDS_DEPLOYMENT_TESTING:
-            body = render_ndt(f)
+            body = render_ndt(f, has_redteam_plan=has_redteam_plan)
         else:
             body = render_finding(f, patch_status=(patch_statuses or {}).get(f.id))
         (ws.findings_dir / f"{f.id}.md").write_text(body + "\n")
@@ -576,6 +614,8 @@ def collapse_clusters(findings: list[Finding]) -> list[Finding]:
 
     Returns:
         One representative per cluster plus every un-clustered finding.
+
+    The input findings are never mutated — a synthesized representative is a copy.
     """
     singletons = [f for f in findings if not f.cluster_id]
     groups: dict[str, list[Finding]] = {}
@@ -586,8 +626,10 @@ def collapse_clusters(findings: list[Finding]) -> list[Finding]:
     for members in groups.values():
         primary = next((m for m in members if m.affected_sites), None)
         if primary is None:
-            primary = min(members, key=_risk_sort_key)
-            primary.affected_sites = [{"id": m.id, "file": m.file, "line": m.line} for m in members]
+            primary = replace(
+                min(members, key=_risk_sort_key),
+                affected_sites=[{"id": m.id, "file": m.file, "line": m.line} for m in members],
+            )
         reps.append(primary)
     return reps
 
@@ -621,6 +663,7 @@ def write_report(
     reflection_skips: list | None = None,
     review_findings: list[ReviewFinding] | None = None,
     review_source_skips: list | None = None,
+    has_redteam_plan: bool = False,
 ) -> dict:
     """Assemble the final SARIF + Markdown report from a workspace's findings.
 
@@ -629,7 +672,7 @@ def write_report(
     ``findings.json`` always carries confirmed/fixed findings plus
     needs-deployment-testing findings (distinguished by status). By default,
     SARIF carries the same set, with needs-deployment-testing findings marked
-    with an ``inSource`` suppression so downstream tools see them without
+    with an ``external`` suppression so downstream tools see them without
     failing a gate; ``confirmed_only=True`` restores the prior behavior of
     emitting confirmed/fixed findings only, with no suppressions.
 
@@ -639,7 +682,9 @@ def write_report(
             checked (``git apply --check``) against the real working tree so the report never
             implies a still-vulnerable finding's patch is deployed.
         confirmed_only: When true, SARIF excludes needs-deployment-testing findings
-            entirely, matching the pre-suppression default output.
+            entirely, matching the pre-suppression default output. Persisted at
+            ``state.budget["sarif_confirmed_only"]`` so the artifact-consistency
+            gate knows which population SARIF was written from.
         dropped: Review-mode findings the position gate placed outside the diff; rendered
             into the markdown report and into ``artifacts/review_ledger.json`` from this one
             argument, so the two outputs cannot disagree (D-14, POS-03).
@@ -654,6 +699,10 @@ def write_report(
             no finding survived profile gating.
         review_source_skips: Files whose review source produced nothing; rendered and
             ledgered the same way as ``reflection_skips`` (D-15).
+        has_redteam_plan: True when the run produced ``redteam-plan.md``. The
+            ``redteam`` phase runs before ``report`` and declares this file as
+            an input, so the driver always passes ``True``. The default of
+            ``False`` covers a caller with no redteam phase, such as review mode.
 
     Returns:
         ``{"reported": <count>, "sarif": <path>, "report": <path>}``.
@@ -676,20 +725,9 @@ def write_report(
 
         build_coverage_ledger(ws)
     coverage_ledger = json.loads(cl_path.read_text()) if cl_path.exists() else None
-    has_redteam_plan = (ws.reports / "redteam-plan.md").exists()
     state = load_state(ws)
-    by_phase = cost.aggregate_by_phase(state)
     by_phase_seconds = cost.aggregate_timings_by_phase(state)
-    economics = (
-        {
-            "by_phase": by_phase,
-            "by_model": cost.aggregate_by_model(state),
-            "by_phase_seconds": by_phase_seconds,
-            "usd_estimate": cost.estimate_cost_usd(state),
-        }
-        if by_phase or by_phase_seconds
-        else None
-    )
+    economics = {"by_phase_seconds": by_phase_seconds} if by_phase_seconds else None
     patch_statuses = None
     if target:
         patch_statuses = {
@@ -701,6 +739,8 @@ def write_report(
         sarif_findings, suppressed = reportable, None
     else:
         sarif_findings, suppressed = reportable + ndt, ndt
+    state.budget["sarif_confirmed_only"] = confirmed_only
+    save_state(ws, state)
     ws.sarif_path.write_text(json.dumps(to_sarif(sarif_findings, suppressed=suppressed), indent=2))
     ws.report_path.write_text(
         to_markdown(
@@ -717,7 +757,12 @@ def write_report(
             review_source_skips=review_source_skips,
         )
     )
-    write_finding_details(ws, reportable + ndt, patch_statuses=patch_statuses)
+    write_finding_details(
+        ws,
+        reportable + ndt,
+        patch_statuses=patch_statuses,
+        has_redteam_plan=has_redteam_plan,
+    )
     findings_out = reportable + ndt
     ws.findings_json_path.write_text(json.dumps([f.to_dict() for f in findings_out], indent=2))
     write_review_ledger(
@@ -992,7 +1037,12 @@ def main(argv: list[str] | None = None) -> int:
         findings_dir=args.findings_dir,
         kb_dir=args.kb_dir,
     )
-    result = write_report(ws, target=args.target, confirmed_only=args.confirmed_only)
+    result = write_report(
+        ws,
+        target=args.target,
+        confirmed_only=args.confirmed_only,
+        has_redteam_plan=(ws.reports / "redteam-plan.md").exists(),
+    )
     print(f"reported {result['reported']}")
     return 0
 

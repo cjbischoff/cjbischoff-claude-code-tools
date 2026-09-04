@@ -40,7 +40,17 @@ uv run ruff check sec_overlay/ bench/ tests/     # lint
 uv run ruff format sec_overlay/ bench/ tests/    # format
 uv run ty check                                  # static types
 uv run python -m sec_overlay.preflight           # check which SAST backends/packs are installed
+uv run python -m sec_overlay.phase_docs --check  # fail if a phase-table doc is stale
+uv run python -m sec_overlay.phase_docs --write  # regenerate every phase-table doc in place
 ```
+
+Run `phase_docs --write` any time `sec_overlay/phases.py`'s `PHASE_TABLE` changes — a rename,
+reorder, or added/removed phase. It rewrites the generated table in `SKILL.md`, `README.md`,
+`agents/README.md`, and `helpers/README.md` (`skill CLAUDE.md` is not one of them — it points at
+`SKILL.md` instead of carrying its own copy). `--check` exits 1 and names every stale document
+without writing; `tests/test_phase_docs.py` calls the same regeneration code inside `uv run
+pytest`, so a `PHASE_TABLE` change that skips `--write` fails the normal test run, not just a
+manual `--check`.
 
 The quick end-to-end smoke scan (no agents, deterministic only):
 
@@ -53,6 +63,26 @@ uv run python -m sec_overlay.cli scan \
 ---
 
 ## The pipeline these modules implement
+
+<!-- BEGIN GENERATED: phase-table columns=index,phase,reads,writes kind=deterministic -->
+| # | Phase | Reads | Writes |
+|---|---|---|---|
+| 1 | `route-census` | — | `kb/route-census.json` |
+| 3 | `recall-gate` | `kb/scan-profile.json`<br>`kb/route-census.json` | `kb/gates/recall-gate.json` |
+| 5 | `arch-gate` | `architecture/arc42.md`<br>`architecture/container-diagram.mmd` | `kb/gates/arch-gate.json` |
+| 7 | `tm-gate` | `threat-model/threat-model.md`<br>`threat-model/dfd.mmd` | `kb/gates/tm-gate.json` |
+| 8 | `prefilter` | `kb/scan-profile.json` | `findings` |
+| 10 | `findings-gate` | `findings` | `findings` |
+| 11 | `dedupe` | `findings` | `findings` |
+| 16 | `calibrate` | `findings` | `findings` |
+| 19 | `verify` | `findings`<br>`kb/gates/validate-fix.json` | `findings` |
+| 20 | `demote-noise` | `findings` | `findings` |
+| 22 | `report` | `findings`<br>`redteam-plan.md` | `report.md`<br>`report.sarif` |
+| 23 | `selfscore` | `report.md` | `findings` |
+| 25 | `artifact-gate` | `report.md`<br>`report.sarif` | `kb/gates/artifact-gate.json` |
+| 27 | `artifact-consistency` | `report.md` | `kb/gates/artifact-consistency.json` |
+| 28 | `postflight` | `kb/gates/artifact-review.json` | `kb/prior_context.json` |
+<!-- END GENERATED: phase-table -->
 
 The modules are not a flat bag of utilities — they run in a definite order during an audit.
 This is the deterministic spine; the LLM agents plug in between the deterministic steps.
@@ -97,7 +127,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | Module | Purpose |
 |--------|---------|
 | `models.py` | The `Finding` and `CampaignState` dataclasses, the `Severity` / `FindingStatus` enums, and `to_dict`/`from_dict`. **This is the schema every phase reads and writes.** Recent: `open_questions` field added (list of dicts with `question`, `why_it_matters`, `who_to_ask_or_check` keys; defaults to []) — unrelated to `coverage_ledger.py`'s same-named, differently-shaped `open_questions` list. `from_dict` now rejects an out-of-enum `verification` or `runtime_disposition` (REQ-02) via the module-level `_CLOSED_ENUMS` table. `RUNTIME_TEST_KEYS`, `OPEN_QUESTION_KEYS`, and `AFFECTED_SITE_KEYS` (REQ-18) name the exact keys of the `runtime_test`, `open_questions`, and `affected_sites` nested fields, published in `references/prompt-constants.md`'s `FINDING_SHAPES` block. |
-| `evidence.py` | The tool-receipt gate. `_MECHANICAL` = {semgrep, codeql, ast-grep, tree-sitter, ripgrep, structural-index, secrets, sca, dependency-catalog}; `is_tool_receipt()` returns False for anything `llm`-prefixed; `confidence_for()` grades HIGH/MEDIUM/LOW from the strongest evidence link. `VERIFICATION_VALUES` (REQ-02) is the closed set for `Finding.verification`: `verified-static`, `static-only`, `not-fixed`, `verify-error`, `fact-checked` — the last written only by `factcheck.py`'s F8 stage. |
+| `evidence.py` | The tool-receipt gate. `_MECHANICAL` = {semgrep, codeql, ast-grep, tree-sitter, ripgrep, structural-index, secrets, sca, dependency-catalog}; `is_tool_receipt()` returns False for anything `llm`-prefixed; `confidence_for()` grades HIGH/MEDIUM/LOW from the strongest evidence link. `VERIFICATION_VALUES` (REQ-02) is the closed set for `Finding.verification`: `verified-static`, `static-only`, `not-fixed`, `verify-error` (REQ-42 removed the fifth value, `fact-checked`, with the deleted `factcheck` phase that alone wrote it). |
 | `schema.py` | A tiny stdlib-only JSON-Schema validator (type/enum/required/items/properties) — so schema validation needs no dependency. |
 
 > **These two (`models.py`, `evidence.py`) define the finding serialization/schema contract.**
@@ -145,7 +175,6 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `findings_gate.py` | Schema-validates every finding; forbids `raw`+`duplicate_of` collisions; **enforces the tool-receipt bar** for `confirmed`/`fixed`. CLI-callable. |
 | `partition.py` | Group candidates by attack class for parallel agent fan-out. `reconcile_plan` takes an optional `target_root` and merges every attack class from a dependency-sink catalog entry the target either declares in a manifest or calls by an indicator API. |
 | `fp_feedback.py` | Recycle prior-pass rejections into the next pass's investigate/critic prompts as negative examples. |
-| `factcheck.py` | Post-investigation re-verification of citations/scope/severity against source. |
 | `phase_gate.py` | Deterministic pre-check for analysis phases (schema + `file:line` resolution) before the opus adversary runs; writes `kb/gates/<phase>.json`. Detects comment-only citations via `is_comment_line()` and appends a gate note flagging them for extra scrutiny (prose files — `.md`/`.rst`/`.txt` — are skipped, since every Markdown heading would otherwise read as a comment); the comment check and the basename-fallback note are independent, so a sloppy citation can raise both. Also `review_position_gate(findings, hunks_by_path, file_text_by_path=None)` — the diff-pipeline gate: keeps a finding only when `positioning.resolve_position` calls it `exact`, else drops it with an `OUTSIDE_DIFF_REASON`-shaped `DroppedFinding`. `file_text_by_path` defaults to an empty mapping, which disables the ladder's whole-file and cross-file rungs. Audit-mode symbols above are unchanged by this addition. |
 | `stage_validate.py` | Per-stage structured-output validation + repair contract. |
 
@@ -162,7 +191,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 ### Reporting
 | Module | Purpose |
 |--------|---------|
-| `report.py` | Assemble the final `report.sarif` + `report.md`. Structure: bottom-line count block (confirmed counts rendered in words, e.g. `1 critical, 1 high, 2 medium, 1 low`, never as digit ratios; zero counts omitted, `none` when all zero; + NDT count, never merged) → risk-ordered `## Triage` table (`_triage_row`: id/risk/what/location/status/action; the `what` clip splits on period-space so semver like `decompress@4.2.1` survives) → `## Needs runtime proof — the real leads` (NDT via `render_ndt`, which renders `expected_signal` through the shared `render_util.signal_lines` — tolerant of a bare-string value, foregrounded above confirmed) → `## Confirmed (source-provable)` (via `render_finding`; deps get dep-view, condensed medium/low numbered 1–4 with no gaps) → coverage/redteam-link/ledger/token-spend tail. NDT is never counted as confirmed. `_risk_sort_key` (risk desc → severity → id) orders triage, confirmed, NDT, and `select_reportable` identically. CLI-callable. Also (additive, not yet wired into `to_markdown`) `render_position_review_section(results: list[PositionResult]) -> str` — one `## Position review required` section with one row per declined result (claimed path, claimed line, snippet, reason); pipe characters and newlines in the snippet are escaped/collapsed so a decline can never corrupt the table into a hidden row; an empty list still renders the heading plus an explicit none-required line. `write_review_ledger(ws, *, position_reviews, dropped, rule_docs=None, reflection_retractions=None, reflection_skips=None, review_findings=None) -> Path` writes `artifacts/review_ledger.json` (via the same `_atomic_write` shape as `review_coverage.py`) with `position_reviews`/`dropped`/`rule_docs`/`reflection_retractions`/`reflection_skipped`/`review_findings` keys always present, each `position_reviews` entry carrying `state: "needs-position-review"` and each `review_findings` entry the id/path/line/rule_id/profile/defect_class/disposition of a `review_findings.ReviewFinding` `apply_profile` kept (REV-01) — ledgered only, no markdown rendering yet. A separate artifact rather than a `findings.json` state, since `models.py`'s `FindingStatus` enum has no review-position member and adding one would break the Go port's byte mirror. Both `write_report` and `write_review_ledger` take the same `review_findings` keyword. |
+| `report.py` | Assemble the final `report.sarif` + `report.md`. Structure: bottom-line count block (a `summary_sentence` reads severity over the full triage population — needs-runtime plus confirmed — so a high/critical needs-runtime finding forces the immediate-remediation sentence even when no finding is confirmed, REQ-56; confirmed counts rendered in words, e.g. `1 critical, 1 high, 2 medium, 1 low`, never as digit ratios; zero counts omitted, `none` when all zero; + NDT count over every needs-deployment-testing finding including external-unverifiable leads, never merged into confirmed; a `Leads pending external verification: <n>` line follows when the external-unverifiable subset is non-empty, REQ-53) → risk-ordered `## Triage` table (`_triage_row`: id/risk/what/location/status/action; the `what` cell comes from `triage_what(f)`, which drops a leading lifecycle-status sentence — "Confirmed. ", "Provenance unresolved. " — from `Finding.message` before clipping on a word boundary, so the Status column's word never repeats in What, REQ-56; `artifact_consistency._check_truncated_titles` calls the same helper) → `## Needs runtime proof — the real leads` (NDT via `render_ndt`, which renders `expected_signal` through the shared `render_util.signal_lines` — tolerant of a bare-string value, foregrounded above confirmed) → `## Confirmed (source-provable)` (via `render_finding`; deps get dep-view, condensed medium/low numbered 1–4 with no gaps) → coverage/redteam-link/ledger/token-spend tail. NDT is never counted as confirmed. `_risk_sort_key` (risk desc → severity → id) orders triage, confirmed, NDT, and `select_reportable` identically. CLI-callable. Also (additive, not yet wired into `to_markdown`) `render_position_review_section(results: list[PositionResult]) -> str` — one `## Position review required` section with one row per declined result (claimed path, claimed line, snippet, reason); pipe characters and newlines in the snippet are escaped/collapsed so a decline can never corrupt the table into a hidden row; an empty list still renders the heading plus an explicit none-required line. `write_review_ledger(ws, *, position_reviews, dropped, rule_docs=None, reflection_retractions=None, reflection_skips=None, review_findings=None) -> Path` writes `artifacts/review_ledger.json` (via the same `_atomic_write` shape as `review_coverage.py`) with `position_reviews`/`dropped`/`rule_docs`/`reflection_retractions`/`reflection_skipped`/`review_findings` keys always present, each `position_reviews` entry carrying `state: "needs-position-review"` and each `review_findings` entry the id/path/line/rule_id/profile/defect_class/disposition of a `review_findings.ReviewFinding` `apply_profile` kept (REV-01) — ledgered only, no markdown rendering yet. A separate artifact rather than a `findings.json` state, since `models.py`'s `FindingStatus` enum has no review-position member and adding one would break the Go port's byte mirror. Both `write_report` and `write_review_ledger` take the same `review_findings` keyword. |
 | `sarif.py` | Emit valid SARIF 2.1.0; map severity → SARIF level. `_rules()` builds a de-duplicated `driver.rules` array (one entry per `rule_id`, first occurrence wins) carrying `cls` as `name` and `asvs_ids`/`codeguard_ids` as `properties` — additive to `driver.rules`, `results` unchanged. `_sarif_fingerprint(finding)` derives a 16-hex-char, message-independent result identity from `file\|cls\|evidence.strip()` (own truncated-sha256 idiom, not `fingerprint.fingerprint()`), attached to every result under `partialFingerprints` keyed by the module constant `FINGERPRINT_KEY`. `tests/test_sarif.py` locks the OUT-02 contract: message-independence, file/cls/evidence sensitivity, no fingerprint key on an empty result set, and no Unicode normalization of `evidence` (byte equality, not canonical equality). |
 | `render_util.py` | Shared markdown fragments for the two finding renderers. `signal_lines()` is the single source of truth for rendering an agent-authored `expected_signal` (dict `{secure, insecure}`, bare string, or None) into labeled bullet lines; a bare string is treated as the insecure signal everywhere it is rendered. |
 
@@ -182,8 +211,7 @@ interrupted run can resume, and multi-pass campaigns know what's already done.
 | `driver.py` | The audit sequencer: deterministic-phase runner, loud halt, agent-dispatch printer. `run_deterministic_phase` gates a `PhaseSpec` on inputs/outputs, runs its `DETERMINISTIC_ACTIONS` entry, then `record_stage`s it — raising `PhaseHalt` on either gate. `_act_arch_gate`/`_act_tm_gate` run `diagram_gate.run_diagram_gate` + `ste_lint.lint_prose` (and, for `tm-gate`, `artifact_gate.check_duplication`), writing `kb/gates/arch-gate.json` / `kb/gates/tm-gate.json`; `tm-gate` alone passes `require_threat_model=True` so a missing `dfd.mmd` halts the run. `render_dispatch` builds its `substitute:` line from `DISPATCH_TOKENS` (`TARGET`, `WORKSPACE`, `SHA`, `ATTACK_CLASS`) — the single source name-to-token list the REQ-32 contract lint checks against. |
 | `repo_memory.py` | The per-repo sidecar (`<target>/.sec-overlay/<slug>/`): workspace, `MEMORY.md`, dated `learnings/`, run status for resume. |
 | `workspace.py` | The on-disk layout (`kb/`, `findings/`, reports, `artifacts/` review-mode run state); per-finding read/write; `record_agent_return` / `read_agent_return`. `finding_counts(ws)` returns `{"findings", "findings_in", "findings_out"}` (REQ-13) — `findings_out` is the `evidence.SHIPPING_STATUSES` subset — for every receipt writer to record. |
-| `scanscope.py` | Resolve + pin `repo_root` + `scan_scope` once per campaign (monorepo-safe); `kb/scan-scope.json`. |
-| `scope.py` | `is_external_package(pkg, ws)` reads `kb/scan-scope.json`'s `ingested_packages` list to decide whether a sink's package was scanned; `True` only when a manifest exists and excludes `pkg`, so the check never invents a boundary when no manifest is present. |
+| `scanscope.py` | Resolve + pin `repo_root` + `scan_scope` once per campaign (monorepo-safe); `kb/scan-scope.json`. Exposes only `ScanScope`, `resolve`, `write_scope`, and `load_scope`. |
 | `kb.py` | Paths to the KB files (profile/architecture/threat-model/entities). |
 | `context.py` | Deterministic context ingestion (docs/specs/runbooks + prior scans), trust-tagged. Also discovers IaC/deployment-config files (Pulumi, Terraform, Helm, k8s, docker-compose, serverless) as `deployment_config` items, carrying a `deployed_in` env tag. `Context.diagram` holds the C1 agent's claimed-control status map (a raw mermaid block); `render_markdown` writes it into `CONTEXT.md`, which is regenerated on every `save()` and never hand-edited. |
 | `profile.py` | The `ScanProfile` contract; validate/load `kb/scan-profile.json`. |
@@ -245,7 +273,7 @@ The `tests/` folder houses 98 files, 954 tests. Key structural guards:
 | `redteam.py` | Render `redteam-plan.md` from findings marked `needs-runtime`, filtered by risk bar; includes markdown renderers `_bullets()` and `_signal()` for runtime directives (both accept list/dict *or* plain-string `runtime_test` values); `_signal()` delegates to the shared `render_util.signal_lines`, so a bare-string `expected_signal` renders as an `**insecure:**` bullet — the same shape `report.py` uses; `_question_block()` renders `open_questions` from all statuses (plan + below-bar + static-settled) into a "Questions to ask" section. The "static-settled" footer counts `disc["static_settled"]` (not the needs-runtime code-settled subset). CLI-callable. |
 | `parse.py` | Fail-open JSON extraction from LLM prose/fences (largest balanced substring); returns None, never a silent empty. |
 | `gates.py` | Fail-closed gate orchestrator: a `GATE_ROUTING` table + `REQUIRED_GATES`; a missing gate result hard-fails. |
-| `cost.py` | Per-phase and per-model token accounting into `CampaignState.budget` (`aggregate_by_phase`, `aggregate_by_model`); USD is an opt-in estimate (`estimate_cost_usd`), never rendered as measured. Also records per-phase wall-clock duration (`record_timing`, `aggregate_timings_by_phase`). Feeds `report.py`'s "Run economics" section. |
+| `cost.py` | Per-phase wall-clock accounting into `CampaignState.budget` (`record_timing`, `aggregate_timings_by_phase`). Feeds `report.py`'s "Run economics" section. |
 | `scanscope.py` / `normalize.py` | (listed above) |
 
 ### `sec_overlay/correlate/` — cross-repo correlation (a product spans many repos)

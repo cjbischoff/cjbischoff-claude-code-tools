@@ -17,8 +17,7 @@ from bench.adapter import BinaryAdapter, WorkspaceAdapter, reportable, tier1_det
 from bench.corpus import load_corpus
 from bench.judge import judge_all
 from bench.tally import Scorecard, aggregate_scorecards, tally
-from sec_overlay import cost as costmod
-from sec_overlay.models import CampaignState, Finding
+from sec_overlay.models import Finding
 from sec_overlay.repo_memory import repo_slug
 from sec_overlay.workspace import Workspace
 
@@ -113,16 +112,9 @@ def run_benchmark(corpus_dir, run_dir, adapter, *, clone_fn=git_clone_at_commit,
 
     wall = time.monotonic() - t0
 
-    tokens = 0
-    usd = 0.0
-    ws_root = run_dir / "workspaces"
-    for sp in sorted(ws_root.glob("*/state.json")) if ws_root.exists() else []:
-        state = CampaignState.from_dict(json.loads(sp.read_text()))
-        tokens += sum(costmod.aggregate_by_model(state).values())
-        usd += costmod.estimate_cost_usd(state)
-    cost = {"tokens": tokens, "wall_time_s": wall,
-            "usd_estimate": usd if tokens else None}
+    cost = {"wall_time_s": wall}
 
+    ws_root = run_dir / "workspaces"
     coverage_ledgers = {}
     for cl in sorted(ws_root.glob("*/kb/coverage-ledger.json")) if ws_root.exists() else []:
         coverage_ledgers[cl.parent.parent.name] = json.loads(cl.read_text())

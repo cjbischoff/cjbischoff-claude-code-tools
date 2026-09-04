@@ -57,7 +57,7 @@ exists and runs the gate; a synthetic locked-miss test proves exit 1.
 2. `bench/aacr_adapter.py`: AACR row → `CorpusEntry`, `source="aacr"`, never blended into the
    `real-confirmed` headline (tally already segments by source; add a guard test).
 3. Runner mode that grades OCR's own `ocr review --format json` output under the identical
-   `judge.py` criterion, producing one table: tool × {F1, P, R, FP-rate, tokens, wall-time}.
+   `judge.py` criterion, producing one table: tool × {F1, P, R, FP-rate, wall-time}.
 4. Scorecard text states: the matching rule (class + file + line ≤ 12 + fingerprint;
    CVE-match for deps) and the caveat that cross-tool numbers are comparable only under the
    same judge. Any LLM judge prompt is a versioned artifact.
@@ -69,12 +69,12 @@ the headline; scorecard markdown contains the judge statement and caveat.
 range (min/max) for P/R/F1/FP-rate. **Acceptance:** test with 3 synthetic runs asserts mean
 and range in `to_dict` and markdown.
 
-### REQ-M6 — token/latency + $/TP columns (EXTRACTION M6, T3b partial)
-The run record carries per-entry token totals and wall-time (from `cost.py` records when the
-driver produces them; from the adapter's own timing otherwise). Scorecard emits tokens,
-wall-time, and derived `$ / confirmed-TP` (USD an opt-in estimate per `cost.py` discipline,
-labeled estimate). FP-rate is published per class (T3b). **Acceptance:** tests over synthetic
-run records assert the columns and the per-class FP-rate rows.
+### REQ-M6 — latency column (EXTRACTION M6, T3b partial)
+The run record carries per-entry wall-time, from the adapter's own timing. The scorecard emits
+wall-time. It emits no token count and no `$ / confirmed-TP` column, because REQ-46 deleted the
+token and cost measurements from `cost.py`. FP-rate is published per class (T3b).
+**Acceptance:** tests over synthetic run records assert the wall-time column and the per-class
+FP-rate rows.
 
 ### REQ-R3 — annotation protocol statement (EXTRACTION R3)
 `bench/README.md` documents how internal corpus entries are labeled, who adjudicates

@@ -279,35 +279,6 @@ def test_run_audit_halts_when_scan_profile_missing_at_investigate(tmp_path):
     assert "scan-profile.json" in str(exc.value)
 
 
-def test_factcheck_action_applies_verdicts(tmp_path):
-    import json
-
-    from sec_overlay.driver import DETERMINISTIC_ACTIONS, AuditContext
-    from sec_overlay.models import Finding, FindingStatus, Severity
-    from sec_overlay.workspace import read_findings, write_findings
-
-    ws = Workspace(tmp_path / "w")
-    ws.ensure()
-    finding = Finding(
-        id="F-0001",
-        rule_id="r",
-        cls="sqli",
-        status=FindingStatus.CONFIRMED,
-        severity=Severity.HIGH,
-        file="app.py",
-        line=1,
-        message="m",
-    )
-    write_findings(ws, [finding])
-    (ws.kb / "verdicts.json").write_text(json.dumps({"F-0001": {"verdict": "VERIFIED"}}))
-
-    ctx = AuditContext(ws=ws, target="t", config="c", sha="s")
-    DETERMINISTIC_ACTIONS["factcheck"](ctx)
-
-    updated = {f.id: f for f in read_findings(ws)}["F-0001"]
-    assert updated.verification == "fact-checked"
-
-
 def test_findings_gate_action_halts_on_error(tmp_path):
     import json
 

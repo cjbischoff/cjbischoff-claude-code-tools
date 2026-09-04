@@ -340,3 +340,56 @@ def test_directive_renders_string_typed_fields_verbatim():
     assert "valid low-priv token" in out          # string precondition, verbatim
     assert "200 instead of 403" in out            # string expected_signal, verbatim
     assert "_not specified_" not in out.split("**Telemetry")[0]  # str fields not collapsed
+
+
+def test_directive_falls_back_to_the_finding_preconditions():
+    """REQ-55: the heading and the directive body read one preconditions field.
+
+    A finding with dataflow and preconditions is grouped "Code-settled" by
+    render_plan. Its directive must not then say the preconditions are absent.
+    """
+    f = Finding(
+        id="F-1",
+        rule_id="investigation:authz",
+        cls="authz",
+        status=FindingStatus.NEEDS_DEPLOYMENT_TESTING,
+        severity=Severity.HIGH,
+        file="a.js",
+        line=1,
+        risk_score=8,
+        message="cross-tenant write",
+        dataflow=["req.body -> db.write"],
+        preconditions=["two tenants", "low-privilege token in tenant A"],
+        runtime_test=None,
+    )
+    md = render_plan(discriminate([f]))
+    assert "Code-settled, runtime-impact-pending" in md
+    block = md.split("Code-settled, runtime-impact-pending")[1]
+    assert "low-privilege token in tenant A" in block
+    assert "_not specified_" not in block.split("**Payload")[0]
+
+
+def test_an_explicit_empty_preconditions_list_renders_none_needed():
+    """REQ-67: an author who states "no preconditions" must not read as "unknown"."""
+    from sec_overlay.redteam import _directive_block
+
+    f = _f("F-1", runtime_test={"objective": "hit the endpoint", "preconditions": []})
+    f.preconditions = ["a stale fallback nobody asked for"]
+
+    out = _directive_block(f)
+
+    assert "_(none needed)_" in out
+    assert "stale fallback" not in out
+
+
+def test_a_null_preconditions_value_falls_back_to_the_finding():
+    """A JSON null means "not supplied", not "explicitly none" — it must fall back."""
+    from sec_overlay.redteam import _directive_block
+
+    f = _f("F-1", runtime_test={"objective": "hit the endpoint", "preconditions": None})
+    f.preconditions = ["low-priv token in tenant A"]
+
+    out = _directive_block(f)
+
+    assert "low-priv token in tenant A" in out
+    assert "_(none needed)_" not in out

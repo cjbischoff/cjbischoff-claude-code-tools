@@ -6,9 +6,9 @@ one LLM subagent for one job in the audit. The harness itself (the Python in
 tools, moves files, and enforces rules. The *judgement* — "is this reachable? is this input
 attacker-controlled? is this fix correct?" — happens inside these prompts.
 
-Nothing here is code. A prompt is a text file with `{{PLACEHOLDER}}` tokens that the
-orchestrator fills in (target path, workspace path, which attack class, etc.) before
-spawning the subagent.
+Nothing here is code. A prompt is a text file with double-curly-brace tokens — for example
+`{{TARGET}}` or `{{WORKSPACE}}` — that the orchestrator fills in (target path, workspace path,
+which attack class, etc.) before spawning the subagent.
 
 ---
 
@@ -40,8 +40,26 @@ flowchart LR
 
 ## The pipeline, as prompts
 
-Read this top-to-bottom — it is the order the orchestrator spawns them (the full driver is
-in [`../SKILL.md`](../SKILL.md); the phase legend in the skill [`CLAUDE.md`](../CLAUDE.md)).
+<!-- BEGIN GENERATED: phase-table columns=index,phase,prompt kind=agent -->
+| # | Phase | Prompt |
+|---|---|---|
+| 2 | `recon` | `agents/recon.md` |
+| 4 | `architecture` | `agents/architecture.md` |
+| 6 | `threat_model` | `agents/threat-model.md` |
+| 9 | `investigate` | `agents/investigate.md` |
+| 12 | `critic` | `agents/critic.md` |
+| 13 | `judge` | `agents/judge.md` |
+| 14 | `validate` | `agents/validate.md` |
+| 15 | `trace` | `agents/trace.md` |
+| 17 | `patch` | `agents/patch.md` |
+| 18 | `validate-fix` | `agents/validate-fix.md` |
+| 21 | `redteam` | `agents/redteam.md` |
+| 24 | `prove` | `agents/prove.md` |
+| 26 | `artifact-review` | `agents/artifact-review.md` |
+<!-- END GENERATED: phase-table -->
+
+Read this top-to-bottom — it is the order the orchestrator spawns them (the full driver and the
+phase legend are both in [`../SKILL.md`](../SKILL.md)).
 
 ```mermaid
 flowchart TD
@@ -66,7 +84,6 @@ flowchart TD
     end
     C --> AN --> INV --> LADDER --> FIX --> RT --> PF["postflight.md<br/>(durable memory)"]
     AN -.gated by.-> PA
-    INV -.re-check.-> FC["factcheck.md"]
 ```
 
 ### Phase 1 — Context ingestion (C1)
@@ -136,7 +153,7 @@ safe option, or a codeql dataflow path.
 |--------|-------|-----|
 | `critic.md` | sonnet | production-viability filter: reject debug-only/dead/test-fixture/vendored/fully-mitigated code. **Demote on doubt, don't hard-reject.** |
 | `judge.md` | cheap, **no tools** | reads only the finding + critic verdict; asks "is the severity inflated?" Uphold / downgrade / flag. |
-| `validate.md` | opus (different family) | **assumes every finding is wrong** and tries to refute it independently. Survival = confirmation. A `false-positive` verdict *requires* a `file:line` cite of the defeating control. Never confirms a finding whose `reachability.blocker == "external-boundary"` — it stays a lead for calibrate/report to handle. `confirmed` requires at least one Tier-1 receipt (`codeql:`/`semgrep:`/`sca:`/`secrets:`); a Tier-2-only finding (REQ-07) routes to `needs-deployment-testing` instead, matching `findings_gate.py`'s `confirms_alone` rule. A `confirmed` finding now also requires a real (derived, not placeholder) CVSS v4.0 `cvss_vector` and a non-empty `preconditions` list, or it routes to `needs-deployment-testing` instead (ISSUE-008) — calibrate scores off this vector verbatim. |
+| `validate.md` | opus (different family) | **assumes every finding is wrong** and tries to refute it independently. Survival = confirmation. A `false-positive` verdict *requires* a `file:line` cite of the defeating control. `confirmed` requires at least one Tier-1 receipt (`codeql:`/`semgrep:`/`sca:`/`secrets:`); a Tier-2-only finding (REQ-07) routes to `needs-deployment-testing` instead, matching `findings_gate.py`'s `confirms_alone` rule. A `confirmed` finding now also requires a real (derived, not placeholder) CVSS v4.0 `cvss_vector` and a non-empty `preconditions` list, or it routes to `needs-deployment-testing` instead (ISSUE-008) — calibrate scores off this vector verbatim. |
 
 > `judge` and `validate` must **never** run concurrently against the same finding file — the
 > last writer silently drops the other's field. (Enforced by orchestration order, not code.)
@@ -150,7 +167,7 @@ safe option, or a codeql dataflow path.
 ### Phase 5.5 — Red team (static → runtime bridge)
 | Prompt | Model | Job |
 |--------|-------|-----|
-| `trace.md` | opus | backward-trace each confirmed sink to an entry point; verdict `reachable?` + blocker taxonomy; when the blocker is an external fact this repo can't answer, populates `open_questions` instead of guessing; when a sink resolves into an un-ingested dependency, sets `reachability.blocker = "external-boundary"` and records the package in `preconditions` rather than guessing reachable/confirmed. On a static-settled `reachable: true` verdict, also records `preconditions` (attacker position, required inputs, config/state) that feed calibrate's severity precondition check (ISSUE-008). Traces both `confirmed` and
+| `trace.md` | opus | backward-trace each confirmed sink to an entry point; verdict `reachable?` + blocker taxonomy (`sanitizer` \| `auth_check` \| `input_validation` \| `dead_code` \| `feature_flag` \| `external-boundary` \| `other`, `reachability.BLOCKERS`); when the blocker is an external fact this repo can't answer, populates `open_questions` instead of guessing; when a sink resolves into an un-ingested dependency, sets `reachability.blocker = "external-boundary"`, leaves `reachable` absent, and records the package in `preconditions` rather than guessing reachable/confirmed — `findings_gate.py` rejects an `external-boundary` finding whose `open_questions` carries no complete entry (REQ-52). The verdict shape in step 4 says to omit the `reachable` key when the verdict stays unset, never to write `null` for it — `validate_reachability` accepts an absent `reachable` only for an `external-boundary` blocker. On a static-settled `reachable: true` verdict, also records `preconditions` (attacker position, required inputs, config/state) that feed calibrate's severity precondition check (ISSUE-008). Traces both `confirmed` and
 `needs-deployment-testing` findings, and records any in-band channel — a sink reply observable
 to the caller — before an out-of-band channel. |
 | `redteam.md` | sonnet | split confirmed findings into `static-settled` vs `needs-runtime`; write a `runtime_test` block (objective, preconditions, `$SHELL_VAR` payloads — **never literal secrets**, expected signal, telemetry). `expected_signal` must be an object `{secure, insecure}` — not a bare string — because the deterministic renderer reads both keys. `redteam.py`'s `wants_runtime()` is a plain OR over two independent triggers — `runtime_disposition == "needs-runtime"` or `status is FindingStatus.NEEDS_DEPLOYMENT_TESTING` — either alone forces a finding into the plan; there is no third disposition value that opts one out. `open_questions` is a separate, non-bucket-affecting mechanism: for findings that hinge on a human-answerable fact rather than a runtime test, populates `open_questions` instead of forcing a hollow `runtime_test`. |
@@ -167,13 +184,12 @@ unrunnable precondition, not a live directive — enforced deterministically dow
 ### Phase 6 — Artifact review (§4.8)
 | Prompt | Model | Reads | Writes / does |
 |--------|-------|-------|---------------|
-| `artifact-review.md` | opus | `report.md`, `report.sarif`, `redteam-plan.md`, `findings/*.json`, plus the deterministic `kb/gates/artifact-gate.json` (already passed) | the final adversary — checks the *rendered* output tells the truth about what the run found: claim-to-evidence (does the report's severity/impact/status match the finding's tool receipt?), impact honesty (a real consequence, not a restated attack class), and red-team coverage (every `needs-runtime` finding has a matching `redteam-plan.md` directive). Same safety contract as everywhere else: reasoning alone may demote severity (with a `file:line` cite), mark a finding `render_stale: true` to force a re-render, or add an `open_questions` entry — never delete or reject a tool-receipt-backed finding. Verdict → `kb/gates/artifact-review.json`. It runs after the deterministic `artifact_gate.py` (helpers) and never writes `report.md` itself. |
+| `artifact-review.md` | opus | `report.md`, `report.sarif`, `redteam-plan.md`, `findings/*.json`, plus the deterministic `kb/gates/artifact-gate.json` (already passed) | the final adversary — checks the *rendered* output tells the truth about what the run found: claim-to-evidence (does the report's severity/impact/status match the finding's tool receipt?), impact honesty (a real consequence, not a restated attack class), and red-team coverage (every `needs-runtime` finding has a matching `redteam-plan.md` directive). Same safety contract as everywhere else: reasoning alone may demote severity (with a `file:line` cite) or add an `open_questions` entry — never delete or reject a tool-receipt-backed finding. Verdict → `kb/gates/artifact-review.json`. It runs after the deterministic `artifact_gate.py` (helpers) and never writes `report.md` itself. |
 
 ### Postflight & optional extensions
 | Prompt | Role |
 |--------|------|
 | `postflight.md` | sonnet; adds durable security-profile notes to `kb/prior_context.json` for the next scan. |
-| `factcheck.md` | fresh-context re-verification of a finding's citations/scope/severity against source (catches drift); targets ONE shipping-status (`confirmed`/`fixed`/`needs-deployment-testing`) finding, not narrowly `confirmed`. |
 | `variant-hunt.md` | amplify one confirmed finding into its family: enqueue sibling call sites as new `candidate`s for the gate ladder. |
 | `bugchain.md` | look across the confirmed set for **chains** — individually low findings that compose into a critical (auth-bypass → IDOR → RCE). |
 | `tune-config.md` | optional ratcheted loop (≤3 rounds): author targeted semgrep rules for uncovered classes, test-fire them, add noise-floor exclusions. |
@@ -301,3 +317,12 @@ prompt allows no network egress: the only oracle is in-band and on loopback. It 
 auto-confirmable classes, routes `sqli` and `authz` to a human-run harness, and requires the agent
 to record `scope` as `entrypoint` or `slice` honestly. The agent writes `kb/prove.json` and never
 edits a finding file; the deterministic side in `helpers/sec_overlay/prove.py` applies the proofs.
+
+`validate-fix.md` is now `PHASE_TABLE`-wired between `patch` and `verify` (REQ-43); it shipped
+earlier with no phase entry, so the driver never dispatched it. Its output is
+`kb/gates/validate-fix.json`, mapping each patched finding id to the two personas' combined
+`root_cause` / `instance_coverage` / `no_new_vulnerabilities` / `best_practices` statuses. The
+agent never computes or writes a verdict — `helpers/sec_overlay/verify.py`'s `apply_fix_gates`
+runs `sec_overlay.scoring.score_fix` on those statuses, so only the deterministic scorer decides
+`fixed`/`partial`/`not_fixed`/`unverifiable`. The prompt writes `{}` when it validated nothing;
+the phase does not complete until the file exists at all.

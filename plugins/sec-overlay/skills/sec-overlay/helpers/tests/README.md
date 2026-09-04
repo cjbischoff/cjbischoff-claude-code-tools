@@ -1,8 +1,176 @@
 # `tests/` — the deterministic test suite
 
-132 pytest files, 1697 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
+142 pytest files, 1830 tests. Run from `helpers/`: `uv run pytest -q`. Two failures on a clean
 checkout are environmental (gitignored bench corpus, excluded vendored semgrep clone) — see the
 skill [`CLAUDE.md`](../../CLAUDE.md) §1.
+
+New `test_phase_docs.py` pins REQ-61: every document that states the pipeline's phase order must
+carry a `<!-- BEGIN GENERATED: phase-table -->` block rendered from `PHASE_TABLE`, not a
+hand-maintained list that can drift from the code. `test_every_document_carries_a_generated_block`
+and `test_every_generated_block_is_current` check the four generated documents (`SKILL.md`, the
+skill root `README.md`, `agents/README.md`, `helpers/README.md`) against `phase_docs.regenerate`.
+`test_the_table_states_every_phase_in_order` and `test_a_kind_filter_keeps_the_full_table_index`
+pin `render_phase_table`'s column and kind-filter contract directly against `PHASE_TABLE`.
+`test_renaming_a_phase_makes_a_block_stale` proves the staleness check actually detects a rename,
+not just an absent block. `test_claude_md_carries_no_generated_block` and
+`test_note_documents_is_skill_md_only` pin that the skill `CLAUDE.md` points at `SKILL.md` for the
+phase table and its operator notes instead of duplicating them.
+`test_every_table_phase_has_a_note_in_skill_md` is gone: ruling P5-10 removed it because it and
+`test_contract_lint.py`'s `test_operator_notes_name_every_phase_and_nothing_else` stated two
+contradictory contracts for the same `<!-- BEGIN PHASE NOTES -->` region. The contract-lint test is
+the surviving one. `test_claude_md_is_in_documents_but_not_note_documents` pins that `CLAUDE.md` is a `DOCUMENTS`
+member (so Task 5's contract lint, which iterates `DOCUMENTS`, covers it) while staying out of
+`NOTE_DOCUMENTS` — a fix-round finding: `CLAUDE.md` had been left out of `DOCUMENTS` entirely.
+
+`test_contract_lint.py` gains three more REQ-61 tests.
+`test_operator_notes_name_every_phase_and_nothing_else` asserts exact set equality: the note keys in
+`SKILL.md` and the `PHASE_TABLE` phase names are one set, and the failure message names both the
+missing and the extra keys. There is no `NON_TABLE_STEPS` exception — ruling P5-10 deleted that
+constant. `test_operator_notes_follow_the_table_order` checks the notes appear in the same order
+as `PHASE_TABLE`. `test_pipeline_documents_name_only_substitutable_tokens` checks every `{{TOKEN}}`
+in a `DOCUMENTS`/`NOTE_DOCUMENTS` file is in `driver.DISPATCH_TOKENS` or
+`phase_docs.ORCHESTRATOR_TOKENS` — the operator notes live in `SKILL.md`, not `CLAUDE.md`. Only the
+token test failed on the first run: `agents/README.md` named a literal `{{PLACEHOLDER}}` token that
+no producer substitutes; the sentence now shows real tokens (`{{TARGET}}`/`{{WORKSPACE}}`) instead
+of an invented one. A `PhaseSpec` rename in `phases.py` now fails this file's
+`test_operator_notes_name_every_phase_and_nothing_else` alongside `test_phase_docs.py`'s
+`test_every_generated_block_is_current` (plus two more phase_docs tests the rename also breaks), so
+a rename can no longer pass the suite with a stale document.
+
+Two more `test_phase_docs.py` tests pin `regenerate`'s failure modes, both on synthetic text so no
+real document carries a broken marker.
+`test_a_nested_begin_marker_raises_instead_of_deleting_the_text` builds a document whose second
+`BEGIN` opens before the first block's `END` and asserts the `ValueError` names line 4; before the
+guard, the outer rewrite swallowed the inner marker and every line between the two. `test_a_crlf_document_regenerates` joins the same document with `\r\n` and
+asserts the block is rewritten; before the `\r?$` anchor, the marker never matched and `--check`
+reported a stale document as current.
+
+`phase_docs.py` ships. `regenerate` rewrote the four generated documents from `PHASE_TABLE`, and
+`SKILL.md`'s old hand-numbered walkthrough became a five-item preface list (the steps
+`PHASE_TABLE` does not own) plus the generated table and a 28-entry Phase Notes region, one bullet
+per `PHASE_TABLE` name, in order. `test_docs_invariants.py`'s old
+`test_claude_md_phase_order_tracks_phase_table` guarded a hand-maintained phase-order block in the
+skill `CLAUDE.md` that no longer exists — that file now points at `SKILL.md` instead of duplicating
+`PHASE_TABLE` (REQ-61), so the test is replaced with
+`test_claude_md_points_at_skill_md_for_the_phase_order`, which checks the pointer instead of a
+label list. `test_no_dead_helpers.py`'s `DEAD_ALLOWLIST` gains `phase_docs.py:note_keys`
+(test-only importer, no production caller).
+
+New `test_redteam.py::test_directive_falls_back_to_the_finding_preconditions` pins REQ-55: a
+finding with no `runtime_test` still shows its own `preconditions` in the directive body, in the
+same "Code-settled" block the heading already names.
+
+New `test_selfscore.py` tests pin REQ-54: `test_self_score_buckets_partition_the_finding_population`
+checks every finding on disk lands in exactly one `by_status` bucket and that `duplicate` matches
+the bucket count, and `test_self_score_reports_collapsed_counts` checks `reported_collapsed` counts
+one representative per cluster, the same way the report collapses clusters. New
+`test_artifact_consistency.py` tests pin the same requirement:
+`test_gate_flags_a_self_score_that_loses_findings` checks clause (h) rejects a score whose
+`by_status` buckets sum to less than `total`, and
+`test_gate_flags_any_self_score_mismatch_against_the_report` replaces the old bounded-tolerance
+test — clause (d) now flags a mismatch in either direction, since both the report and the score
+collapse clusters under REQ-54.
+
+`test_self_score_counts_by_status_and_persists` now asserts the five new REQ-54 keys alongside
+the original ten: `total`, `duplicate`, `by_status`, `reported_collapsed`, and
+`needs_runtime_collapsed`, computed from the same fixture findings the original ten keys use.
+
+New `test_constraint_enforcer.py` tests pin REQ-51: `evidence._MECHANICAL` must equal
+`TIER1_RECEIPTS | TIER2_RECEIPTS` (the derivation, not an independent literal), and a new
+`evidence.unknown_receipts` must report a source whose prefix names neither tier and is not
+`llm`-namespaced, pass a declared prefix, pass an `llm-claimed:`/`llm-corroborated` source, and
+pass the `prove` lane's `reproduction` receipt (a real receipt outside both tiers). A gate test
+confirms `validate_findings` reports the offending source with a "closed set" message instead of
+silently ignoring it; a second gate test confirms a finding confirmed solely by `reproduction`
+still passes. `test_findings_gate.py::test_confirmed_requires_tool_receipt`'s fixture drops
+`read:sanity` (an undeclared prefix under REQ-51) for `llm-claimed:read-sanity` — same intent, no
+mechanical receipt, now legal under the closed set. `test_frozen_contract.py`'s pinned
+`_EVIDENCE_SHA256` (D-15) is updated to match `evidence.py`'s new bytes — `unknown_receipts` and
+the `_MECHANICAL` derivation moved `REPRODUCTION_RECEIPT`/`is_reproduction_receipt` into that file.
+
+New `test_constraint_enforcer.py` tests pin REQ-52: `reachability.BLOCKERS` must admit
+`external-boundary`, and `blocker_of` must report it verbatim instead of coercing it to `"other"`.
+A prompt test asserts `agents/trace.md`'s reachability-decision bullet names `external-boundary` in
+the closed taxonomy list, not only in the paragraph below it. Three `findings_gate` tests cover the
+new clause: an `external-boundary` finding with no `open_questions` entry is rejected, one whose
+entry is missing `who_to_ask_or_check` is rejected the same way, and one with all three
+`OPEN_QUESTION_KEYS` populated passes. Three further tests pin the shape `agents/trace.md`
+documents: an `external-boundary` verdict with no `reachable` key passes both
+`validate_reachability` and `stage_validate.validate_stage("reachability", ...)`, the same verdict
+with a non-bool `reachable` still errors, and a non-`external-boundary` verdict with `reachable`
+absent still errors.
+
+`test_contract_lint.py::test_every_closed_vocabulary_matches_its_schema_enum` (REQ-50) now also
+derives `completeness_tier`, `judge_verdict`, `receipt_tier`, and `reachability.blocker` from
+`fix_disposition.TIERS`, `calibrate.JUDGE_VERDICTS`, the literal `{1, 2}`, and
+`reachability.BLOCKERS`. A new `test_nested_item_schemas_declare_their_published_keys` pins the
+`open_questions`, `affected_sites`, and `history` item schemas against
+`models.OPEN_QUESTION_KEYS`, `models.AFFECTED_SITE_KEYS`, and the `history` event key.
+
+New `test_no_dead_helpers.py` (REQ-48) is the standing guard against the class of dead lever
+`test_dead_lever.py` pins one instance at a time: an AST scan walks every public function in
+`sec_overlay/` and requires each one to carry a reference from a non-test Python file, a
+`DEAD_ALLOWLIST` entry with a one-line reason, or a `PROMPT_ONLY` entry naming the agent prompt or
+`SKILL.md` that runs it by name (never a Python import). The scan proves a reference, not a call:
+an unused import still counts, so the guard is a floor against new dead code, not a reachability
+proof. A second test fails the moment a listed entry gains a reference,
+and a third fails the moment a listed entry names a function deleted from the tree, so a new dead
+helper fails the suite instead of joining the pile silently. Reconciling the two lists against the
+current tree dropped `scoring.py:score_fix` from `PROMPT_ONLY` (`verify.py` now imports and calls
+it directly) and added `reflection.py:validate_verdict` (named only by `agents/README.md`).
+`report.py`'s `to_markdown` carried an unreached `token_spend`/"Token spend by phase" branch behind
+`economics`; REQ-46 deleted the token measurements, so this task deleted the parameter and the
+branch with it.
+
+`test_no_dead_helpers.py` gains two tests. The first requires `context.py:load` and
+`fix_disposition.py:validate` to carry a list entry. Both are dead, and the flat name scan hides
+them behind an unrelated identifier of the same name. The second requires `_public_functions` to
+report an `async def` helper. Both tests fail against the flat name scan.
+
+The scan now resolves a reference to the module that defines the function, so a bare name in an
+unrelated module no longer counts as a caller. A key is `<module>.py:<function>`. It counts as
+referenced when a non-test file imports the function by name from that module, imports the module
+and reads the attribute, or uses the bare name inside the defining module itself.
+`_public_functions` also matches `ast.AsyncFunctionDef`. `helpers/tests/` stays outside the scan,
+so a test-only importer never makes a helper live: `fix_disposition.py:validate` is imported by
+`test_fix_and_gates.py` and still belongs in `DEAD_ALLOWLIST`. Module keys are file basenames, so
+`cli.py` and `workspace.py`, which each exist twice in this tree, share one key per name.
+
+`test_no_dead_helpers.py` gains three more tests pinning fix round 1, finding I2. The prompt corpus
+must hold `commands/audit.md`. The four helpers that the slash command runs must cite that file.
+Every `PROMPT_ONLY` entry must invoke its helper inside a code span of the cited file. All three
+fail: the corpus stops at `agents/` and `SKILL.md`, and a bare name in prose satisfies the current
+citation check.
+
+A `PROMPT_ONLY` citation now must prove an invocation. The guard keeps only the code of the cited
+file: fenced blocks, indented blocks, and inline backtick spans. Inside that code the helper must
+appear as a call, `name(`, or as `module.name`. The corpus adds `plugins/sec-overlay/commands/`,
+which is where the slash command runs `drive`, `advance`, `infer_role`, and `synthesize_manifest`.
+Re-citing every entry moved `run.py:infer_role` and `run.py:synthesize_manifest` out of
+`DEAD_ALLOWLIST` into `PROMPT_ONLY` at `commands/audit.md`, moved `campaign.py:pass_report` and
+`detection_coverage.py:generate` the other way, and re-pointed `context.py:leads`,
+`githist.py:security_fix_commits`, `run.py:advance`, and `run.py:drive` at the file that runs them.
+
+`test_diffscope.py` gains `test_changed_files_raises_when_git_diff_fails`, which pins fix round 1,
+finding I4. A non-zero `git diff --name-only` exit must raise, and the message must name the
+operation and both revisions. It fails today: `changed_files` discards the return code, so a
+failed diff reads as an empty change set and `postflight` keeps every stale prior conclusion.
+
+`test_dead_lever.py`'s three REQ-47 tests now pass: `sec_overlay.scope` and `test_scope.py` are
+deleted (the module had no caller), `scanscope.py`'s `rel_to_root` is deleted along with its test
+in `test_scanscope.py` (also no caller), and `SKILL.md`'s scope-token paragraph now points at
+`run.env` instead of restating the old `kb/scan-scope.json` sentence.
+
+`test_dead_lever.py` gains three tests pinning REQ-46: `sec_overlay.cost` must expose only
+`record_timing` and `aggregate_timings_by_phase`, a bare workspace's rendered report must hold no
+"Tokens by" or "Estimated cost" line, and `SKILL.md` must never name `record_agent(`. `cost.py`
+now holds only the two timing helpers. `test_cost.py` drops its four token/USD tests, keeping
+only `test_record_and_aggregate_timings`. `test_report.py` drops
+`test_write_report_renders_run_economics` and
+`test_run_economics_section_renders_phase_model_and_usd_estimate` — both asserted a token or USD
+total that no longer exists. `test_bench.py` drops `test_scorecard_cost_none_per_tp_when_no_tp`
+and trims the token/USD assertions out of `test_scorecard_carries_cost_columns` and
+`test_scorecard_markdown_renders_cost_and_per_class_fp`, keeping their wall-clock assertions.
 
 New `test_findings_overflow.py` (REQ-27, 5 tests) covers the load-and-save round trip through
 `read_findings`/`write_findings`: an unknown finding key survives the round trip, known fields
@@ -249,7 +417,7 @@ knows is non-`None` at that point — `ty` needs the narrowing spelled out; no b
 apply the same `dataclasses.replace` fix as the `Finding` builders below, for the same
 `ty` reason — no behavior change.
 
-`test_citations.py`, `test_factcheck_baseline_envelope.py`, and `test_report.py`'s `Finding`
+`test_citations.py`, `test_baseline_envelope.py`, and `test_report.py`'s `Finding`
 test-builders (`_f`/`_tf`/`_full`) now build a base `Finding(...)` call and layer per-test
 overrides with `dataclasses.replace(base, **kw)`, instead of a `dict()` + `.update(kw)` +
 `Finding(**d)` construction — `**d`'s inferred concrete dict type tripped `ty`'s
@@ -382,8 +550,7 @@ names `QUALIFIER_PROOF`, since the prompt grades severity and needs the blanket-
 suppressed-full default and the `confirmed_only` restore path.
 
 `test_phases.py` (new) covers `sec_overlay/phases.py`'s `PHASE_TABLE` order (findings-gate right
-after investigate, dedupe/demote-noise before report, trace present, and now `factcheck` sitting
-between `trace` and `calibrate` — ISSUE-047) and the pure sequencer helpers (`missing_inputs`,
+after investigate, dedupe/demote-noise before report, trace present) and the pure sequencer helpers (`missing_inputs`,
 `outputs_present`, `next_actionable_phase`). `test_artifact_phases_follow_selfscore` (new, §4.8)
 asserts `artifact-gate` sits after `selfscore` and `artifact-review` sits after `artifact-gate`,
 and that `artifact-review` is an agent phase naming `agents/artifact-review.md`.
@@ -430,10 +597,7 @@ carries `render_dispatch`'s reconciled `{{ATTACK_CLASS}}` list, including a clas
 added that recon omitted, and the triage block is appended after it when a class stays unrouted),
 `test_run_audit_passes_full_class_set_to_patch_dispatch` — drives `run_audit` up through
 `calibrate` so `patch` is the actionable phase and asserts its dispatch carries every class from
-`agents_to_spawn`, not one token (ISSUE-050), and `test_factcheck_action_applies_verdicts` —
-writes a `kb/verdicts.json` VERIFIED verdict for one finding, runs
-`DETERMINISTIC_ACTIONS["factcheck"]`, and asserts the finding is stamped
-`verification="fact-checked"` (ISSUE-047).
+`agents_to_spawn`, not one token (ISSUE-050).
 `test_run_audit_halts_when_scan_profile_missing_at_investigate` (new, M1, 0.10.1) stages state up
 to `investigate` with no `scan-profile.json` and asserts `run_audit` raises `PhaseHalt` (not
 `FileNotFoundError`) naming the missing file.
@@ -456,7 +620,8 @@ the regression guard for the CLI no longer calling `state.begin_pass` on every i
 | `test_finding_schema.py` | The `Finding` record stays consistent with `references/finding.schema.json`. |
 | `test_contract_lint.py` | REQ-32: a closed vocabulary's code constant matches its schema `enum`, verbatim. |
 | `test_wiring.py` | Silent-backend / clsmap / dead-link regressions and attack-class routing. |
-| `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules, the `EVIDENCE_VOCABULARY` block listing every `sec_overlay.evidence` tier/status/disposition value verbatim, the `CLAUDE.md` phase-order block tracking `PHASE_TABLE`'s relative order, (06-06, WR-01) that no live doc wrongly denies review's --workspace support — premise pinned against `run_review`'s real signature; the matcher covers three denial wordings, with pattern tests pinning both denial and corrected phrasing — and that every `dependency-sinks.json` catalog entry's `sink`/`indicators` tokens appear inside the specific table row named by its `cls` value in `attack-classes.md` — not merely anywhere in the file — so recon's class table never drifts from the catalog, in the row `reconcile_plan` actually routes by. Two more guards pin the class-file side of that routing: every catalogued `cls` value (`ssrf`, `expr-eval-rce`, `ssti`) has a matching `agents/classes/<cls>.md` file, and `expr-eval-rce.md` carries all five required section headings — so `reconcile_plan` can never select a class with no class prompt behind it. |
+| `test_docs_invariants.py` | Documentation contracts: prompt-constants block presence, `finding-template.md` sections, agent-prompt rules, the `EVIDENCE_VOCABULARY` block listing every `sec_overlay.evidence` tier/status/disposition value verbatim, the `CLAUDE.md` phase-order section pointing at `SKILL.md` instead of duplicating `PHASE_TABLE`
+(REQ-61), (06-06, WR-01) that no live doc wrongly denies review's --workspace support — premise pinned against `run_review`'s real signature; the matcher covers three denial wordings, with pattern tests pinning both denial and corrected phrasing — and that every `dependency-sinks.json` catalog entry's `sink`/`indicators` tokens appear inside the specific table row named by its `cls` value in `attack-classes.md` — not merely anywhere in the file — so recon's class table never drifts from the catalog, in the row `reconcile_plan` actually routes by. Two more guards pin the class-file side of that routing: every catalogued `cls` value (`ssrf`, `expr-eval-rce`, `ssti`) has a matching `agents/classes/<cls>.md` file, and `expr-eval-rce.md` carries all five required section headings — so `reconcile_plan` can never select a class with no class prompt behind it. |
 | `test_frozen_contract.py` | Byte-identity: `models.py`/`evidence.py` are frozen mirrors of a separate Go port (D-15) — a sha256 pin fails loudly on any edit. `fingerprint()` golden-value pins (fully-populated, minimally-populated, field-order-permuted) prove its behavior independent of that byte check. REL-03: `pyproject.toml`'s `[project] dependencies` stays `[]`. |
 | `test_absence_rules.py` | The `rules/absence` semgrep pack against `fixtures/absence_repo`: it flags the missing-safe-option site, stays silent on the fixed site, and every rule's own block carries a `cls:` line after its `metadata:` line — not just a raw count of `cls:` occurrences in the file. One test per rule now covers all five. Each asserts the vulnerable site by `(file, rule, line)` and the hardened site's silence. The three added pairs are `engines_unsafe.go`/`engines_safe.go` for `cel.NewEnv` and `lua.NewState`, plus `fetch.py`'s two `requests.get` lines. Skips when `semgrep` is absent from `PATH`. |
 | `test_astgrep.py` (4 new) | `build_rule()` emits a `not:`-wrapped relational rule; `run_astgrep_rule()` passes the rule inline via `--inline-rules` and returns parsed matches; the live case runs `fixtures/absence_repo/rego-absence.yaml` and asserts the Go absence rule flags `vulnerable.go` and stays silent on `safe.go`. Skips when `ast-grep` is absent from `PATH`. |
@@ -525,12 +690,53 @@ injection's explicitly rather than by falling through a default), and
 general-defect finding WITH a Tier-1 receipt still reaches `confirmed` through the unchanged
 `confirms_alone` path, proving no reflection outcome or profile value can grant that status.
 
+`test_phase_artifact_contract.py` gained four tests pinning REQ-40: `report` must declare
+`reports/redteam-plan.md` as an input, `redteam` must run before `report`, `render_ndt` must
+accept a `has_redteam_plan` keyword and omit the pointer when false, and `report.py` must hold
+no `redteam-plan.md` filesystem probe. All four are green. `phases.py` moves `redteam` ahead of
+`report` in `PHASE_TABLE`; `report.py` threads a `has_redteam_plan` keyword through `render_ndt`,
+`_ndt_next_actions`, `to_markdown`, and `write_finding_details`, and `write_report` takes the
+same keyword instead of probing the filesystem for `redteam-plan.md`. `driver.py`'s `_act_report`
+passes `has_redteam_plan=True`, since the driver only calls `write_report` after the `redteam`
+phase has run.
+
+`test_phases.py`'s `test_redteam_precedes_the_artifact_gate` is renamed
+`test_redteam_precedes_the_report` and now asserts `demote-noise` < `redteam` < `report` <
+`artifact-gate`, tracking the REQ-40 reorder.
+
+`test_report.py`'s `test_report_links_redteam_plan_and_shows_receipts` now calls `write_report`
+with `has_redteam_plan=True`, since the probe it used to rely on is gone. Three REQ-03 tests —
+`test_below_bar_ndt_next_action_points_at_the_gaps_section`,
+`test_unrunnable_ndt_next_action_points_at_the_preconditions_section`, and
+`test_directive_ndt_next_action_points_at_the_directive_section` — gained the same keyword on
+their `to_markdown` calls, because `_ndt_next_actions` returns a fixed no-plan action for every
+finding when the caller omits it.
+
+`test_report.py` gained `test_main_probes_redteam_plan_when_present` and
+`test_main_omits_redteam_plan_when_absent` (REQ-40 fix round 1). They call `report.main()` with
+an argument vector, not `write_report()` directly. `main()` is a CLI boundary with no phase
+context, so it probes `redteam-plan.md` on disk instead of taking `write_report`'s `False`
+default.
+
+`test_phase_artifact_contract.py`'s `test_report_module_holds_no_redteam_plan_probe` is reversed
+to `test_only_the_report_cli_probes_for_the_redteam_plan` (REQ-40 fix round 1). The old test
+banned the probe substring anywhere in the module, which was broader than REQ-40 states. The
+replacement asserts the probe appears exactly once in `report.py`, inside `main()`, and confirms
+`write_report` and `write_finding_details` hold none.
+
+`test_phase_artifact_contract.py` gains four tests pinning REQ-43: `validate-fix` must sit
+between `patch` and `verify` as an agent phase naming `validate-fix.md`; `verify` must declare
+`kb/gates/validate-fix.json` as an input; `apply_fix_gates` must stamp a scored verdict into a
+finding's history without changing its `status`; and `sec_overlay.verify` must name `score_fix`.
+All four fail: `validate-fix` is absent from `PHASE_TABLE`, `verify` declares no such input,
+`apply_fix_gates` does not exist, and `verify.py` names `score_fix` nowhere.
+
 When you add or change a test file, update this README's counts and guard list in the same commit
 (enforced by the pre-commit hook).
 
-The review-improvements test files (`test_cluster.py`, `test_scope.py`, `test_selfscore.py`,
-`test_sarif.py`, `test_calibrate.py`, `test_report.py`) are `ruff format`-clean; run `ruff format`
-before committing edits.
+The review-improvements test files (`test_cluster.py`, `test_selfscore.py`, `test_sarif.py`,
+`test_calibrate.py`, `test_report.py`) are `ruff format`-clean; run `ruff format` before
+committing edits. (`test_scope.py` is deleted — REQ-47.)
 
 `test_selfscore.py` gained `test_shipping_counts_full_set`, covering `build_self_score`'s new
 `shipping` count over `evidence.SHIPPING_STATUSES`.
@@ -671,7 +877,7 @@ The `_full` helper in `test_report.py` builds its `Finding` kwargs as a dict lit
 `test_cvss.py`'s `sec_overlay.cvss` import is wrapped across multiple lines to satisfy ruff
 `I001` (the single-line form exceeded the 100-char limit).
 
-`test_report.py`, `test_models.py`, `test_citations.py`, and `test_factcheck_baseline_envelope.py`
+`test_report.py`, `test_models.py`, `test_citations.py`, and `test_baseline_envelope.py`
 had their fixture `cvss_vector` strings swapped from `CVSS:3.1` to `CVSS:4.0` vectors of
 equivalent meaning, matching the v4.0-only parser (`sec_overlay/cvss.py`). `test_cvss.py`'s own
 `CVSS:3.1` fixture is untouched — it exercises the parser's rejection path.
@@ -1149,7 +1355,7 @@ a finding can be routed into or out of.
 (Phase 6 security audit, T-06-02-06): it walks the live `PHASE_TABLE` and asserts every phase
 the skill `CLAUDE.md` "Phase order" block names appears in the same relative order, using a
 name-to-doc-label map. The block is a condensed operator view, so table rows it deliberately
-omits (`factcheck`, `demote-noise`, `selfscore`) are exempt from presence but a reorder of any
+omits (`demote-noise`, `selfscore`) are exempt from presence but a reorder of any
 named row fails the suite. This replaces the one-time manual side-by-side read Plan 06-02
 recorded as its doc-drift check with a standing regression guard.
 
@@ -1188,7 +1394,7 @@ order is fixed, so a full-repo `ruff check` runs clean (LINT-01).
 Phase 8 (v5.1, DOC-03) promotes `selfscore` from a deliberately-omitted PHASE_TABLE row to
 an enforced label in `test_docs_invariants.py`'s `_PHASE_DOC_LABELS`: the CLAUDE.md
 phase-order block must now carry `Selfscore` between `Report` and `Red Team`, in
-PHASE_TABLE order. Only `factcheck` and `demote-noise` remain condensed-view omissions.
+PHASE_TABLE order. Only `demote-noise` remains a condensed-view omission.
 
 `test_dependency_sinks.py` (new) covers `sec_overlay.dependency_sinks`: the shipped
 catalog loads and passes `validate_catalog` with zero errors; the `opa-rego-http-send`
@@ -1474,7 +1680,7 @@ The reason key is deliberately not a backend name. `run_prefilter` asserts that 
 
 The REQ-14 import block was reordered by `ruff --fix` after the red commit. The change is import order only.
 
-`test_prove.py` pins the opt-in proof-by-execution lane (REQ-30). Nineteen tests cover seven layers. Three assert the flag gate: `prove_enabled` is False without a scan profile, False when `scan_options.prove_findings` is absent, and True only when the key is exactly `true`. One asserts that `run_prove` mutates no finding when the lane is off. Two pin the receipt vocabulary — `prove.is_reproduction_receipt` accepts `reproduction` and rejects `semgrep:x`, while `evidence.is_tool_receipt("reproduction")` stays False, because `evidence.py` is byte-pinned by the D-15 frozen-contract test. Five pin the soundness guard: an `entrypoint` proof promotes an `ssrf` finding to `confirmed`, a `slice` proof leaves it `raw` and `needs-runtime`, a `slice` proof records `prove: slice-unbuildable`, a `sqli` finding never promotes, and a missing toolchain records `prove: toolchain-absent`. One asserts that `findings_gate` accepts a `confirmed` finding whose only evidence source is `reproduction`. One drives the stdlib loopback collector and asserts it reports the observed request path. The last five cover the wiring: the `prove` phase sits between `redteam` and `artifact-gate`, `Workspace.repro` exists after `ensure()`, `finding.schema.json` declares the seven-key `reproduction` object, the driver skips the phase when the lane is off and dispatches it when the lane is on, and `preflight_report` reports the prove-lane toolchains.
+`test_prove.py` pins the opt-in proof-by-execution lane (REQ-30). Nineteen tests cover seven layers. Three assert the flag gate: `prove_enabled` is False without a scan profile, False when `scan_options.prove_findings` is absent, and True only when the key is exactly `true`. One asserts that `run_prove` mutates no finding when the lane is off. Two pin the receipt vocabulary — `prove.is_reproduction_receipt` accepts `reproduction` and rejects `semgrep:x`, while `evidence.is_tool_receipt("reproduction")` stays False, because `"reproduction"` is not a member of `_MECHANICAL`, the union of the two tool-receipt tiers. Five pin the soundness guard: an `entrypoint` proof promotes an `ssrf` finding to `confirmed`, a `slice` proof leaves it `raw` and `needs-runtime`, a `slice` proof records `prove: slice-unbuildable`, a `sqli` finding never promotes, and a missing toolchain records `prove: toolchain-absent`. One asserts that `findings_gate` accepts a `confirmed` finding whose only evidence source is `reproduction`. One drives the stdlib loopback collector and asserts it reports the observed request path. The last five cover the wiring: `Workspace.repro` exists after `ensure()`, `finding.schema.json` declares the seven-key `reproduction` object, the driver skips the phase when the lane is off and dispatches it when the lane is on, and `preflight_report` reports the prove-lane toolchains. A fifth wiring test originally pinned `prove` directly after `redteam`; REQ-40 moved `report` and `selfscore` between them, so the test is renamed `test_the_phase_table_places_prove_directly_before_the_artifact_gate` and now asserts only `redteam` < `prove` and `prove` immediately before `artifact-gate`.
 
 All nineteen fail at collection: `sec_overlay.prove` does not exist.
 
@@ -1486,3 +1692,387 @@ partition assert survives the new receipt vocabulary.
 One test needed a fixture repair. `test_the_gate_accepts_a_reproduction_only_confirmed_finding`
 failed on an unrelated pre-existing gate rule: a shipping finding must carry a non-empty `impact`.
 The finding now sets `impact`, so the test asserts the one thing it was written to assert.
+
+New `test_phase_artifact_contract.py` pins REQ-42: no phase reads an artifact no earlier phase
+writes. Three tests assert `factcheck` is absent from `PHASE_TABLE` and `DETERMINISTIC_ACTIONS`,
+`fact-checked` is absent from `VERIFICATION_VALUES`, and no `sec_overlay.factcheck` module or
+`agents/factcheck.md` prompt exists. All three fail: the phase's only input, `kb/verdicts.json`,
+had no producing phase, so every run recorded `factcheck: done` after doing nothing.
+
+`test_phase_artifact_contract.py` gains two tests pinning REQ-41: `calibrate_findings` must
+demote a `CONFIRMED` external-boundary finding to `NEEDS_DEPLOYMENT_TESTING`, and `validate.md`
+must no longer carry the `external-boundary` ban it could not enforce — `trace` runs after
+`validate`, so a blocker `trace` sets was never checked. Both fail: the status stays `CONFIRMED`,
+and the banned phrase is still in the prompt.
+
+The REQ-41 `risk_score` assertion now reads `f.risk_score is not None and f.risk_score <= 3`,
+matching the null-check idiom already used in `test_calibrate.py` — `risk_score` types as
+`int | None`, so a bare `<= 3` fails the type checker.
+
+`test_phase_artifact_contract.py` gains one test pinning REQ-44: `verify_findings` reads the
+whole finding set, then writes the whole set back, so a finding it never touched overwrites a
+concurrent writer's change to that same finding with the stale copy from its own read. The test
+writes two findings, has the injected verifier simulate a second writer changing the untouched
+one mid-run, then asserts the untouched finding keeps the concurrent writer's value after
+`verify_findings` returns. It fails: the untouched finding reverts to its pre-race value.
+
+The REQ-44 test's `config` argument reads `""`, not `{}`: `verify_findings`'s `config` parameter
+types as `str`, and the injected stub verifier ignores its `configs` argument entirely, so an
+empty string satisfies `ty check` with no change in what the test exercises.
+
+New `test_dead_lever.py` pins REQ-45: `run_postflight` must derive its drift set from a `target`
+argument instead of dropping the parameter every caller left unpassed. Four tests build a
+workspace whose prior context holds one settled non-finding, then drive `run_postflight` with a
+fake git runner. One asserts a prior item on a file `git diff` reports as changed is dropped from
+the merged context, and that the runner's `cwd` and argv carry `target` and the prior context's
+pinned SHA. One asserts a prior item on an unchanged file survives. One asserts the merge key
+strips a prior item's leading `./` before comparing it against `git diff`'s bare paths. Three
+fail: `run_postflight` takes no `target` keyword at all.
+
+New `test_constraint_enforcer.py` pins REQ-49: `_validate_object_fields` must reject a key no
+`properties` entry declares when the schema sets `additionalProperties: false`, must still accept
+every declared key, and must leave the object open when `additionalProperties` is the dict form
+(a subschema for undeclared keys, not the closing boolean). Two more tests assert
+`finding.schema.json` itself sets `additionalProperties: false` and that the golden fixture with
+`render_stale: true` grafted on now fails — the deleted re-render lever's key no longer validates.
+A prompt-scan test asserts no `agents/*.md` file still offers `render_stale`, and a text test
+asserts `artifact-review.md`'s verdict vocabulary dropped to `"clean" | "downgrades"` with no
+`forced_rerender` id list. `test_finding_schema.py`'s `test_unknown_extra_key_is_not_flagged`
+becomes `test_unknown_extra_key_is_flagged`: the schema is closed now, so an undeclared key is an
+error, not silent overflow.
+
+All eight now pass. `_validate_object_fields` (`sec_overlay/schema.py`) gains a branch: when
+`schema.get("additionalProperties") is False`, every key in `data` absent from `properties`
+appends an `"<path>.<key>: unknown field"` error. `finding.schema.json` sets
+`additionalProperties: false` at its root only — every nested object schema stays open, so a
+later task's nested addition never trips this same branch. `artifact-review.md` drops the
+`render_stale` lever and its `"re-render"`/`forced_rerender` verdict shape; `agents/README.md`'s
+phase-6 row drops the same clause.
+
+`test_artifact_consistency.py` gains three tests pinning REQ-53 clause (g): a report whose stated
+`Needs runtime proof` count sits below the needs-runtime finding ids the report renders (triage
+row, `## Detail` link, or `### <id> — ` heading) must be flagged, a SARIF result count that
+disagrees with the report's total rendered finding count must be flagged, and a report that
+states both the needs-runtime total and a `Leads pending external verification` split reconciles
+against SARIF with no error. `test_report.py` gains one test asserting the stated needs-runtime
+count includes external-unverifiable leads and that the report renders the split line — its
+`dataclasses.replace` call needs a local `import dataclasses`, matching the two other tests in the
+file that build a modified `Finding` this way; the module has no top-level `dataclasses` import.
+All four fail before the fix: `artifact_consistency.py` has no clause reading SARIF or the
+rendered id set, and `report.py`'s `Needs runtime proof` line counts only the non-external
+needs-deployment-testing findings with no split line.
+
+A fifth test, `test_gate_flags_a_triage_heading_with_no_rows_against_a_stated_count`, pins a fix
+round on clause (g)'s render-surface guard: the guard narrowed from an OR across triage rows,
+`## Detail` links, and section headings down to one structural check, `"## Triage" in report_md`.
+The broader OR went silent on a report that emits the `## Triage` heading but no data rows while
+the stated count stays non-zero — a `to_markdown()` rendering bug, not a missing artifact — and
+this test fails against that broader guard while passing against the single-heading check.
+
+`test_report.py` gains three tests pinning REQ-56. One test proves a high-severity needs-runtime
+finding forces the "High-severity findings require immediate remediation" sentence, not a
+"medium/low" sentence keyed only off confirmed findings. Two tests pin the new `triage_what`
+helper: it drops a leading status sentence ("Confirmed.", "Provenance unresolved.") from a
+finding's message before the What column renders it, so a rendered triage row never leaks the
+finding's lifecycle state. The three tests use `dataclasses.replace` through a new module-level
+`import dataclasses`; earlier tests in the file keep their own local `import dataclasses` lines,
+left untouched.
+
+`test_sarif.py` gains three tests pinning REQ-57. One test pins a cluster's `relatedLocations`:
+each entry of `Finding.affected_sites` must become its own SARIF location, in list order, so a
+systemic cluster stops shrinking to the single primary location. A second test pins the negative
+case: a finding with no `affected_sites` carries no `relatedLocations` key at all. A third test
+pins `result.properties.findingId`, so a SARIF consumer can name the finding a result came from.
+`test_suppressed_findings_carry_insource_suppression` is renamed to
+`test_suppressed_findings_carry_an_external_suppression` and its final assertion now expects
+`kind == "external"`, not `"inSource"` — the prior kind asserted an in-file annotation that never
+existed. The cluster and finding-id tests fail before the fix with `KeyError`; the renamed test
+fails on the kind string. The negative test (no `affected_sites`, no `relatedLocations` key)
+already holds against the unfixed code and stays green as a regression guard, not a red test.
+
+`test_dedupe.py` gains `test_dedupe_stamps_a_fingerprint_on_a_rejected_finding`, pinning REQ-58.
+Two `REJECTED` findings share one file and line but carry different `rule_id` values. The test
+asserts both end up with a 12-character fingerprint and that the two fingerprints differ. It
+fails before the fix because the stamping loop in `dedupe.py` only stamps findings whose status
+is `RAW` or `CONFIRMED`, so both rejected findings keep a `None` fingerprint.
+
+## Two artifact-consistency false halts, fixed (P4-15)
+
+`test_artifact_consistency.py` gains `test_confirmed_only_report_does_not_halt_the_gate`, pinning
+the fix to clause (g) part two. It drives the real pipeline end to end —
+`write_report(ws, confirmed_only=True)` then `write_self_score(ws)` — on a workspace holding one
+`CONFIRMED` finding and one needs-runtime finding, then asserts `run_artifact_consistency(ws) ==
+[]`. It fails before the fix: `write_report` in confirmed-only mode writes SARIF from the
+reportable set alone but still renders the needs-runtime row into the Markdown, so clause (g)
+always saw a SARIF/report count mismatch on an otherwise-correct run.
+
+`test_artifact_consistency.py` also gains `test_gate_degrades_a_legacy_score_missing_the_collapsed_key`,
+pinning the fix to clause (d). It writes a self-score with a `needs_runtime` key but no
+`needs_runtime_collapsed` key — the shape a `state.json` predates REQ-54 or a standalone
+`sec_overlay.artifact_consistency` run supplies — against a report stating a different count, then
+asserts `run_artifact_consistency(ws) == []`. It fails before the fix: the old fallback,
+`score.get("needs_runtime_collapsed", score.get("needs_runtime", 0))`, ran the exact-equality
+check against the uncollapsed count and flagged a contradiction that was never real.
+
+`test_gate_flags_any_self_score_mismatch_against_the_report`'s score fixtures now carry
+`needs_runtime_collapsed` alongside `needs_runtime` — the modern (post-REQ-54) shape. The test's
+assertions are unchanged; only the input shape moved off the legacy path the fix above now
+degrades instead of checks, so the test still exercises a genuine mismatch under clause (d)'s
+current logic.
+
+## 2026-09-01 — REQ-59 red: a verify hit matches by base filename, not by path
+
+`test_verify_paths.py` pins the fix. Two tests assert `_rel_path` strips a scan root from a path
+and leaves an unprefixed path untouched. Three assert `_path_matches`: it accepts two paths naming
+the same file, accepts a repo-relative finding path under a scoped scan target, and rejects a
+same-named file in another directory. One drives `_file_has_hit` end to end: a hit reported for
+`b/util.py` must not satisfy a finding filed against `a/util.py`.
+
+All six fail: `sec_overlay.verify` has no `_rel_path` or `_path_matches` attribute, and
+`_file_has_hit`'s basename comparison treats `a/util.py` and `b/util.py` as the same file.
+
+## 2026-09-01 — REQ-59 red: a cross-file fix reads as `not-fixed`
+
+`test_verify_paths.py` gains three more tests. `test_patch_files_reads_the_post_image_paths`
+asserts `_patch_files` returns the `+++ b/<path>` paths a diff writes, skips a `/dev/null`
+deletion header, and returns an empty set for text with no diff header at all.
+`test_a_cross_file_fix_is_not_reported_as_not_fixed` asserts `verify_patch` returns the new
+cause `rule-no-target-file`, not `not-fixed`, when the patch never touches the finding's own
+file. `test_the_new_cause_maps_to_a_legal_verification` asserts the cause is a member of
+`VERIFY_CAUSES` and maps to `static-only`.
+
+All three fail: `sec_overlay.verify` has no `_patch_files` attribute, and `VERIFY_CAUSES`
+has no `rule-no-target-file` member.
+
+## 2026-09-01 — REQ-60 red: a rule that fires on both constructions reads as `not-fixed`
+
+`test_verify_paths.py` pins the `rule-no-discriminate` cause. `_evidence_hit` builds a `Finding`
+with a chosen `line` and `evidence` string. `test_a_rule_that_matches_both_constructions_reports_no_discriminate`
+stubs `_file_has_hit` to append a pre-patch hit then a distinct post-patch hit to its new
+`detail` list, and asserts `verify_patch` returns `rule-no-discriminate`, not `not-fixed`.
+`test_a_surviving_construction_still_reports_not_fixed` stubs the same hit twice and asserts
+`not-fixed` — the same construction surviving is a real miss, not a discrimination failure.
+`test_the_history_reason_names_both_lines` drives `verify_findings` end to end and asserts the
+`verify:cause:rule-no-discriminate` history entry carries a `reason` naming both matched lines.
+
+A fourth test, `test_a_stale_last_lines_record_does_not_leak_into_the_next_verification`, guards
+a module-level pitfall: the line-carrying record a later fix introduces must be scoped per
+`verify_findings` call, not per process. It runs two verifications back to back — the first with
+a stubbed `_file_has_hit` that populates evidence, the second with a stub verifier that never
+touches the record — and asserts the second finding's history entry carries no leftover `reason`.
+
+All four fail: `_file_has_hit` accepts no `detail` keyword yet, so `verify_patch` cannot compare
+pre-patch and post-patch evidence, and `sec_overlay.verify` has no `_LAST_LINES` attribute.
+
+## 2026-09-01 — REQ-60 green: `rule-no-discriminate` compares evidence text
+
+`_file_has_hit` and `_check` gain a keyword-only `detail` out-parameter. When given, every matching
+scanner finding is appended instead of returning `True` on the first match. `verify_patch` collects
+a `pre_detail` and a `post_detail` list this way, then calls a new `_post_verdict` helper. The
+helper compares stripped evidence text, never line numbers, since an inserted line shifts every
+later line and a same-line comparison would call an unfixed finding new. Disjoint non-empty
+evidence sets return `rule-no-discriminate`. Any other case returns `not-fixed`.
+
+`_post_verdict` records the pre-patch and post-patch line on a module-level `_LAST_LINES` dict,
+since the cause is a plain string that carries no line data on its own. `verify_findings` reads
+this dict right after calling `verifier` and adds a `reason` key to the history entry only when the
+dict is non-empty, so `test_verify_findings_records_the_cause`'s exact-dict membership check for
+causes with no evidence still holds.
+
+`verify_findings` clears `_LAST_LINES` immediately before every `verifier` call, not only inside
+`verify_patch`. A stub `verifier=` callable injected in a test bypasses `verify_patch` outright, so
+clearing only inside `verify_patch` would let one finding's real line numbers leak into a later
+finding's history entry that used a stub. The fourth test above pins this: two `verify_findings`
+calls in one process, the second with a stub verifier, and asserts the second's history entry
+carries no `reason` key.
+
+`tests/test_verify.py`'s `fake_hit` at line 126 widens from five fixed positional parameters to
+`(target_dir, config, file_path, cls, rules, **kw)`, so the new keyword-only `detail` argument
+still binds when a test's stub does not care about it.
+
+All 42 targeted tests pass. The full suite passes at 1843 tests (1839 plus these four).
+
+## 2026-09-01 — P5-9 and F2: the cross-file guard and the multi-config loop
+
+`test_verify_paths.py` gains three tests and updates one.
+
+`test_a_cross_file_fix_with_a_clean_re_scan_is_verified` pins ruling P5-9. The
+`rule-no-target-file` guard used to return before the copy, the apply, and the post-patch
+re-scan, so a cross-file fix a cross-file backend (`codeql:dataflow`, or `sca` where the
+finding cites the lockfile and the patch edits the manifest) would prove clean could no
+longer reach `verified-static`. The test counts `_file_has_hit` calls and asserts the second
+one ran. It failed with `assert 1 == 2` before the guard moved after the re-scan.
+
+`test_a_cross_file_fix_is_not_reported_as_not_fixed` now monkeypatches `shutil.copytree`.
+The guard no longer short-circuits the copy, so the test's fictional `/repo` target would
+otherwise raise from `copytree`. Its assertion is unchanged: a surviving post-patch hit on a
+patch that writes no file the rule fires in still returns `rule-no-target-file`.
+
+`test_detail_accumulates_across_every_planned_ruleset` pins the multi-config loop. Two
+configs, one firing pre-patch only and one firing on both sides with identical evidence text,
+used to yield `pre_detail` and `post_detail` drawn from different rulesets and a false
+`rule-no-discriminate`. `_check` now runs every config when the caller passes a `detail` list
+and keeps the early return only on the detail-free path.
+
+`test_path_matches_rejects_an_empty_path` pins the `_path_matches` guard. An empty `a` or `b`
+made `a.endswith("/" + b)` true for any counterpart ending in `/`.
+
+## 2026-09-02 — REQ-62 red: the receipt-tier bar was a literal
+
+`test_every_closed_vocabulary_matches_its_schema_enum` compared the schema enum for
+`receipt_tier` against the literal `frozenset({1, 2})`. A third tier added to
+`evidence.py` would have satisfied the literal and the test would have stayed green.
+The expected set now comes from `receipt_tier` applied to every prefix in
+`TIER1_RECEIPTS | TIER2_RECEIPTS`, so the assertion follows the code.
+
+`evidence.py` is byte-frozen, so no red run is possible. A stubbed tier-3 receipt shows
+the derived set becomes `{1, 2, 3}` while the literal stays `{1, 2}`. Closes F-4.
+
+## 2026-09-02 — REQ-63 red: two rule-origin prefixes could never match
+
+`_RULE_ORIGINS` listed `asvs:` and `codeguard:`. Neither prefix appears in
+`evidence._MECHANICAL`, so no evidence source could ever start with either one.
+`test_every_rule_origin_is_a_mechanical_receipt_prefix` failed with `AssertionError: asvs:`
+before the fix and passes after it. Closes F-5.
+
+## 2026-09-02 — REQ-64 red: the receipt-prefix test restated its own premise
+
+`test_backend_receipt_prefixes_are_mechanical` hardcoded six prefixes and asserted
+`prefix in _MECHANICAL`. `is_tool_receipt` is defined by that same membership, so the
+assertion could not fail, and the hardcoded list missed any newly declared prefix. The test
+now iterates `TIER1_RECEIPTS | TIER2_RECEIPTS` and asserts the gate result and the tier.
+
+A probe over `declared | {"nosuch"}` shows the loop rejects an undeclared prefix.
+
+Residual gap: the test cannot catch a new backend whose prefix is never added to
+`evidence.py`. No constant enumerates the backends — `prefilter.py` names the four inline.
+Closes F-6.
+
+## 2026-09-02 — REQ-65 red: collapse_clusters mutated its input
+
+`collapse_clusters` assigned onto `primary.affected_sites` in place. A caller that kept its
+own list saw one element change. `test_collapse_clusters_does_not_mutate_the_input_findings`
+failed on `assert all(m.affected_sites == [] for m in members)` before the fix. The function
+now returns a `dataclasses.replace` copy. Closes F-7.
+
+## 2026-09-02 — REQ-66 red: SARIF repeated the primary location
+
+`_related_locations` mapped every entry of `affected_sites` to a related location. A cluster
+representative appears in its own site list, so its primary location repeated as a related
+location. `test_related_locations_skip_the_findings_own_site` asserted
+`["other.py", "nameless.py"]` and saw `["app.py", "other.py", "nameless.py"]` before the fix.
+Closes F-10.
+
+## 2026-09-02 — REQ-67 red: an empty preconditions list fell through
+
+`_directive_block` used `rt.get('preconditions') or f.preconditions`, which cannot tell an
+absent key from an explicit empty list. A runtime test that stated "no preconditions" rendered
+the finding's stale preconditions instead.
+`test_an_explicit_empty_preconditions_list_renders_none_needed` failed on
+`assert "stale fallback" not in out` before the fix. Closes F-8.
+
+## 2026-09-02 — REQ-68 red: the truncated-title check was tautological
+
+`_check_truncated_titles` built its expected cell with `triage_what`, the same helper that
+produced the cell under test. The comparison could not fail on a renderer bug, and it reported
+`is truncated mid-word` for a hand-edited cell that was not a cut at all.
+
+`test_gate_flags_a_hand_edited_truncated_title` asserts `not a prefix` and failed before the
+fix. Two further tests guard the accepted cases: a correct word-boundary cut and a single long
+word with no boundary. `test_gate_flags_a_title_truncated_mid_word` still passes. Closes F-12.
+
+## 2026-09-02 — REQ-69 red: a quoted diff path never matched
+
+`_patch_files` read the raw `+++` field. A path git had quoted and octal-escaped entered the
+set with its quotes and escapes intact, so `_path_matches` never matched it and the
+patch-scope check passed a patch that touched the wrong file.
+
+Four tests pin `_unquote_path` — an octal-escaped UTF-8 path, an unquoted path, a quoted path
+holding a space, and a body that does not decode. A fifth test runs a quoted path through
+`_patch_files`. All five failed before the fix. Closes F-14.
+
+## 2026-09-02 — REQ-70 red: the concurrency test asserted wall-clock time
+
+`test_review_fetches_files_concurrently_bounded_by_max_git_procs` asserted
+`elapsed < len(paths) * sleep_seconds`. A loaded machine could fail the test with correct
+code, and the bound proved overlap only indirectly. The fake runner now counts its own
+concurrent calls under a lock and the test asserts the peak is above 1.
+
+Setting `max_git_procs=1` drops the peak to 1 and fails the assertion, which is the proof the
+assertion is live.
+
+Trade-off: the test no longer covers the value of the bound. `test_review_default_bounds_are_8_600_and_16`
+at line 475 already asserts `{"concurrency": 8, "timeout": 600, "max_git_procs": 16}`, so the
+bound stays pinned elsewhere. Closes F-13.
+
+## 2026-09-02 — REQ-71 red: the package README is STE-linted
+
+`sec_overlay/README.md` held semicolon-joined clauses and over-long sentences throughout, and
+nothing checked it. `test_package_readme_ste_lint_clean` now asserts `lint_prose` returns no
+error and no warning for the file.
+
+The test is committed red on purpose. The file is too large to rewrite in one commit, so the
+rewrite lands in six parts and the test stays red until the last part. The spec authorises the
+departure from red-green-per-commit. Each rewrite commit must reduce the reported error count,
+and no other test may fail during that window.
+
+The test asserts errors and warnings, while the model test `test_assurance_case_ste_lint_clean`
+asserts errors only. The README's baseline warning count is zero, so asserting both is free and
+catches a buried sequence or a noun cluster the model test would let through. Closes F-9 and F-11.
+
+## 2026-09-03 — final-review finding 1: three git calls still read quoted paths
+
+`_unquote_path` only covered `_patch_files`. Three call sites still read raw git output:
+`diffscope.changed_file_records`, `diffscope.changed_files`, and `githist.files_in_commit`. A
+non-ASCII filename came back quoted, so it dropped out of incremental scope and git-history
+mining.
+
+Three new tests assert each call's argv carries `-c core.quotePath=false` before the subcommand.
+All three failed before the fix. The fix stops the quoting at the source, so `_unquote_path`
+stays unchanged.
+
+The new flag shifted argv positions. Fake runners in `test_cli.py`, `test_rule_glob.py`, and
+`test_dead_lever.py` matched the old positions. Their matches now check `"diff" in cmd` or the
+shifted index.
+
+## 2026-09-03 — final-review finding 3: a null preconditions value read as "none needed"
+
+REQ-67's `"preconditions" in rt` guard treats an explicit JSON `null` the same as an
+empty list, so it renders `_(none needed)_` instead of falling back to
+`Finding.preconditions`. `test_a_null_preconditions_value_falls_back_to_the_finding` asserts
+the fallback and failed before the fix. The guard now reads
+`rt.get('preconditions') is not None`.
+
+## 2026-09-03 — final-review finding 6: a substring check called itself a prefix check
+
+`_check_truncated_titles` finds the triage cell's prefix anywhere in the finding's message with
+`message.find(prefix)`, a substring search. The absent-prefix error said the cell "is not a
+prefix of its message", which claims a stricter check than the code runs.
+`test_gate_flags_a_hand_edited_truncated_title` now asserts the error says the cell "does not
+appear in its message" and failed before the fix. The check itself is unchanged.
+
+## 2026-09-03 — re-review finding 1: two sibling git calls still read quoted paths
+
+The `core.quotePath=false` fix covered `changed_file_records`, `changed_files`, and
+`files_in_commit`, but missed `dirty_file_records` and `binary_paths` in the same file. The
+`binary_paths` miss was a regression the fix round itself created: `file_select` tests each
+`changed_file_records` path for membership in the `binary_paths` set, and after the fix one side
+was unquoted while the other stayed quoted. A non-ASCII binary file therefore stopped being
+excluded. `test_dirty_file_records_disables_git_quote_path` and
+`test_binary_paths_disables_git_quote_path` assert the flag and failed before the fix.
+
+The new flag shifted argv positions again. `test_binary_paths_reads_numstat_dash_markers` matched
+`cmd[:3]` and now matches `cmd[:5]`.
+`test_rev_parse_precedes_diff_and_diff_never_sees_a_raw_ref` read the subcommand at `cmd[1]`, so
+it found no diff call at all. It now reads the subcommand through a `_subcommand` helper that
+skips leading `-c` and `-C` flag pairs.
+
+### A stale `.pyc` hid the fix for one test run
+
+`test_gate_flags_a_hand_edited_truncated_title` failed against correct source. The
+truncated-title fix replaced a 23-character string with another 23-character string, and the
+edit landed in the same clock second as the previous byte-compile. Python validates a cached
+`.pyc` on source mtime and size alone, so both matched and the old bytecode loaded.
+`inspect.getsource` reads the `.py` and showed the new text, which made the module look correct.
+`__code__.co_consts` showed the old text and settled it. Note that `fd` skips gitignored paths by
+default, so a `__pycache__` sweep needs `--no-ignore`.

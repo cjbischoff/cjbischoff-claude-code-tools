@@ -109,7 +109,7 @@ you change a word here, every agent's behaviour changes.
 | `FIELD_OWNERSHIP` | Each `Finding` field is owned by exactly one phase. Only populate your phase's Output fields; never overwrite downstream phase fields (e.g. `risk_score`, `patch_diff`). |
 | `FINDING_SHAPES` | Names the exact keys of the three nested `Finding` fields: `runtime_test`, `open_questions`, `affected_sites`. A different key is dropped when the finding loads. Bound to `models.RUNTIME_TEST_KEYS`/`OPEN_QUESTION_KEYS`/`AFFECTED_SITE_KEYS` by a drift test (REQ-18). |
 | `QUALIFIER_PROOF` | A blanket security claim ("mitigated", "sanitized", "handled elsewhere") is a claim about *every* code path. Enumerate all reachable paths and confirm the qualifier on each, or state which specific paths you verified. |
-| `EVIDENCE_VOCABULARY` | The receipt tiers, shipping statuses, and `runtime_disposition` enum are closed sets — Tier-1 (`codeql`/`semgrep`/`sca`/`secrets`) confirms alone, Tier-2 (`ripgrep`/`structural-index`/`ast-grep`/`tree-sitter`/`dependency-catalog`) only corroborates. `dependency-catalog:<entry-id>` locates a sink inside a declared dependency; it never confirms alone. Bound to `sec_overlay.evidence`'s constants by a drift test. |
+| `EVIDENCE_VOCABULARY` | The receipt tiers, shipping statuses, and `runtime_disposition` enum are closed sets — Tier-1 (`codeql`/`semgrep`/`sca`/`secrets`) confirms alone, Tier-2 (`ripgrep`/`structural-index`/`ast-grep`/`tree-sitter`/`dependency-catalog`) only corroborates. `dependency-catalog:<entry-id>` locates a sink inside a declared dependency; it never confirms alone. A source whose prefix names neither tier, and is not `llm-claimed:`/`llm-corroborated`, is rejected at the findings gate (`evidence.unknown_receipts`); the `prove` lane's `reproduction` receipt is the one exception, exempted separately because it proves by execution rather than static match. Bound to `sec_overlay.evidence`'s constants by a drift test. |
 | `STE_PROSE` | Human-facing prose (arc42.md, threat-model.md, findings-table free text) follows ASD-STE100's checkable core: active voice, one claim per sentence, ≤25-word sentences, no semicolons, ≤3-word noun clusters, ≤6-sentence paragraphs, lists for 3+ steps. Hedges and scope qualifiers are never dropped. Checked by `sec_overlay.ste_lint`. |
 
 > **Note:** the table above is authoritative. If you add or remove a block, update the count
@@ -241,6 +241,10 @@ they never confirm a finding.
 `crypto_policy.check(algo, params, key_source)` turns "is this weak crypto?" from an LLM
 opinion into a deterministic lookup — that is the whole point of the two YAML files.
 
+REQ-42 narrowed `finding.schema.json`'s `verification` enum to four values (`verified-static`,
+`static-only`, `not-fixed`, `verify-error`), matching `sec_overlay.evidence.VERIFICATION_VALUES`
+after the deleted `factcheck` phase's `fact-checked` value lost its only writer.
+
 ---
 
 ## How a reference file flows into a decision (worked example: crypto)
@@ -282,8 +286,9 @@ pre-commit hook (see the plugin [`CLAUDE.md`](../../../CLAUDE.md), "Documentatio
 `exact_request`, `library_version`, `refutation`, and `baseline` as nullable strings, plus
 `exfil_channels` and `negative_results` as nullable string arrays. The schema is the only type
 check on these fields, because they ride the finding overflow rather than a `Finding` dataclass
-field (`models.py` is byte-pinned by the D-15 frozen-contract test). The schema declares no
-`additionalProperties`, so a finding written before this change still validates.
+field (`models.py` is byte-pinned by the D-15 frozen-contract test). The schema sets `additionalProperties: false` (REQ-49), so a key no property declares is a
+validation error at the findings gate, not silent overflow. Adding a prompt-written field
+means declaring it here first.
 
 `finding.schema.json`'s `expected_signal` now also accepts an array (REQ-34), alongside the
 object, the string, and null. The array holds observation-channel objects that `agents/redteam.md`
@@ -295,3 +300,21 @@ The `STE_PROSE` block's mandated front-matter statement is now three sentences: 
 `exit_code`, `oracle`, `oracle_result`, `toolchain`, `resolved_version`, and `scope`. `scope` is an
 enum of `entrypoint` and `slice`. `helpers/sec_overlay/prove.py` writes the object when a proof
 runs, and only an `entrypoint` proof of an oracle-able class promotes its finding.
+
+REQ-50 pins four more schema enums, and three nested item shapes, to their code source so a future
+edit to the constant edits the schema too — a maintainer changing one of these constants must
+update the matching schema block in the same commit, or `test_contract_lint.py` fails:
+
+- `completeness_tier` mirrors `sec_overlay.fix_disposition.TIERS`.
+- `judge_verdict` mirrors `sec_overlay.calibrate.JUDGE_VERDICTS`.
+- `reachability.blocker` mirrors `sec_overlay.reachability.BLOCKERS`, which REQ-52 extended with
+  `external-boundary` — the blocker an agent cites when a sink resolves into a dependency outside
+  the ingested set; a finding carrying it must also carry a complete `open_questions` entry, or
+  `findings_gate.py` rejects it.
+- `receipt_tier` pins the two integer tiers (`1`, `2`) themselves; `EVIDENCE_VOCABULARY` names the
+  tiers those integers stand for (Tier-1/Tier-2), not the digits — the two are complementary, not
+  a mirror of each other.
+- `open_questions` and `affected_sites` item schemas mirror `sec_overlay.models.OPEN_QUESTION_KEYS`
+  and `AFFECTED_SITE_KEYS`; `history` items require an `event` string. None of the three nested
+  item schemas set `additionalProperties: false` — `history` extras vary by event kind and
+  `reachability` carries `chain` alongside future fields, so both stay open by design (ruling R-7).

@@ -9,6 +9,7 @@ after.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -22,6 +23,7 @@ from pathlib import Path
 # by ``verify_patch``, mapped below, and recorded in the finding's history.
 VERIFY_CAUSES = frozenset({
     "verified-static", "not-fixed", "patch-not-applied", "rule-no-match", "unconfirmed",
+    "rule-no-target-file", "rule-no-discriminate",
 })
 
 _CAUSE_TO_VERIFICATION = {
@@ -30,6 +32,8 @@ _CAUSE_TO_VERIFICATION = {
     "patch-not-applied": "static-only",
     "rule-no-match": "static-only",
     "unconfirmed": "static-only",
+    "rule-no-target-file": "static-only",
+    "rule-no-discriminate": "static-only",
 }
 
 
@@ -65,9 +69,10 @@ def _copy_ignore(directory: str, names: list[str]) -> set[str]:
 from sec_overlay.campaign import record_stage
 from sec_overlay.codeql import CodeQLError, run_codeql
 from sec_overlay.kb import read_profile
-from sec_overlay.models import FindingStatus
+from sec_overlay.models import Finding, FindingStatus
 from sec_overlay.sast import run_semgrep
 from sec_overlay.sca import ScaError, run_sca
+from sec_overlay.scoring import score_fix
 from sec_overlay.workspace import Workspace, read_findings, write_findings
 
 
@@ -144,11 +149,63 @@ def _pick_backend(evidence_sources: list[str] | None) -> str:
     return "semgrep"
 
 
+def _rel_path(path: str, root: str) -> str:
+    """Return ``path`` in POSIX form with ``root``'s prefix removed.
+
+    Pure string work on purpose: a CodeQL SARIF URI is already repo-relative and
+    does not exist relative to this process's CWD, so a ``realpath`` round-trip
+    would corrupt it. semgrep prefixes the scan target, osv-scanner reports an
+    absolute source path, and CodeQL reports neither.
+
+    Args:
+        path: A scanner-reported or finding-reported file path.
+        root: The directory the scan ran against; may be empty.
+
+    Returns:
+        ``path`` relative to ``root`` when ``root`` prefixes it, else ``path``
+        unchanged, with ``os.sep`` rewritten to ``/`` and no leading ``./``. On
+        POSIX ``os.sep`` is already ``/``, so a Windows-style input passes
+        through with its backslashes — a backslash is a legal POSIX filename
+        character, and rewriting it would corrupt a real path.
+    """
+    q = path.replace(os.sep, "/").removeprefix("./")
+    r = root.replace(os.sep, "/").rstrip("/")
+    return q[len(r) + 1 :] if r and q.startswith(r + "/") else q
+
+
+def _path_matches(scanner_path: str, finding_path: str, root: str) -> bool:
+    """Return True when two paths name the same file after normalization.
+
+    Matches on a path-segment suffix in both directions rather than on equality.
+    ``verify_patch``'s ``target`` may be the scan scope while the finding cites a
+    repo-root-relative path, and no helper reconciles the two prefixes. A suffix
+    match survives that difference and still separates ``a/util.py`` from
+    ``b/util.py``, which a base-filename match could not.
+
+    Args:
+        scanner_path: The path the re-scan reported.
+        finding_path: The path the finding cites.
+        root: The directory the re-scan ran against.
+
+    An empty path names no file, so it never matches: without the guard, an empty
+    ``b`` makes ``a.endswith("/")`` true for every directory-like counterpart.
+
+    Returns:
+        Whether both paths name one file.
+    """
+    a = _rel_path(scanner_path, root)
+    b = _rel_path(finding_path, root)
+    if not a or not b:
+        return False
+    return a == b or a.endswith("/" + b) or b.endswith("/" + a)
+
+
 def _file_has_hit(
-    target_dir: str, config: str, file_basename: str, cls: str, rules: set[str],
+    target_dir: str, config: str, file_path: str, cls: str, rules: set[str],
     *, backend: str = "semgrep", language: str | None = None, db_dir: str | None = None,
+    detail: list[Finding] | None = None,
 ) -> bool | None:
-    """Return True if the finding's signal is present in ``file_basename``.
+    """Return True if the finding's signal is present in ``file_path``.
 
     Matches on the finding's own rule ids when known (``rules``); falls back to
     attack-class match when the finding carries no receipt for the backend.
@@ -156,12 +213,17 @@ def _file_has_hit(
     Args:
         target_dir: Directory to scan.
         config: SAST rules config path (semgrep only).
-        file_basename: Base filename to match (e.g. ``app.py``).
+        file_path: The finding's own file path, matched by path segment (e.g.
+            ``src/app.py``); a bare filename still matches as a one-segment suffix.
         cls: Attack-class key (fallback matcher).
         rules: The finding's own rule ids (precise matcher); empty → class.
         backend: Which SAST backend to re-run (``"semgrep"``/``"codeql"``/``"sca"``).
         language: CodeQL language id — required for the ``codeql`` backend.
         db_dir: CodeQL database directory — required for the ``codeql`` backend.
+        detail: When given, every matching scanner finding is appended, so the
+            caller can compare pre-patch and post-patch matches rather than only
+            their presence. A monkeypatched stub that ignores it leaves it empty,
+            and the caller falls back to the boolean comparison.
 
     Returns:
         Whether at least one matching finding exists, or ``None`` if the
@@ -179,37 +241,53 @@ def _file_has_hit(
             findings = run_semgrep(target_dir, config)
     except (CodeQLError, ScaError):
         return None
+    matched = False
     for f in findings:
-        if os.path.basename(f.file) != file_basename:
+        if not _path_matches(f.file, file_path, target_dir):
             continue
         if f.rule_id in rules if rules else f.cls == cls:
-            return True
-    return False
+            matched = True
+            if detail is None:
+                return True
+            detail.append(f)
+    return matched
 
 
 def _check(
-    target: str, configs: list[str], basename: str, cls: str, rules: set[str],
+    target: str, configs: list[str], file_path: str, cls: str, rules: set[str],
     backend: str, language: str | None, db_dir: str | None,
+    *, detail: list[Finding] | None = None,
 ) -> bool | None:
     """Call ``_file_has_hit`` once per config, OR-combining the tri-state result.
 
     ``semgrep`` uses the original 5-positional-arg call (kept exact for
     backward compatibility with existing monkeypatches of ``_file_has_hit``);
     ``codeql``/``sca`` ignore ``configs`` entirely and run once, so a
-    multi-ruleset plan never re-runs a database build per ruleset.
+    multi-ruleset plan never re-runs a database build per ruleset. ``detail``
+    rides as a keyword so a 5-positional monkeypatch still binds.
+
+    When the caller asked for ``detail``, every config runs even after one hits:
+    stopping early leaves the pre-patch and post-patch detail drawn from
+    different rulesets, and comparing disjoint evidence yields a false
+    ``rule-no-discriminate``. The detail-free path keeps the early return.
     """
     if backend != "semgrep":
         return _file_has_hit(
-            target, configs[0], basename, cls, rules,
-            backend=backend, language=language, db_dir=db_dir,
+            target, configs[0], file_path, cls, rules,
+            backend=backend, language=language, db_dir=db_dir, detail=detail,
         )
     saw_none = False
+    saw_hit = False
     for config in configs:
-        hit = _file_has_hit(target, config, basename, cls, rules)
+        hit = _file_has_hit(target, config, file_path, cls, rules, detail=detail)
         if hit:
-            return True
-        if hit is None:
+            if detail is None:
+                return True
+            saw_hit = True
+        elif hit is None:
             saw_none = True
+    if saw_hit:
+        return True
     return None if saw_none else False
 
 
@@ -245,6 +323,88 @@ def _placeholder_version_bump(patch_diff: str) -> bool:
     return False
 
 
+def _unquote_path(path: str) -> str:
+    """Decode git's C-style quoting on a diff path (see ``core.quotePath``).
+
+    Git wraps a path in double quotes and escapes its bytes when the path holds a
+    non-ASCII byte, a space, or a control character. Each byte becomes an octal
+    escape, so the quoted form is pure ASCII.
+
+    Args:
+        path: One path field from a diff header, quotes included if git added them.
+
+    Returns:
+        The decoded path. An unquoted path comes back unchanged. A quoted body that
+        does not decode comes back with its quotes stripped and nothing else changed.
+    """
+    if len(path) < 2 or not (path.startswith('"') and path.endswith('"')):
+        return path
+    try:
+        body = path[1:-1].encode("utf-8").decode("unicode_escape")
+        return body.encode("latin-1").decode("utf-8")
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        return path[1:-1]
+
+
+def _patch_files(patch_diff: str) -> set[str]:
+    """Return the post-image paths a unified diff writes to.
+
+    Reads ``+++ b/<path>`` headers only. ``/dev/null`` (a deletion) contributes
+    nothing, and a diff with no header at all yields an empty set, which the
+    caller reads as "unknown" and skips the check.
+
+    Args:
+        patch_diff: The unified diff text.
+
+    Returns:
+        The set of POSIX paths the diff writes, with a ``b/`` prefix stripped.
+    """
+    files = set()
+    for line in patch_diff.splitlines():
+        if not line.startswith("+++ "):
+            continue
+        path = _unquote_path(line[4:].split("\t", 1)[0].strip())
+        if path == "/dev/null":
+            continue
+        files.add(_rel_path(path.removeprefix("b/"), ""))
+    return files
+
+
+def _post_verdict(pre: list[Finding], post: list[Finding]) -> str:
+    """Return ``not-fixed`` or ``rule-no-discriminate`` for a surviving hit.
+
+    Compares matched source text, never line numbers: a patch that inserts a
+    line shifts every later line, so a line comparison would call a genuinely
+    unfixed finding a new construction. Disjoint evidence sets mean the rule
+    fires on something the patch introduced — the rule does not separate the
+    vulnerable construction from the safe one (REQ-60). Overlapping sets mean the
+    original construction survives.
+
+    Args:
+        pre: Findings the pre-patch scan matched; empty when a stub supplied none.
+        post: Findings the post-patch scan matched; empty on the same condition.
+
+    Returns:
+        ``"rule-no-discriminate"`` when both sets are non-empty and share no
+        evidence text, else ``"not-fixed"``.
+    """
+    if not pre or not post:
+        return "not-fixed"
+    before = {f.evidence.strip() for f in pre if f.evidence}
+    after = {f.evidence.strip() for f in post if f.evidence}
+    _LAST_LINES.clear()
+    if before and after and not (before & after):
+        _LAST_LINES.update({"pre": pre[0].line, "post": post[0].line})
+        return "rule-no-discriminate"
+    return "not-fixed"
+
+
+# The lines the last ``verify_patch`` call matched, pre-patch and post-patch. The
+# cause is a plain string, so the numbers the register asks for cannot ride on the
+# return value; ``verify_findings`` reads them here immediately after the call.
+_LAST_LINES: dict[str, int] = {}
+
+
 def verify_patch(
     target: str, patch_diff: str, config: str | list[str], file: str, cls: str,
     evidence_sources: list[str] | None = None,
@@ -260,7 +420,7 @@ def verify_patch(
         target: Path to the (unmodified) target repo.
         patch_diff: Unified diff proposed for the finding.
         config: SAST rules config path, or a list of them (semgrep only).
-        file: Finding's file path (only the basename is matched).
+        file: Finding's file path, matched by path segment against the re-scan hit.
         cls: Finding's attack class.
         evidence_sources: The finding's evidence sources — picks the re-run backend.
         language: CodeQL language id, if the backend is codeql.
@@ -269,23 +429,26 @@ def verify_patch(
     Returns:
         A member of :data:`VERIFY_CAUSES`. ``"verified-static"`` (was flagged, now
         gone), ``"not-fixed"`` (still flagged after a clean apply),
-        ``"rule-no-match"`` (not detectable pre-patch), ``"patch-not-applied"``
-        (the patch failed to apply to the copy), or ``"unconfirmed"`` (the
-        post-patch re-scan could not run). :func:`verify_findings` maps each
-        cause to a legal ``Finding.verification`` value.
+        ``"rule-no-match"`` (not detectable pre-patch), ``"rule-no-target-file"``
+        (the patch touches no file the finding's rule fires in), ``"rule-no-discriminate"``
+        (the rule still fires, but on evidence text the pre-patch scan never matched),
+        ``"patch-not-applied"`` (the patch failed to apply to the copy), or
+        ``"unconfirmed"`` (the post-patch re-scan could not run). :func:`verify_findings`
+        maps each cause to a legal ``Finding.verification`` value.
     """
+    _LAST_LINES.clear()
     # Cheap string check first: a placeholder-version deps bump can never be a real fix, so
     # short-circuit before the pre-scan, the repo copy, and the patch apply.
     if cls == "deps" and _placeholder_version_bump(patch_diff):
         return "not-fixed"
 
     configs = [config] if isinstance(config, str) else list(config) or [""]
-    basename = os.path.basename(file)
     backend = _pick_backend(evidence_sources)
     rules = _source_rules(f"{backend}:", evidence_sources)
-    # ponytail: basename match is fine for distinct filenames; a repo with two
-    # same-named files in different dirs could alias — revisit with full paths then.
-    pre = _check(target, configs, basename, cls, rules, backend, language, db_dir)
+    pre_detail: list[Finding] = []
+    pre = _check(
+        target, configs, file, cls, rules, backend, language, db_dir, detail=pre_detail
+    )
     if not pre:
         return "rule-no-match"
 
@@ -295,10 +458,24 @@ def verify_patch(
         shutil.copytree(target, repo, ignore=_copy_ignore)
         if not apply_patch(repo, patch_diff):
             return "patch-not-applied"
-        post = _check(str(repo), configs, basename, cls, rules, backend, language, db_dir)
+        post_detail: list[Finding] = []
+        post = _check(
+            str(repo), configs, file, cls, rules, backend, language, db_dir,
+            detail=post_detail,
+        )
         if post is None:
             return "unconfirmed"
-        return "not-fixed" if post else "verified-static"
+        if not post:
+            return "verified-static"
+        # A cross-file fix — a sanitizer added beside the sink — leaves the sink line
+        # byte-identical, so OSS semgrep's intra-file taint reports the identical hit
+        # after the patch. That is not evidence the patch failed (REQ-59). This runs
+        # AFTER the re-scan so it can only downgrade a surviving hit: a cross-file
+        # backend that proves the patch clean still reaches ``verified-static``.
+        touched = _patch_files(patch_diff)
+        if touched and not any(_path_matches(t, file, target) for t in touched):
+            return "rule-no-target-file"
+        return _post_verdict(pre_detail, post_detail)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -325,6 +502,50 @@ def resolve_configs(ws: Workspace, fallback: str) -> list[str]:
     return [str(r) for r in rulesets] or [fallback]
 
 
+def apply_fix_gates(ws: Workspace) -> int:
+    """Score the validate-fix agent's per-gate statuses and record each verdict.
+
+    The agent supplies gate statuses only. ``scoring.score_fix`` computes the
+    verdict, so an LLM cannot promote a finding by writing a status field. This
+    function never sets ``status``: ``verify_findings`` owns promotion, and its
+    ``verify:conflict`` branch reads the history event written here.
+
+    Args:
+        ws: The audit workspace. ``kb/gates/validate-fix.json`` must exist; the
+            phase table declares it as verify's input, so a missing file is a
+            driver-level halt, not a case to tolerate here.
+
+    Returns:
+        The number of findings stamped with a verdict.
+
+    Raises:
+        FileNotFoundError: The gate file is absent.
+        json.JSONDecodeError: The gate file is not valid JSON.
+
+    Example:
+        >>> from sec_overlay.scoring import score_fix
+        >>> score_fix({"root_cause": "pass", "instance_coverage": "pass",
+        ...            "no_new_vulnerabilities": "pass", "best_practices": "pass"})[0]
+        'fixed'
+    """
+    gates = json.loads((ws.kb / "gates" / "validate-fix.json").read_text())
+    touched: list[Finding] = []
+    for f in read_findings(ws):
+        entry = gates.get(f.id)
+        if not isinstance(entry, dict):
+            continue
+        verdict, score = score_fix(entry)
+        f.history.append({"event": f"validate-fix:{verdict}", "score": score})
+        if verdict in ("partial", "not_fixed"):
+            f.verification = "not-fixed"
+        elif verdict == "unverifiable":
+            f.verification = "verify-error"
+        touched.append(f)
+    if touched:
+        write_findings(ws, touched)
+    return len(touched)
+
+
 def verify_findings(
     ws: Workspace, target: str, config: str, *,
     verifier=verify_patch, language: str | None = None, db_dir: str | None = None,
@@ -348,7 +569,7 @@ def verify_findings(
     findings = read_findings(ws)
     configs = resolve_configs(ws, config)
     fixed = 0
-    changed = False
+    touched: list[Finding] = []
     for f in findings:
         if f.status is not FindingStatus.CONFIRMED or not f.patch_diff:
             continue
@@ -363,6 +584,9 @@ def verify_findings(
             last_validate_fix is not None
             and last_validate_fix.get("event") != "validate-fix:fixed"
         )
+        # Cleared before every call: a stub ``verifier`` that never touches ``_LAST_LINES``
+        # must not inherit a prior finding's or a prior run's stale pre/post line numbers.
+        _LAST_LINES.clear()
         cause = verifier(
             target, f.patch_diff, configs, f.file, f.cls, f.evidence_sources,
             language=language, db_dir=db_dir,
@@ -379,11 +603,14 @@ def verify_findings(
                            f"explicitly said {last_validate_fix.get('event')!r} — leaving "
                            "status/verification as validate-fix left them for human review"),
             })
-            changed = True
+            touched.append(f)
             continue
-        f.history.append({"event": f"verify:cause:{cause}"})
+        entry = {"event": f"verify:cause:{cause}"}
+        if _LAST_LINES:
+            entry["reason"] = f"pre line {_LAST_LINES['pre']}, post line {_LAST_LINES['post']}"
+        f.history.append(entry)
         f.verification = verification
-        changed = True
+        touched.append(f)
         if verification == "verified-static":
             f.status = FindingStatus.FIXED
             f.history.append({"event": "verify:fixed"})
@@ -391,8 +618,8 @@ def verify_findings(
         elif verification == "static-only":
             f.status = FindingStatus.NEEDS_DEPLOYMENT_TESTING
             f.history.append({"event": "verify:needs-deployment-testing"})
-    if changed:
-        write_findings(ws, findings)
+    if touched:
+        write_findings(ws, touched)
     record_stage(ws, "verify")
     return fixed
 

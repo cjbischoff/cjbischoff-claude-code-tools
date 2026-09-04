@@ -78,7 +78,7 @@ def changed_file_records(base: str, head: str, *, runner=subprocess.run) -> list
         ``old_path``.
     """
     completed = runner(
-        ["git", "diff", "--name-status", base, head, "--"],
+        ["git", "-c", "core.quotePath=false", "diff", "--name-status", base, head, "--"],
         capture_output=True, text=True, check=False,
     )
     records: list[ChangedFile] = []
@@ -110,7 +110,7 @@ def dirty_file_records(*, runner=subprocess.run) -> list[ChangedFile]:
         then edited again reports one XY line, so no dedup is needed across lines).
     """
     completed = runner(
-        ["git", "status", "--porcelain", "--untracked-files=all"],
+        ["git", "-c", "core.quotePath=false", "status", "--porcelain", "--untracked-files=all"],
         capture_output=True, text=True, check=False,
     )
     records: list[ChangedFile] = []
@@ -174,7 +174,7 @@ def binary_paths(base: str, head: str | None, *, runner=subprocess.run) -> froze
         binary marker).
     """
     completed = runner(
-        ["git", "diff", "--numstat", *_diff_revs(base, head), "--"],
+        ["git", "-c", "core.quotePath=false", "diff", "--numstat", *_diff_revs(base, head), "--"],
         capture_output=True, text=True, check=False,
     )
     paths: set[str] = set()
@@ -237,11 +237,21 @@ def changed_files(base: str, head: str = "HEAD", *, runner=subprocess.run) -> li
 
     Returns:
         Repo-relative changed file paths.
+
+    Raises:
+        ValueError: The diff failed. An empty result would read as "nothing changed".
     """
     completed = runner(
         # `--` separates revisions from paths so a ref that looks like a path can't be misparsed.
-        ["git", "diff", "--name-only", base, head, "--"], capture_output=True, text=True, check=False
+        ["git", "-c", "core.quotePath=false", "diff", "--name-only", base, head, "--"],
+        capture_output=True, text=True, check=False,
     )
+    if completed.returncode != 0:
+        detail = (completed.stderr or "").strip()
+        raise ValueError(
+            f"git diff --name-only failed between {base} and {head}"
+            + (f": {detail}" if detail else "")
+        )
     return [line for line in completed.stdout.splitlines() if line.strip()]
 
 

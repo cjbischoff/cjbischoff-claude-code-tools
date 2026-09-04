@@ -122,31 +122,3 @@ def load_scope(ws) -> ScanScope | None:
     """Load ``ws.kb/scan-scope.json`` or ``None`` if absent."""
     p = ws.kb / "scan-scope.json"
     return ScanScope.from_dict(json.loads(p.read_text())) if p.exists() else None
-
-
-def rel_to_root(path: str | Path, scope: ScanScope) -> str:
-    """Normalize ``path`` to a repo-root-relative POSIX string using ``scope``.
-
-    Accepts an absolute path under ``repo_root``, a path already relative to ``repo_root``,
-    or a path relative to ``scan_scope`` (the common agent shorthand). Anything that cannot
-    be made repo-root-relative is returned as a POSIX string unchanged.
-    """
-    root = Path(scope.repo_root)
-    p = Path(path)
-    if p.is_absolute():
-        try:
-            return p.relative_to(root).as_posix()
-        except ValueError:
-            return p.as_posix()
-    # already repo-root-relative? (exists or starts with scan_scope)
-    if (root / p).exists():
-        return p.as_posix()
-    if scope.scan_scope != "." and str(p).startswith(scope.scan_scope):
-        return p.as_posix()
-    # scan-scope-relative?
-    if scope.scan_scope != "." and (root / scope.scan_scope / p).exists():
-        return (Path(scope.scan_scope) / p).as_posix()
-    # default: assume scan-scope-relative when scoped, else as-is
-    if scope.scan_scope != ".":
-        return (Path(scope.scan_scope) / p).as_posix()
-    return p.as_posix()

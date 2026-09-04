@@ -85,19 +85,31 @@ Each persona scores each gate independently as `pass|partial|fail|skip`, with a
    that gate below `fixed`; do not override it.
 
 ## Output
-Update each validated finding's JSON in place:
-- Verdict `fixed` → set BOTH `status: "fixed"` AND `verification: "verified-static"`,
-  and append a `history` entry `{"event": "validate-fix:fixed"}`. (This matches the
-  deterministic `verify.py` convention where `verified-static` is the `fixed`
-  trigger — the persona path and the scanner path must leave findings in the same
-  terminal state.)
-- Verdict `partial` / `not_fixed` / `unverifiable` → leave `status: "confirmed"`
-  (do not promote) and set `verification` to `not-fixed` (partial/not_fixed) or
-  `verify-error` (unverifiable); append a `history` entry noting the verdict, e.g.
-  `{"event": "validate-fix:partial", "reason": "<gate>: <file:line> citation"}`.
+Write `{{WORKSPACE}}/kb/gates/validate-fix.json`. The file maps each validated
+finding id to its four gate statuses:
 
-Return a table: finding id, per-gate combined status, verdict, score, and
-which persona supplied the deciding citation.
+```json
+{
+  "AUTHZ-0001": {
+    "root_cause": "pass",
+    "instance_coverage": "partial",
+    "no_new_vulnerabilities": "pass",
+    "best_practices": "skip"
+  }
+}
+```
+
+Write the file even when you validated nothing. An empty object (`{}`) is the
+correct output for a run with no patched findings, and the phase does not
+complete until the file exists.
+
+Do not edit any finding's `status` or `verification`. `verify.apply_fix_gates`
+calls `score_fix` on these statuses, records the verdict in the finding's
+history, and the deterministic `verify` phase decides promotion. A verdict you
+write by hand would bypass the scoring weights.
+
+Return a table: finding id, per-gate status, and which persona supplied the
+deciding citation.
 
 ## Rules
 - Evidence-based: every gate status above `skip` needs a `file:line` citation

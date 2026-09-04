@@ -72,6 +72,38 @@ def _sarif_fingerprint(finding: Finding) -> str:
     return hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
 
 
+def _related_locations(finding: Finding) -> list[dict]:
+    """Return one SARIF location per site of a systemic cluster.
+
+    A cluster representative carries every member's site in ``affected_sites``.
+    Without these, a 66-site cluster reaches a SARIF consumer as one location.
+
+    Args:
+        finding: The finding to expand.
+
+    Returns:
+        One location dict per site, in the order the finding records them. An
+        entry missing ``file`` is skipped, and ``line`` defaults to 1. An
+        entry whose ``id`` is the finding's own id is skipped, because SARIF
+        already carries it as the primary location. An entry with no ``id``
+        is kept.
+    """
+    out: list[dict] = []
+    for site in finding.affected_sites or []:
+        uri = site.get("file")
+        if not uri or site.get("id") == finding.id:
+            continue
+        out.append(
+            {
+                "physicalLocation": {
+                    "artifactLocation": {"uri": uri},
+                    "region": {"startLine": site.get("line") or 1},
+                }
+            }
+        )
+    return out
+
+
 def to_sarif(
     findings: list[Finding], tool_name: str = "sec-overlay", suppressed: list[Finding] | None = None
 ) -> dict:
@@ -80,7 +112,7 @@ def to_sarif(
     Args:
         findings: Findings to serialize.
         tool_name: Name recorded as the SARIF tool driver.
-        suppressed: Findings that should carry an ``inSource`` suppression
+        suppressed: Findings that should carry an ``external`` suppression
             entry (e.g. needs-deployment-testing) so downstream gates see
             them without treating them as blocking.
 
@@ -103,8 +135,12 @@ def to_sarif(
                 }
             ],
         }
+        related = _related_locations(f)
+        if related:
+            result["relatedLocations"] = related
+        result["properties"] = {"findingId": f.id}
         if f.id in suppressed_ids:
-            result["suppressions"] = [{"kind": "inSource", "justification": "needs runtime proof"}]
+            result["suppressions"] = [{"kind": "external", "justification": "needs runtime proof"}]
         result["partialFingerprints"] = {FINGERPRINT_KEY: _sarif_fingerprint(f)}
         results.append(result)
     return {

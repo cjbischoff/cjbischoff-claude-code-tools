@@ -100,6 +100,39 @@ step, spawns an agent, records the phase, calls the next Python step.
 
 ## The pipeline
 
+<!-- BEGIN GENERATED: phase-table columns=index,phase,kind -->
+| # | Phase | Kind |
+|---|---|---|
+| 1 | `route-census` | deterministic |
+| 2 | `recon` | agent |
+| 3 | `recall-gate` | deterministic |
+| 4 | `architecture` | agent |
+| 5 | `arch-gate` | deterministic |
+| 6 | `threat_model` | agent |
+| 7 | `tm-gate` | deterministic |
+| 8 | `prefilter` | deterministic |
+| 9 | `investigate` | agent |
+| 10 | `findings-gate` | deterministic |
+| 11 | `dedupe` | deterministic |
+| 12 | `critic` | agent |
+| 13 | `judge` | agent |
+| 14 | `validate` | agent |
+| 15 | `trace` | agent |
+| 16 | `calibrate` | deterministic |
+| 17 | `patch` | agent |
+| 18 | `validate-fix` | agent |
+| 19 | `verify` | deterministic |
+| 20 | `demote-noise` | deterministic |
+| 21 | `redteam` | agent |
+| 22 | `report` | deterministic |
+| 23 | `selfscore` | deterministic |
+| 24 | `prove` | agent |
+| 25 | `artifact-gate` | deterministic |
+| 26 | `artifact-review` | agent |
+| 27 | `artifact-consistency` | deterministic |
+| 28 | `postflight` | deterministic |
+<!-- END GENERATED: phase-table -->
+
 One audit pass, in order. Deterministic (Python) steps are rectangles; agent (LLM) steps are
 rounded. `<T>` = target, `<WS>` = workspace.
 
@@ -119,13 +152,14 @@ flowchart TD
     DED --> CLUS["7.5 · cluster<br/>≥3 same-class/sink -> systemic cluster"]
     CLUS --> LAD(("8-9 · critic → judge → validate(opus refutes)"))
     LAD --> CAL["10 · calibrate<br/>risk_score 1-10 + citations"]
-    CAL --> PAT(("11 · patch(opus) → validate-fix"))
-    PAT --> VER["12 · verify<br/>apply patch to COPY, re-scan"]
+    CAL --> PAT(("11 · patch(opus)"))
+    PAT --> VF(("11.5 · validate-fix(opus)<br/>architect + pentester score the patch"))
+    VF --> VER["12 · verify<br/>apply_fix_gates scores validate-fix.json, then re-scan"]
     VER --> GATE["13 · findings_gate"]
-    GATE --> REP["14 · report<br/>report.sarif + report.md"]
-    REP --> RT(("14.4 · redteam → redteam-adversary"))
+    GATE --> RT(("14 · redteam → redteam-adversary"))
     RT --> RTR["redteam.py → redteam-plan.md"]
-    RTR --> AG["14.5 · artifact_gate<br/>deterministic self-check (requires redteam-plan.md)"]
+    RTR --> REP["14.2 · report<br/>report.sarif + report.md (reads redteam-plan.md as an input)"]
+    REP --> AG["14.5 · artifact_gate<br/>deterministic self-check (requires redteam-plan.md)"]
     AG --> AR(("14.6 · artifact-review (opus)<br/>claim↔evidence over the rendered report"))
     AR --> C2["15 · postflight<br/>durable prior_context.json"]
 ```
@@ -135,12 +169,15 @@ For the recon phase only, `RA`'s phase-adversary pass is followed by one more ga
 `sec_overlay.phase_gate.recall_claims` and `kb/route-census.json`. A separate
 deterministic `recall-gate` phase runs right after recon. It recomputes the
 same checks and writes each gap through `route_control.record_route_gaps` into
-`kb/coverage-ledger.json`, demoting `completeness` to `partial`. `CLAUDE.md`'s
-phase-order table lists this `recall-gate` row right after `recon`, matching
+`kb/coverage-ledger.json`, demoting `completeness` to `partial`. [`SKILL.md`](SKILL.md)'s
+generated phase-order table lists this `recall-gate` row right after `recon`, matching
 `PHASE_TABLE`.
 
 The phase legend with exact commands is in [`SKILL.md`](SKILL.md); the hard operating rules
-(a partial scan is a coverage hole, not "clean") are in [`CLAUDE.md`](CLAUDE.md) §2.
+(a partial scan is a coverage hole, not "clean") are in [`CLAUDE.md`](CLAUDE.md) §2. `SKILL.md`
+also carries the `<!-- BEGIN PHASE NOTES -->` region: one operator note per `PHASE_TABLE` phase,
+no more and no fewer, in table order. `test_operator_notes_name_every_phase_and_nothing_else`
+asserts that set equality, so a phase rename or a dropped note fails the suite.
 
 ---
 
@@ -171,8 +208,8 @@ def get_user():
 | **10 calibrate** | `calibrate` (no LLM) | Preconditions enumerated first (unauthenticated, no WAF assumed) → CVSS computed by formula → `risk_score: 9`. ASVS/CodeGuard citations auto-attached. | `risk_score`, `asvs_ids` |
 | **11 patch** | `patch.md` (opus) | Proposes a parameterized-query diff into `patch_diff` — against a *copy*, never the real file. | `patch_diff` |
 | **12 verify** | `verify` (no LLM) | Applies the diff to a temp copy, re-runs semgrep → the rule no longer fires → **`fixed` / verified-static**. | status → `fixed` |
-| **14 report** | `report` (no LLM) | Renders the finding into `report.md` (9-section template) and `report.sarif`. | `report.md`, `report.sarif` |
-| **14.4 redteam** | `redteam` → `redteam-adversary` | Marks it `static-settled` (source proves it) but still writes a `runtime_test` with a `$PAYLOAD` shell var so an operator can confirm live; opus adversary keeps it (payload ties to the real sink). `artifact_gate` hard-requires this file, so redteam runs before it, not after. | `redteam-plan.md` |
+| **14 redteam** | `redteam` → `redteam-adversary` | Marks it `static-settled` (source proves it) but still writes a `runtime_test` with a `$PAYLOAD` shell var so an operator can confirm live; opus adversary keeps it (payload ties to the real sink). `report` declares this file as an input and reads it next, so redteam runs before report. | `redteam-plan.md` |
+| **14.2 report** | `report` (no LLM) | Renders the finding into `report.md` (9-section template) and `report.sarif`, linking the red-team plan the prior phase wrote. | `report.md`, `report.sarif` |
 | **14.5 artifact_gate** | `artifact_gate` (no LLM) | Checks the finding has a detail file and a red-team directive, and that its triage-table `what` cell isn't stale or over-long. Passes. | `kb/gates/artifact-gate.json` |
 | **14.6 artifact-review** | `artifact-review.md` (**opus**) | Reads the finding's tool receipt against `report.md`'s claim — they match, impact text is honest, red-team coverage is present. No demotion, no re-render forced. | `kb/gates/artifact-review.json` |
 | **15 postflight** | `postflight` | Records "confirmed SQLi in get_user, fixed at <sha>" into durable memory so the next scan doesn't re-litigate it. | `kb/prior_context.json` |
@@ -222,17 +259,23 @@ uv run python -m sec_overlay.dedupe        --workspace <WS>    # 7
 uv run python -m sec_overlay.cluster       --workspace <WS>    # 7.5
 # 8-9 spawn critic → judge → validate
 uv run python -m sec_overlay.calibrate     --workspace <WS>    # 10
-# 11 spawn patch → validate-fix
-uv run python -m sec_overlay.verify        --workspace <WS> --target <T> --config <rules>   # 12
+# 11 spawn agents/patch.md
+# spawn agents/validate-fix.md → kb/gates/validate-fix.json (per-gate statuses, no verdict)
+uv run python -m sec_overlay.verify        --workspace <WS> --target <T> --config <rules>
+# 12 — apply_fix_gates scores validate-fix.json with score_fix first, then re-scans the patch
 uv run python -m sec_overlay.findings_gate --workspace <WS>    # 13 — idempotent re-run before report
-uv run python -m sec_overlay.report        --workspace <WS>    # 14
-uv run python -m sec_overlay.selfscore     --workspace <WS>    # 14.2 — post-gate counts back to state
-# 14.4 spawn redteam → redteam-adversary (before artifact_gate: it hard-requires redteam-plan.md)
-uv run python -m sec_overlay.redteam       --workspace <WS>    # 14.4 — manual re-run of the plan render
+# 14 spawn redteam → redteam-adversary (before report: report.py reads redteam-plan.md as an input)
+uv run python -m sec_overlay.redteam       --workspace <WS>    # 14 — manual re-run of the plan render
+uv run python -m sec_overlay.report        --workspace <WS>    # 14.2
+uv run python -m sec_overlay.selfscore     --workspace <WS>    # 14.4 — post-gate counts back to state
 uv run python -m sec_overlay.artifact_gate --workspace <WS>    # 14.5
 # 14.6 spawn agents/artifact-review.md (opus)
-uv run python -m sec_overlay.postflight    --workspace <WS> --sha <sha>   # 15, final phase
+uv run python -m sec_overlay.postflight    --workspace <WS> --sha <sha> --target <T>   # 15, final phase
 ```
+
+> Pass `--target <T>` on `postflight` so it can derive its own drift set: it diffs the prior
+> context's pinned SHA against this pass's SHA and drops prior conclusions on any file that
+> changed, keeping the rest (REQ-45). Omit it only for a first pass with no prior context.
 
 > **A scan is clean only if every planned backend actually ran.** If `preflight` shows a
 > missing CodeQL pack, that language has *zero dataflow coverage* — a partial scan is a
@@ -273,6 +316,10 @@ MEMORY.md, learnings/     durable per-repo memory across runs
 command. Its `main()` only prints to stdout, so the driver phase is the supported path
 to `kb/route-census.json`.
 
+`state.json`'s `budget` field carries per-phase wall-clock timings (`sec_overlay.cost`); `report.md`
+renders them under "Run economics" when any were recorded. Token and USD accounting is gone (REQ-46)
+— the harness never surfaced a subagent's usage, so those figures always rendered empty or zero.
+
 ---
 
 ## Develop
@@ -300,3 +347,6 @@ One coupling point to respect before editing:
 - **Prompt rendering is loud.** `helpers/sec_overlay/prompts.py`'s `render_prompt` substitutes
   `{{KEY}}` tokens and raises if any remain — CLAUDE.md §2 has the orchestrator render every
   dispatched agent prompt through it instead of hand-substituting tokens.
+- **Scope tokens are runtime-only.** `{{REPO_ROOT}}` and `{{SCAN_SCOPE}}` aren't in `driver.py`'s
+  `DISPATCH_TOKENS`; the driver writes both to `{{WORKSPACE}}/run.env`. No agent prompt reads that
+  file, so the orchestrator reads it and substitutes both tokens — see `SKILL.md`.

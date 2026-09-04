@@ -14,15 +14,23 @@ import json
 import re
 from pathlib import Path
 
-from sec_overlay.calibrate import PRECONDITION_CAP_FLOOR, PRECONDITION_CAPS, _precondition_cap
+from sec_overlay.calibrate import (
+    JUDGE_VERDICTS,
+    PRECONDITION_CAP_FLOOR,
+    PRECONDITION_CAPS,
+    _precondition_cap,
+)
 from sec_overlay.driver import DISPATCH_TOKENS, render_dispatch
 from sec_overlay.evidence import (
     RUNTIME_DISPOSITIONS,
     TIER1_RECEIPTS,
     TIER2_RECEIPTS,
     VERIFICATION_VALUES,
+    receipt_tier,
 )
+from sec_overlay.fix_disposition import TIERS
 from sec_overlay.models import AFFECTED_SITE_KEYS, OPEN_QUESTION_KEYS, RUNTIME_TEST_KEYS, Finding
+from sec_overlay.reachability import BLOCKERS
 
 SKILL = Path(__file__).resolve().parents[2]
 CONSTS = SKILL / "references" / "prompt-constants.md"
@@ -31,14 +39,35 @@ AGENTS = SKILL / "agents"
 
 
 def test_every_closed_vocabulary_matches_its_schema_enum():
-    """Each code constant with a schema counterpart must equal that enum."""
+    """Each code constant with a schema counterpart must equal that enum (REQ-50)."""
     props = json.loads(SCHEMA.read_text())["properties"]
+    receipt_tiers = frozenset(receipt_tier(f"{p}:x") for p in TIER1_RECEIPTS | TIER2_RECEIPTS)
     for field, allowed in (
         ("verification", VERIFICATION_VALUES),
         ("runtime_disposition", RUNTIME_DISPOSITIONS),
+        ("completeness_tier", frozenset(TIERS)),
+        ("judge_verdict", JUDGE_VERDICTS),
+        ("receipt_tier", receipt_tiers),
     ):
         assert "enum" in props[field], f"{field} has no schema enum"
         assert set(props[field]["enum"]) == allowed | {None}, f"{field} drifted"
+    blocker = props["reachability"]["properties"]["blocker"]
+    assert set(blocker["enum"]) == frozenset(BLOCKERS) | {None}, "reachability.blocker drifted"
+
+
+def test_nested_item_schemas_declare_their_published_keys():
+    """``open_questions``, ``affected_sites``, and ``history`` items are typed (REQ-50)."""
+    props = json.loads(SCHEMA.read_text())["properties"]
+    for field, keys in (
+        ("open_questions", OPEN_QUESTION_KEYS),
+        ("affected_sites", AFFECTED_SITE_KEYS),
+    ):
+        item = props[field]["items"]
+        assert set(item["properties"]) == set(keys), f"{field} item schema drifted"
+        assert "required" not in item, f"{field} items must require nothing (ruling R-7)"
+    history = props["history"]["items"]
+    assert history["required"] == ["event"], "history items must require event"
+    assert set(history["properties"]) == {"event"}, "history item schema drifted"
 
 
 def _block(name: str) -> str:
@@ -181,3 +210,38 @@ def test_dispatch_tokens_are_a_single_source(tmp_path):
         f"the substitute line and DISPATCH_TOKENS disagree: {rendered ^ set(DISPATCH_TOKENS)}"
     )
     assert all(re.fullmatch(r"[A-Z][A-Z0-9_]*", t) for t in DISPATCH_TOKENS)
+
+
+def test_operator_notes_name_every_phase_and_nothing_else():
+    """The note keys and the PHASE_TABLE phase names are one set (ruling P5-10)."""
+    from sec_overlay.phase_docs import NOTE_DOCUMENTS, note_keys
+    from sec_overlay.phases import PHASE_TABLE
+
+    phases = {p.name for p in PHASE_TABLE}
+    for doc in NOTE_DOCUMENTS:
+        keys = set(note_keys(doc.read_text()))
+        assert keys == phases, (
+            f"{doc.name} note keys drifted from PHASE_TABLE — "
+            f"missing: {sorted(phases - keys)}; extra: {sorted(keys - phases)}"
+        )
+
+
+def test_operator_notes_follow_the_table_order():
+    """A reorder in PHASE_TABLE must fail until the notes follow it."""
+    from sec_overlay.phase_docs import NOTE_DOCUMENTS, note_keys
+    from sec_overlay.phases import PHASE_TABLE
+
+    order = [p.name for p in PHASE_TABLE]
+    for doc in NOTE_DOCUMENTS:
+        keys = note_keys(doc.read_text())
+        assert keys == sorted(keys, key=order.index), f"{doc.name} is out of table order"
+
+
+def test_pipeline_documents_name_only_substitutable_tokens():
+    """Every {{TOKEN}} in a pipeline document has a substituter."""
+    from sec_overlay.phase_docs import DOCUMENTS, NOTE_DOCUMENTS, ORCHESTRATOR_TOKENS
+
+    known = set(DISPATCH_TOKENS) | set(ORCHESTRATOR_TOKENS)
+    for doc in dict.fromkeys((*DOCUMENTS, *NOTE_DOCUMENTS)):
+        found = set(re.findall(r"\{\{([A-Z][A-Z0-9_]*)\}\}", doc.read_text()))
+        assert found <= known, f"{doc.name} names tokens nothing substitutes: {found - known}"

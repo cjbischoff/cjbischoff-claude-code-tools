@@ -39,7 +39,7 @@ class Scorecard:
     regressions: list = field(default_factory=list)   # locked positives now missed
     missed: list = field(default_factory=list)         # all missed positives (for analyze-misses)
     false_positives: list = field(default_factory=list)
-    cost: dict = field(default_factory=dict)  # {tokens, wall_time_s, usd_per_confirmed_tp} (REQ-M6)
+    cost: dict = field(default_factory=dict)  # {wall_time_s} (REQ-M6)
     verified_fix: dict = field(default_factory=dict)  # {fixed, confirmed, rate} (REQ-T3c/T3h)
     coverage_honesty: dict = field(default_factory=dict)  # {runs, unsupported, rate} (REQ-T3d)
 
@@ -110,12 +110,8 @@ class Scorecard:
             lines += [f"- {fid}" for fid in self.false_positives]
         if self.cost:
             c = self.cost
-            per_tp = c.get("usd_per_confirmed_tp")
-            usd = "n/a" if per_tp is None else f"${per_tp:.4f}"
-            lines += ["", "## Cost & latency (estimates)", "",
-                      f"- Tokens: {c.get('tokens', 0)}",
-                      f"- Wall-time: {c.get('wall_time_s', 0.0):.1f}s",
-                      f"- $ / confirmed-TP: {usd} (estimate — token-rate table, not billed)"]
+            lines += ["", "## Cost & latency", "",
+                      f"- Wall-time: {c.get('wall_time_s', 0.0):.1f}s"]
         if self.coverage_honesty:
             ch = self.coverage_honesty
             lines += ["", "## Coverage honesty (REQ-T3d)", "",
@@ -202,9 +198,7 @@ def tally(results, corpus, *, cost: dict | None = None,
     Args:
         results: List of :class:`bench.judge.JudgeResult`.
         corpus: The :class:`bench.corpus.Corpus` (for lifecycle/regression checks).
-        cost: Optional run cost record ``{tokens, wall_time_s, usd_estimate}`` (REQ-M6).
-            ``usd_per_confirmed_tp`` is derived as ``usd_estimate / real-confirmed TP``
-            (``None`` when no TP), and reported as an estimate.
+        cost: Optional run cost record ``{wall_time_s}`` (REQ-M6).
         findings_by_id: Optional ``{finding_id: Finding}`` for the verified-fix block (REQ-T3c/T3h).
         coverage_ledgers: Optional ``{run_slug: coverage_ledger_dict}`` for the coverage-honesty
             block (REQ-T3d); a run claiming ``complete`` with open gaps is an unsupported claim.
@@ -231,12 +225,7 @@ def tally(results, corpus, *, cost: dict | None = None,
                    regressions=regressions, missed=missed, false_positives=fps)
     sc._real = _metrics([r for r in results if r.source == "real-confirmed"]) or {}
     if cost:
-        real_tp = sc._real.get("tp", 0)
-        usd = cost.get("usd_estimate")
-        per_tp = usd / real_tp if (usd is not None and real_tp) else None
-        sc.cost = {"tokens": int(cost.get("tokens", 0)),
-                   "wall_time_s": float(cost.get("wall_time_s", 0.0)),
-                   "usd_per_confirmed_tp": per_tp}
+        sc.cost = {"wall_time_s": float(cost.get("wall_time_s", 0.0))}
     if findings_by_id:
         sc.verified_fix = _verified_fix(results, findings_by_id)
     if coverage_ledgers:

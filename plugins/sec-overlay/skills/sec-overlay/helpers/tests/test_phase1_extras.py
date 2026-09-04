@@ -49,3 +49,13 @@ def test_detection_coverage_lists_every_class():
     for cls in known_classes():
         assert cls in md, f"class {cls} missing from coverage doc"
     assert "Known limitations" in md and "no PHP" in md
+
+
+def test_every_rule_origin_is_a_mechanical_receipt_prefix():
+    """REQ-63: a prefix no receipt carries can never mark a finding rule-originated."""
+    from sec_overlay.evidence import _MECHANICAL
+    from sec_overlay.rule_gaps import _RULE_ORIGINS
+
+    for origin in _RULE_ORIGINS:
+        assert origin.endswith(":"), origin
+        assert origin[:-1] in _MECHANICAL, origin

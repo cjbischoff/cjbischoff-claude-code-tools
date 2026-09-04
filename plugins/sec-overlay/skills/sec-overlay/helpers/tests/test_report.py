@@ -1,7 +1,10 @@
 """Tests for Markdown reporting."""
 
+import dataclasses
 import json
 from pathlib import Path
+
+import pytest
 
 from sec_overlay.models import Finding, FindingStatus, Severity
 from sec_overlay.patch_status import PatchStatus
@@ -12,12 +15,14 @@ from sec_overlay.report import (
     POSITION_REVIEW_HEADING,
     _short_title,
     collapse_clusters,
+    main,
     render_dropped_findings_section,
     render_finding,
     render_ndt,
     render_position_review_section,
     select_reportable,
     to_markdown,
+    triage_what,
     write_report,
     write_review_ledger,
 )
@@ -114,9 +119,13 @@ def test_markdown_orders_by_severity_desc():
     assert md.index("F-0002") < md.index("F-0001")
 
 
-def test_markdown_includes_token_spend_when_given():
-    md = to_markdown([_f("F-0001", Severity.HIGH)], token_spend={"investigate": 1200})
-    assert "Token spend" in md and "investigate" in md and "1200" in md
+def test_markdown_has_no_token_spend_section():
+    """REQ-46 deleted the token columns, so the parameter and the section are gone."""
+    md = to_markdown([_f("F-0001", Severity.HIGH)])
+    assert "Token spend" not in md
+    with pytest.raises(TypeError):
+        # ty: ignore[unknown-argument] — the rejected argument is what this test proves.
+        to_markdown([], token_spend={"investigate": 1200})
 
 
 def _rf(id_, status, risk=None, verification=None, sev=Severity.HIGH):
@@ -344,11 +353,33 @@ def test_report_links_redteam_plan_and_shows_receipts(tmp_path):
             )
         ],
     )
-    write_report(ws)
+    write_report(ws, has_redteam_plan=True)
     md = (ws.reports / "report.md").read_text()
     assert "redteam-plan.md" in md  # T11a: link the manual test plan
     # T11b: receipts visible in the per-finding detail file, even at condensed (medium) tier
     assert "ripgrep:a.py:1" in (ws.findings_dir / "F-1.md").read_text()
+
+
+def test_main_probes_redteam_plan_when_present(tmp_path):
+    # REQ-40: main() is a CLI boundary with no phase context, so it reads the
+    # filesystem for has_redteam_plan instead of taking the library default.
+    ws = Workspace(tmp_path / "ws")
+    ws.ensure()
+    (ws.reports).mkdir(parents=True, exist_ok=True)
+    (ws.reports / "redteam-plan.md").write_text("# plan\n")
+    write_findings(ws, [_f_new("F-1", FindingStatus.CONFIRMED)])
+    main(["--workspace", str(tmp_path / "ws")])
+    md = (ws.reports / "report.md").read_text()
+    assert "redteam-plan.md" in md
+
+
+def test_main_omits_redteam_plan_when_absent(tmp_path):
+    ws = Workspace(tmp_path / "ws")
+    ws.ensure()
+    write_findings(ws, [_f_new("F-1", FindingStatus.CONFIRMED)])
+    main(["--workspace", str(tmp_path / "ws")])
+    md = (ws.reports / "report.md").read_text()
+    assert "redteam-plan.md" not in md
 
 
 def test_to_markdown_renders_coverage_ledger():
@@ -422,24 +453,6 @@ def test_write_report_without_target_skips_patch_check(tmp_path):
     write_report(ws)
     md = ws.report_path.read_text()
     assert "Caution" not in md
-
-
-def test_write_report_renders_run_economics(tmp_path):
-    from sec_overlay import cost
-    from sec_overlay.report import write_report
-    from sec_overlay.state import load_state, save_state
-    from sec_overlay.workspace import Workspace, write_findings
-
-    ws = Workspace(root=tmp_path / "ws")
-    ws.ensure()
-    write_findings(ws, [])
-    st = load_state(ws)
-    cost.record_agent(st, "investigate", "sonnet", 1234)
-    save_state(ws, st)
-    write_report(ws)
-    md = ws.report_path.read_text()
-    assert "## Run economics" in md
-    assert "investigate" in md and "sonnet" in md and "1234" in md
 
 
 def _dep():
@@ -601,7 +614,7 @@ def test_render_ndt_degrades_without_runtime_test():
     assert "needs runtime" in out.lower()
     assert "no source chain recorded" in out
     assert "none recorded" in out
-    assert "redteam-plan.md" in out  # pointer present unconditionally
+    assert "redteam-plan.md" in out  # pointer present when a plan exists (the default)
 
 
 def test_render_ndt_tolerates_string_expected_signal():
@@ -687,14 +700,6 @@ def test_triage_puts_ndt_lead_above_low_dep():
     detail = out.split("## Detail")[1]
     assert detail.index("NDT-T4") < detail.index("DEP-T4")  # leads above confirmed, risk-ordered
 
-
-def test_run_economics_section_renders_phase_model_and_usd_estimate():
-    econ = {"by_phase": {"investigate": 1500}, "by_model": {"sonnet": 1500}, "usd_estimate": 0.0045}
-    md = to_markdown([], economics=econ)
-    assert "## Run economics" in md
-    assert "investigate" in md and "sonnet" in md
-    assert "estimate" in md.lower()  # USD must be labelled an estimate
-    assert "$0.0045" in md
 
 
 def test_external_leads_render_in_their_own_bucket():
@@ -1227,20 +1232,20 @@ def _triage_action(md: str, fid: str) -> str:
 
 def test_below_bar_ndt_next_action_points_at_the_gaps_section():
     """REQ-03: a below-bar finding has no directive, so it must not be sent to one."""
-    md = to_markdown([], needs_deployment=[_ndt_below_bar()])
+    md = to_markdown([], needs_deployment=[_ndt_below_bar()], has_redteam_plan=True)
     assert _triage_action(md, "AUTHZ-0001") == "see redteam-plan gaps"
     assert "run redteam-plan test" not in md
 
 
 def test_unrunnable_ndt_next_action_points_at_the_preconditions_section():
     """REQ-03: an untraceable payload lands under 'Unrunnable preconditions', not 'gaps'."""
-    md = to_markdown([], needs_deployment=[_ndt_unrunnable()])
+    md = to_markdown([], needs_deployment=[_ndt_unrunnable()], has_redteam_plan=True)
     assert _triage_action(md, "SSRF-0002") == "see redteam-plan preconditions"
 
 
 def test_directive_ndt_next_action_points_at_the_directive_section():
     """REQ-03: an above-bar, traceable finding keeps a directive-shaped action."""
-    md = to_markdown([], needs_deployment=[_ndt_med()])
+    md = to_markdown([], needs_deployment=[_ndt_med()], has_redteam_plan=True)
     assert _triage_action(md, "NDT-T4") == "run redteam-plan directive"
 
 
@@ -1256,3 +1261,71 @@ def test_run_economics_section_absent_when_nothing_was_measured():
     """REQ-05: an empty economics payload renders no section at all."""
     md = to_markdown([], economics={"by_phase": {}, "by_model": {}})
     assert "## Run economics" not in md
+
+
+def test_ndt_count_includes_the_external_leads_and_states_the_split():
+    """REQ-53: the stated needs-runtime count covers every needs-runtime finding."""
+    import dataclasses
+
+    lead = dataclasses.replace(
+        _ndt_med(), id="NDT-EXT", completeness_tier="external-unverifiable"
+    )
+    out = to_markdown([], needs_deployment=[_ndt_med(), lead])
+    assert "Needs runtime proof: 2" in out
+    assert "Leads pending external verification: 1" in out
+
+
+def test_bottom_line_counts_the_triage_population():
+    """REQ-56: a high-severity needs-runtime finding cannot read as medium/low."""
+    high = dataclasses.replace(_ndt_med(), id="NDT-HI", severity=Severity.HIGH)
+    out = to_markdown([_confirmed_dep()], needs_deployment=[high])
+    assert "High-severity findings require immediate remediation." in out
+    assert "medium/low" not in out.split("## Triage")[0]
+
+
+def test_triage_what_drops_a_leading_status_sentence():
+    """REQ-56: the What column carries the finding, never its status word."""
+    assert triage_what(
+        dataclasses.replace(
+            _confirmed_dep(), message="Provenance unresolved. Sink reads user input."
+        )
+    ) == "Sink reads user input."
+    assert triage_what(
+        dataclasses.replace(_confirmed_dep(), message="Confirmed. Sink reads user input.")
+    ) == "Sink reads user input."
+
+
+def test_triage_row_carries_no_status_word_in_the_what_column():
+    """REQ-56: the rendered row shows the finding, not its lifecycle state."""
+    f = dataclasses.replace(
+        _confirmed_dep(), message="Provenance unresolved. Sink reads user input."
+    )
+    out = to_markdown([f])
+    row = next(l for l in out.splitlines() if l.startswith(f"| {f.id} "))
+    assert "Provenance unresolved" not in row
+    assert "Sink reads user input." in row
+
+
+def test_collapse_clusters_does_not_mutate_the_input_findings():
+    """REQ-65: the synthesized representative is a copy, so the caller's list is untouched."""
+    members = [
+        Finding(
+            id=f"F-{i}",
+            rule_id="r",
+            cls="authz",
+            status=FindingStatus.CONFIRMED,
+            severity=Severity.MEDIUM,
+            file=f"route_{i}.py",
+            line=i,
+            message="missing owner check",
+            cluster_id="cluster:F-1",
+        )
+        for i in (1, 2, 3)
+    ]
+
+    reps = collapse_clusters(members)
+
+    assert len(reps) == 1
+    assert len(reps[0].affected_sites) == 3
+    assert all(m.affected_sites == [] for m in members)
+    assert all(reps[0] is not m for m in members)

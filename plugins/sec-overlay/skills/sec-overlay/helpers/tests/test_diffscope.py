@@ -23,10 +23,46 @@ def test_changed_files_parses_name_only(monkeypatch):
         returncode = 0
 
     def fake_run(cmd, capture_output, text, check):
-        assert cmd[:3] == ["git", "diff", "--name-only"]
+        assert cmd[:5] == ["git", "-c", "core.quotePath=false", "diff", "--name-only"]
         return R()
 
     assert changed_files("sha1", "HEAD", runner=fake_run) == ["app.py", "src/db.py"]
+
+
+def test_changed_files_disables_git_quote_path():
+    """A non-ASCII filename must not come back C-quoted and unmatched on disk."""
+    captured = {}
+
+    def fake_run(cmd, capture_output, text, check):
+        captured["cmd"] = cmd
+
+        class R:
+            stdout = ""
+            returncode = 0
+
+        return R()
+
+    changed_files("base", "head", runner=fake_run)
+    assert captured["cmd"][:4] == ["git", "-c", "core.quotePath=false", "diff"]
+
+
+def test_changed_files_raises_when_git_diff_fails():
+    """A failed diff must not read as an empty change set."""
+
+    class R:
+        stdout = ""
+        stderr = "fatal: bad object dead1\n"
+        returncode = 128
+
+    def fake_run(cmd, capture_output, text, check):
+        return R()
+
+    with pytest.raises(ValueError) as err:
+        changed_files("dead1", "beef2", runner=fake_run)
+    message = str(err.value)
+    assert "git diff --name-only" in message
+    assert "dead1" in message
+    assert "beef2" in message
 
 
 def test_head_sha_strips(monkeypatch):
@@ -88,6 +124,57 @@ def test_validate_ref_rejects_leading_dash_even_with_allowlisted_rest():
 def test_validate_ref_rejects_shell_metacharacters(ref):
     with pytest.raises(ValueError):
         validate_ref(ref)
+
+
+def test_changed_file_records_disables_git_quote_path():
+    """A non-ASCII filename must not come back C-quoted and unmatched on disk."""
+    captured = {}
+
+    def fake_run(cmd, capture_output, text, check):
+        captured["cmd"] = cmd
+
+        class R:
+            stdout = ""
+            returncode = 0
+
+        return R()
+
+    changed_file_records("base", "head", runner=fake_run)
+    assert captured["cmd"][:4] == ["git", "-c", "core.quotePath=false", "diff"]
+
+
+def test_dirty_file_records_disables_git_quote_path():
+    """A non-ASCII working-tree filename must not come back C-quoted and drop out of scope."""
+    captured = {}
+
+    def fake_run(cmd, capture_output, text, check):
+        captured["cmd"] = cmd
+
+        class R:
+            stdout = ""
+            returncode = 0
+
+        return R()
+
+    dirty_file_records(runner=fake_run)
+    assert captured["cmd"][:4] == ["git", "-c", "core.quotePath=false", "status"]
+
+
+def test_binary_paths_disables_git_quote_path():
+    """The binary set must key on the same unquoted path `changed_file_records` returns."""
+    captured = {}
+
+    def fake_run(cmd, capture_output, text, check):
+        captured["cmd"] = cmd
+
+        class R:
+            stdout = ""
+            returncode = 0
+
+        return R()
+
+    binary_paths("base", "head", runner=fake_run)
+    assert captured["cmd"][:4] == ["git", "-c", "core.quotePath=false", "diff"]
 
 
 def test_changed_file_records_empty_diff_returns_empty_list():
@@ -158,7 +245,7 @@ def test_file_diff_line_count_counts_diff_body_lines():
 
 def test_binary_paths_reads_numstat_dash_markers():
     def fake_run(cmd, capture_output, text, check):
-        assert cmd[:3] == ["git", "diff", "--numstat"]
+        assert cmd[:5] == ["git", "-c", "core.quotePath=false", "diff", "--numstat"]
 
         class R:
             stdout = "3\t1\ttext.py\n-\t-\timage.png\n"
@@ -167,6 +254,14 @@ def test_binary_paths_reads_numstat_dash_markers():
         return R()
 
     assert binary_paths("base", "head", runner=fake_run) == frozenset({"image.png"})
+
+
+def _subcommand(cmd: list[str]) -> str:
+    """Return the git subcommand, skipping any leading ``-c``/``-C`` flag pairs."""
+    i = 1
+    while i + 1 < len(cmd) and cmd[i] in ("-c", "-C"):
+        i += 2
+    return cmd[i] if i < len(cmd) else ""
 
 
 def test_rev_parse_precedes_diff_and_diff_never_sees_a_raw_ref(tmp_path):
@@ -190,8 +285,8 @@ def test_rev_parse_precedes_diff_and_diff_never_sees_a_raw_ref(tmp_path):
     runner = OrderRunner()
     run_review("main", "develop", str(tmp_path), runner=runner)
 
-    diff_indexes = [i for i, c in enumerate(runner.calls) if c[1] == "diff"]
-    rev_parse_indexes = [i for i, c in enumerate(runner.calls) if c[1] == "rev-parse"]
+    diff_indexes = [i for i, c in enumerate(runner.calls) if _subcommand(c) == "diff"]
+    rev_parse_indexes = [i for i, c in enumerate(runner.calls) if _subcommand(c) == "rev-parse"]
     assert rev_parse_indexes and diff_indexes
     assert max(rev_parse_indexes[:2]) < min(diff_indexes)
     for i in diff_indexes:
