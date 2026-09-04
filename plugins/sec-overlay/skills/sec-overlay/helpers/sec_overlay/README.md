@@ -1918,5 +1918,14 @@ files without it: `diffscope.changed_file_records`, `diffscope.changed_files`, a
 non-ASCII path no longer comes back quoted from those calls either. This stops the quoting
 at the source instead of decoding it downstream, so `_unquote_path` needed no change.
 
+Two more git calls in `diffscope.py` kept the old behavior. `dirty_file_records` backs the
+`--workspace-dirty` scope, so a non-ASCII working-tree file dropped out of review.
+`binary_paths` is worse.
+
+Its result is a set that `file_select` tests each changed path against. The path came from the
+fixed `changed_file_records` and was unquoted, and the set key was still quoted, so the check
+missed. A non-ASCII binary file then entered the text-diff review path. Both calls now pass
+`-c core.quotePath=false`.
+
 Residual gap: `core.quotePath=false` still quotes a path holding a double quote, a
 backslash, or a control character.

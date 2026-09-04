@@ -2050,3 +2050,29 @@ the fallback and failed before the fix. The guard now reads
 prefix of its message", which claims a stricter check than the code runs.
 `test_gate_flags_a_hand_edited_truncated_title` now asserts the error says the cell "does not
 appear in its message" and failed before the fix. The check itself is unchanged.
+
+## 2026-09-03 — re-review finding 1: two sibling git calls still read quoted paths
+
+The `core.quotePath=false` fix covered `changed_file_records`, `changed_files`, and
+`files_in_commit`, but missed `dirty_file_records` and `binary_paths` in the same file. The
+`binary_paths` miss was a regression the fix round itself created: `file_select` tests each
+`changed_file_records` path for membership in the `binary_paths` set, and after the fix one side
+was unquoted while the other stayed quoted. A non-ASCII binary file therefore stopped being
+excluded. `test_dirty_file_records_disables_git_quote_path` and
+`test_binary_paths_disables_git_quote_path` assert the flag and failed before the fix.
+
+The new flag shifted argv positions again. `test_binary_paths_reads_numstat_dash_markers` matched
+`cmd[:3]` and now matches `cmd[:5]`.
+`test_rev_parse_precedes_diff_and_diff_never_sees_a_raw_ref` read the subcommand at `cmd[1]`, so
+it found no diff call at all. It now reads the subcommand through a `_subcommand` helper that
+skips leading `-c` and `-C` flag pairs.
+
+### A stale `.pyc` hid the fix for one test run
+
+`test_gate_flags_a_hand_edited_truncated_title` failed against correct source. The
+truncated-title fix replaced a 23-character string with another 23-character string, and the
+edit landed in the same clock second as the previous byte-compile. Python validates a cached
+`.pyc` on source mtime and size alone, so both matched and the old bytecode loaded.
+`inspect.getsource` reads the `.py` and showed the new text, which made the module look correct.
+`__code__.co_consts` showed the old text and settled it. Note that `fd` skips gitignored paths by
+default, so a `__pycache__` sweep needs `--no-ignore`.
