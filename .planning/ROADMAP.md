@@ -45,17 +45,17 @@ Full phase details: `.planning/milestones/v5.1-ROADMAP.md`
   3. Offending config line printed in untrusted-config messages ✓
   Completed 2026-09-05 | Commits: 2d1bd12, 92230fd
 
-- [ ] **Phase 10: Prompt-Contract Consistency**
+- [x] **Phase 10: Prompt-Contract Consistency**
   Requirements: CONTRACT-01, CONTRACT-02 (D1, D9, D11, D12, D23)
   Goal: Fix four instances of agent prompts naming outputs the Python contract doesn't model. Add consistency test binding prompt-named outputs to schema/dataclass.
   Success criteria:
-  1. `dependency_sinks` field exists on `ScanProfile` dataclass and schema
-  2. `validate_profile` reports unknown keys as validation errors
-  3. Consistency test catches future prompt-contract drift (model after `test_references_caps.py`)
-  4. `logic-chain` added to canonical class list
-  5. `attacker`, `privilege`, `exact_request`, `exfil_channels` declared on `Finding`
-  6. `impact` added to producer prompts
-  CODE-REVIEW | VERIFY
+  1. `dependency_sinks` field exists on `ScanProfile` dataclass and schema ✓
+  2. `validate_profile` reports unknown keys as validation errors ✓
+  3. Consistency test catches future prompt-contract drift (model after `test_references_caps.py`) ✓
+  4. `logic-chain` added to canonical class list ✓
+  5. `attacker`, `privilege`, `exact_request`, `exfil_channels` declared on `Finding` ✓
+  6. `impact` added to producer prompts ✓
+  Completed 2026-09-05 | Commit: 8e3c064
 
 - [ ] **Phase 11: Report Renderer Overhaul**
   Requirements: REPORT-01 through REPORT-07 (D14-D19, D24)
