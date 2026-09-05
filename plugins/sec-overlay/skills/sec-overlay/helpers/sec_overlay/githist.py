@@ -11,9 +11,12 @@ from __future__ import annotations
 import subprocess
 
 # Commit-message signals for a security fix (case-insensitive grep alternation).
+# Short acronyms are anchored with \b to avoid matching inside domain words
+# (e.g. RCE inside source/resource/enforce).
 _SECURITY_GREP = (
-    r"CVE-|vuln|security|exploit|injection|traversal|overflow|"
-    r"XSS|CSRF|SSRF|RCE|sanitize|escape|auth bypass|privilege"
+    r"CVE-|\bvuln\b|\bsecurity\b|\bexploit\b|\binjection\b|\btraversal\b|"
+    r"\boverflow\b|\bXSS\b|\bCSRF\b|\bSSRF\b|"
+    r"\bRCE\b|\bsanitiz|\bescap(e|ing)\b|auth bypass|\bprivilege\b"
 )
 
 

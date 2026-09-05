@@ -249,4 +249,5 @@ def advance(target, phase: str, *, workspace=None, runner=subprocess.run) -> Pat
     fence(target, baseline, runner=runner)
     rcpt = receipt(ws, phase, counts=finding_counts(ws))
     record_stage(ws, phase)
+    print(f"  [{phase}] advanced — receipt: {rcpt}")
     return rcpt
