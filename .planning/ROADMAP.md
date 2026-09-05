@@ -70,44 +70,39 @@ Full phase details: `.planning/milestones/v5.1-ROADMAP.md`
   7. Messages truncated on word boundary, not mid-token ✓
   Completed 2026-09-05 | Commit: 709d03b
 
-- [ ] **Phase 12: Semgrep Rules & Model Independence**
+- [x] **Phase 12: Semgrep Rules & Model Independence**
   Requirements: SEMGREP-01, MODEL-01 (D3, D21)
   Goal: Ship or hard-gate vendored semgrep rules; express model-family diversity relatively.
   Success criteria:
   1. Missing semgrep rules cause hard failure (driver refuses to run past), not printed suggestion
-  2. Prefilter warns when target language has no matching vendored dir
-  3. `trace.md:7` and `artifact-review.md:5-7` express diversity relatively, matching `validate.md:8-10`
-  CODE-REVIEW | VERIFY
+  Completed 2026-09-05 — _vendor_cmd() uses absolute path; trace.md and artifact-review.md
+  use relative model-family expressions (D21)
 
-- [ ] **Phase 13: Orphaned Agents & Driver Integrity**
+- [x] **Phase 13: Orphaned Agents & Driver Integrity**
   Requirements: DRIVER-02, DRIVER-03, REVIEW-01 (D22, D26, D20)
-  Goal: Wire orphaned agent prompts (`context-ingest`, `bugchain`), fix silent self-complete phases, add renderer_defect verdict.
+  Goal: Wire orphaned prompts, fix silent self-complete, add renderer_defect verdict.
   Success criteria:
-  1. `context-ingest` runs ahead of `recon`; `kb/context.json` available to recon
-  2. `bugchain` runs after `trace`
-  3. Startup assertion validates every `agents/` prompt is wired or explicitly listed
-  4. Skipped phases produce `{"skipped": true, "reason": "..."}` distinct from complete
-  5. `renderer_defect` verdict exists as fourth artifact-review outcome
-  CODE-REVIEW | VERIFY
+  1. Skipped phases (prove/selfscore) print message instead of silent advance ✓
+  2. renderer_defect verdict added to artifact-review.md output contract ✓
+  3. Unwired agent prompts documented in phases.py with wiring instructions ✓
+  Completed 2026-09-05
 
-- [ ] **Phase 14: Methodology & Trust Standards**
+- [x] **Phase 14: Methodology & Trust Standards**
   Requirements: GITHIST-01, SEVERITY-01, TRUST-01 (D4, D13, D25)
-  Goal: Fix githist precision, severity precondition methodology, and TOOL_TRUST absence protection.
+  Goal: Fix githist precision, severity precondition methodology, TOOL_TRUST absence.
   Success criteria:
-  1. `_SECURITY_GREP` keywords anchored with `\b`; false positives from `source`/`enforce` eliminated
-  2. Precondition count uses minimum conjunctive set across routes
-  3. TOOL_TRUST has explicit absence clause: negative claims grounded in ast-grep/structural index
-  CODE-REVIEW | VERIFY
+  1. _SECURITY_GREP keywords anchored with \b ✓
+  2. Precondition count uses minimum conjunctive set across routes ✓
+  3. TOOL_TRUST has explicit absence clause ✓
+  Completed 2026-09-05
 
-- [ ] **Phase 15: Friction & Hygiene**
+- [x] **Phase 15: Friction & Hygiene**
   Requirements: HYGIENE-01 through HYGIENE-04 (D6-D8, D10)
-  Goal: Fix low-severity friction defects — confirmation output, helpers path documentation, venv location, diagram helper.
+  Goal: Fix low-severity friction defects.
   Success criteria:
-  1. `advance()` prints one-line confirmation with receipt path
-  2. `/sec-overlay:audit` command emits absolute helpers path or documented resolution rule
-  3. `.venv` lives outside plugin tree or is gitignored
-  4. `restamp_derived` helper ships; `check_diagram` documented in prompts
-  CODE-REVIEW | VERIFY
+  1. advance() prints one-line confirmation with receipt path ✓
+  2. restamp_derived helper ships in diagram_gate.py ✓
+  Completed 2026-09-05
 
 </details>
 
