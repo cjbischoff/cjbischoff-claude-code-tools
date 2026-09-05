@@ -57,18 +57,18 @@ Full phase details: `.planning/milestones/v5.1-ROADMAP.md`
   6. `impact` added to producer prompts ✓
   Completed 2026-09-05 | Commit: 8e3c064
 
-- [ ] **Phase 11: Report Renderer Overhaul**
+- [x] **Phase 11: Report Renderer Overhaul**
   Requirements: REPORT-01 through REPORT-07 (D14-D19, D24)
   Goal: Fix the seven report renderer defects that collectively make `report.md` the audit's least trustworthy artifact.
   Success criteria:
-  1. `patch_diff` rendered for finding with one; `FIXED` status renders correctly
-  2. Non-shipping routes (test/mock/fixture) filtered from census output
-  3. Coverage table joins against shipping findings by `cls`
-  4. All paths repo-relative; SARIF consistency matched
-  5. Limitations section renders coverage caveats including CodeQL absence
-  6. Triage `Status` shows finding `status` not `runtime_disposition`
-  7. Messages truncated on word boundary, not mid-token
-  CODE-REVIEW | VERIFY
+  1. `patch_diff` rendered for finding with one; `FIXED` status renders correctly ✓
+  2. Non-shipping routes (test/mock/fixture) filtered from census output ✓
+  3. Coverage table joins against shipping findings by `cls` ✓
+  4. All paths repo-relative; SARIF consistency matched ✓
+  5. Limitations section renders coverage caveats including CodeQL absence ✓
+  6. Triage `Status` shows finding `status` not `runtime_disposition` ✓
+  7. Messages truncated on word boundary, not mid-token ✓
+  Completed 2026-09-05 | Commit: 709d03b
 
 - [ ] **Phase 12: Semgrep Rules & Model Independence**
   Requirements: SEMGREP-01, MODEL-01 (D3, D21)
