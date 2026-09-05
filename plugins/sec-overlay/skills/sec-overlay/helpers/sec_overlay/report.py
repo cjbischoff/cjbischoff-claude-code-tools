@@ -321,7 +321,9 @@ def triage_what(f: Finding) -> str:
         f: The finding to describe.
 
     Returns:
-        The first non-status sentence of the message, clipped by ``_short_title``.
+        The first non-status sentence of the message, clipped by ``_short_title``
+        with an explicit 120-char word-boundary cap (raised from 72 to avoid
+        cutting before critical context like ``javascript:`` in a DOM-XSS finding).
 
     Example:
         >>> triage_what(Finding(message="Confirmed. Sink reads user input."))
@@ -330,7 +332,7 @@ def triage_what(f: Finding) -> str:
     parts = (f.message or "").split("|", 1)[0].strip().split(". ")
     while len(parts) > 1 and parts[0].strip().rstrip(".").lower() in _STATUS_LEAD:
         parts = parts[1:]
-    return _short_title(parts[0].strip())
+    return _short_title(parts[0].strip(), limit=120)
 
 
 def _ndt_next_actions(
@@ -499,9 +501,20 @@ def to_markdown(
     ndt_actions = _ndt_next_actions(ndt, has_redteam_plan=has_redteam_plan)
     default_action = "see redteam-plan gaps" if has_redteam_plan else "no runtime plan produced"
     all_triage = [
-        (f, "needs-runtime", ndt_actions.get(f.id, default_action)) for f in ndt
+        (
+            f,
+            f.status.value if f.status is FindingStatus.FIXED else "needs-deployment-testing",
+            ndt_actions.get(f.id, default_action),
+        )
+        for f in ndt
     ] + [
-        (f, "confirmed", "bump" if f.cls == "deps" else "apply fix (§ below)") for f in conf
+        (
+            f,
+            f.status.value if f.status is FindingStatus.FIXED else "confirmed",
+            "fix verified — review and merge" if f.status is FindingStatus.FIXED
+            else ("bump" if f.cls == "deps" else "apply fix"),
+        )
+        for f in conf
     ]
     all_triage.sort(key=lambda t: _risk_sort_key(t[0]))
     lines += [

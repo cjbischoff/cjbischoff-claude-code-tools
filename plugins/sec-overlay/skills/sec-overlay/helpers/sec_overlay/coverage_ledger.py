@@ -54,13 +54,24 @@ def build_coverage_ledger(ws: Workspace) -> dict:
     by_site: dict[tuple[str, str, int], list[FindingStatus]] = {}
     for f in read_findings(ws):
         by_site.setdefault((f.cls, f.file, f.line), []).append(f.status)
+    # Per-class terminal-status check for D16: a class that shipped findings at
+    # different sites than the attack_surface evidence should still show "reported".
+    cls_has_terminal: dict[str, bool] = {}
+    for f in read_findings(ws):
+        if f.status in _REPORTED:
+            cls_has_terminal[f.cls] = True
     surfaces = []
     for cls in classes:
         sites = {k: v for k, v in by_site.items() if k[0] == cls}
         if not sites:
-            surface = {"id": cls, "cls": cls, "disposition": "needs_follow_up"}
-            surface["reason"] = "no terminal finding for this attack surface this pass"
-            surface["next_step"] = f"hunt {cls} or record why it is not applicable"
+            if cls_has_terminal.get(cls):
+                surface = {"id": f"{cls}", "cls": cls, "disposition": "reported",
+                           "reason": f"terminal finding(s) exist for class {cls}",
+                           "next_step": "—"}
+            else:
+                surface = {"id": cls, "cls": cls, "disposition": "needs_follow_up"}
+                surface["reason"] = "no terminal finding for this attack surface this pass"
+                surface["next_step"] = f"hunt {cls} or record why it is not applicable"
             surfaces.append(surface)
             continue
         for (_, file, line), statuses in sites.items():
@@ -82,8 +93,31 @@ def build_coverage_ledger(ws: Workspace) -> dict:
         if not any(s["disposition"] == "needs_follow_up" for s in surfaces)
         else "partial"
     )
-    ledger = {"completeness": completeness, "surfaces": surfaces,
-              "deferred": [], "open_questions": []}
+    # Coverage caveats (D18): surface the sast_plan's disabled-backend reasons
+    # and any prefilter coverage notes so the report reader can calibrate.
+    sast_caveats = {}
+    codeql_reason = profile.get("sast_plan", {}).get("codeql", {}).get("reason", "")
+    if codeql_reason:
+        sast_caveats["reason"] = (
+            f"CodeQL did not run: {codeql_reason}. "
+            "No interprocedural taint receipts exist for any finding. "
+            "Tier-1 evidence is limited to semgrep rules only."
+        )
+    notes_path = ws.kb / "investigate-coverage-notes.md"
+    coverage_caveats = []
+    if notes_path.exists():
+        text = notes_path.read_text().strip()
+        if text:
+            coverage_caveats.append(
+                f"Coverage notes: see kb/investigate-coverage-notes.md"
+            )
+
+    ledger = {
+        "completeness": completeness, "surfaces": surfaces,
+        "deferred": [], "open_questions": [],
+        "sast_caveats": sast_caveats,
+        "notes": {"coverage_caveats": coverage_caveats},
+    }
     (ws.kb / "coverage-ledger.json").write_text(json.dumps(ledger, indent=2))
     return ledger
 
@@ -151,11 +185,48 @@ def render_markdown(d: dict) -> str:
              f"Completeness: **{d.get('completeness', 'unknown')}**", "",
              "| Surface | Disposition | Reason | Next step |",
              "|---------|-------------|--------|-----------|"]
-    for s in d.get("surfaces", []):
+    surfaces = d.get("surfaces", [])
+    # Filter non-shipping paths from needs_follow_up surfaces (D15).
+    _NON_SHIPPING_PATTERNS = (
+        ".test.", ".spec.", "__mocks__", "__fixtures__", "e2e/",
+        ".stories.", "__tests__", "/test/", "/tests/",
+        "internal/ufe-dev-server",
+    )
+    def _is_non_shipping(surface: dict) -> bool:
+        site = surface.get("site", "")
+        if surface.get("disposition") != "needs_follow_up":
+            return False
+        return any(p in site.lower() for p in _NON_SHIPPING_PATTERNS)
+
+    filtered = [s for s in surfaces if not _is_non_shipping(s)]
+    non_shipping_count = len(surfaces) - len(filtered)
+    surfaces = filtered
+
+    # Cap needs_follow_up surfaces to avoid flooding the report (D15).
+    follow_up = [s for s in surfaces if s.get("disposition") == "needs_follow_up"]
+    capped = follow_up[:20]
+    capped_count = len(follow_up) - len(capped)
+    other = [s for s in surfaces if s.get("disposition") != "needs_follow_up"]
+
+    for s in other + capped:
         lines.append(
             f"| {s.get('id', '?')} | {s.get('disposition', '?')} "
             f"| {s.get('reason', '') or '—'} | {s.get('next_step', '') or '—'} |"
         )
+    if capped_count:
+        lines.append(f"| — | — | _({capped_count} more needs_follow_up surfaces omitted)_ | — |")
+
+    # Caveats section (D18): render coverage caveats from the run's notes.
+    notes = d.get("notes", {})
+    caveats = notes.get("coverage_caveats", [])
+    sast_reason = d.get("sast_caveats", {}).get("reason", "")
+    if caveats or sast_reason:
+        lines += ["", "### Limitations", ""]
+        if sast_reason:
+            lines.append(f"- {sast_reason}")
+        for c in caveats:
+            lines.append(f"- {c}")
+
     deferred = d.get("deferred", [])
     if deferred:
         lines += ["", "Deferred (not examined this pass):"]
