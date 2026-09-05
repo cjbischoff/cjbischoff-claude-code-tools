@@ -507,6 +507,7 @@ def run_audit(
             record_stage(ctx.ws, phase.name)
             continue
         if phase.name == "prove" and not prove_enabled(ctx.ws):
+            print(f"  [{phase.name}] skipped — proof lane not enabled in scan options")
             if on_complete is not None:
                 on_complete(phase.name)
             record_stage(ctx.ws, phase.name)

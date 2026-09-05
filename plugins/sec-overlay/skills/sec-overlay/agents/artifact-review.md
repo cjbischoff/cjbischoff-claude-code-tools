@@ -43,8 +43,13 @@ receipt — only a competing mechanical receipt can do that. If you believe a re
 finding is wrong, downgrade and voice the doubt; do not remove it.
 
 Write `{{WORKSPACE}}/kb/gates/artifact-review.json`:
-`{"verdict": "clean" | "downgrades", "notes": [...], "downgraded": [ids]}`. Return a
-one-line summary. You do not write `report.md`.
+`{"verdict": "clean" | "downgrades" | "renderer_defect", "notes": [...], "downgraded": [ids]}`.
+Use ``renderer_defect`` when the defects you find are in the *renderer* itself
+(e.g. stale status not matching on-disk data, missing patch_diff, broken cross-references)
+rather than judgment calls on the findings — a re-render will reproduce the same defects
+because the renderer is buggy, not stale. A ``renderer_defect`` verdict causes the run to
+fail loudly so renderer bugs surface as run failures, not ignored re-render requests.
+Return a one-line summary. You do not write `report.md`.
 
 ## Rules
 - A downgrade needs a `file:line` citation into the finding's own evidence, per validate.md.

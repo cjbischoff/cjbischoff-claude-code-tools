@@ -179,3 +179,17 @@ def next_actionable_phase(table: tuple[PhaseSpec, ...], state: CampaignState) ->
         if state.stages.get(phase.name) != "done":
             return phase
     return None
+
+
+# D26: Unwired agent prompts (not in PHASE_TABLE).
+# These prompts exist under agents/ but are not reachable from run_audit:
+#   context-ingest (C1) — should run before recon; recon.md:12-13 already reads
+#     kb/context.json if present. Wire by adding PhaseSpec("context-ingest", ...)
+#     ahead of "recon" with output (_context_json,).
+#   bugchain — should run after trace and before calibrate. Wire by adding
+#     PhaseSpec("bugchain", "agent", (_findings_dir,), (_bugchain_json,),
+#     prompt="bugchain.md") after the "trace" entry.
+#   validate-fix — referenced by verify.py:380 in history notes but the phase
+#     IS wired at index 17 in PHASE_TABLE above, so the reference is correct.
+# Other unwired prompts are for non-driver entrypoints (review, correlate, etc.)
+# and are intentionally absent from PHASE_TABLE.
