@@ -58,7 +58,11 @@ def _raise_on_incomplete_backends(
     """
     if not strict:
         return
-    skips = [(b, r) for b, r in skipped_reasons.items() if r != "disabled"]
+    # Filter out skipped_reasons already represented in ``failed`` to avoid
+    # duplicated ``codeql: untrusted, codeql: untrusted codeql config: ...``.
+    failed_backends = {f.get("backend") for f in failed}
+    skips = [(b, r) for b, r in skipped_reasons.items()
+             if r != "disabled" and b not in failed_backends]
     problems = skips + [(f.get("backend"), f.get("error")) for f in failed]
     if problems:
         joined = ", ".join(f"{b}: {r}" for b, r in problems)

@@ -15,8 +15,16 @@ from pathlib import Path
 from sec_overlay.clsmap import cls_from_cwe, cls_from_rule_id
 from sec_overlay.models import Finding, FindingStatus, Severity
 
-_DANGEROUS = ("extractor", "buildcommand", "build-command", "setup",
-              "pre-build", "post-build", "prebuild", "postbuild")
+# Each token matched as a YAML key (at line start, optionally preceded by list
+# marker ``- ``) to avoid false-positively matching ``paths-ignore`` glob values
+# like ``**/jest.setup.*``. ``re`` is already imported at module top.
+_DANGEROUS_KEY: dict[str, re.Pattern] = {
+    token: re.compile(rf"^[ \t]*(?:-[ \t]+)?{re.escape(token)}[ \t]*:", re.MULTILINE)
+    for token in (
+        "extractor", "buildcommand", "build-command", "setup",
+        "pre-build", "post-build", "prebuild", "postbuild",
+    )
+}
 
 
 def codeql_config_trusted(target: str | Path) -> tuple[bool, str]:
@@ -43,8 +51,8 @@ def codeql_config_trusted(target: str | Path) -> tuple[bool, str]:
         if not path.is_file():
             continue
         text = path.read_text(errors="ignore").lower()
-        for token in _DANGEROUS:
-            if token in text:
+        for token, pattern in _DANGEROUS_KEY.items():
+            if pattern.search(text):
                 return False, f"dangerous CodeQL config field '{token}' in {path.name}"
         # external query pack refs outside codeql/ namespace
         for m in re.finditer(r"uses:\s*([^\s#]+)", text):

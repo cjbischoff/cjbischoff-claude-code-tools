@@ -87,6 +87,9 @@ def run_deterministic_phase(
     Raises:
         PhaseHalt: An input artifact is missing, no action is registered, or the
             action ran but a declared output artifact is still absent.
+        RuntimeError: Propagated from the phase action (e.g. prefilter backend
+            failure) and printed as a structured operator message with
+            remediation options before re-raising.
     """
     absent = missing_inputs(phase, ctx.ws)
     if absent:
@@ -98,7 +101,28 @@ def run_deterministic_phase(
     if action is None:
         raise PhaseHalt(f"phase {phase.name!r} has no registered action")
     start = time.perf_counter()
-    action(ctx)
+    try:
+        action(ctx)
+    except RuntimeError as exc:
+        msg = str(exc)
+        border = "─" * min(72, len(msg) + 4)
+        print(
+            f"\n{border}\n"
+            f"  {phase.name!r} phase failed:\n"
+            f"  {msg}\n"
+            f"{border}\n"
+            f"  Remediation options:\n"
+        )
+        if "codeql" in msg and "untrusted" in msg:
+            print("    1. Set codeql.run: false in scan-profile.json and accept the"
+                  " coverage gap.")
+            print("    2. Or configure a trusted CodeQL config."
+                  " See codeql.py codeql_config_trusted().")
+        else:
+            print("    Check the backend binary is installed and scan-profile.json")
+            print("    sast_plan is correct. Set the backend's `run: false` to skip.")
+        print(f"{border}\n")
+        raise
     elapsed = time.perf_counter() - start
     if not outputs_present(phase, ctx.ws):
         missing = [str(p(ctx.ws)) for p in phase.outputs if not p(ctx.ws).exists()]
