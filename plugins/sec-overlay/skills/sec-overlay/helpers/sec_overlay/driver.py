@@ -113,7 +113,7 @@ def run_deterministic_phase(
             f"{border}\n"
             f"  Remediation options:\n"
         )
-        if "codeql" in msg and "untrusted" in msg:
+        if "untrusted" in msg.split() and "codeql" in msg.split():
             print("    1. Set codeql.run: false in scan-profile.json and accept the"
                   " coverage gap.")
             print("    2. Or configure a trusted CodeQL config."
