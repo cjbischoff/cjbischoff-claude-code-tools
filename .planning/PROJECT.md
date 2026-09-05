@@ -37,10 +37,27 @@ core stays stdlib-only and the frozen JSON contract is unchanged.
 
 ## Next Milestone Goals
 
-Not yet defined — run `/gsd-new-milestone`. Standing candidates (deferred to v2
-twice, 2026-08-16 and 2026-08-22, no second-plugin candidate named):
-- GROW-01: onboard a second plugin from `docs/templates/plugin/`
-- GROW-02: run `claude plugin validate .` as an automated gate (prek or CI)
+### v5.2: sec-overlay Defect Remediation
+
+Fix or disposition all 26 defects (D1-D26) identified in the 2026-09-01 sec-overlay
+audit run on `ufe`. The defect report is at
+`docs/reports/2026-09-01-sec-overlay-audit-defects.md`.
+
+**Highest-leverage fixes (per the report's own priority):**
+1. D2 — CodeQL guard substring match → anchored key regex (measured cost: 53 confirmations)
+2. Consistency test binding prompt-named outputs to schema/dataclass (closes D1, D9, D11, D12, D23)
+3. Report renderer overhaul (D14-D18: patch display, route filter, relative paths, caveats section)
+4. D3 — ship or hard-gate vendored semgrep rules
+5. D21 — relative model-family independence requirements
+6. All remaining defects (D4-D10, D13, D19-D20, D22, D24-D26)
+
+**Quality gates per phase:**
+- `/gsd:code-review` — after each phase's implementation
+- `/gsd:verify-work` — validate built features against defect spec
+
+**Non-goals:** No new runtime dependencies. No changes to the frozen JSON contract
+(models.py / evidence.py). No new features — remediation only. GROW-01/GROW-02
+remain deferred to v2.
 
 ## Requirements
 

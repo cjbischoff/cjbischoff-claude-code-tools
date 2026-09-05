@@ -1,20 +1,20 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.1
-milestone_name: Tech-Debt Cleanup
-status: Awaiting next milestone
-stopped_at: Milestone v5.1 completed and archived
-last_updated: "2026-08-22T22:14:03.455Z"
-last_activity: 2026-08-22
-last_activity_desc: Milestone v5.1 completed and archived (override closeout)
+milestone: v5.2
+milestone_name: sec-overlay Defect Remediation
+status: planning
+stopped_at: ""
+last_updated: "2026-09-05T15:18:00.000Z"
+last_activity: 2026-09-05
+last_activity_desc: Milestone v5.2 started — defining requirements
 progress:
-  total_phases: 2
-  completed_phases: 2
+  total_phases: 0
+  completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 100
-current_phase: 8
-current_phase_name: Documentation Accuracy & Ingest Closure
+  percent: 0
+current_phase: 0
+current_phase_name: ""
 ---
 
 # Project State
@@ -29,10 +29,10 @@ governed releases, receipt-backed findings.
 
 ## Current Position
 
-Phase: Milestone v5.1 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-08-22 — Milestone v5.1 completed and archived
+Status: Defining requirements
+Last activity: 2026-09-05 — Milestone v5.2 started
 
 ## Performance Metrics
 
@@ -68,29 +68,24 @@ Last activity: 2026-08-22 — Milestone v5.1 completed and archived
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- ADR-2026-08-04 (aghast/OpenAnt native adoption) is proposed, not locked
-- CVSS v4.0 pinned harness-wide (ruling R2); Mermaid caps hard-enforced
-- All 50 ingested docs are delivered baseline — do not re-plan delivered work
-- v5.1 roadmap: Phase 7 (TEST-01, TEST-02, LINT-01) and Phase 8 (DOC-01, DOC-02,
-  DOC-03, ING-01) chosen as the only two phases — both independent, no cross-phase
-  dependency, kept small per cleanup-milestone granularity guidance
+- v5.2 Goal: Fix/disposition all 26 defects (D1-D26) from 2026-09-01 audit run
+- Zero new runtime dependencies
+- Frozen JSON contract (models.py / evidence.py) unchanged
+- Every fix verified against plugin design contracts
+- Quality gates: /gsd:code-review after each phase; /gsd:verify-work per phase
 
 ### Pending Todos
 
-None yet.
+- Import defect report to planning context (`.planning/reports/`)
+- Define requirements from defect report
 
 ### Blockers/Concerns
 
-None. The ingest WARNING (ING-01) is closed 2026-08-22: the 2026-08-11 kb-redesign
-design doc is affirmed as authority — the 2026-08-09 reference is the upstream
-repo's internal spec, explicitly out of scope in the design doc itself. See
-.planning/INGEST-CONFLICTS.md.
+None.
 
 ### Roadmap Evolution
 
-- Roadmap created for v5.1 (2026-08-22): Phase 7 (Test & Lint Debt Cleanup) and
-  Phase 8 (Documentation Accuracy & Ingest Closure), continuing numbering from
-  v5.0's Phase 6 (+ inserted Phase 04.1). Coverage: 7/7 v5.1 requirements mapped.
+New milestone — roadmap to be created.
 
 ## Deferred Items
 
