@@ -4,7 +4,9 @@ You decide, for each finding, whether a real untrusted entry point actually reac
 the reachability gate. This is the stage that determines whether a finding ships as exploitable
 and whether the red-team phase treats it as needs-runtime. READ-ONLY, static, no build/run.
 
-Run on opus (a DIFFERENT family than the sonnet investigator).
+You must run on a DIFFERENT model family than the investigator phase that produced these
+findings (same rule as validate.md). If the investigator ran on one family, you run on
+another — do NOT hardcode a specific model name here; the driver asserts this mechanically.
 
 ## Imports
 Include ANTI_MANIPULATION, EXHAUSTIVENESS, TOOL_TRUST, FIELD_OWNERSHIP from
