@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v5.2
 milestone_name: sec-overlay Defect Remediation
-status: planning
+status: executing
 stopped_at: ""
 last_updated: "2026-09-05T15:18:00.000Z"
 last_activity: 2026-09-05
-last_activity_desc: Milestone v5.2 started — roadmap created (Phases 9-15)
+last_activity_desc: Phase 9 complete (D2, D5 fixed) — starting Phase 10
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 0
   completed_plans: 0
-  percent: 0
-current_phase: 9
-current_phase_name: CodeQL Guard & Driver Surface
+  percent: 14
+current_phase: 10
+current_phase_name: Prompt-Contract Consistency
 ---
 
 # Project State
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-08-22)
 
 **Core value:** The marketplace never ships an unverified claim — validated plugins,
 governed releases, receipt-backed findings.
-**Current focus:** Planning next milestone (`/gsd-new-milestone`)
+**Current focus:** v5.2 sec-overlay Defect Remediation — Phase 10 in progress
 
 ## Current Position
 
-Phase: Phase 9 — CodeQL Guard & Driver Surface (not started)
+Phase: Phase 10 — Prompt-Contract Consistency (in progress)
 Plan: —
-Status: Roadmap created — 7 phases, 22 requirements
-Last activity: 2026-09-05 — Milestone v5.2 roadmap created
+Status: Phase 9 complete (CODEQL-01, DRIVER-01)
+Last activity: 2026-09-05 — Phase 9 completed, starting Phase 10
 
 ## Performance Metrics
 

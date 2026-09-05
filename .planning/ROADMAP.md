@@ -36,14 +36,14 @@ Full phase details: `.planning/milestones/v5.1-ROADMAP.md`
 <details open>
 <summary>🔜 v5.2 sec-overlay Defect Remediation (Phases 9-15) — ACTIVE</summary>
 
-- [ ] **Phase 9: CodeQL Guard & Driver Surface**
+- [x] **Phase 9: CodeQL Guard & Driver Surface**
   Requirements: CODEQL-01, DRIVER-01 (D2, D5)
   Goal: Fix the unanchored substring match in `codeql.py` that false-positively flags benign CodeQL configs, and structured error rendering for backend failures.
   Success criteria:
-  1. `**/jest.setup.*` in `paths-ignore` is TRUSTED; `setup:` key is UNTRUSTED — both directions pass
-  2. Backend failure surfaces as bordered operator message, not raw traceback
-  3. Offending config line printed in untrusted-config messages
-  CODE-REVIEW | VERIFY
+  1. `**/jest.setup.*` in `paths-ignore` is TRUSTED; `setup:` key is UNTRUSTED — both directions pass ✓
+  2. Backend failure surfaces as bordered operator message, not raw traceback ✓
+  3. Offending config line printed in untrusted-config messages ✓
+  Completed 2026-09-05 | Commits: 2d1bd12, 92230fd
 
 - [ ] **Phase 10: Prompt-Contract Consistency**
   Requirements: CONTRACT-01, CONTRACT-02 (D1, D9, D11, D12, D23)
