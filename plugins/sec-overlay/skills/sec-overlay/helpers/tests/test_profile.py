@@ -30,6 +30,7 @@ def _valid_dict():
         "attack_surface_evidence": {},
         "scan_options": {},
         "route_summary": {},
+        "dependency_sinks": [],
     }
 
 

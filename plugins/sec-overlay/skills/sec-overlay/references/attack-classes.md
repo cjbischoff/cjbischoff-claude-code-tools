@@ -6,6 +6,7 @@ Use these exact keys (lowercase) in `scan-profile.json`.
 
 | key | name | ripgrep indicators (non-exhaustive) | PoC feasible (no-exec harness) |
 |-----|------|-------------------------------------|-------------------------------|
+| `logic-chain` | Cross-class multi-primitive chain | Two or more classes compose across 2-3 files (e.g. auth-bypass → IDOR → RCE). Exception to one-class-per-finding: sanctioned single finding spanning multiple primitives as a composed capability. | static only |
 | `sqli` | SQL injection | `execute(`, `cursor`, `SELECT`, `%`/f-string into query, ORM raw | static only |
 | `cmdi` | OS command injection | `subprocess`, `os.system`, `exec(`, `child_process`, backticks (note: `exec(` substring-matches PHP `curl_exec(`/`mysqli_*_exec` — anchor with word boundary `\bexec\(` or `\bshell_exec\(` to avoid HTTP/DB false hits) | static only |
 | `ssrf` | Server-side request forgery | `requests.get(`, `urlopen`, `fetch(`, `axios`, user-controlled URL; OPA/Rego specifically: `rego.New`, `rego.Module`, `rego.Capabilities`, `http.send` | static only |
