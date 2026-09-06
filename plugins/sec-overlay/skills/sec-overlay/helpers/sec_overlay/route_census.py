@@ -108,9 +108,13 @@ def census(
     seen: dict[tuple[str, int, str], RouteSite] = {}
 
     # OpenAPI strategy: parse openapi/swagger spec files (D-6).
-    for spec_file in ("openapi.json", "openapi.yaml", "openapi.yml", "swagger.json"):
+    for spec_file in ("openapi.json", "swagger.json", "openapi.yaml", "openapi.yml"):
         sp = Path(root) / spec_file
         if sp.is_file():
+            if spec_file.endswith((".yaml", ".yml")):
+                print(f"  [route-census] found {sp.name} but YAML parsing is not supported without PyYAML; "
+                      f"ship an openapi.json alongside it for route discovery")
+                break
             try:
                 spec = json.loads(sp.read_text())
                 paths = spec.get("paths", spec.get("swagger", {}) or {})
