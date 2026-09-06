@@ -67,6 +67,20 @@ def as_llm_claim(source: str) -> str:
     return source if source.startswith("llm") else f"llm-claimed:{source}"
 
 
+def validate_dependency_catalog_receipt(
+    source: str, *, catalog_ids: frozenset[str]
+) -> str | None:
+    """Validate a dependency-catalog evidence source and extract the entry id.
+    """
+    if not source.startswith("dependency-catalog:"):
+        return "not a dependency-catalog receipt"
+    rest = source[len("dependency-catalog:"):]
+    entry_id = rest.split("@")[0]
+    if entry_id not in catalog_ids:
+        return f"unknown catalog entry id: {entry_id}"
+    return None
+
+
 def receipt_tier(source: str) -> int | None:
     """Return the receipt tier (1 or 2) of an evidence source, or None.
 

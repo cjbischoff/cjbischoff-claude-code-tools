@@ -88,6 +88,32 @@ def build_coverage_ledger(ws: Workspace) -> dict:
                 surface["reason"] = f"no terminal finding at sink site {site} this pass"
                 surface["next_step"] = f"adjudicate {site}"
             surfaces.append(surface)
+
+    # D-5: Mandatory class floor per language/framework.
+    # Floor classes must be investigated or explicitly excluded with a cited
+    # reason. A floor class that is neither forces completeness: partial.
+    # Recon may add to the surface; it may not shrink below the floor.
+    _FLOOR: dict[str, set[str]] = {
+        "javascript": {"ssti", "injection"},
+        "typescript": {"ssti", "injection"},
+        "python": {"ssti"},
+        "go": {"expr-eval-rce"},
+    }
+    target_languages = profile.get("languages", [])
+    floor_classes: set[str] = set()
+    for lang in target_languages:
+        floor_classes |= _FLOOR.get(lang, set())
+    covered = {s["cls"] for s in surfaces}
+    for cls in sorted(floor_classes):
+        if cls not in covered:
+            surfaces.append({
+                "id": f"{cls} (mandatory floor)",
+                "cls": cls,
+                "disposition": "needs_follow_up",
+                "reason": f"mandatory floor class {cls} not investigated for {target_languages} target",
+                "next_step": f"hunt {cls} or cite why it is not applicable",
+            })
+
     completeness = (
         "complete"
         if not any(s["disposition"] == "needs_follow_up" for s in surfaces)

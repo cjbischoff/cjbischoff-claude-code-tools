@@ -42,13 +42,15 @@ def test_uncovered_class_blocks_complete(tmp_path: Path):
 
 def test_all_covered_is_complete(tmp_path: Path):
     ws = Workspace(tmp_path); ws.ensure()
-    _profile(ws, ["authz", "secrets"])
+    _profile(ws, ["authz", "secrets", "expr-eval-rce"])
     write_findings(ws, [_f("authz", FindingStatus.NEEDS_DEPLOYMENT_TESTING, "A-1"),
-                        _f("secrets", FindingStatus.REJECTED, "S-1")])
+                        _f("secrets", FindingStatus.REJECTED, "S-1"),
+                        _f("expr-eval-rce", FindingStatus.REJECTED, "E-1")])
     led = build_coverage_ledger(ws)
     disp = {s["id"]: s["disposition"] for s in led["surfaces"]}
     assert disp["authz@a.py:1"] == "reported"
     assert disp["secrets@a.py:1"] == "no_issue_found"
+    assert "expr-eval-rce" in str(led["surfaces"])
     assert led["completeness"] == "complete"
     assert validate_coverage_ledger(led) == []
 
