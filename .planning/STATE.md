@@ -29,10 +29,10 @@ governed releases, receipt-backed findings.
 
 ## Current Position
 
-Phase: Phase 16 — Dependency-Sink Catalog & CWE Mapping (not started)
-Plan: —
-Status: Planning — requirements defined, 4 phases
-Last activity: 2026-09-05 — Milestone v5.3 started
+Phase: Phase 16 — Dependency-Sink Catalog & CWE Mapping (planned)
+Plan: 16-01 — 3 tasks: CWE map → catalog → prefilter filter
+Status: Planned — ready to execute
+Last activity: 2026-09-06 — Phase 16 planned, 1 plan created
 
 ## Performance Metrics
 

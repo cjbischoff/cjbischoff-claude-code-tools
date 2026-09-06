@@ -115,13 +115,11 @@ Full phase details: `.planning/milestones/v5.1-ROADMAP.md`
   Goal: Fix the three data/logic defects that block the finding at the earliest stage —
   no npm entries in the dependency-sink catalog, CWE-94/95 unmapped in the class map,
   and `security_only` silently deleting `unknown`-class semgrep hits.
+  Plan: 1 plan (16-01), 3 tasks — CWE map → catalog → prefilter filter
   Success criteria:
-  1. npm template/eval packages catalogued in dependency-sinks.json; `reconcile_plan` routes
-     classes from `package.json:127` alone
-  2. CWE-94/95 resolve to routable class; `detect-eval-with-expression` semgrep result
-     appears in `agents_to_spawn`
-  3. `security_only` does not drop CWE-declaring semgrep hits; dropped findings recorded
-     per-id in a drop ledger
+  1. npm template/eval packages catalogued; match-any strategy routes classes from `package.json` alone
+  2. CWE-94/95 resolve to injection class; `detect-eval-with-expression` routes deterministically
+  3. `security_only` preserves CWE-declaring semgrep hits; dropped findings recorded per-id in ledger
 
 - [ ] **Phase 17: Receipt Kind & Class Floor**
   Requirements: RECEIPT-01, FLOOR-01 (D-4, D-5)
