@@ -37,27 +37,35 @@ core stays stdlib-only and the frozen JSON contract is unchanged.
 
 ## Next Milestone Goals
 
-### v5.2: sec-overlay Defect Remediation
+### v5.2: sec-overlay Defect Remediation (completed 2026-09-05)
 
 Fix or disposition all 26 defects (D1-D26) identified in the 2026-09-01 sec-overlay
-audit run on `ufe`. The defect report is at
-`docs/reports/2026-09-01-sec-overlay-audit-defects.md`.
+audit run on `ufe`. All 7 phases shipped. See `.planning/reports/2026-09-01-sec-overlay-audit-defects.md`.
 
-**Highest-leverage fixes (per the report's own priority):**
-1. D2 — CodeQL guard substring match → anchored key regex (measured cost: 53 confirmations)
-2. Consistency test binding prompt-named outputs to schema/dataclass (closes D1, D9, D11, D12, D23)
-3. Report renderer overhaul (D14-D18: patch display, route filter, relative paths, caveats section)
-4. D3 — ship or hard-gate vendored semgrep rules
-5. D21 — relative model-family independence requirements
-6. All remaining defects (D4-D10, D13, D19-D20, D22, D24-D26)
+### v5.3: sec-overlay Harness Coverage — Missed RCE
 
-**Quality gates per phase:**
-- `/gsd:code-review` — after each phase's implementation
-- `/gsd:verify-work` — validate built features against defect spec
+Fix the 9 harness defects (D-1 through D-9) that caused the sec-overlay audit to miss
+an authenticated RCE in Tanium Comply. The defect report is at
+`.planning/reports/2026-09-02-sec-overlay-missed-rce-coverage-defect-report.md`.
 
-**Non-goals:** No new runtime dependencies. No changes to the frozen JSON contract
-(models.py / evidence.py). No new features — remediation only. GROW-01/GROW-02
-remain deferred to v2.
+**Defects (ordered by priority per the report):**
+1. D-3 — No npm entries in dependency-sink catalog (low, data)
+2. D-1 — CWE-94/CWE-95 absent from class map; `injection` class unroutable (low, data)
+3. D-2 — `security_only` silently deletes `unknown`-class semgrep findings (low, logic)
+4. D-4 — No `dependency-catalog` receipt kind; prompt contradicts gate (medium)
+5. D-5 — No mandatory class floor; coverage ledger is a closed loop (medium)
+6. D-6 — Route census blind to OpenAPI; test-file noise (medium)
+7. D-9 — Proof lane off by default, class-blind to ssti/injection (medium)
+8. D-7 — No cross-repo data-channel edge in correlation (high)
+9. D-8 — Out-of-scope caller => rejection instead of open obligation (medium)
+
+**Cheapest combination that surfaces the finding:** D-3 + D-1 + D-2 + D-4
+**Cheapest that surfaces the class:** D-7 + D-8
+
+**Quality gates per phase:** `/gsd:code-review` after implementation; `/gsd:verify-work` per phase
+
+**Non-goals:** No new runtime dependencies. Frozen JSON contract unchanged.
+GROW-01/GROW-02 remain deferred to v2.
 
 ## Requirements
 

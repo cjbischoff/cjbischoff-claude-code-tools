@@ -4,7 +4,8 @@
 
 - ✅ **v5.0 Hybrid Diff-Review Architecture** — Phases 1-6 + 04.1 (shipped 2026-08-22)
 - ✅ **v5.1 Tech-Debt Cleanup** — Phases 7-8 (shipped 2026-08-22)
-- **v5.2 sec-overlay Defect Remediation** — Phases 9-15 (active)
+- ✅ **v5.2 sec-overlay Defect Remediation** — Phases 9-15 (shipped 2026-09-05)
+- **v5.3 sec-overlay Harness Coverage — Missed RCE** — Phases 16-19 (active)
 
 ## Phases
 
@@ -106,10 +107,58 @@ Full phase details: `.planning/milestones/v5.1-ROADMAP.md`
 
 </details>
 
+<details open>
+<summary>🔜 v5.3 sec-overlay Harness Coverage — Missed RCE (Phases 16-19) — ACTIVE</summary>
+
+- [ ] **Phase 16: Dependency-Sink Catalog & CWE Mapping**
+  Requirements: CATALOG-01, CWE-01, CWE-02 (D-3, D-1, D-2)
+  Goal: Fix the three data/logic defects that block the finding at the earliest stage —
+  no npm entries in the dependency-sink catalog, CWE-94/95 unmapped in the class map,
+  and `security_only` silently deleting `unknown`-class semgrep hits.
+  Success criteria:
+  1. npm template/eval packages catalogued in dependency-sinks.json; `reconcile_plan` routes
+     classes from `package.json:127` alone
+  2. CWE-94/95 resolve to routable class; `detect-eval-with-expression` semgrep result
+     appears in `agents_to_spawn`
+  3. `security_only` does not drop CWE-declaring semgrep hits; dropped findings recorded
+     per-id in a drop ledger
+
+- [ ] **Phase 17: Receipt Kind & Class Floor**
+  Requirements: RECEIPT-01, FLOOR-01 (D-4, D-5)
+  Goal: Fix the two medium-severity contract defects — add `dependency-catalog` receipt
+  kind so dependency-internal sinks can reach confirmed, and implement a mandatory class
+  floor so the coverage ledger captures missing classes.
+  Success criteria:
+  1. `dependency-catalog` receipt in `_MECHANICAL`; prompt-constants and gate agree
+  2. JS/TS mandatory class floor enforced; floor class neither investigated nor excluded
+     forces `completeness: partial` and names the class in the ledger
+
+- [ ] **Phase 18: Route Census & Proof Lane**
+  Requirements: CENSUS-01, PROVE-01 (D-6, D-9)
+  Goal: Fix OpenAPI-blind route census and add ssti/injection to the proof lane's
+  oracle-able classes.
+  Success criteria:
+  1. Census over comply contains `POST /v1/vulnerability-sources` bound to OpenAPI handler;
+     zero test-path entries; zero path-shape validation rejects
+  2. `prove.AUTO_CONFIRMABLE` includes `ssti` and `injection`; with `prove_findings: true`,
+     a `dot.template` fixture is promoted, not rejected `class-not-oracle-able`
+
+- [ ] **Phase 19: Correlation & Cross-Member Obligations**
+  Requirements: EDGE-01, OBLIGATION-01 (D-7, D-8)
+  Goal: Fix the two high-cost defects — add data-channel edge kind to correlation and
+  cross-member obligation state so a producer/consumer pair across repos is representable.
+  Success criteria:
+  1. Manifest-declared data-channel emits cross-member verdict with `evidence_chain`
+     naming both sites
+  2. `caller-out-of-scope` blocker is non-fatal; cross-member obligation persists as
+     open obligation, not rejection
+
+</details>
+
 ## Progress
 
-Milestone v5.2 active — Phase 9 not started.
+Milestone v5.3 active — Phase 16 not started.
 
 ---
 
-*Next: `/gsd:discuss-phase 9` or `/gsd:autonomous`*
+*Next: `/gsd:discuss-phase 16` or `/gsd:autonomous`*

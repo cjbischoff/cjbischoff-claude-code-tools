@@ -1,132 +1,79 @@
-# Milestone v5.2 Requirements: sec-overlay Defect Remediation
+# Milestone v5.3 Requirements: sec-overlay Harness Coverage — Missed RCE
 
 ## Source
 
-Defect report from the 2026-09-01 sec-overlay audit run on `ufe`:
-`.planning/reports/2026-09-01-sec-overlay-audit-defects.md`
+Defect report from the 2026-09-02 sec-overlay audit run on Tanium Comply:
+`.planning/reports/2026-09-02-sec-overlay-missed-rce-coverage-defect-report.md`
 
-26 defects identified (D1-D26), grouped by component. All fixes verified against
-plugin design contracts. Frozen JSON contract (models.py / evidence.py) unchanged.
-Zero new runtime dependencies.
+9 defects (D-1 through D-9) that caused the harness to miss an authenticated RCE.
+The finding: uploaded OVAL XML reaches `new Function` via `dot.template`, RCE as
+Comply service identity. All fixes verified against plugin design contracts.
+Frozen JSON contract unchanged. Zero new runtime dependencies.
 
 ---
 
-## CodeQL Guard
+## Dependency-Sink Catalog & CWE Mapping
 
-- [ ] **CODEQL-01**: Fix D2 — substring `"setup" in text` matches `**/jest.setup.*` glob.
-      Replace unanchored substring match with YAML-key-anchored regex pattern.
-      `re` already imported at `codeql.py:11`. Test both directions: benign
-      `paths-ignore` glob must pass; `setup:` key must reject.
+- [ ] **CATALOG-01**: Fix D-3 — add npm entries to `references/dependency-sinks.json` for
+      template/eval packages: `dot`, `ejs`, `pug`, `handlebars` (compile with `noEscape`),
+      `lodash.template`, `vm2`, `serialize-javascript`, `eval`, `safe-eval`. Manifest names
+      include `package.json` and `package-lock.json`. Catalog coverage per ecosystem present
+      in any scanned target should be a preflight-reported metric.
+- [ ] **CWE-01**: Fix D-1 — add CWE-94 (Code Injection) and CWE-95 (Eval Injection) to
+      `clsmap.py` `CWE_CLS`, routing them to `injection` / `ssti` / `expr-eval-rce`.
+      Verify semgrep rules `detect-eval-with-expression` and `code-string-concat` resolve
+      to a routable class with a class prompt. Add acceptance test: CWE-95 semgrep result
+      must resolve to a class in `canonical_classes()` and appear in `agents_to_spawn`.
+- [ ] **CWE-02**: Fix D-2 — `security_only` must never drop a semgrep result that declares
+      `category: security` or any `cwe` field. Route unmapped-but-security-declared hits to
+      `security-other`. Create a per-finding drop ledger (`kb/<drop-ledger>.json`) recording
+      every dropped finding's id, file, line, rule id, and reason — not just a count.
 
-## Prompt-Contract Consistency
+## Receipt Kind & Class Floor
 
-- [ ] **CONTRACT-01**: Fix D1 — add `dependency_sinks: list[dict]` field to `ScanProfile`
-      dataclass and `scan-profile.schema.json`. Add unknown-key check to
-      `validate_profile` so future contract drift produces a validation error,
-      not a `TypeError`.
-- [ ] **CONTRACT-02**: Fix D9, D11, D12, D23 — create a single consistency test that
-      asserts every field name mentioned as an output in `agents/recon.md`,
-      `agents/investigate.md`, and `agents/artifact-review.md` exists in the
-      corresponding dataclass or schema. Model after `tests/test_references_caps.py`.
-      Canonical class list: add `logic-chain` (fix D11). Add `impact` to producer
-      prompts (fix D23). Add `attacker`, `privilege`, `exact_request`,
-      `exfil_channels` to `Finding` (fix D12).
+- [ ] **RECEIPT-01**: Fix D-4 — add `dependency-catalog:<entry-id>` to `evidence.py`'s
+      `_MECHANICAL` receipt set, pinned to a resolved version from the lockfile. Required:
+      the catalog entry must cite the sink API and the version range. Update prompt-constants.md
+      to match. A finding with `dependency-catalog:npm-dot-template` + lockfile-pinned version
+      must reach `confirmed`; a version outside range must be refused.
+- [ ] **FLOOR-01**: Fix D-5 — implement a mandatory class floor per language/framework.
+      For JS/TS targets, template-injection and dynamic-code-eval on the floor. Floor classes
+      must terminate as investigated (with finding, including "no instance found") or excluded
+      with cited reason. Floor class neither → force `completeness: partial` and name the class
+      in the coverage ledger. Recon may add to the surface; it may not shrink below the floor.
 
-## Report Renderer
+## Route Census & Proof Lane
 
-- [ ] **REPORT-01**: Fix D14 — render `patch_diff` for finding with one. Add
-      `FindingStatus.FIXED` branch with next-action "fix verified — review and
-      merge". Make "(§ below)" link conditional on section existence.
-- [ ] **REPORT-02**: Fix D15 — filter route-census output against non-shipping path
-      set (test/mock/fixture). Anchor route-extraction patterns to avoid
-      non-route false positives. Cap and summarise: top N uncovered routes +
-      count dropped.
-- [ ] **REPORT-03**: Fix D16 — join coverage-completeness attack-surface table against
-      shipping findings by `cls` before rendering "no terminal finding" text.
-- [ ] **REPORT-04**: Fix D17 — apply repo-relative path normalisation to coverage
-      renderer, matching SARIF writer's existing behaviour.
-- [ ] **REPORT-05**: Fix D18 — render `kb/investigate-coverage-notes.md` caveats
-      into a prominent Limitations section. Surface `sast_plan.codeql.reason`.
-- [ ] **REPORT-06**: Fix D19 — make Triage `Status` column render finding `status`,
-      surface `runtime_disposition` as its own column or note.
-- [ ] **REPORT-07**: Fix D24 — truncate message on word boundary at higher cap
-      (or no cap). Prefer `impact` over `message` for summary cell.
+- [ ] **CENSUS-01**: Fix D-6 — add OpenAPI strategy to `route_frameworks.json`: parse
+      `openapi*.yaml` path items + `operationId` → handler binding. Exclude test paths
+      from census by default or tag `origin: test`. Validate extracted path shape (leading
+      `/`, no SQL, no dotted identifier) and count rejects as extraction-quality metric.
+      Where target declares routes no strategy models, surface as explicit coverage gap.
+- [ ] **PROVE-01**: Fix D-9 — add `ssti` and `injection` to `prove.AUTO_CONFIRMABLE`.
+      Define when the proof lane defaults on: a finding whose only missing receipt is a
+      dependency-internal sink is the strongest candidate. Acceptance: with `prove_findings: true`
+      and a fixture `ssti` finding on `dot.template`, the lane must reproduce, observe oracle,
+      and promote.
 
-## Vendored Semgrep Rules
+## Correlation & Cross-Member Obligations
 
-- [ ] **SEMGREP-01**: Fix D3 — ship vendored semgrep rules with the plugin, OR make
-      preflight's missing-rules state a hard failure the driver refuses to run
-      past. Emit `_VENDOR_CMD` as absolute path. Verify exit code propagates.
-      Add prefilter warning when a target's language has no matching vendored
-      dir and plan silently falls back to `smoke.yaml`.
-
-## Model-Family Independence
-
-- [ ] **MODEL-01**: Fix D21 — rewrite `trace.md:7` and `artifact-review.md:5-7` to
-      express model-family diversity relatively ("a DIFFERENT model family than
-      the phase that produced these findings"), matching `validate.md:8-10`.
-
-## Driver & Prefilter
-
-- [ ] **DRIVER-01**: Fix D5 — catch `RuntimeError` in `run_deterministic_phase` and
-      render as bordered operator message with remediation options. Deduplicate
-      backend prefix in joined reason string. Print offending config line.
-- [ ] **DRIVER-02**: Fix D22 — emit `{"phase": ..., "skipped": true, "reason": "..."}`
-      for phases that don't execute. Have `postflight` surface skipped phases.
-      Label cost estimate "deterministic phases only".
-- [ ] **DRIVER-03**: Fix D26 — wire `context-ingest` (C1) ahead of `recon` in
-      `PHASE_TABLE`. Wire `bugchain` after `trace`. Add startup assertion that
-      every prompt in `agents/` is in a phase table or on an explicit
-      `_UNWIRED_BY_DESIGN` allowlist.
-
-## Githist Precision
-
-- [ ] **GITHIST-01**: Fix D4 — anchor short acronyms with `\b` in `_SECURITY_GREP`.
-      Prefer commits whose subject starts with a `fix`-class conventional-commit
-      type when the repo uses them.
-
-## Severity Methodology
-
-- [ ] **SEVERITY-01**: Fix D13 — change precondition counting to use minimum
-      conjunctive set across routes (cheapest path's preconditions). State in
-      prompt that alternative routes must NOT be concatenated into one list.
-      Exclude unverified-from-repo preconditions from tally.
-
-## Artifact-Review Remedy Escalation
-
-- [ ] **REVIEW-01**: Fix D20 — add a `renderer_defect` verdict to `artifact-review.md`
-      that fails the phase loudly (or writes a gate file `postflight` treats as
-      hard error), so renderer bugs surface as run failures rather than ignored
-      re-render requests.
-
-## TOOL_TRUST Absence Clause
-
-- [ ] **TRUST-01**: Fix D25 — add explicit clause to `prompt-constants.md` § TOOL_TRUST:
-      a claim that something does NOT exist must be grounded in `ast-grep`,
-      structural index, or explicitly-stated search scope; never rest on bare
-      piped `rg` returning zero. Generalise the existing semgrep-absence wording.
-
-## Friction & Hygiene
-
-- [ ] **HYGIENE-01**: Fix D6 — wrap `advance()` call in `print(...)` in
-      `commands/audit.md`, or have `advance` print one-line confirmation with
-      receipt path.
-- [ ] **HYGIENE-02**: Fix D7 — have the `/sec-overlay:audit` command emit the absolute
-      helpers path, or document the `find`/resolution rule and canonical candidate.
-- [ ] **HYGIENE-03**: Fix D8 — set `UV_PROJECT_ENVIRONMENT` to path outside plugin
-      tree, or add `.venv/` to plugin ignore rules.
-- [ ] **HYGIENE-04**: Fix D10 — ship a `restamp_derived(path, source)` helper in
-      `diagram_gate.py`. Mention `check_diagram` in architecture and threat-model
-      prompts as pre-submit self-check.
+- [ ] **EDGE-01**: Fix D-7 — add `data-channel` edge kind to correlation: a declared/discovered
+      shared channel (DB table.column, queue topic, file artifact) with producer and consumer
+      members, with taint semantics. Manifest must declare channels explicitly. `evidence_chain`
+      must be populated with producer/consumer `file:line` pair. A verdict with
+      `evidence_chain: []` on every row is a null result.
+- [ ] **OBLIGATION-01**: Fix D-8 — add cross-member obligation state. A finding whose blocker
+      is `caller-out-of-scope` must not be rejectable by member-scoped validator; persist as
+      open obligation carrying the out-of-scope symbol. Add `caller-out-of-scope` to
+      `reachability` blocker taxonomy as first-class, non-fatal blocker. Correlation must
+      attempt to discharge it against sibling members.
 
 ---
 
 ## Quality Gates (every phase)
 
-- **CODE-REVIEW**: `/gsd:code-review` after each implementation phase — verify no
-  regressions, no contract violations, no security issues.
-- **VERIFY**: `/gsd:verify-work` after each phase — validate built features against
-  the defect requirements spec.
+- **CODE-REVIEW**: `/gsd:code-review` after each implementation phase
+- **VERIFY**: `/gsd:verify-work` after each phase
 
 ---
 
@@ -135,7 +82,7 @@ Zero new runtime dependencies.
 - New runtime dependencies (stdlib-only core constraint)
 - Changes to frozen JSON contract (`models.py`, `evidence.py`)
 - GROW-01 / GROW-02 (deferred to v2)
-- New features or capabilities — remediation only
+- New features beyond the 9 defects — remediation only
 
 ---
 
@@ -143,16 +90,13 @@ Zero new runtime dependencies.
 
 | Phase | REQ-IDs | Defects |
 |-------|---------|---------|
-| 09 — CodeQL Guard & Driver Surface | CODEQL-01, DRIVER-01 | D2, D5 |
-| 10 — Prompt-Contract Consistency | CONTRACT-01, CONTRACT-02 | D1, D9, D11, D12, D23 |
-| 11 — Report Renderer Overhaul | REPORT-01 through REPORT-07 | D14-D19, D24 |
-| 12 — Semgrep Rules & Model Independence | SEMGREP-01, MODEL-01 | D3, D21 |
-| 13 — Orphaned Agents & Driver Integrity | DRIVER-02, DRIVER-03, REVIEW-01 | D22, D26, D20 |
-| 14 — Methodology & Trust Standards | GITHIST-01, SEVERITY-01, TRUST-01 | D4, D13, D25 |
-| 15 — Friction & Hygiene | HYGIENE-01 through HYGIENE-04 | D6, D7, D8, D10 |
+| 16 — Dependency-Sink Catalog & CWE Mapping | CATALOG-01, CWE-01, CWE-02 | D-3, D-1, D-2 |
+| 17 — Receipt Kind & Class Floor | RECEIPT-01, FLOOR-01 | D-4, D-5 |
+| 18 — Route Census & Proof Lane | CENSUS-01, PROVE-01 | D-6, D-9 |
+| 19 — Correlation & Cross-Member Obligations | EDGE-01, OBLIGATION-01 | D-7, D-8 |
 
-Coverage: **22 requirements, 26 defects** across **7 phases**. All mapped.
+Coverage: **9 requirements, 9 defects** across **4 phases**. All mapped.
 
 ---
 
-*Generated 2026-09-05 from `.planning/reports/2026-09-01-sec-overlay-audit-defects.md`*
+*Generated 2026-09-05 from `.planning/reports/2026-09-02-sec-overlay-missed-rce-coverage-defect-report.md`*
