@@ -4,10 +4,31 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
-### Changed
+### Fixed
 
-- Rewrite the first part of the `sec_overlay` package README to ASD-STE100. Prose only — no code,
-  identifier, path, or fact changed. Part 1 of 6 for REQ-71.
+- Fix CodeQL guard false-positive on `**/jest.setup.*` in `paths-ignore`: use YAML-key-anchored regex instead of substring match (D2).
+- Fix CodeQL guard error message deduplication and surface backend failures as structured operator messages with remediation options (D5).
+- Add `dependency_sinks` field to `ScanProfile` dataclass and JSON schema, with unknown-key validation in `from_dict` (D1).
+- Add `logic-chain` to canonical attack-class reference so the findings gate accepts cross-class chain findings (D11).
+- Add `attacker`, `privilege`, `exact_request`, `exfil_channels` fields to `Finding` dataclass (D12).
+- Add consistency test binding agent prompt output fields to dataclass/schema contracts, preventing prompt-vs-contract drift (D9).
+- Fix report renderer: render `patch_diff` for fixed findings with accurate `FIXED` status and fix-verified next action; remove dangling `(§ below)` cross-reference (D14).
+- Fix report coverage-completeness table: filter non-shipping paths (test/mock/fixture) from needs-follow-up rows, cap output at 20 rows with overflow count; join attack-surface table against shipping findings by class (D15, D16).
+- Add coverage-caveats Limitations section to report, surfacing CodeQL absence and `kb/investigate-coverage-notes.md` (D18).
+- Fix triage Status column to render actual finding status, not runtime_disposition (D19).
+- Raise triage message truncation cap from 72 to 120 characters with word-boundary break (D24).
+- Add `renderer_defect` verdict to artifact-review output contract so renderer bugs surface as run failures (D20).
+- Log skipped phases (prove/selfscore) with explanation instead of silent self-complete (D22).
+- Document unwired agent prompts in `phases.py` with wiring instructions (D26).
+- Make `_vendor_cmd()` use `default_rules_dir()` so the suggested install path works from any CWD (D3).
+- Express model-family diversity as relative requirement in `trace.md` and `artifact-review.md` instead of hardcoded model names (D21).
+- Add word-boundary anchors to `_SECURITY_GREP` in `githist.py` to avoid matching inside domain words like `source`/`enforce` (D4).
+- Document alternative-route precondition handling in SEVERITY_PRECONDITION: use minimum conjunctive set across routes (D13).
+- Add absence-protection clause to TOOL_TRUST: negative claims grounded in ast-grep or structural index, never bare piped `rg` (D25).
+- Ship `restamp_derived` helper in `diagram_gate.py` for re-stamping derived diagram SHAs after source edits (D10).
+- Print one-line confirmation with receipt path after `advance()` closes a phase (D6).
+
+## 2.8.26
 - Rewrite the second part of the `sec_overlay` package README to ASD-STE100. Prose only — no code,
   identifier, path, or fact changed. Part 2 of 6 for REQ-71.
 - Rewrite the third part of the `sec_overlay` package README to ASD-STE100. Prose only — no code,
