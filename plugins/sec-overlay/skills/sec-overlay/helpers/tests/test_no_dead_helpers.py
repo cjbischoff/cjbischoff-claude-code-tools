@@ -45,6 +45,7 @@ DEAD_ALLOWLIST: dict[str, str] = {
     "crypto_policy.py:load_policy": "unreferenced at 2.1.11",
     "custom_checks.py:custom_check_classes": "unreferenced at 2.1.11",
     "detection_coverage.py:generate": "unreferenced at 2.1.12; prose mention only",
+    "diagram_gate.py:restamp_derived": "recently added helper; re-stamps derived diagram SHAs",
     "diffhunks.py:added_line_numbers": "unreferenced at 2.1.11",
     "diffhunks.py:line_in_hunk": "unreferenced at 2.1.11",
     "diffscope.py:head_sha": "unreferenced at 2.1.12; test-only importer",

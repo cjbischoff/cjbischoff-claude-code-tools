@@ -61,6 +61,15 @@ precondition weighs 0, a weak one 0.5, and a strong one 1.0. Summed weight below
 10, below 2 caps at 8, below 3 caps at 7, and 3 or more caps at 5. The harness flags any
 claimed severity that sits well above the derived score as inflation.
 
+**Alternative routes (D13):** If the finding has multiple independent attack paths,
+record each route's preconditions separately (e.g. using a structure like
+`"via console: ..."` / `"via agent: ..."` prefixes or separate arrays). Do NOT
+concatenate alternative routes into one conjunctive list — that would count each
+alternative path's preconditions as additive obstacles, making the most thoroughly
+analysed finding score as the least severe. The severity band is derived from the
+**minimum conjunctive set across routes** (the cheapest path's preconditions),
+which is what an attacker actually faces.
+
 ## SHAPE_HUNTING
 Hunt by vulnerability SHAPE, not by an API checklist. The dangerous property is structural:
 "attacker-controlled input alters the syntactic structure of an interpreted string/query/
@@ -98,6 +107,12 @@ identifier silently rewritten — a verdict grounded on that would be wrong).
   including the ones already fixed. Before you cite an absence, run the rule against a site you
   know carries the safe option. Confirm the rule produces no match there. A rule that fires on
   the fixed code is not evidence.
+- **Absence claims (D25):** A claim that something does NOT exist must be grounded in
+  **ast-grep**, the structural index, or an explicitly-stated search scope — never rest
+  on a bare piped `rg` returning zero results. An empty `rg` result may reflect a
+  mis-scoped or mangled search rather than genuine absence. If you use `rg` for
+  discovery and it returns empty, re-confirm with ast-grep or a structural index query
+  before grounding a negative claim.
 - Only mechanical receipts satisfy gates; a receipt you cannot reproduce with a
   Read/ast-grep is not a receipt.
 

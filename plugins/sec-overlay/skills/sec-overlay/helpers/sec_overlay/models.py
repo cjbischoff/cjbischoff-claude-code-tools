@@ -156,6 +156,12 @@ class Finding:
     affected_sites: list[dict] = field(default_factory=list)
     receipt_tier: int | None = None
     impact: str = ""
+    # Attack-context fields (optional, evidence-gated). Documented in
+    # agents/investigate.md as first-class optional outputs.
+    attacker: str | None = None
+    privilege: str | None = None
+    exact_request: str | None = None
+    exfil_channels: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Serialize to a JSON-safe dict (enums become their string values)."""

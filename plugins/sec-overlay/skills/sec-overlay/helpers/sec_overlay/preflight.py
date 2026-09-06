@@ -42,11 +42,16 @@ TOOLS = [
 # the scan degrades gracefully and records them as skipped rather than crashing.
 _OPTIONAL = {"tree-sitter", "osv-scanner", "gitleaks"}
 
-_VENDOR_CMD = (
-    "git clone --depth 1 https://github.com/semgrep/semgrep-rules "
-    "skills/sec-overlay/helpers/rules/semgrep"
-)
-# Note: _VENDOR_CMD path is repo-root-relative for human manual use
+def _vendor_cmd() -> str:
+    """Return the git-clone command to download the vendored semgrep rules.
+
+    The target path is derived from ``default_rules_dir()`` so it is always
+    correct regardless of operator CWD.
+    """
+    return (
+        f"git clone --depth 1 https://github.com/semgrep/semgrep-rules "
+        f"{default_rules_dir()}"
+    )
 
 
 def check_tools(*, which=shutil.which) -> list[dict]:
@@ -158,7 +163,7 @@ def preflight_report(rules_dir: str | Path, *, which=shutil.which) -> dict:
     missing = [t["name"] for t in tools if not t["present"] and t["name"] not in _OPTIONAL]
     commands = [t["install_cmd"] for t in tools if not t["present"] and t["name"] not in _OPTIONAL]
     if not rules_ok:
-        commands.append(_VENDOR_CMD)
+        commands.append(_vendor_cmd())
     return {
         "tools": tools,
         "semgrep_rules": rules_ok,

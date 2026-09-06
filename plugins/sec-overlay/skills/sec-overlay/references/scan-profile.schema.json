@@ -46,6 +46,11 @@
           "description": "Census route ids the profile never mentions."
         }
       }
+    },
+    "dependency_sinks": {
+      "type": "array",
+      "items": {"type": "object"},
+      "description": "Packages whose dependency-sink primitives were detected in manifests. Each entry has id, package, sink, and safe_option."
     }
   }
 }

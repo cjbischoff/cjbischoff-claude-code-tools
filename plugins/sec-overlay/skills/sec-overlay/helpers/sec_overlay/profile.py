@@ -7,7 +7,7 @@ selection, which attack-class agents spawn, and per-pass budget caps.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
 
@@ -59,6 +59,7 @@ class ScanProfile:
     attack_surface_evidence: dict[str, list[str]] = field(default_factory=dict)
     scan_options: dict = field(default_factory=dict)
     route_summary: dict = field(default_factory=dict)
+    dependency_sinks: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Serialize to a JSON-safe dict."""
@@ -67,6 +68,10 @@ class ScanProfile:
     @classmethod
     def from_dict(cls, d: dict) -> ScanProfile:
         """Deserialize from a dict (unknown keys rejected by the dataclass)."""
+        valid = {f.name for f in fields(cls)}
+        extra = d.keys() - valid
+        if extra:
+            raise ValueError(f"unknown keys in scan-profile: {', '.join(sorted(extra))}")
         return cls(**d)
 
 

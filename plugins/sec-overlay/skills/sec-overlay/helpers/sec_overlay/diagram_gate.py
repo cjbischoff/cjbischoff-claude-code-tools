@@ -20,6 +20,30 @@ CAPS = {"context": 10, "container": 15, "component": 10, "dfd": 12}
 SEQ_CAPS = (6, 15)  # participants, messages
 _EDGE_LABEL_MAX_WORDS = 4
 _DERIVED = re.compile(r"%% derived-from:\s*(\S+)\s+sha256:([0-9a-f]{64})")
+
+
+def restamp_derived(derived_path: Path, source: Path) -> None:
+    """Re-stamp the ``%% derived-from`` SHA header in a derived diagram.
+
+    After editing the source diagram, run this to re-stamp every derived diagram
+    so the provenance gate does not reject a stale SHA.
+
+    Args:
+        derived_path: Path to the derived diagram (e.g. ``dfd.mmd``).
+        source: Path to the source diagram (e.g. ``container-diagram.mmd``).
+
+    Raises:
+        FileNotFoundError: Either file does not exist.
+        ValueError: The derived file has no ``%% derived-from`` header.
+    """
+    text = derived_path.read_text()
+    if not _DERIVED.search(text):
+        raise ValueError(f"no derived-from header in {derived_path}")
+    new_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+    updated = _DERIVED.sub(
+        f"%% derived-from: {source.name} sha256:{new_sha}", text
+    )
+    derived_path.write_text(updated)
 # Context diagrams are by definition required actors/systems — often degree-1
 # by design — so the orphan-detail check never applies to them (design spec §6, R4).
 _ORPHAN_CHECKED_KINDS = {"container", "component", "dfd"}
