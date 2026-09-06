@@ -1,20 +1,20 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.2
-milestone_name: sec-overlay Defect Remediation
-status: executing
+milestone: v5.3
+milestone_name: sec-overlay Harness Coverage — Missed RCE
+status: planning
 stopped_at: ""
 last_updated: "2026-09-05T15:18:00.000Z"
 last_activity: 2026-09-05
-last_activity_desc: All 7 phases complete — 26 defects fixed or dispositioned
+last_activity_desc: Milestone v5.3 started — defining requirements
 progress:
-  total_phases: 7
-  completed_phases: 7
+  total_phases: 0
+  completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 100
-current_phase: 15
-current_phase_name: Friction & Hygiene
+  percent: 0
+current_phase: 16
+current_phase_name: ""
 ---
 
 # Project State
@@ -29,10 +29,10 @@ governed releases, receipt-backed findings.
 
 ## Current Position
 
-Phase: Milestone v5.2 complete
+Phase: Phase 16 — Dependency-Sink Catalog & CWE Mapping (not started)
 Plan: —
-Status: All 7 phases complete — 26 defects fixed or dispositioned
-Last activity: 2026-09-05 — Milestone v5.2 complete
+Status: Planning — requirements defined, 4 phases
+Last activity: 2026-09-05 — Milestone v5.3 started
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Recent decisions affecting current work:
 
 - Import defect report to planning context (`.planning/reports/`)
 - Define requirements from defect report
+- Execute Phase 16: catalog npm entries + fix CWE mapping + security_only filter
 
 ### Blockers/Concerns
 
@@ -86,7 +87,8 @@ None.
 ### Roadmap Evolution
 
 - Milestone v5.2 roadmap created (2026-09-05): Phases 9-15, 22 requirements covering 26 defects (D1-D26). Phase numbering continues from v5.1 Phase 8. Quality gates: CODE-REVIEW and VERIFY on every phase.
-- Milestone v5.2 completed (2026-09-05): All 7 phases shipped. 1883 tests pass. All 26 defects from the 2026-09-01 audit run fixed or dispositioned. Zero new runtime dependencies. Frozen JSON contract updated with 4 new Finding fields.
+- Milestone v5.2 completed (2026-09-05): All 7 phases shipped. 1883 tests pass. All 26 defects from the 2026-09-01 audit run fixed or dispositioned. Zero new runtime dependencies.
+- Milestone v5.3 started (2026-09-05): 4 phases, 9 requirements covering 9 harness defects (D-1 through D-9) from the 2026-09-02 Missed RCE audit run. Phase numbering continues from v5.2 Phase 15. Quality gates: CODE-REVIEW and VERIFY on every phase.
 
 ## Deferred Items
 
@@ -117,4 +119,4 @@ Resume file: .planning/MILESTONES.md
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Execute Phase 16: Dependency-Sink Catalog & CWE Mapping with /gsd:autonomous or /gsd:discuss-phase 16
