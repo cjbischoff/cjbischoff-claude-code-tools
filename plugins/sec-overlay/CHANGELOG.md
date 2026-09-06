@@ -4,6 +4,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 
 ## Unreleased
 
+### Added
+
+- Add `.omp/AGENTS.md` at plugin and skill depths: native-priority omp context files that import the existing CLAUDE.md governance via `@import`, ensuring omp always reads plugin and skill rules at priority 100.
+
 ### Fixed
 
 - Fix CodeQL guard false-positive on `**/jest.setup.*` in `paths-ignore`: use YAML-key-anchored regex instead of substring match (D2).
