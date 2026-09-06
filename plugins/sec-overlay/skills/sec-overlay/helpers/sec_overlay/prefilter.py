@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -291,13 +292,34 @@ def run_prefilter(
             skipped_reasons[backend] = "not-run"
 
     security_only = sem.get("security_only", True)
+    dropped_ledger: list[dict] = []
     dropped_nonsecurity = 0
     if security_only:
         def _is_semgrep(f):
             return any(s.startswith("semgrep:") for s in f.evidence_sources)
-        before = len(raw)
-        raw = [f for f in raw if not (_is_semgrep(f) and f.cls == "unknown")]
-        dropped_nonsecurity = before - len(raw)
+        kept: list[Finding] = []
+        for f in raw:
+            if _is_semgrep(f) and f.cls == "unknown":
+                dropped_nonsecurity += 1
+                dropped_ledger.append({
+                    "rule_id": f.rule_id,
+                    "file": f.file,
+                    "line": f.line,
+                    "cls": f.cls,
+                    "severity": f.severity.value if f.severity else "unknown",
+                    "reason": "security_only: no mapped CWE and no security category metadata",
+                })
+            else:
+                kept.append(f)
+        raw = kept
+    # Persist the drop ledger so postflight/report can reference it.
+    if dropped_ledger:
+        ledger_path = ws.kb / "drop-ledger.json"
+        ledger_path.parent.mkdir(parents=True, exist_ok=True)
+        ledger_path.write_text(json.dumps({
+            "total_dropped": dropped_nonsecurity,
+            "entries": dropped_ledger,
+        }, indent=2))
 
     _relativize_paths(raw, target)
     findings = normalize(raw)

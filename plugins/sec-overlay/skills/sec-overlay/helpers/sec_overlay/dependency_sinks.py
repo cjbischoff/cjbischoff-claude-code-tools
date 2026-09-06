@@ -18,7 +18,6 @@ CATALOG_PATH = Path(__file__).resolve().parents[2] / "references" / "dependency-
 
 _REQUIRED = (
     "id",
-    "package",
     "ecosystem",
     "manifests",
     "cls",
@@ -43,6 +42,9 @@ class SinkEntry:
         why: One sentence explaining why the dependency is the sink.
         safe_option: The option that removes or narrows the sink.
         indicators: Source tokens that show the dependency is actually used.
+        strategy: ``package-match`` (default) or ``match-any``. When
+            ``match-any``, the entry matches when ANY listed manifest is found
+            under the target, regardless of which packages it declares.
     """
 
     id: str
@@ -54,6 +56,7 @@ class SinkEntry:
     why: str
     safe_option: str
     indicators: tuple[str, ...]
+    strategy: str = "package-match"
 
 
 def validate_catalog(raw: dict) -> list[str]:
@@ -77,6 +80,11 @@ def validate_catalog(raw: dict) -> list[str]:
         for key in _REQUIRED:
             if not e.get(key):
                 errors.append(f"entries[{i}]: missing or empty {key}")
+        strategy = e.get("strategy", "package-match")
+        if strategy not in ("package-match", "match-any"):
+            errors.append(f"entries[{i}]: invalid strategy {strategy!r}")
+        if strategy != "match-any" and not e.get("package"):
+            errors.append(f"entries[{i}]: missing or empty package (required for package-match strategy)")
         eid = e.get("id")
         if isinstance(eid, str) and eid in seen:
             errors.append(f"entries[{i}]: duplicate id {eid}")
@@ -104,7 +112,7 @@ def load_catalog(path: Path = CATALOG_PATH) -> list[SinkEntry]:
     return [
         SinkEntry(
             id=e["id"],
-            package=e["package"],
+            package=e.get("package", ""),
             ecosystem=e["ecosystem"],
             manifests=tuple(e["manifests"]),
             cls=e["cls"],
@@ -112,6 +120,7 @@ def load_catalog(path: Path = CATALOG_PATH) -> list[SinkEntry]:
             why=e["why"],
             safe_option=e["safe_option"],
             indicators=tuple(e["indicators"]),
+            strategy=e.get("strategy", "package-match"),
         )
         for e in raw["entries"]
     ]
@@ -176,6 +185,15 @@ def match_manifests(root: str | Path, *, path: Path = CATALOG_PATH) -> list[Sink
             continue
     matched: list[SinkEntry] = []
     for e in entries:
+        if e.strategy == "match-any":
+            # match-any: match when ANY listed manifest exists under root.
+            for name in e.manifests:
+                if name in texts:
+                    matched.append(e)
+                    break
+            continue
+        # package-match (default): match when the entry's package name appears
+        # in a manifest file.
         for name in e.manifests:
             if any(e.package in text for text in texts.get(name, ())):
                 matched.append(e)

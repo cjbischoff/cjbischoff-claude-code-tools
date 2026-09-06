@@ -19,6 +19,7 @@ CWE_CLS: dict[str, str] = {
     "285": "authz", "287": "authn", "502": "deserialization", "79": "xss",
     "798": "secrets", "327": "crypto", "1336": "ssti", "611": "xxe",
     "601": "open-redirect", "117": "log-injection", "312": "clear-text-logging",
+    "94": "injection", "95": "injection",
     # F2: domain-specific classes (see references/hunting/*.md)
     "347": "jwt", "444": "request-smuggling", "1321": "prototype-pollution",
     "1385": "cswsh", "441": "excessive-agency", "384": "authn",
@@ -41,6 +42,10 @@ _RULE_ID_CLS: dict[str, str] = {
     "backticks-use": "cmdi",
     "mcrypt-use": "crypto",
     "weak-crypto": "crypto",
+    # dynamic-eval / code-injection — vendored rules detecting new Function,
+    # eval(), and string-concatenated code execution (D-1).
+    "detect-eval-with-expression": "injection",
+    "code-string-concat": "injection",
     # CodeQL js/*, py/* rule ids that carry no mapped CWE tag and would otherwise
     # orphan to "unknown" (observed across every JS/TS/Python target). Substring
     # match, so both js/ and py/ variants resolve. Conservative — only rules whose

@@ -18,13 +18,14 @@ Use these exact keys (lowercase) in `scan-profile.json`.
 | `xss` | Cross-site scripting | template render, `innerHTML`, `dangerouslySetInnerHTML`, unescaped output | static only |
 | `secrets` | Hardcoded secrets/keys | `api_key`, `secret`, `AKIA`, `sk_live_`, `token =`, private keys | static only |
 | `crypto` | Weak/misused cryptography | `md5`, `sha1`, `DES`, `ECB`, static IV, `random` for tokens | static only |
-| `ssti` | Server-side template injection | template engine with user input, `render_template_string`; Jinja2 specifically: `Environment.from_string`, `Template(`, missing `SandboxedEnvironment` | static only |
+| `ssti` | Server-side template injection | `render_template_string`, `Environment.from_string`, `Template(`, missing `SandboxedEnvironment`; npm: Template engine compiles user text → dynamic code execution — `.template(`, `compile(`, `require('dot')`, `require('ejs')`, `require('pug')`, `require('handlebars')`, `require('lodash.template')` | static only |
 | `xxe` | XML external entity | XML parser without entity disabling, `etree`, `DocumentBuilder` | static only |
 | `open-redirect` | Open redirect | `redirect(`, user-controlled `Location`, `next=` params | static only |
 | `deps` | Vulnerable dependencies | lockfiles / manifests (handled by SCA, not an investigation agent) | static only |
 | `prompt-injection` | LLM prompt injection / unsafe tool use / guardrail bypass | `langchain`, `langgraph`, `openai`, `anthropic`, `bedrock`, `.invoke(`, `bind_tools`, `mcp`, tool registration, user text → model prompt, model output → sink (exec/DB/fetch) | static only |
 | `webhook-verification` | Missing/incorrect signature verification | `X-Shopify-Hmac-Sha256`, `Stripe-Signature`, `verifyWebhook`, `crypto.timingSafeEqual`, `hmac`, raw-body handling on a webhook/callback route | static only |
 | `expr-eval-rce` | Sandboxed expression, policy, or rule-engine escape | `jsep`, `expr-eval`, `mathjs`, `vm.runInContext`, `callee.apply`, `constructor.constructor`, custom formula/rules engines; server-side policy and script engines: `cel.NewEnv`, `cel.Compile`, `Program.Eval`, `starlark.ExecFile`, `starlark.Thread`, `starlark.StringDict`, `goja.New`, `Runtime.RunString`, `vm.Set`, `lua.NewState`, `LState.DoString`, `SkipOpenLibs`, `SpelExpressionParser` | static only |
+| `injection` | Code injection / dynamic evaluation | Dynamic code evaluation via eval-like API: `new Function`, `vm2`, `VM2`, `eval(`, `exec(`, `serialize-javascript`, `require('vm2')`, `require('eval')`, `safe-eval`; npm dependency code-evaluation packages | static only |
 
 `expr-eval-rce` is distinct from `deserialization` and `ssti`: the sink is a custom
 evaluator's own call/apply mechanism, not `eval()` or a template engine.

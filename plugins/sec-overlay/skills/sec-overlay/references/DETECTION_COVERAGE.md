@@ -26,6 +26,7 @@ _Generated from the live `clsmap` inventory (`sec_overlay.detection_coverage`). 
 | cswsh | High | semgrep/codeql |
 | deserialization | High | semgrep/codeql |
 | excessive-agency | High | semgrep/codeql |
+| injection | High | semgrep/codeql |
 | jwt | High | semgrep/codeql |
 | log-injection | High | semgrep/codeql |
 | open-redirect | High | semgrep/codeql |

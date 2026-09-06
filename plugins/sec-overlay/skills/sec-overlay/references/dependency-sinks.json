@@ -66,6 +66,30 @@
       "why": "Jinja2 compiles caller-supplied template text; attribute traversal from a template reaches Python objects unless the sandboxed environment is used.",
       "safe_option": "jinja2.sandbox.SandboxedEnvironment instead of jinja2.Environment",
       "indicators": ["from_string", "Template(", "SandboxedEnvironment"]
+    },
+    {
+      "id": "npm-template-injection",
+      "package": "",
+      "ecosystem": "npm",
+      "manifests": ["package.json", "package-lock.json"],
+      "strategy": "match-any",
+      "cls": "ssti",
+      "sink": "Template engine compiles user text → dynamic code execution",
+      "why": "Any npm project with a template engine (dot, ejs, pug, handlebars, lodash.template) that compiles user-supplied text is a server-side template injection sink inside the dependency.",
+      "safe_option": "Pre-compile templates at build time; never pass unsanitized user text to a template compile call",
+      "indicators": [".template(", "compile(", "require('dot')", "require('ejs')", "require('pug')", "require('handlebars')", "require('lodash.template')"]
+    },
+    {
+      "id": "npm-code-evaluation",
+      "package": "",
+      "ecosystem": "npm",
+      "manifests": ["package.json", "package-lock.json"],
+      "strategy": "match-any",
+      "cls": "injection",
+      "sink": "Dynamic code evaluation via eval-like API",
+      "why": "Any npm project with a code-evaluation library (vm2, serialize-javascript, eval, safe-eval) or bare new Function usage is a code-injection sink inside the dependency.",
+      "safe_option": "Avoid dynamic code evaluation; use sandboxed parsers or pre-compiled schemas instead",
+      "indicators": ["new Function", "vm2", "VM2", "serialize-javascript", "require('vm2')", "require('eval')"]
     }
   ]
 }
