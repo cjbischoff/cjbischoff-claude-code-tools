@@ -106,6 +106,41 @@ def census(
     """
     root = str(root)
     seen: dict[tuple[str, int, str], RouteSite] = {}
+
+    # OpenAPI strategy: parse openapi/swagger spec files (D-6).
+    for spec_file in ("openapi.json", "openapi.yaml", "openapi.yml", "swagger.json"):
+        sp = Path(root) / spec_file
+        if sp.is_file():
+            try:
+                spec = json.loads(sp.read_text())
+                paths = spec.get("paths", spec.get("swagger", {}) or {})
+                if isinstance(paths, dict):
+                    for route_path, methods in paths.items():
+                        if not isinstance(methods, dict):
+                            continue
+                        for method in ("get", "post", "put", "patch", "delete", "options", "head"):
+                            op = methods.get(method)
+                            if not isinstance(op, dict):
+                                continue
+                            oid = op.get("operationId", "")
+                            if not oid:
+                                continue
+                            key = (str(sp), 0, route_path)
+                            if key in seen:
+                                continue
+                            seen[key] = RouteSite(
+                                id=f"route:openapi:{sp.name}:{method}:{route_path}",
+                                method=method.upper(),
+                                path=route_path,
+                                file=str(sp),
+                                line=0,
+                                framework="openapi",
+                            )
+            except (json.JSONDecodeError, OSError):
+                pass
+            break  # Only process the first found spec file
+
+    # Framework-specific regex strategies (fallback when no OpenAPI spec found).
     for fw in load_frameworks(path):
         compiled = re.compile(fw.pattern)
         for file, line, text in _rg(fw, root, runner):
