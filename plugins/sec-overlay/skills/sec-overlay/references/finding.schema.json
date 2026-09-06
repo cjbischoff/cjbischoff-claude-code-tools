@@ -70,7 +70,7 @@
         "blocker": {
           "type": ["string", "null"],
           "enum": ["sanitizer", "auth_check", "input_validation", "dead_code",
-                   "feature_flag", "external-boundary", "other", null]
+                   "feature_flag", "external-boundary", "caller-out-of-scope", "other", null]
         },
         "chain": {"type": "array", "items": {"type": "string"}}
       }

@@ -3,10 +3,33 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 ROLES = ("rbac-source", "service-enforcer", "infra")
+
+
+@dataclass
+class DataChannel:
+    """A declared data channel between two members of a product correlation.
+
+    Attributes:
+        id: Stable channel identifier.
+        description: Human-readable description of the channel.
+        producer: Member slug that writes to the channel.
+        consumer: Member slug that reads from the channel.
+        producer_site: ``file:line`` where data enters the channel.
+        consumer_site: ``file:line`` where data leaves the channel.
+        medium: ``database``, ``queue``, ``file``, or ``shared-schema``.
+    """
+
+    id: str
+    description: str
+    producer: str
+    consumer: str
+    producer_site: str
+    consumer_site: str
+    medium: str = "database"
 
 
 @dataclass

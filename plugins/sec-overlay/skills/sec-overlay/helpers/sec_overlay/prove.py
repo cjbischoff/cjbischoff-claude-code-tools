@@ -27,7 +27,8 @@ from sec_overlay.workspace import Workspace
 
 # Classes whose oracle a wrapper can decide without provisioning a live service.
 AUTO_CONFIRMABLE = frozenset(
-    {"ssrf", "cmdi", "path-traversal", "deserialization", "expr-eval-rce"}
+    {"ssrf", "cmdi", "path-traversal", "deserialization", "expr-eval-rce",
+     "ssti", "injection"}
 )
 
 # Classes whose oracle needs a provisioned backend; these get a human-run harness.

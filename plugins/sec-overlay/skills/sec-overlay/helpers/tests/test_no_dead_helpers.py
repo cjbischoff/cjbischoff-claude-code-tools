@@ -50,6 +50,7 @@ DEAD_ALLOWLIST: dict[str, str] = {
     "diffhunks.py:line_in_hunk": "unreferenced at 2.1.11",
     "diffscope.py:head_sha": "unreferenced at 2.1.12; test-only importer",
     "envelope.py:attribution_banner": "unreferenced at 2.1.11",
+    "evidence.py:validate_dependency_catalog_receipt": "recently added helper; validates dependency-catalog receipt ids",
     "fix_disposition.py:compute_tier": "unreferenced at 2.1.11",
     "fix_disposition.py:validate": "unreferenced at 2.1.12; test-only importer",
     "gates.py:run_gates": "unreferenced at 2.1.11",
