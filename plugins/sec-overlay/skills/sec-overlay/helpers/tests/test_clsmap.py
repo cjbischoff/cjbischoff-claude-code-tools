@@ -93,3 +93,35 @@ def test_noise_classes():
     assert is_noise_class("unknown")
     assert not is_noise_class("sqli") and not is_noise_class("ssrf")
     assert "log-injection" in NOISE_CLASSES
+
+
+def test_cwe_94_maps_to_injection():
+    from sec_overlay.clsmap import cls_from_cwe
+    assert cls_from_cwe(["CWE-94"]) == "injection"
+    assert cls_from_cwe(["cwe-94"]) == "injection"
+    assert cls_from_cwe(["CWE-094"]) == "injection"
+
+
+def test_cwe_95_maps_to_injection():
+    from sec_overlay.clsmap import cls_from_cwe
+    assert cls_from_cwe(["CWE-95"]) == "injection"
+    assert cls_from_cwe(["cwe-95"]) == "injection"
+
+
+def test_detect_eval_with_expression_rule_id_maps_to_injection():
+    from sec_overlay.clsmap import cls_from_rule_id
+    assert cls_from_rule_id("detect-eval-with-expression") == "injection"
+
+
+def test_code_string_concat_rule_id_maps_to_injection():
+    from sec_overlay.clsmap import cls_from_rule_id
+    assert cls_from_rule_id("code-string-concat") == "injection"
+
+
+def test_cwe_95_semgrep_meta_resolves_to_injection():
+    """A semgrep result with CWE-95 metadata must resolve to a routable class."""
+    from sec_overlay.clsmap import cls_from_semgrep_meta
+    result = cls_from_semgrep_meta({"cwe": ["CWE-95: Eval Injection"]},
+                                    rule_id="detect-eval-with-expression")
+    assert result == "injection", f"expected injection, got {result}"
+

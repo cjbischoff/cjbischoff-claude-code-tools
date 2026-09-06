@@ -113,3 +113,56 @@ def test_indicator_classes_is_empty_without_an_indicator(tmp_path):
 
     (tmp_path / "main.go").write_text("package main\n\nfunc main() {}\n")
     assert indicator_classes(tmp_path) == []
+
+
+def test_validate_catalog_accepts_match_any_strategy_without_package():
+    from sec_overlay.dependency_sinks import validate_catalog
+    raw = {
+        "entries": [{
+            "id": "test-entry", "ecosystem": "npm", "manifests": ["package.json"],
+            "strategy": "match-any", "cls": "ssti", "sink": "test sink",
+            "why": "test", "safe_option": "none", "indicators": [".template("],
+        }]
+    }
+    assert validate_catalog(raw) == []
+
+
+def test_validate_catalog_rejects_invalid_strategy():
+    from sec_overlay.dependency_sinks import validate_catalog
+    raw = {
+        "entries": [{
+            "id": "test-entry", "package": "dot", "ecosystem": "npm",
+            "manifests": ["package.json"], "strategy": "invalid-strategy",
+            "cls": "ssti", "sink": "test", "why": "test",
+            "safe_option": "none", "indicators": [".template("],
+        }]
+    }
+    errs = validate_catalog(raw)
+    assert any("invalid-strategy" in e for e in errs)
+
+
+def test_validate_catalog_requires_package_for_package_match():
+    from sec_overlay.dependency_sinks import validate_catalog
+    raw = {
+        "entries": [{
+            "id": "test-entry", "ecosystem": "npm", "manifests": ["package.json"],
+            "strategy": "package-match", "cls": "ssti", "sink": "test",
+            "why": "test", "safe_option": "none", "indicators": [".template("],
+        }]
+    }
+    errs = validate_catalog(raw)
+    assert any("package" in e for e in errs)
+
+
+def test_load_catalog_parses_strategy_field():
+    from sec_overlay.dependency_sinks import load_catalog
+    entries = load_catalog()
+    npm_template = [e for e in entries if e.id == "npm-template-injection"]
+    assert len(npm_template) == 1
+    assert npm_template[0].strategy == "match-any"
+    assert npm_template[0].ecosystem == "npm"
+    assert npm_template[0].cls == "ssti"
+    # Existing entries without strategy default to package-match
+    go_entries = [e for e in entries if e.ecosystem == "go"]
+    if go_entries:
+        assert go_entries[0].strategy == "package-match"

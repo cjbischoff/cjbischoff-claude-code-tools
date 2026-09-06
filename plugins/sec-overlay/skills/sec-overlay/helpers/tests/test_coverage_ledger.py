@@ -226,3 +226,37 @@ def test_surface_ids_stay_unique(tmp_path: Path):
     ])
     ids = [s["id"] for s in build_coverage_ledger(ws)["surfaces"]]
     assert len(ids) == len(set(ids))
+
+
+def _profile_with_languages(ws: Workspace, attack_surface: list[str], languages: list[str]) -> None:
+    (ws.kb).mkdir(parents=True, exist_ok=True)
+    (ws.kb / "scan-profile.json").write_text(json.dumps({
+        "languages": languages, "frameworks": [], "entrypoints": [], "runnable": False,
+        "attack_surface": attack_surface, "sast_plan": {}, "agents_to_spawn": attack_surface,
+        "budget_hint": {},
+    }))
+
+
+def test_mandatory_floor_adds_floor_class_when_not_in_attack_surface(tmp_path):
+    """A javascript target must have ssti and injection on the class floor (D-5)."""
+    ws = Workspace(tmp_path); ws.ensure()
+    _profile_with_languages(ws, ["xss", "authz"], ["javascript"])
+    write_findings(ws, [_f("xss", FindingStatus.CONFIRMED, "X-1")])
+    led = build_coverage_ledger(ws)
+    cls_set = {s["cls"] for s in led["surfaces"]}
+    assert "ssti" in cls_set, "floor class ssti should be in surfaces for javascript target"
+    assert "injection" in cls_set, "floor class injection should be in surfaces for javascript target"
+    assert led["completeness"] == "partial", "floor classes force partial completeness"
+
+
+def test_mandatory_floor_allows_complete_when_floor_class_covered(tmp_path):
+    """When floor classes are in the attack surface and have findings, completeness can be complete."""
+    ws = Workspace(tmp_path); ws.ensure()
+    _profile_with_languages(ws, ["xss", "ssti", "injection"], ["javascript"])
+    write_findings(ws, [
+        _f("xss", FindingStatus.CONFIRMED, "X-1"),
+        _f("ssti", FindingStatus.REJECTED, "S-1"),
+        _f("injection", FindingStatus.REJECTED, "I-1"),
+    ])
+    led = build_coverage_ledger(ws)
+    assert led["completeness"] == "complete", "covered floor classes should not block completeness"

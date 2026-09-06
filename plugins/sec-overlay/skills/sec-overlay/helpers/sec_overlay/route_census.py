@@ -125,7 +125,8 @@ def census(
                             oid = op.get("operationId", "")
                             if not oid:
                                 continue
-                            key = (str(sp), 0, route_path)
+                            umethod = method.upper()
+                            key = (str(sp), umethod, route_path)
                             if key in seen:
                                 continue
                             seen[key] = RouteSite(
