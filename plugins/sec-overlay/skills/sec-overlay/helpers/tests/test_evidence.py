@@ -77,3 +77,28 @@ def test_dependency_catalog_alone_cannot_confirm():
     assert confirms_alone(["dependency-catalog:opa-rego-http-send"]) is False
     assert confirms_alone(["dependency-catalog:opa-rego-http-send",
                            "semgrep:sec-overlay.absence.go-rego-new-missing-capabilities"]) is True
+
+
+def test_validate_dependency_catalog_receipt_accepts_valid_entry():
+    from sec_overlay.evidence import validate_dependency_catalog_receipt
+    catalog_ids = frozenset({"opa-rego-http-send", "jinja2-sandbox-escape"})
+    assert validate_dependency_catalog_receipt(
+        "dependency-catalog:opa-rego-http-send", catalog_ids=catalog_ids) is None
+    assert validate_dependency_catalog_receipt(
+        "dependency-catalog:opa-rego-http-send@1.0.0", catalog_ids=catalog_ids) is None
+
+
+def test_validate_dependency_catalog_receipt_rejects_unknown_entry():
+    from sec_overlay.evidence import validate_dependency_catalog_receipt
+    err = validate_dependency_catalog_receipt(
+        "dependency-catalog:nonexistent-id", catalog_ids=frozenset({"real-id"}))
+    assert err is not None
+    assert "nonexistent-id" in err
+
+
+def test_validate_dependency_catalog_receipt_rejects_non_catalog_source():
+    from sec_overlay.evidence import validate_dependency_catalog_receipt
+    err = validate_dependency_catalog_receipt(
+        "semgrep:rule-x", catalog_ids=frozenset({"real-id"}))
+    assert err is not None
+    assert "not a dependency-catalog receipt" in err

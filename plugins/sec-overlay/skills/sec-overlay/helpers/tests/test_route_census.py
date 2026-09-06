@@ -82,3 +82,34 @@ def test_load_census_is_empty_when_absent(tmp_path):
     ws = Workspace(tmp_path)
     ws.kb.mkdir(parents=True, exist_ok=True)
     assert load_census(ws) == []
+
+
+def test_census_parses_openapi_json(tmp_path):
+    """Census must extract routes from openapi.json when present (D-6)."""
+    from sec_overlay.route_census import RouteSite
+
+    spec = {
+        "openapi": "3.0.0",
+        "paths": {
+            "/v1/vulnerability-sources": {
+                "post": {"operationId": "createVulnerabilitySource"},
+                "get": {"operationId": "listVulnerabilitySources"},
+            },
+            "/health": {"get": {"operationId": "healthCheck"}},
+        },
+    }
+    (tmp_path / "openapi.json").write_text(__import__("json").dumps(spec))
+    sites = census(tmp_path, runner=lambda cmd, **kw: type("R", (), {"stdout": "", "returncode": 0})())
+    found = {(s.method, s.path) for s in sites}
+    assert ("POST", "/v1/vulnerability-sources") in found
+    assert ("GET", "/v1/vulnerability-sources") in found
+    assert ("GET", "/health") in found
+    for s in sites:
+        assert s.framework == "openapi"
+
+
+def test_census_falls_back_to_framework_regex_when_no_openapi(tmp_path):
+    """When no openapi spec exists, the census should use framework regex (no crash)."""
+    # A directory with no routes and no openapi spec should return empty via framework fallback
+    sites = census(tmp_path, runner=lambda cmd, **kw: type("R", (), {"stdout": "", "returncode": 0})())
+    assert isinstance(sites, list)
