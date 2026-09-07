@@ -20,8 +20,9 @@ from the repository root. This is the Claude Code CLI's own manifest validator �
 correctness (valid JSON, required fields present, a marketplace entry existing for each plugin
 directory). The root [`README.md`](/README.md) lists this as the first Development command,
 and the root [`CLAUDE.md`](/CLAUDE.md) Desired outcome states plainly: "Each plugin passes
-`claude plugin validate .` before release." As of this writing the repository's Status section
-records that "plugin and marketplace manifests validate."
+`claude plugin validate .` before release." The root README no longer carries a status section
+recording pass/fail state — `CHANGELOG.md` and each plugin's own `version` field are what
+record what shipped.
 
 CodeRabbit's `**/.claude-plugin/*.json` path instruction (see
 [code review](../governance/code-review.md)) performs a lighter-weight version of the same
@@ -54,12 +55,17 @@ The edit lands in `plugins/<name>/.claude-plugin/plugin.json`'s `version` field,
 commit as the shipping-file change. `marketplace.json` never needs an edit for this — it does
 not pin plugin versions.
 
-As a concrete example of the rule being applied: the plugin's `plugin.json` currently reads
-`"version": "0.2.0"`. The root README's Status section explains the jump from the prior
-`0.1.1` governance release: "Plugin versions bump automatically on shipping-file changes
-(Conventional-Commits semver); this review-improvements release ships sec-overlay as 0.2.0,
-above the 0.1.1 governance release on `main`" — a `feat`-driven minor bump accumulated across
-that branch's shipping-file changes.
+As a concrete example of the rule's cumulative effect: the plugin's `plugin.json` currently
+reads `"version": "2.8.27"`, up from `0.2.0` at an earlier point in this repository's history —
+hundreds of `feat`/`fix`/`refactor` commits against shipping files, each bumping the version by
+its own Conventional Commit type, and at least one deliberate **major** bump. A major bump
+happens when a change crosses the plugin's public contract — for example,
+[`docs/decisions/2026-09-01-sec-overlay-major-version-bump.md`](/docs/decisions/2026-09-01-sec-overlay-major-version-bump.md)
+records that deleting the unreachable `factcheck` phase counted as one, because it touched the
+phase name, a CLI-callable module, a documented agent prompt, and a public enum value all at
+once. Check `plugins/sec-overlay/.claude-plugin/plugin.json` and `CHANGELOG.md` for the current
+value and the most recent bump's rationale — never cite a specific version number here as if it
+were static.
 
 ## Where this rule is (and is not) enforced — important nuance
 
@@ -70,9 +76,9 @@ reference to `plugin.json` or `version` at all — a commit that changes a sec-o
 file without touching `plugin.json`'s `version` will pass both hooks and the GitHub ruleset on
 `main` without complaint.
 
-The rule is instead declared as **policy** in the root README's Governance section and root
-`CLAUDE.md`'s Conventions section, and checked only by CodeRabbit's `plugin-version-bump`
-pre-merge check, which runs in `warning` mode (`.coderabbit.yaml`):
+The rule is instead declared as **policy** in the root [`CLAUDE.md`](/CLAUDE.md)'s Governance
+section, and checked only by CodeRabbit's `plugin-version-bump` pre-merge check, which runs in
+`warning` mode (`.coderabbit.yaml`):
 
 > FAIL if a shipping file changed under `plugins/<name>/` and the `version` field in
 > `plugins/<name>/.claude-plugin/plugin.json` is unchanged. FAIL if the version increment does
@@ -82,11 +88,11 @@ pre-merge check, which runs in `warning` mode (`.coderabbit.yaml`):
 Because CodeRabbit's pre-merge checks are advisory (`request_changes_workflow: false` —
 see [code review](../governance/code-review.md)), the GitHub ruleset requiring a pull request
 is the only *required* gate on `main`; a missed version bump surfaces as a CodeRabbit warning
-comment, not a blocked merge. Treat that warning as a real finding — the root `README.md`
-states explicitly that "Pre-merge checks mirror the governance rules above in `warning` mode,
-so a violation shows up in the review as well as in the hooks" for the *other* governance
-rules, but the version-bump rule specifically has no hook counterpart at all; CodeRabbit is its
-only automated check.
+comment, not a blocked merge. Treat that warning as a real finding — root `CLAUDE.md` states
+plainly that pre-merge checks "restate this repo's governance... treat a warning as a real
+finding: it means a hook would have caught the same thing" for the *other* governance rules,
+but the version-bump rule specifically has no hook counterpart at all; CodeRabbit is its only
+automated check.
 
 ## Related pages
 

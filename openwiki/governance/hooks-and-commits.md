@@ -57,9 +57,9 @@ governance. It runs on every `pre-commit` and does four things, in order:
    [GitHub ruleset on `main`](#the-github-ruleset-on-main) below is the server-side one.
 2. **Requires `README.md` and `CHANGELOG.md` on any non-doc change.** If the staged file set
    contains anything other than `README.md`/`CHANGELOG.md`, both of those files must also be
-   staged, or the commit is rejected. This mirrors root `README.md`'s Governance rule: "Every
-   commit that changes tracked files updates `README.md` and `CHANGELOG.md` (Common Changelog
-   format) in the same commit."
+   staged, or the commit is rejected. This mirrors root `CLAUDE.md`'s Governance section:
+   a commit touching anything outside `plugins/` updates the root `CHANGELOG.md` and root
+   `README.md` in the same commit.
 3. **A hard-coded check for the three Directory Guide folders** (`plugins`, `scripts`, `docs`):
    if a staged file lives under one of these and that folder's own `README.md` is not also
    staged, the commit is rejected naming the folder. This is a "stricter, redundant-but-harmless
@@ -110,10 +110,10 @@ git config core.hooksPath skills/sec-overlay/.githooks
 
 Two details mark it as a legacy artifact rather than a second required gate. First, its
 comments describe scope in terms of "a go/ commit from the parallel workstream" — there is no
-`go/` directory or Go-language workstream anywhere in the current repository; the root
-`README.md`'s Status log records a change that "removed stale Go-rewrite prose... from the
-live docs," consistent with this hook predating a since-completed migration off a parallel
-Go-based layout. Second, running `core.hooksPath` to `skills/sec-overlay/.githooks` would
+`go/` directory or Go-language workstream anywhere in the current repository (multiple
+sec-overlay changelog entries record removing stale Go-rewrite prose from live docs),
+consistent with this hook predating a since-completed migration off a parallel Go-based layout.
+Second, running `core.hooksPath` to `skills/sec-overlay/.githooks` would
 **replace**, not add to, the hooks path prek manages at the repository root — installing it as
 documented would silently disable the `doc-update-guard`'s `main`-branch block and its
 `CHANGELOG.md`/`README.md` requirement for every commit, not just ones touching the skill.
@@ -142,10 +142,11 @@ other" hook, because only one hooksPath is active at a time.
 Independent of any local hook, a GitHub repository ruleset on `main` requires a pull request
 before merging and blocks force-pushes and branch deletion. This is the non-bypassable
 backstop: even a contributor who skips `prek install` or bypasses hooks locally still cannot
-push directly to `main`. The root `README.md` states: "Direct commits to `main` are blocked by
-a pre-commit hook and by a GitHub ruleset (pull requests required; force-push and deletion
-blocked)." There is no ruleset configuration file in the repository to cite beyond this
-documentation — GitHub rulesets are a server-side setting, not a checked-in file.
+push directly to `main`. Root `CLAUDE.md`'s Governance section states the same rule: "Direct
+pushes to `main` are also blocked on GitHub by a repository ruleset (pull request required;
+force-push and deletion blocked)." There is no ruleset configuration file in the repository to
+cite beyond this documentation — GitHub rulesets are a server-side setting, not a checked-in
+file.
 
 ## Related pages
 

@@ -62,6 +62,25 @@ as `.openwikiignore`'s rationale) and local caches. If you are looking for "the 
 workflow," there isn't one to find — the exclusion list above is the entire repo-tracked
 configuration surface for it.
 
+## sec-overlay pytest + detection-regression gate
+
+`.github/workflows/sec-overlay-tests.yml` runs on every pull request that touches
+`plugins/sec-overlay/skills/sec-overlay/helpers/**` (or the workflow file itself). Two gates,
+both fully offline — no repository cloning beyond this one, no network-facing SAST:
+
+1. **The full helper pytest suite** (`uv run pytest -q` from `helpers/`).
+2. **An offline detection-regression gate**: smoke-scans the committed `fixtures/vulnerable_repo`
+   fixture, then grades the committed `bench/corpus_seed/` seed corpus in `--grade-mode
+   detection --only-local` — a `locked` positive that stops being detected fails the job. See
+   [developing the skill — the bench harness](../plugins/sec-overlay/developing-the-skill.md#the-bench-harness-dev-only-not-part-of-an-audit).
+
+Detection mode grades whether a Tier-1 receipt (codeql/semgrep/sca/secrets) located a
+ground-truth finding — a deterministic-only CI scan never reaches `confirmed` (that needs the
+adversarial LLM pass), so this gate cannot and does not exercise the confirmation gate itself.
+Per repo policy, third-party Actions are avoided here entirely: only SHA-pinned
+`actions/checkout` is used, and `uv`/`semgrep` install via their own official install scripts
+rather than a marketplace Action.
+
 ## Secret scanning
 
 GitHub secret scanning and push protection are native platform features for public
@@ -80,8 +99,9 @@ SHA with the human-readable version in a trailing comment, e.g.:
 uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 ```
 
-This appears in both `dependency-review.yml` and `.github/workflows/openwiki-update.yml` (see
-[OpenWiki refresh](openwiki-refresh.md)). Pinning to a SHA rather than a mutable tag (`@v7`)
+This appears in `dependency-review.yml`, `sec-overlay-tests.yml` (above), and
+`.github/workflows/openwiki-update.yml` (see [OpenWiki refresh](openwiki-refresh.md)). Pinning
+to a SHA rather than a mutable tag (`@v7`)
 means a compromised or force-pushed tag on the upstream Action cannot silently change what runs
 in this repository's CI — the only way to update is a new commit that changes the SHA, which
 Dependabot's `github-actions` stream (above) proposes automatically. CodeRabbit's
@@ -90,14 +110,15 @@ checks this on every PR that touches a workflow file.
 
 ## The default read-only workflow token
 
-Both workflows declare `permissions` explicitly rather than relying on the default:
-`dependency-review.yml` uses `permissions: contents: read` — it only needs to check out code
-and read manifests. `openwiki-update.yml` needs to open a pull request, so it declares the
-narrower elevated grant its job actually needs (`contents: write`, `pull-requests: write`) at
-the job level rather than repository-wide, and otherwise defaults to `permissions: {}` at the
-workflow level. This least-privilege pattern — read-only unless a job specifically needs to
-write — limits what a compromised or buggy workflow step could do even if it were tricked into
-running attacker-controlled code.
+All three workflows declare `permissions` explicitly rather than relying on the default:
+`dependency-review.yml` and `sec-overlay-tests.yml` both use `permissions: contents: read` —
+neither needs to write anything, only check out code and (for the latter) run tests locally.
+`openwiki-update.yml` needs to open a pull request, so it declares the narrower elevated grant
+its job actually needs (`contents: write`, `pull-requests: write`) at the job level rather than
+repository-wide, and otherwise defaults to `permissions: {}` at the workflow level. This
+least-privilege pattern — read-only unless a job specifically needs to write — limits what a
+compromised or buggy workflow step could do even if it were tricked into running
+attacker-controlled code.
 
 ## Related pages
 

@@ -14,12 +14,13 @@ service repo enforcing them, an infra repo wiring the entitlements — a per-rep
 deterministically, with **no source reads and no LLM** for the joins themselves.
 
 **This is a separate, opt-in, multi-repo capability, not a stage in the single-repo phase
-order.** `SKILL.md`'s numbered phase list (0 through 14, plus C1/C2) contains no "correlate"
-step — correlation runs *after* each member repo already has its own independent
-`.sec-overlay/<slug>/` workspace from the [pipeline](pipeline.md) above. It was designed for a
-real four-repo campaign (`docs/plans/2026-08-07-cross-repo-correlation-design.md` records the
-motivating case: control→enforcement handoffs and shared-dependency CVEs that were, before this
-capability existed, correlated by hand).
+order.** `SKILL.md`'s generated 28-entry `PHASE_TABLE` (see [pipeline](pipeline.md#the-full-phase-order))
+contains no "correlate" step — correlation runs *after* each member repo already has its own
+independent `.sec-overlay/<slug>/` workspace from the [pipeline](pipeline.md) above. It was
+designed for a real four-repo campaign
+(`plugins/sec-overlay/skills/sec-overlay/docs/plans/2026-08-07-cross-repo-correlation-design.md`
+records the motivating case: control→enforcement handoffs and shared-dependency CVEs that were,
+before this capability existed, correlated by hand).
 
 ## The correlation workspace and CLI
 

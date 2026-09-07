@@ -66,7 +66,7 @@ plugins/sec-overlay/
 {
   "name": "sec-overlay",
   "description": "Agentic security-audit harness: runs SAST, investigates candidates with multi-agent gates, and emits SARIF + Markdown reports.",
-  "version": "0.2.0",
+  "version": "2.8.27",
   "author": { "name": "Christopher Bischoff" }
 }
 ```
@@ -105,6 +105,24 @@ Put together: everything a plugin needs at runtime — its skill definition, age
 Python helpers, and reference data — must live inside `plugins/<name>/`, and every reference
 to those files inside the plugin's own instructions must be relative to the plugin root (or to
 `${CLAUDE_PLUGIN_ROOT}` once installed), never to the surrounding marketplace repository.
+
+A plugin's install payload is not limited to its skill: `sec-overlay` also ships a
+`commands/` directory (`/sec-overlay:audit`, a slash command) and a root-level `action.yml`
+(a composite GitHub Action) — both are shipping files under the same version-bump rule as
+`skills/`, because both are things a user or a CI workflow receives on install. See
+[sec-overlay — running an audit](../plugins/sec-overlay/running-an-audit.md#the-slash-command-and-the-github-action)
+for what each does.
+
+## Adding a second plugin
+
+Root [`CLAUDE.md`](/CLAUDE.md)'s "New plugin" section is the checklist: copy
+[`docs/templates/plugin/`](/docs/templates/plugin/) to `plugins/<name>/`, replace every
+`{{PLACEHOLDER}}` marker with the plugin's real values, register the plugin in
+`.claude-plugin/marketplace.json`, run `claude plugin validate .`, and write the first
+`CHANGELOG.md` entry at version `0.1.0`. The template carries the same five-file trio every
+plugin needs (`.claude-plugin/plugin.json`, `README.md`, `CHANGELOG.md`, `CLAUDE.md`, and a
+`skills/skill-name/SKILL.md` placeholder) — see [`plugins/README.md`](/plugins/README.md)'s
+"Plugin-root doc trio" note for what each of those three root files is for.
 
 ## Related pages
 

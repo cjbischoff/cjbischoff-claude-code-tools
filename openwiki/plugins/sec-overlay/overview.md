@@ -11,8 +11,14 @@ tags: [sec-overlay, security-audit, architecture, invariants]
 **agentic security-audit harness**. Point it at a codebase and it finds *actually-exploitable*
 vulnerabilities, then hands a security engineer artifacts they can act on: a threat model,
 per-finding evidence, a SARIF file, a Markdown report, and a manual runtime-test plan. It calls
-binary tools directly (no other Claude Code skills or plugins) and **never executes the
-scanned code**.
+binary tools directly (no other Claude Code skills or plugins) and, apart from one named
+opt-in phase (see [invariant 1](#the-four-invariants) below), **never executes the scanned
+code**. Three surfaces drive a run: the main agent following the full `SKILL.md` playbook (a
+full audit, described below and in [pipeline](pipeline.md)), the installed
+`/sec-overlay:audit <repo> [<repo>...]` slash command (`commands/audit.md`, single- or
+multi-repo with correlation), and the `action.yml` composite GitHub Action that runs the
+lighter diff-scoped `review` mode on a pull request and posts findings as a PR review — see
+[running an audit](running-an-audit.md) for all three.
 
 The core idea, in the skill's own words: *run cheap mechanical tools to find candidates, use
 LLM agents to investigate whether each candidate is real, and never let an LLM's opinion alone
@@ -52,10 +58,10 @@ flowchart TB
             R1["prompt-constants, attack-classes,<br/>schemas, crypto policy, hunting guides"]
         end
         subgraph AG["agents/ - the JUDGEMENT"]
-            A1["~30 LLM prompts:<br/>producer (sonnet) vs adversary (opus)"]
+            A1["~40 LLM prompts:<br/>producer (sonnet) vs adversary (opus)"]
         end
         subgraph HP["helpers/ - the MACHINE"]
-            H1["~70 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
+            H1["~100 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
         end
     end
     TARGET[("target codebase<br/>read-only")]
@@ -91,11 +97,17 @@ step. See [pipeline](pipeline.md) for the full phase-by-phase flow, and
 
 These hold everywhere and are enforced in code where possible, in prompts otherwise:
 
-1. **Never executes or modifies the reviewed source.** Static analysis only. Patches are
-   applied to a *throwaway copy* to verify them (see `verify.py` in [helpers](helpers.md))
-   — the repo's own files are never run or edited. See
-   [running an audit](running-an-audit.md#the-do-not-execute-the-target-invariant) for how this
-   holds end to end, including the red-team plan.
+1. **Never executes or modifies the reviewed source — with one named, opt-in exception.**
+   Static analysis only, everywhere except the `prove` phase: patches are applied to a
+   *throwaway copy* to verify them (see `verify.py` in [helpers](helpers.md)) and the repo's own
+   files are never run or edited. The one exception is `prove` (opus, opt-in via
+   `scan_options.prove_findings`, default off, absent from a normal audit): it may build and run
+   target-derived code, but only out-of-tree under `ws.repro`, never inside the target's working
+   copy — see
+   [docs/decisions/2026-08-31-prove-lane-execution.md](/docs/decisions/2026-08-31-prove-lane-execution.md)
+   for the three conditions a proof must satisfy and the trade-offs accepted. See
+   [running an audit](running-an-audit.md#the-do-not-execute-the-target-invariant) for how the
+   invariant holds end to end elsewhere, including the red-team plan.
 2. **Writes only its own sidecar.** All output lives in an in-repo, self-ignoring
    `<target>/.sec-overlay/<slug>/` directory (override the base with `$SEC_OVERLAY_HOME`, or the
    whole workspace with `--workspace`). A seeded `.sec-overlay/.gitignore` keeps output out of
@@ -117,14 +129,15 @@ Everything a security engineer receives lands in `<target>/.sec-overlay/<slug>/`
 | Path | Contents |
 |---|---|
 | `kb/scan-profile.json` | recon output: languages, frameworks, `attack_surface`, `sast_plan`, `subsystems` |
-| `kb/architecture.md` + `kb/entities/*.md` | components, data flows, trust boundaries |
-| `kb/THREAT_MODEL.md` | attacker profiles + the prioritized hunt list |
+| `kb/route-census.json` | code-derived route inventory (see [pipeline](pipeline.md)), predates recon |
+| `architecture/` | C4 diagrams + runtime-view sequences + `arc42.md` (building blocks) |
+| `threat-model/` | `dfd.mmd` (derived from the container diagram) + attack-sequences + `threat-model.md` (STRIDE findings, CVSS v4.0 table, hunt list) |
 | `kb/context.json` | the repo's own docs distilled, trust-tagged (`untrusted-doc` / `prior-scan`) |
 | `kb/graph.json` | the Tier-1/Tier-2 code graph (reachability substrate) |
-| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase |
+| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase, including `arch-gate.json`/`tm-gate.json` (diagram caps + STE prose) and `artifact-gate.json`/`artifact-review.json` (report self-check + final adversary) |
 | `kb/coverage-ledger.json` | surface-completeness ledger; blocks `complete` while gaps remain |
 | `kb/discovery-ledger.json` | investigate saturation state (waves, `terminal_reason`) |
-| `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS, patch diff |
+| `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS v4.0, patch diff |
 | `report.sarif` | SARIF 2.1.0 (confirmed/fixed) |
 | `report.md` | human report, built from `finding-template.md`; links `redteam-plan.md` |
 | `redteam-plan.md` | manual runtime test plan — the engineer's follow-up |
@@ -132,7 +145,7 @@ Everything a security engineer receives lands in `<target>/.sec-overlay/<slug>/`
 | `MEMORY.md`, `learnings/` | durable per-repo memory across runs |
 
 This layout is the `Workspace` dataclass's contract (`helpers/sec_overlay/workspace.py`,
-described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §5.
+described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §4.
 
 ## Related pages
 
@@ -140,6 +153,7 @@ described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §5.
 - [Agents](agents.md) — every LLM prompt, its model tier, and the investigate gate ladder.
 - [Helpers](helpers.md) — the Python core, module map, and CLI-callable list.
 - [References](references.md) — the rule book: prompt constants, schemas, crypto policy.
-- [Running an audit](running-an-audit.md) — the smoke scan vs. the full agentic audit.
+- [Running an audit](running-an-audit.md) — the smoke scan vs. the full agentic audit vs.
+  diff-scoped review, plus the slash command and GitHub Action surfaces.
 - [Developing the skill](developing-the-skill.md) — tests, linting, and the dev-only bench harness.
 - [Cross-repo correlation](cross-repo-correlation.md) — the optional multi-repo capability.

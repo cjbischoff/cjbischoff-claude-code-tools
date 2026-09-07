@@ -29,8 +29,9 @@ rule could gate on it even if one were configured to look. Combined with `abort_
 false` (below — a late merge still gets a review, it just can't stop anything), CodeRabbit has
 no mechanism in this repository capable of blocking a merge. The
 [GitHub ruleset on `main`](hooks-and-commits.md#the-github-ruleset-on-main) — pull request
-required, no force-push/deletion — is the *only* required gate. Root `README.md`: "The review
-comments but never blocks: the GitHub ruleset is the only required gate on `main`."
+required, no force-push/deletion — is the *only* required gate. Root `CLAUDE.md`'s Governance
+section states the same rule: direct pushes to `main` are blocked by the ruleset, and nothing
+in CodeRabbit's own configuration can add a second required gate.
 
 ## Timing matters
 
