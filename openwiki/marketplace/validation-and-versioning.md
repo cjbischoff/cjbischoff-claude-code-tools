@@ -33,12 +33,15 @@ gate.
 
 A **shipping file** is any tracked file a user actually receives when they install a plugin.
 For `sec-overlay` that is: `.claude-plugin/plugin.json`, `SKILL.md`, and everything under
-`skills/`, `agents/`, `helpers/`, and `references/` — including their folder `README.md`
-files. A plugin's own `CLAUDE.md` (its **operating manual**, read only when working *inside*
-the skill) is explicitly **not** a shipping file: editing it alone does not bump the version.
-This distinction is stated identically in the root [`CLAUDE.md`](/CLAUDE.md) Conventions
-section and the skill's own
-[`CLAUDE.md`](/plugins/sec-overlay/skills/sec-overlay/CLAUDE.md) §1.
+`commands/`, `skills/`, `agents/`, `helpers/`, and `references/` — including their folder
+`README.md` files. `commands/` (the `/sec-overlay:audit` slash command — see
+[the review pipeline](../plugins/sec-overlay/review-pipeline.md)) was added to this list after
+the root `CLAUDE.md` recognized that a plugin-root slash-command file is install payload just
+like a skill file: without the bump the update mechanism never ships a `commands/` change. A
+plugin's own `CLAUDE.md` (its **operating manual**, read only when working *inside* the skill)
+is explicitly **not** a shipping file: editing it alone does not bump the version. This
+distinction is stated identically in the root [`CLAUDE.md`](/CLAUDE.md) Conventions section and
+the skill's own [`CLAUDE.md`](/plugins/sec-overlay/skills/sec-overlay/CLAUDE.md) §1.
 
 The rule: **a commit that changes a shipping file in a plugin must bump that plugin's
 `version` in the same commit**, using the commit's own Conventional Commit type to pick the
@@ -54,12 +57,16 @@ The edit lands in `plugins/<name>/.claude-plugin/plugin.json`'s `version` field,
 commit as the shipping-file change. `marketplace.json` never needs an edit for this — it does
 not pin plugin versions.
 
-As a concrete example of the rule being applied: the plugin's `plugin.json` currently reads
-`"version": "0.2.0"`. The root README's Status section explains the jump from the prior
-`0.1.1` governance release: "Plugin versions bump automatically on shipping-file changes
-(Conventional-Commits semver); this review-improvements release ships sec-overlay as 0.2.0,
-above the 0.1.1 governance release on `main`" — a `feat`-driven minor bump accumulated across
-that branch's shipping-file changes.
+As a concrete example of the rule being applied: the plugin's `plugin.json` is currently at a
+major version (`2.x`), not a `1.x` or `0.x` release. The jump to `2.0.0` happened when a defect
+repair deleted the unreachable `factcheck` phase, its CLI module, its agent prompt, and its
+`fact-checked` verification-enum value together — each surface was externally reachable (a
+caller of `factcheck.py`, a workspace carrying the enum value, a schema validator pinned to it),
+so semver's answer to removing a public surface is a major bump, recorded with a `BREAKING
+CHANGE:` commit footer and explained in
+[`docs/decisions/2026-09-01-sec-overlay-major-version-bump.md`](/docs/decisions/2026-09-01-sec-overlay-major-version-bump.md).
+Most day-to-day changes are much smaller: a `feat` commit accumulates a minor bump, everything
+else accumulates a patch bump.
 
 ## Where this rule is (and is not) enforced — important nuance
 
@@ -79,7 +86,10 @@ pre-merge check, which runs in `warning` mode (`.coderabbit.yaml`):
 > not match the PR's Conventional Commit type... PASS if only `plugins/<name>/CLAUDE.md`
 > changed, which is an operating manual and not a shipping file.
 
-Because CodeRabbit's pre-merge checks are advisory (`request_changes_workflow: false` —
+The check's own shipping-file definition (`.claude-plugin/plugin.json`, `SKILL.md`,
+`skills/`/`agents/`/`helpers/`/`references/`) has not yet been updated to name `commands/`
+alongside them — the root `CLAUDE.md`'s policy statement is the more current source for that
+folder's inclusion. Because CodeRabbit's pre-merge checks are advisory (`request_changes_workflow: false` —
 see [code review](../governance/code-review.md)), the GitHub ruleset requiring a pull request
 is the only *required* gate on `main`; a missed version bump surfaces as a CodeRabbit warning
 comment, not a blocked merge. Treat that warning as a real finding — the root `README.md`

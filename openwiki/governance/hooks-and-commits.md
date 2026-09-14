@@ -137,6 +137,17 @@ it. `git commit --no-verify` skips whichever hook is currently installed at `cor
 that commit (prek's, if the documented, standard install was followed); it does not skip "the
 other" hook, because only one hooksPath is active at a time.
 
+## `.omp/AGENTS.md` — making other tools read the same governance
+
+Every governance rule above is stated in `CLAUDE.md` files (root, per-plugin, per-skill), which
+Claude Code reads natively. A separate family of `.omp/AGENTS.md` files — one at the repo root,
+one per plugin, one per skill — exists so a different tool ("omp") that discovers context via
+`AGENTS.md` rather than `CLAUDE.md` still picks up the same rules: each is a thin wrapper that
+`@import`s the `CLAUDE.md` at the matching depth (e.g. the root `.omp/AGENTS.md` is `@../CLAUDE.md`),
+auto-discovered at priority 100 ("native"), so it is never shadowed by a different tool config.
+These wrappers carry no governance content of their own — they exist purely so the rules on this
+page and in `CLAUDE.md` apply regardless of which coding-agent tool a contributor uses.
+
 ## The GitHub ruleset on `main`
 
 Independent of any local hook, a GitHub repository ruleset on `main` requires a pull request

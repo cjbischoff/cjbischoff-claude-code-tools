@@ -44,12 +44,14 @@ from `plugins/sec-overlay/`. Read this page first; it links to everything else.
     bench harness.
   - [Cross-repo correlation](plugins/sec-overlay/cross-repo-correlation.md) — the optional
     multi-repo capability.
+  - [The review pipeline](plugins/sec-overlay/review-pipeline.md) — the lighter diff-scoped
+    track, its GitHub Action, and its slash command.
 - **[operations/](operations/security-automation.md)** — repository-level security automation
   and how this repo runs its own tooling.
   - [Security automation](operations/security-automation.md) — dependency review, Dependabot,
     CodeQL default setup, secret scanning, SHA pinning, least-privilege tokens.
-  - [Cursor CodeGuard rules](operations/cursor-codeguard-rules.md) — the `.cursor/rules/`
-    families.
+  - [Cursor CodeGuard rule](operations/cursor-codeguard-rules.md) — the single remaining
+    `.cursor/rules/` file.
   - [OpenWiki refresh](operations/openwiki-refresh.md) — how this wiki itself gets regenerated.
 
 ## Task-routing table
@@ -62,14 +64,18 @@ from `plugins/sec-overlay/`. Read this page first; it links to everything else.
 | Make any tracked-file change without breaking a hook | [Hooks and commits](governance/hooks-and-commits.md) | `scripts/hooks/pre-commit-check.sh`, `scripts/hooks/commit-msg-check.sh` | `scripts/hooks/test-pre-commit-check.sh`, `scripts/hooks/test-commit-msg-check.sh` | `bash scripts/hooks/test-pre-commit-check.sh && bash scripts/hooks/test-commit-msg-check.sh` |
 | Understand what CodeRabbit will flag | [Code review](governance/code-review.md) | `.coderabbit.yaml` | — | open the PR, wait for the walkthrough comment (`gh pr view <n> --comments`) |
 | Run a fast smoke scan of a target | [Running an audit](plugins/sec-overlay/running-an-audit.md) | `sec_overlay.cli.run_scan`, `rules/smoke.yaml` | `helpers/tests/test_cli.py`, `test_cli_e2e.py` | `uv run python -m sec_overlay.cli scan --target <T> --config rules/smoke.yaml --sha <sha>` from `helpers/` |
-| Run a full agentic audit | [Pipeline](plugins/sec-overlay/pipeline.md), [Running an audit](plugins/sec-overlay/running-an-audit.md) | `SKILL.md`, skill `CLAUDE.md` §3 | `helpers/tests/test_preflight.py`, `test_wiring.py` | `uv run python -m sec_overlay.preflight` first, then follow `SKILL.md` phase order |
+| Run a full agentic audit | [Pipeline](plugins/sec-overlay/pipeline.md), [Running an audit](plugins/sec-overlay/running-an-audit.md) | `SKILL.md`, skill `CLAUDE.md` §3, `sec_overlay/phases.py`'s `PHASE_TABLE` | `helpers/tests/test_preflight.py`, `test_phases.py` | `uv run python -m sec_overlay.preflight` first, then follow `SKILL.md`'s phase order |
+| Change the phase order itself | [Pipeline](plugins/sec-overlay/pipeline.md) | `helpers/sec_overlay/phases.py`, `driver.py` | `helpers/tests/test_phases.py`, `test_driver.py`, `test_phase_artifact_contract.py` | `uv run pytest tests/test_phases.py tests/test_driver.py -q`; then `uv run python -m sec_overlay.phase_docs --write` to regenerate the docs it drives |
 | Change the tool-receipt gate | [Helpers](plugins/sec-overlay/helpers.md#the-tool-receipt-gate) | `helpers/sec_overlay/evidence.py`, `findings_gate.py` | `helpers/tests/test_finding_schema.py`, `test_contracts.py` | `uv run pytest tests/test_finding_schema.py tests/test_contracts.py -q` |
 | Edit an agent prompt | [Agents](plugins/sec-overlay/agents.md#editing-rules) | `agents/*.md`, `agents/README.md` | `helpers/tests/test_wiring.py`, `test_docs_invariants.py` | `uv run pytest tests/test_wiring.py tests/test_docs_invariants.py -q`; update `agents/README.md` in the same commit |
 | Add a new attack class | [Agents — classes/](plugins/sec-overlay/agents.md#classes--cwe-class-extension-prompts), [References](plugins/sec-overlay/references.md) | `references/attack-classes.md`, `agents/classes/<key>.md`, `helpers/sec_overlay/clsmap.py` | `helpers/tests/test_wiring.py`, `test_clsmap.py` | `uv run pytest tests/test_wiring.py tests/test_clsmap.py -q` |
 | Loosen or tighten crypto policy | [References](plugins/sec-overlay/references.md#machine-checked-policy-and-schemas) | `references/approved-crypto-algorithms.yaml`, `helpers/sec_overlay/crypto_policy.py` | `helpers/tests/test_crypto_policy.py` | `uv run pytest tests/test_crypto_policy.py -q` — requires sign-off per the editing rules |
+| Change how CVSS is scored | [References](plugins/sec-overlay/references.md#machine-checked-policy-and-schemas) | `helpers/sec_overlay/cvss.py`, `cvss4_data.py` | `helpers/tests/test_cvss.py`, `test_cvss4_data.py` | `uv run pytest tests/test_cvss.py tests/test_cvss4_data.py -q` |
+| Change the diff-scoped review pipeline (PR comments) | [The review pipeline](plugins/sec-overlay/review-pipeline.md) | `helpers/sec_overlay/review_agent.py`, `reflection.py`, `positioning.py`; `agents/review-*.md` | `helpers/tests/test_review_agent.py`, `test_reflection.py`, `test_positioning.py`, `test_review_tracer.py` | `uv run pytest tests/test_review_agent.py tests/test_reflection.py tests/test_positioning.py -q` |
+| Change the opt-in `prove` (execution) lane | [Pipeline](plugins/sec-overlay/pipeline.md#the-opt-in-prove-lane--the-one-execution-exception) | `helpers/sec_overlay/prove.py`, `agents/prove.md` | `helpers/tests/test_prove.py` | `uv run pytest tests/test_prove.py -q` |
 | Correlate findings across multiple repos | [Cross-repo correlation](plugins/sec-overlay/cross-repo-correlation.md) | `helpers/sec_overlay/correlate/cli.py` | `helpers/tests/test_correlate_*.py` (8 files) | `python -m sec_overlay.correlate --manifest <m.json> --out <dir>` |
-| Run the full sec-overlay test suite | [Developing the skill](plugins/sec-overlay/developing-the-skill.md) | `helpers/pyproject.toml` | all 81 files under `helpers/tests/` | `uv run pytest -q` from `helpers/` (2 env-only failures expected on a clean checkout) |
-| Add or change a Cursor secure-coding rule | [Cursor CodeGuard rules](operations/cursor-codeguard-rules.md) | `.cursor/rules/codeguard-*.mdc` | — | CodeRabbit's `codeguard-reference-audit` finishing-touch on the PR |
+| Run the full sec-overlay test suite | [Developing the skill](plugins/sec-overlay/developing-the-skill.md) | `helpers/pyproject.toml` | all 145 files under `helpers/tests/` | `uv run pytest -q` from `helpers/` (one env-only failure expected on a clean checkout) |
+| Add or change a Cursor secure-coding rule | [Cursor CodeGuard rule](operations/cursor-codeguard-rules.md) | `.cursor/rules/codeguard-1-hardcoded-credentials.mdc` | — | CodeRabbit's `codeguard-reference-audit` finishing-touch on the PR |
 | Change a GitHub Actions workflow | [Security automation](operations/security-automation.md) | `.github/workflows/*.yml` | — | `.github/workflows/**` CodeRabbit path instruction (SHA pin + least-privilege `permissions`) |
 | Refresh the wiki itself | [OpenWiki refresh](operations/openwiki-refresh.md) | `openwiki/INSTRUCTIONS.md`, `.openwikiignore` | — | `openwiki code --update --print`, or dispatch the `OpenWiki Update` workflow |
 
@@ -103,9 +109,6 @@ reader, with the reason and source anchor:
   ones). They exist to exercise the harness's own detectors in `helpers/tests/`; see
   [`SECURITY.md`](/SECURITY.md)'s "Test fixtures" note — this wiki documents their existence and
   purpose only, never their contents.
-- **`helpers/bench/corpus_seed/`** — gitignored, local-only labelled-corpus data for the
-  dev-only [bench harness](plugins/sec-overlay/developing-the-skill.md#the-bench-harness-dev-only-not-part-of-an-audit);
-  not part of any audit run and not present in this repository's tracked source.
 - **The top-level `/skills/` directory** (`skills/mermaid-diagrams/`, `skills/write-connector/`)
   — this is **OpenWiki's own** tooling-authoring skill library, unrelated to the distributed
   `sec-overlay` plugin's `plugins/sec-overlay/skills/sec-overlay/`. It is untracked in the root

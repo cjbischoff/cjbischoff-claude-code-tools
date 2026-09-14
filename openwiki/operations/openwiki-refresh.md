@@ -47,6 +47,12 @@ to this repository's governance:
 - **Requires the `ANTHROPIC_API_KEY` repository secret.** Checked explicitly before anything
   else runs, so a missing secret fails with a clear message instead of a cryptic downstream
   error.
+- **Materializes bounded git history before running the agent.** `.openwikiignore`'s active
+  rules mean the agent cannot run `git log`/`git diff` itself during a run (only `pwd` and
+  `git rev-parse HEAD` are permitted); the workflow runs `scripts/openwiki-history-digest.sh`
+  first to write `.openwiki-history.md` — a bounded commit list plus a net changed-files list
+  since the last documented `gitHead` — which the update agent reads instead. A local
+  `--update` run must do the same thing by hand before invoking OpenWiki.
 - **Never pushes to `main` directly.** The job opens a **pull request** with its changes,
   consistent with the [GitHub ruleset](../governance/hooks-and-commits.md#the-github-ruleset-on-main)
   that requires a PR for every change to `main` — even an automated one.

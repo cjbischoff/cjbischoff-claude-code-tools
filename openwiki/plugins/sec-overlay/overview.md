@@ -11,8 +11,15 @@ tags: [sec-overlay, security-audit, architecture, invariants]
 **agentic security-audit harness**. Point it at a codebase and it finds *actually-exploitable*
 vulnerabilities, then hands a security engineer artifacts they can act on: a threat model,
 per-finding evidence, a SARIF file, a Markdown report, and a manual runtime-test plan. It calls
-binary tools directly (no other Claude Code skills or plugins) and **never executes the
-scanned code**.
+binary tools directly (no other Claude Code skills or plugins) and **never executes the scanned
+code**, with one narrow, opt-in exception: the [`prove` phase](pipeline.md#the-opt-in-prove-lane--the-one-execution-exception)
+may build and run target-derived code, strictly out-of-tree, to auto-confirm a finding by
+observed effect.
+
+Beyond the Claude Code skill, the plugin also ships a second, lighter
+[diff-scoped review pipeline](review-pipeline.md) for pull requests, distributed both as a
+`/sec-overlay:audit` slash command and as a standalone GitHub Action (`action.yml`) that posts
+PR review comments — see [review pipeline](review-pipeline.md) for both surfaces.
 
 The core idea, in the skill's own words: *run cheap mechanical tools to find candidates, use
 LLM agents to investigate whether each candidate is real, and never let an LLM's opinion alone
@@ -52,10 +59,10 @@ flowchart TB
             R1["prompt-constants, attack-classes,<br/>schemas, crypto policy, hunting guides"]
         end
         subgraph AG["agents/ - the JUDGEMENT"]
-            A1["~30 LLM prompts:<br/>producer (sonnet) vs adversary (opus)"]
+            A1["~40 LLM prompts:<br/>producer (sonnet) vs adversary (opus)"]
         end
         subgraph HP["helpers/ - the MACHINE"]
-            H1["~70 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
+            H1["~100 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
         end
     end
     TARGET[("target codebase<br/>read-only")]
@@ -91,19 +98,24 @@ step. See [pipeline](pipeline.md) for the full phase-by-phase flow, and
 
 These hold everywhere and are enforced in code where possible, in prompts otherwise:
 
-1. **Never executes or modifies the reviewed source.** Static analysis only. Patches are
-   applied to a *throwaway copy* to verify them (see `verify.py` in [helpers](helpers.md))
-   — the repo's own files are never run or edited. See
+1. **Never executes or modifies the reviewed source, with one named exception.** Static
+   analysis only. Patches are applied to a *throwaway copy* to verify them (see `verify.py` in
+   [helpers](helpers.md)) — the repo's own files are never run or edited. The opt-in `prove`
+   phase is the sole exception: it builds and runs target-derived code strictly under
+   `ws.repro/`, outside the target tree, and only when an operator sets
+   `scan_options.prove_findings`. See
    [running an audit](running-an-audit.md#the-do-not-execute-the-target-invariant) for how this
-   holds end to end, including the red-team plan.
+   holds end to end, including the red-team plan and the `prove` carve-out.
 2. **Writes only its own sidecar.** All output lives in an in-repo, self-ignoring
    `<target>/.sec-overlay/<slug>/` directory (override the base with `$SEC_OVERLAY_HOME`, or the
    whole workspace with `--workspace`). A seeded `.sec-overlay/.gitignore` keeps output out of
    the reviewed repo's git tree.
 3. **Tool-receipt gate.** A finding reaches `confirmed`/`fixed` only with at least one
    mechanical receipt (`semgrep` / `codeql` / `ast-grep` / `tree-sitter` / `ripgrep` /
-   `structural-index` / `secrets` / `sca`). LLM reasoning is namespaced `llm-claimed:` and can
-   corroborate but **never** confirm. Enforced in
+   `structural-index` / `secrets` / `sca` / `dependency-catalog`). LLM reasoning is namespaced
+   `llm-claimed:` and can corroborate but **never** confirm — the one narrowly-scoped exception
+   is `prove`'s `reproduction` receipt, which proves by an observed execution effect rather than
+   a static match. Enforced in
    [`helpers/sec_overlay/findings_gate.py`](helpers.md#the-tool-receipt-gate).
 4. **Signal over noise.** Every load-bearing claim made by a Sonnet "producer" is attacked by
    an Opus "adversary" on a different model family; a false-positive ladder plus a
@@ -116,15 +128,17 @@ Everything a security engineer receives lands in `<target>/.sec-overlay/<slug>/`
 
 | Path | Contents |
 |---|---|
-| `kb/scan-profile.json` | recon output: languages, frameworks, `attack_surface`, `sast_plan`, `subsystems` |
-| `kb/architecture.md` + `kb/entities/*.md` | components, data flows, trust boundaries |
-| `kb/THREAT_MODEL.md` | attacker profiles + the prioritized hunt list |
+| `kb/scan-profile.json` | recon output: languages, frameworks, `attack_surface`, `sast_plan`, `subsystems`, `dependency_sinks` |
+| `kb/route-census.json` | deterministic, source-derived route inventory (route-census phase, before recon) |
+| `architecture/` | C4 diagrams (context/container/component) + runtime-view sequences + `arc42.md` |
+| `threat-model/` | `dfd.mmd` (derived from the container diagram) + attack-sequences + `threat-model.md` (STRIDE + CVSS v4.0 + hunt list) |
 | `kb/context.json` | the repo's own docs distilled, trust-tagged (`untrusted-doc` / `prior-scan`) |
 | `kb/graph.json` | the Tier-1/Tier-2 code graph (reachability substrate) |
-| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase |
+| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase, plus deterministic `arch-gate.json`/`tm-gate.json`/`recall-gate.json`/`artifact-gate.json` |
 | `kb/coverage-ledger.json` | surface-completeness ledger; blocks `complete` while gaps remain |
 | `kb/discovery-ledger.json` | investigate saturation state (waves, `terminal_reason`) |
-| `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS, patch diff |
+| `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS v4.0, patch diff |
+| `kb/prove.json`, `repro/` | opt-in `prove` phase output and its out-of-tree build/run root |
 | `report.sarif` | SARIF 2.1.0 (confirmed/fixed) |
 | `report.md` | human report, built from `finding-template.md`; links `redteam-plan.md` |
 | `redteam-plan.md` | manual runtime test plan — the engineer's follow-up |
@@ -142,4 +156,6 @@ described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §5.
 - [References](references.md) — the rule book: prompt constants, schemas, crypto policy.
 - [Running an audit](running-an-audit.md) — the smoke scan vs. the full agentic audit.
 - [Developing the skill](developing-the-skill.md) — tests, linting, and the dev-only bench harness.
+- [The review pipeline](review-pipeline.md) — the lighter diff-scoped track, its GitHub Action,
+  and its slash command.
 - [Cross-repo correlation](cross-repo-correlation.md) — the optional multi-repo capability.

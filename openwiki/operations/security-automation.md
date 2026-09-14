@@ -38,6 +38,18 @@ convention):
 Both run on a weekly schedule rather than continuously, trading immediacy for a bounded review
 burden.
 
+## sec-overlay's own pull-request test gate
+
+`.github/workflows/sec-overlay-tests.yml` runs on any pull request that touches
+`plugins/sec-overlay/skills/sec-overlay/helpers/**`: the full `uv run pytest` suite, then an
+offline detection-regression gate that smoke-scans the committed `fixtures/vulnerable_repo`
+fixture and asserts its two `locked` seed-corpus entries are still detected (see
+[developing the skill](../plugins/sec-overlay/developing-the-skill.md#the-bench-harness)). Both
+steps are fully offline — no target cloning, no live SAST beyond the local fixture — and the job
+declares `permissions: contents: read`, the same least-privilege default used everywhere else.
+Third-party Actions are avoided here entirely (`uv` installs via its official script, `semgrep`
+via `pip`); only the SHA-pinned, GitHub-owned `actions/checkout` is used.
+
 ## CodeQL default setup
 
 `.github/codeql/codeql-config.yml` exists, but **no CodeQL workflow file does** — this is

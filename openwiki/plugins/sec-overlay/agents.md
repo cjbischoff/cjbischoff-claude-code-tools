@@ -1,7 +1,7 @@
 ---
 type: architecture-overview
 title: sec-overlay LLM Agent Prompts
-description: The producer-vs-adversary model behind every sec-overlay agent prompt, the investigate gate ladder, the classes/ extension prompts, and the template tokens the orchestrator substitutes.
+description: The producer-vs-adversary model behind every sec-overlay agent prompt, the investigate gate ladder, the 13 classes/ extension prompts, and the template tokens the orchestrator substitutes.
 tags: [sec-overlay, agents, producer-adversary, gate-ladder, llm-prompts]
 ---
 
@@ -44,40 +44,49 @@ is enforced in code.
 ## The pipeline, as prompts
 
 Read top to bottom — this is the order the orchestrator spawns them (see
-[pipeline](pipeline.md) for the deterministic steps interleaved between these).
+[pipeline](pipeline.md) for the deterministic steps interleaved between these; this table is
+generated from `PHASE_TABLE` by `phase_docs.py` and reproduced here for the agent phases only).
 
-| Phase | Prompt | Model | Job |
-|---|---|---|---|
-| C1 context | `context-ingest.md` | sonnet | discovers repo docs/prior scans, verifies claimed controls against code |
-| C1 context | `context-adversary.md` | opus | pressure-checks that verification |
-| Analysis | `recon.md` | sonnet | surveys the repo → `kb/scan-profile.json` |
-| Analysis | `architecture.md` | sonnet | components/data-flows/trust-boundaries → `kb/architecture.md` |
-| Analysis | `threat-model.md` | sonnet | attacker profiles + hunt list → `kb/THREAT_MODEL.md` |
-| Analysis (each of the three) | `phase-adversary.md` | opus | re-derives each claim from code; verdicts → `kb/gates/<phase>.json` |
-| Investigate | `investigate.md` + `classes/<cls>.md` | sonnet, parallel per class | walks the [gate ladder](#the-investigate-gate-ladder) → `raw`/`rejected` |
-| FP ladder | `critic.md` | sonnet | production-viability filter (reject debug-only/dead/test-fixture code); demotes on doubt, never hard-rejects |
-| FP ladder | `judge.md` | cheap, no tools | severity-inflation adjudicator; uphold / downgrade / flag |
-| FP ladder | `validate.md` | opus, different family | assumes every finding is wrong and tries to refute it; survival = `confirmed` |
-| Patch | `patch.md` | opus | proposes a minimal diff into `patch_diff`, applied only to a throwaway copy |
-| Patch | `validate-fix.md` | opus, two personas | security-architect + penetration-tester independently check the patch; `no_new_vulnerabilities` regression is non-waivable |
-| Red team | `trace.md` | opus | backward-traces each confirmed sink to an entry point; sets `reachability` |
-| Red team | `redteam.md` | sonnet | splits confirmed findings into `static-settled` vs `needs-runtime`; writes `runtime_test` |
-| Red team | `redteam-adversary.md` | opus | strips settleable-from-source or payload-mismatched items |
-| Postflight | `postflight.md` | sonnet | durable security-profile notes to `kb/prior_context.json` |
+| # | Phase | Prompt | Model | Job |
+|---|---|---|---|---|
+| — | C1 context (not a `PHASE_TABLE` entry) | `context-ingest.md` | sonnet | discovers repo docs/prior scans, verifies claimed controls against code |
+| — | C1 context (not a `PHASE_TABLE` entry) | `context-adversary.md` | opus | pressure-checks that verification |
+| 2 | `recon` | `recon.md` | sonnet | surveys the repo → `kb/scan-profile.json`, including the dependency-sink catalog match |
+| — | (deterministic `recall-gate` follows) | — | — | records into `kb/coverage-ledger.json` what recon left out, per `recall-adversary.md` below |
+| 4 | `architecture` | `architecture.md` | sonnet | C4 diagrams + `arc42.md` |
+| 6 | `threat_model` | `threat-model.md` | sonnet | `dfd.mmd` + `threat-model.md` (STRIDE + CVSS v4.0) |
+| — | (gates every analysis phase) | `phase-adversary.md` | opus | re-derives each claim from code; verdicts → `kb/gates/<phase>.json` |
+| — | (gates recon specifically) | `recall-adversary.md` | opus | judges what recon *left out*, never what it claimed |
+| 9 | `investigate` | `investigate.md` + `classes/<cls>.md` | sonnet, parallel per class | walks the [gate ladder](#the-investigate-gate-ladder) → `raw`/`rejected` |
+| 12 | `critic` | `critic.md` | sonnet | production-viability filter (reject debug-only/dead/test-fixture code); demotes on doubt, never hard-rejects |
+| 13 | `judge` | `judge.md` | cheap, no tools | severity-inflation adjudicator; uphold / downgrade / flag |
+| 14 | `validate` | `validate.md` | opus, different family | assumes every finding is wrong and tries to refute it; survival = `confirmed` |
+| 15 | `trace` | `trace.md` | opus | backward-traces each confirmed sink to an entry point; sets `reachability` |
+| 17 | `patch` | `patch.md` | opus | proposes a minimal diff into `patch_diff`, applied only to a throwaway copy |
+| 18 | `validate-fix` | `validate-fix.md` | opus, two personas | security-architect + penetration-tester independently check the patch; `no_new_vulnerabilities` regression is non-waivable |
+| 21 | `redteam` | `redteam.md` | sonnet | splits confirmed findings into `static-settled` vs `needs-runtime`; writes `runtime_test` |
+| — | (gates the redteam plan) | `redteam-adversary.md` | opus | strips settleable-from-source or payload-mismatched items |
+| 24 | `prove` (opt-in) | `prove.md` | opus | executes target-derived code, out-of-tree, to auto-confirm an oracle-able class — see [pipeline](pipeline.md#the-opt-in-prove-lane--the-one-execution-exception) |
+| 26 | `artifact-review` | `artifact-review.md` | opus | final adversary over the rendered `report.md`/`report.sarif`/`redteam-plan.md` |
+| 28 | `postflight` | `postflight.md` | sonnet | durable security-profile notes to `kb/prior_context.json` |
 
 **`judge` and `validate` must never run concurrently against the same finding file** — the last
 writer silently drops the other's field. This is enforced by orchestration order (dispatch
 judge, wait for its writes to persist, then dispatch validate), not by code.
 
-### Optional extension agents
+### Optional extension agents (not `PHASE_TABLE` entries)
 
 | Prompt | Role |
 |---|---|
-| `factcheck.md` | fresh-context re-verification of a finding's citations/scope/severity against source (catches drift) |
 | `variant-hunt.md` | amplifies one confirmed finding into its family: enqueues sibling call sites as new candidates |
 | `bugchain.md` | looks across the confirmed set for chains — individually low findings that compose into a critical |
 | `tune-config.md` | optional ratcheted loop (≤3 rounds): authors targeted semgrep rules for uncovered classes |
-| `correlate-combiner.md` + `cross-repo-adversary.md` | cross-repo: see [Cross-repo correlation](cross-repo-correlation.md) — these gate correlation *verdicts*, not per-repo findings, and carry the same producer/adversary pattern applied to a joined multi-repo artifact rather than a single finding |
+| `correlate-combiner.md` + `cross-repo-adversary.md` | cross-repo: see [Cross-repo correlation](cross-repo-correlation.md) — these gate correlation *verdicts*, not per-repo findings |
+
+An earlier release also shipped `factcheck.md` (fresh-context re-verification of a finding's
+citations). No phase ever dispatched it — the defect-repair build deleted the prompt, its CLI
+module, and its `verification` enum value together rather than finishing an unreachable
+capability; see [pipeline](pipeline.md#factcheck-is-gone-not-renamed).
 
 ## The investigate gate ladder
 
@@ -102,24 +111,45 @@ flowchart TD
 fails Gate -1 is discarded with no further reasoning.*
 
 On pass N>1, prior `rejected` findings are injected as `{{FP_FEEDBACK}}` negative examples so
-the agent does not re-raise a known false positive.
+the agent does not re-raise a known false positive. The discovery loop is mechanical, not
+prompt-controlled: `driver._record_discovery_wave` folds each pass's finding fingerprints into
+`kb/discovery-ledger.json` on every `findings-gate` run, and the driver halts the loop at
+`terminal_reason` `saturated` (two consecutive waves with no new fingerprint) or `capped` (the
+`max_waves` bound) — the agent cannot end the loop early or extend it past the cap.
+
+`investigate.md` also names `dependency-catalog:<entry-id>` (a hit in the
+[dependency-sink catalog](helpers.md#route-census-and-the-dependency-sink-catalog--closing-recons-blind-spots))
+as a mechanical Tier-2 receipt: it locates a sink inside a dependency but never confirms a
+finding alone — a gate needs a paired Tier-1 receipt too (a `semgrep:sec-overlay.absence.*` hit
+on the missing safe option, or a codeql dataflow path).
 
 ## `classes/` — CWE-class extension prompts
 
-Eleven small prompts under
+Thirteen small prompts under
 [`agents/classes/`](/plugins/sec-overlay/skills/sec-overlay/agents/classes/) — `injection`,
-`ssrf`, `authz`, `authn`, `crypto`, `config`, `business-logic`, `prompt-injection`,
-`context-bleed`, `excessive-agency`, `resource` — each appended to `investigate.md` /
-`patch.md` for that class, supplying:
+`ssrf`, `ssti`, `authz`, `authn`, `crypto`, `config`, `business-logic`, `prompt-injection`,
+`context-bleed`, `excessive-agency`, `resource`, `expr-eval-rce` (added for server-side policy
+and rule engines: CEL, Starlark, goja, gopher-lua, Spring SpEL) — each appended to
+`investigate.md` / `patch.md` for that class, supplying:
 
 1. **Canonical fix shape** (e.g. injection → parameterized query; crypto → AEAD or slow KDF).
 2. **Discrimination boundary** — an explicit IS/IS-NOT so a finding routes to exactly one class
-   (SSRF is not open-redirect; authz is not authn).
+   (SSRF is not open-redirect; authz is not authn; OPA/Rego's `http.send` routes to `ssrf`, not
+   `expr-eval-rce`, because its builtin performs an outbound request).
 3. **Proof tuple** — the required three-part evidence: source, defense/bypass, sink/impact.
 4. **Instance-preservation rule** — do not collapse sibling instances into one finding.
 
 `test_wiring.py` checks that every class prompt carries the proof tuple and the anti-collapse
 rule.
+
+## The diff-scoped `review` track has its own three prompts
+
+A separate, lighter pipeline — [the review pipeline](review-pipeline.md) — runs over one diff
+rather than a full audit, with `review-file.md` (sonnet, the producer that writes
+`code_comment`s), `review-plan.md` (sonnet, an advisory severity-ordered plan for large diffs),
+and `review-filter.md` (sonnet, a retract-only fact-check gated by a mechanical code-level veto
+rather than a second-opinion adversary). See [the review pipeline](review-pipeline.md) for their
+inputs/outputs and how they differ from the producer/adversary pattern above.
 
 ## Template tokens the orchestrator substitutes
 
@@ -136,9 +166,9 @@ rule.
 | `{{ROUND}}` | tuning iteration number (tune-config) |
 
 Every agent wraps untrusted repo text in the trust envelope and imports the
-[`references/prompt-constants.md`](references.md#prompt-constantsmd--the-constitution) blocks.
-Agents most prone to cross-phase field writes (`investigate.md`, `critic.md`, `validate.md`,
-`trace.md`, `patch.md`, `validate-fix.md`, `redteam.md`, `context-ingest.md`,
+[`references/prompt-constants.md`](references.md#prompt-constantsmd--the-constitution-16-blocks)
+blocks. Agents most prone to cross-phase field writes (`investigate.md`, `critic.md`,
+`validate.md`, `trace.md`, `patch.md`, `validate-fix.md`, `redteam.md`, `context-ingest.md`,
 `context-adversary.md`, `phase-adversary.md`, plus `architecture.md`/`threat-model.md` as
 readers) import `FIELD_OWNERSHIP` to enforce that each `Finding` field is owned by exactly one
 phase.
@@ -163,6 +193,8 @@ repo's [doc-update-guard hook](../../governance/hooks-and-commits.md).
 - [Pipeline](pipeline.md) — where each phase above fits in the full audit sequence.
 - [Helpers](helpers.md) — the deterministic modules that enforce the tool-receipt gate these
   prompts cannot bypass.
-- [References](references.md) — `prompt-constants.md`'s twelve blocks every prompt imports.
+- [References](references.md) — `prompt-constants.md`'s sixteen blocks every prompt imports.
+- [The review pipeline](review-pipeline.md) — `review-file.md`, `review-plan.md`, and
+  `review-filter.md` in detail.
 - [Cross-repo correlation](cross-repo-correlation.md) — `correlate-combiner.md` and
   `cross-repo-adversary.md` in detail.

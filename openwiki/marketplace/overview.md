@@ -51,6 +51,9 @@ entry: "one directory per distributed plugin"). For `sec-overlay`:
 ```
 plugins/sec-overlay/
   .claude-plugin/plugin.json      # plugin manifest
+  action.yml                      # composite GitHub Action ("sec-overlay review") — a second,
+                                   # non-Claude-Code distribution surface, see below
+  commands/                       # /sec-overlay:audit slash command — a shipping surface too
   skills/sec-overlay/             # the skill Claude Code discovers and loads
     SKILL.md
     CLAUDE.md
@@ -60,13 +63,19 @@ plugins/sec-overlay/
     references/
 ```
 
+`action.yml` is a distribution surface distinct from the Claude Code skill: it lets a GitHub
+Actions workflow in any repository run the plugin's diff-scoped
+[review pipeline](../plugins/sec-overlay/review-pipeline.md) directly, without installing the
+skill into Claude Code at all. It ships from the plugin directory the same way everything else
+does — `${{ github.action_path }}` is its runtime equivalent of `${CLAUDE_PLUGIN_ROOT}` below.
+
 `plugins/sec-overlay/.claude-plugin/plugin.json` is the **plugin manifest**:
 
 ```json
 {
   "name": "sec-overlay",
   "description": "Agentic security-audit harness: runs SAST, investigates candidates with multi-agent gates, and emits SARIF + Markdown reports.",
-  "version": "0.2.0",
+  "version": "2.8.27",
   "author": { "name": "Christopher Bischoff" }
 }
 ```
@@ -111,5 +120,7 @@ to those files inside the plugin's own instructions must be relative to the plug
 - [Validation and versioning](validation-and-versioning.md) — `claude plugin validate .` and
   the automatic semver bump rule.
 - [sec-overlay overview](../plugins/sec-overlay/overview.md) — what the one shipped plugin does.
+- [The review pipeline](../plugins/sec-overlay/review-pipeline.md) — `action.yml` and
+  `commands/` in full.
 - [Commit governance](../governance/hooks-and-commits.md) — the hooks that gate any change to
   this repository, including plugin files.

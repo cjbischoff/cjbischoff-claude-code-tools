@@ -1,16 +1,18 @@
 ---
 type: how-to-guide
 title: Running a sec-overlay Audit
-description: The deterministic smoke-scan command versus a full agentic audit, preflight tool checks, environment prerequisites and the two known env-only test failures, and how the harness upholds its never-execute-the-target invariant.
+description: The deterministic smoke-scan command versus a full agentic audit, preflight tool checks, environment prerequisites and the one known env-only test failure, and how the harness upholds its never-execute-the-target invariant with the opt-in prove lane as the sole exception.
 tags: [sec-overlay, running-audit, preflight, smoke-scan]
 ---
 
 # Running a sec-overlay audit
 
-There are two ways to run this harness: a fast deterministic **smoke scan** with no agents at
-all, and the **full agentic audit** described in [pipeline](pipeline.md). Both start from
-`skills/sec-overlay/helpers/` — inside an installed plugin, that is
-`${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay/helpers`.
+There are three ways to run this harness: a fast deterministic **smoke scan** with no agents at
+all, the **full agentic audit** described in [pipeline](pipeline.md), and the lighter, diff-scoped
+[**review pipeline**](review-pipeline.md) (`sec_overlay.cli review`) that comments on a pull
+request instead of running a full campaign. All three start from `skills/sec-overlay/helpers/` —
+inside an installed plugin, that is `${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay/helpers`. This page
+covers the first two; see [the review pipeline](review-pipeline.md) for the third.
 
 ## Quick deterministic smoke scan (no agents)
 
@@ -33,8 +35,9 @@ never calls `sec_overlay.state.begin_pass`, so it does not pin a SHA or advance 
 model described in [pipeline](pipeline.md#multi-pass-campaigns). It is the fast path to see
 output — **not** a real audit: no agents run, so there is no investigate gate ladder, no
 adversarial validation, and no `risk_score`. The bundled `rules/smoke.yaml` is a minimal
-ruleset; the semgrep-rules submodule (fuller semgrep coverage) is not part of the plugin — for
-a real audit, point `--config` (and the recon agent's `rulesets`) at your own semgrep ruleset.
+ruleset; the vendored semgrep-rules clone (fuller semgrep coverage — a gitignored shallow clone,
+not a submodule) is not part of the plugin — for a real audit, point `--config` (and the recon
+agent's `rulesets`) at your own semgrep ruleset.
 
 ## Full agentic audit
 
@@ -79,30 +82,38 @@ stated identically in `SKILL.md` and the skill's own [`CLAUDE.md`](/plugins/sec-
 
 ## Environment prerequisites for a full run
 
-A clean checkout is missing three things a full audit needs:
+A clean checkout is missing one thing a full audit needs, plus one thing to verify:
 
-1. **The semgrep rules submodule.** `rules/semgrep/` must be checked out:
-   `git submodule update --init --recursive`. Without it, semgrep has no rules and
-   `test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd` fails.
+1. **The vendored semgrep ruleset.** `rules/semgrep/` is a gitignored, shallow-cloned directory
+   (**not** a git submodule — an earlier plugin manual incorrectly called it one; no
+   `.gitmodules` file exists in this repository). Populate it with
+   `git clone --depth 1 https://github.com/semgrep/semgrep-rules rules/semgrep`. Without it,
+   semgrep has no rules and `test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd`
+   fails — this is the **one env-only failure** expected on a clean checkout; do not "fix" it by
+   committing the clone's contents.
 2. **External tool binaries.** `uv run python -m sec_overlay.preflight` must show semgrep,
    codeql (+ language packs), ast-grep, osv-scanner present.
-3. **The bench corpus is local-only.** `bench/corpus_seed/*.json` is gitignored (it contains
-   confirmed vulnerabilities from private code). Its absence fails
-   `test_bench.py::test_seed_corpus_is_valid` and
-   `test_citations.py::test_all_mapped_ids_exist_in_seed` — both dev/bench tests, not part of an
-   audit. See [developing the skill](developing-the-skill.md#the-bench-harness-dev-only-not-part-of-an-audit)
-   to seed it locally.
 
-**The two env-only failures on a clean checkout are environmental, not code defects** — do not
-"fix" them by committing the submodule contents or fabricating seed data:
-`tests/test_bench.py::test_seed_corpus_is_valid` (gitignored bench corpus) and
-`tests/test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd` (excluded semgrep
-submodule). The skill `CLAUDE.md` §2 states this explicitly.
+The bench harness's own labelled corpus (`bench/corpus_seed/*.json`) now ships **committed**
+(public entries only — synthetic fixtures, dep-CVE lockfiles, pinned public-app advisories), so
+`test_bench.py::test_seed_corpus_is_valid`/`test_seed_corpus_has_min_entries` and
+`test_citations.py::test_all_mapped_ids_exist_in_seed` run and pass on a clean checkout — they
+are no longer environment-only gaps. See
+[developing the skill](developing-the-skill.md#the-bench-harness) for what the corpus contains
+and the CI gate built on it.
 
 ## The do-not-execute-the-target invariant
 
-The harness never runs, builds, or modifies the code it is auditing. This holds at every phase
-that touches code:
+The harness never runs, builds, or modifies the code it is auditing, with one narrow, opt-in
+exception: the `prove` phase (phase 24 of the [pipeline](pipeline.md#the-full-phase-order)),
+which only activates when an operator sets `scan_options.prove_findings = true`. When enabled,
+`agents/prove.md` builds and runs target-derived code strictly under
+`{{WORKSPACE}}/repro/`, never inside `{{TARGET}}`, and may auto-confirm only an
+entrypoint-driven proof of a wrapper-decidable class (`ssrf`, `cmdi`, `path-traversal`,
+`deserialization`, `expr-eval-rce`) whose oracle actually observed the effect — see
+[pipeline](pipeline.md#the-opt-in-prove-lane--the-one-execution-exception) for the full
+rationale and trade-offs. Every other phase, and a default run with `prove_findings` unset,
+holds the absolute invariant below:
 
 - **Static analysis only.** Every SAST backend (`sast.py`, `codeql.py`, `sca.py`, `secrets.py`)
   parses source or scans dependency manifests; none of them execute the target.
@@ -130,5 +141,6 @@ that touches code:
 - [Agents](agents.md) — the prompts spawned at each phase.
 - [Helpers](helpers.md) — `preflight.py`, `verify.py`, and the other deterministic modules
   invoked above.
-- [Developing the skill](developing-the-skill.md) — the test suite, including the two env-only
-  failures in more detail.
+- [Developing the skill](developing-the-skill.md) — the test suite, including the one env-only
+  failure in more detail.
+- [The review pipeline](review-pipeline.md) — the diff-scoped `review` command in full.
