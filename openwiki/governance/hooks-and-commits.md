@@ -49,36 +49,53 @@ unconventional header is rejected, and — the exact 50-character boundary —
 ## The doc-update guard (`pre-commit-check.sh`)
 
 `scripts/hooks/pre-commit-check.sh` is the single script that enforces the rest of commit
-governance. It runs on every `pre-commit` and does four things, in order:
+governance. It runs on every `pre-commit` and does five things, in order:
 
 1. **Blocks direct commits to `main`.** `git rev-parse --abbrev-ref HEAD` is checked first;
    if the current branch is `main`, the hook exits 1 immediately with a message to branch
    instead. This is the local backstop for the rule; the
    [GitHub ruleset on `main`](#the-github-ruleset-on-main) below is the server-side one.
-2. **Requires `README.md` and `CHANGELOG.md` on any non-doc change.** If the staged file set
-   contains anything other than `README.md`/`CHANGELOG.md`, both of those files must also be
-   staged, or the commit is rejected. This mirrors root `README.md`'s Governance rule: "Every
-   commit that changes tracked files updates `README.md` and `CHANGELOG.md` (Common Changelog
-   format) in the same commit."
-3. **A hard-coded check for the three Directory Guide folders** (`plugins`, `scripts`, `docs`):
-   if a staged file lives under one of these and that folder's own `README.md` is not also
-   staged, the commit is rejected naming the folder. This is a "stricter, redundant-but-harmless
-   special case" per `scripts/README.md` — it duplicates the general rule below for exactly the
-   three folders listed in the root README's Directory Guide table.
-4. **The generalized per-folder rule.** For every staged file, the hook resolves its immediate
+2. **Requires root `README.md` and `CHANGELOG.md`, but only for repo-level changes.** The hook
+   splits the staged set into files under `plugins/<name>/` and everything else
+   ("`repo_level`"). Root `README.md`/`CHANGELOG.md` are required only when the `repo_level`
+   set is non-empty — a commit whose every staged file sits inside one plugin directory never
+   has to touch the root docs at all. This mirrors the root `README.md`'s Changelog-routing
+   rule: "a commit whose changes are all inside `plugins/<name>/` updates that plugin's
+   `CHANGELOG.md`... A commit touching anything outside `plugins/` updates the root
+   `CHANGELOG.md` and root `README.md`. Mixed commits do both."
+3. **Requires each touched plugin's own `CHANGELOG.md`.** For every plugin name found under
+   `plugins/` in the staged set, `plugins/<name>/CHANGELOG.md` must also be staged, or the
+   commit is rejected naming the plugin. This is the mechanism behind the per-plugin changelog
+   half of the routing rule above — independent of whether any repo-level file was touched.
+4. **A hard-coded check for two Directory Guide folders, `scripts` and `docs`** (`plugins` is
+   deliberately excluded from this list — it is already covered by step 3 above plus the
+   general per-folder rule in step 5, applied per plugin instead of via one root
+   `plugins/README.md` trigger for every change anywhere in the tree): if a staged file lives
+   under `scripts/` or `docs/` and that folder's own `README.md` is not also staged, the commit
+   is rejected naming the folder.
+5. **The generalized per-folder rule.** For every staged file, the hook resolves its immediate
    directory and checks whether that directory has a *tracked* `README.md` (via
    `git ls-files --error-unmatch`). If it does, that `README.md` must also be staged, or the
    commit is rejected naming the specific file and folder. A folder with no tracked `README.md`
-   is simply not gated. This generalized rule is what actually enforces the "docs track code"
-   requirement for every nested folder inside the sec-overlay skill — see
-   [developing the skill](../plugins/sec-overlay/developing-the-skill.md) for the full list of
-   folder READMEs this reaches.
+   is simply not gated. One exemption: a `plugins/<name>/CHANGELOG.md` file is skipped by this
+   rule (step 3 already gates it), so a commit that stages only that plugin's changelog entry
+   never has to also restage the plugin's `README.md`. This generalized rule is what actually
+   enforces the "docs track code" requirement for every nested folder inside the sec-overlay
+   skill — see [developing the skill](../plugins/sec-overlay/developing-the-skill.md) for the
+   full list of folder READMEs this reaches.
 
-`scripts/hooks/test-pre-commit-check.sh` proves this behavior with three cases, each run inside
-a disposable temporary git repository (cleaned up via an `EXIT` trap): a change to a folder's
-file without restaging that folder's `README.md` blocks (exit 1); the same change with the
-`README.md` restaged passes (exit 0); and a change inside a folder that has no tracked
-`README.md` is not gated at all (exit 0).
+`scripts/hooks/test-pre-commit-check.sh` proves this behavior with ten cases, each run inside a
+disposable temporary git repository (cleaned up via an `EXIT` trap): a change to a folder's
+file without restaging that folder's `README.md` blocks; the same change with the `README.md`
+restaged passes; a change inside a folder with no tracked `README.md` is not gated; a
+plugin-only change without that plugin's `CHANGELOG.md` staged blocks even though root
+`README.md`/`CHANGELOG.md` and `plugins/README.md` are untouched; the same change with the
+plugin's `CHANGELOG.md` staged passes with no root-doc requirement at all; a repo-level change
+without root `README.md`/`CHANGELOG.md` blocks, and with them staged passes; a plain file inside
+a plugin subfolder still blocks without that subfolder's own `README.md`, proving step 5 still
+gates inside a plugin tree even though `guide_dirs` no longer does; and two cases pin the
+changelog exemption precisely — staging only a tracked plugin `CHANGELOG.md` edit passes without
+its sibling `README.md`, but adding any other file to that same commit blocks again.
 
 ## Wiring: prek
 

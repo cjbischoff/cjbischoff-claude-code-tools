@@ -33,8 +33,9 @@ never calls `sec_overlay.state.begin_pass`, so it does not pin a SHA or advance 
 model described in [pipeline](pipeline.md#multi-pass-campaigns). It is the fast path to see
 output — **not** a real audit: no agents run, so there is no investigate gate ladder, no
 adversarial validation, and no `risk_score`. The bundled `rules/smoke.yaml` is a minimal
-ruleset; the semgrep-rules submodule (fuller semgrep coverage) is not part of the plugin — for
-a real audit, point `--config` (and the recon agent's `rulesets`) at your own semgrep ruleset.
+ruleset; the vendored, gitignored semgrep-rules clone (fuller semgrep coverage) is not part of
+the plugin — for a real audit, point `--config` (and the recon agent's `rulesets`) at your own
+semgrep ruleset.
 
 ## Full agentic audit
 
@@ -79,25 +80,26 @@ stated identically in `SKILL.md` and the skill's own [`CLAUDE.md`](/plugins/sec-
 
 ## Environment prerequisites for a full run
 
-A clean checkout is missing three things a full audit needs:
+A clean checkout is missing one thing a full audit needs — the bench corpus is no longer one
+of them, since `bench/corpus_seed/*.json` now ships committed (public entries only: pinned
+public-app advisories, dep-CVE lockfiles, and absence/dogfood synthetic fixtures):
 
-1. **The semgrep rules submodule.** `rules/semgrep/` must be checked out:
-   `git submodule update --init --recursive`. Without it, semgrep has no rules and
+1. **The vendored, gitignored semgrep-rules clone.** `helpers/rules/semgrep/` is **not** a git
+   submodule — `preflight.py` prints the exact remediation:
+   `git clone --depth 1 https://github.com/semgrep/semgrep-rules rules/semgrep` (run from
+   `helpers/`). Without it, semgrep has no rules and
    `test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd` fails.
 2. **External tool binaries.** `uv run python -m sec_overlay.preflight` must show semgrep,
    codeql (+ language packs), ast-grep, osv-scanner present.
-3. **The bench corpus is local-only.** `bench/corpus_seed/*.json` is gitignored (it contains
-   confirmed vulnerabilities from private code). Its absence fails
-   `test_bench.py::test_seed_corpus_is_valid` and
-   `test_citations.py::test_all_mapped_ids_exist_in_seed` — both dev/bench tests, not part of an
-   audit. See [developing the skill](developing-the-skill.md#the-bench-harness-dev-only-not-part-of-an-audit)
-   to seed it locally.
 
-**The two env-only failures on a clean checkout are environmental, not code defects** — do not
-"fix" them by committing the submodule contents or fabricating seed data:
-`tests/test_bench.py::test_seed_corpus_is_valid` (gitignored bench corpus) and
-`tests/test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd` (excluded semgrep
-submodule). The skill `CLAUDE.md` §2 states this explicitly.
+**This is the one named env-only failure on a clean checkout, not a code defect** — do not
+"fix" it by committing the cloned rules into this repository:
+`tests/test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd`. The skill
+`CLAUDE.md` §1 states this explicitly; `test_docs_invariants.py::test_no_live_doc_claims_a_git_submodule_that_does_not_exist`
+guards every live doc surface against re-introducing the stale "submodule" instruction. If a
+second failure appears on a clean checkout (e.g. a missing CodeQL query pack), treat it as a
+missing tool per `preflight`'s own report rather than assuming it is this same, single
+documented gap.
 
 ## The do-not-execute-the-target invariant
 
@@ -124,11 +126,35 @@ that touches code:
   secrets), and runtime-validation gaps — an *operator* runs these against a live system by
   hand. **The harness itself never executes the target.**
 
+## CI review mode and the audit command
+
+Two more ways to invoke sec-overlay exist alongside the smoke scan and the full audit above,
+both distinct from the single-repo `PHASE_TABLE` pipeline:
+
+- **`/sec-overlay:audit <repo> [<repo> ...]`** — the plugin's slash command
+  ([`commands/audit.md`](/plugins/sec-overlay/commands/audit.md)). A single repo argument drives
+  the full audit via `sec_overlay.run.drive()` / `advance()` (fences the tree against the pass
+  baseline and writes a receipt before each deterministic stage; resumes at the first phase with
+  no recorded stage). Two or more repos drive each repo's audit independently, then synthesize a
+  manifest and hand it to `python -m sec_overlay.correlate` — see
+  [cross-repo correlation](cross-repo-correlation.md). The command itself holds no executable
+  logic; it only routes to `helpers/sec_overlay/`.
+- **CI review mode** — [`action.yml`](/plugins/sec-overlay/action.yml), a composite GitHub
+  Action that runs a narrower PR-diff review instead of a full audit: `review-plan.md` /
+  `review-file.md` / `review-filter.md` (sonnet; see [agents](agents.md#ci-review-mode-agents))
+  produce comments on changed files, `sec_overlay.pr_poster` (a stdlib-only GitHub API client,
+  no Node dependency) posts them as one pull-request review with the event fixed at `COMMENT` —
+  critical/high findings inline, everything else in the summary — and the action also uploads
+  `report.sarif` to code scanning. Because the review event is always `COMMENT`, this mode never
+  blocks a merge on its own, mirroring the [CodeRabbit governance
+  model](../../governance/code-review.md). `sessions.py` (`sessions list`/`sessions show`)
+  reads a repo's existing sidecar state read-only, for inspecting past runs of either mode.
+
 ## Related pages
 
 - [Pipeline](pipeline.md) — the full phase order this audit runs.
-- [Agents](agents.md) — the prompts spawned at each phase.
+- [Agents](agents.md) — the prompts spawned at each phase, including the CI review-mode family.
 - [Helpers](helpers.md) — `preflight.py`, `verify.py`, and the other deterministic modules
   invoked above.
-- [Developing the skill](developing-the-skill.md) — the test suite, including the two env-only
-  failures in more detail.
+- [Developing the skill](developing-the-skill.md) — the test suite and the CI workflow that
+  runs it on every pull request.

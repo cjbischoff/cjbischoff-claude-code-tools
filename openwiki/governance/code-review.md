@@ -66,6 +66,15 @@ The PR title check (also `warning` mode) requires the same Conventional Commit f
 `commit-msg-check.sh` hook. `issue_assessment` is explicitly turned `off`: "This repo does not
 track work in issues."
 
+**`readme-and-changelog-updated` is now stricter than the hook it mirrors.** Its instructions
+still describe the old blanket rule — any non-`README.md`/`CHANGELOG.md` change requires both
+root files. [`pre-commit-check.sh`](hooks-and-commits.md#the-doc-update-guard-pre-commit-checksh)
+was since narrowed to exempt plugin-internal commits from the root docs entirely (they need
+only the touched plugin's own `CHANGELOG.md`), but `.coderabbit.yaml`'s check text was not
+updated to match. In practice this means a clean, hook-passing plugin-only commit can still draw
+a `readme-and-changelog-updated` warning comment on the PR — a false positive to recognize, not
+a governance violation to fix, until `.coderabbit.yaml` catches up with the hook.
+
 ## Path filters and per-area review instructions
 
 Seeded detector fixtures under `**/fixtures/**` and `**/fixtures_struct/**` are excluded from

@@ -51,6 +51,9 @@ entry: "one directory per distributed plugin"). For `sec-overlay`:
 ```
 plugins/sec-overlay/
   .claude-plugin/plugin.json      # plugin manifest
+  README.md, CHANGELOG.md, CLAUDE.md    # plugin-root doc trio
+  action.yml                      # composite GitHub Action: CI review mode
+  commands/audit.md               # /sec-overlay:audit slash command
   skills/sec-overlay/             # the skill Claude Code discovers and loads
     SKILL.md
     CLAUDE.md
@@ -66,10 +69,17 @@ plugins/sec-overlay/
 {
   "name": "sec-overlay",
   "description": "Agentic security-audit harness: runs SAST, investigates candidates with multi-agent gates, and emits SARIF + Markdown reports.",
-  "version": "0.2.0",
+  "version": "2.8.27",
   "author": { "name": "Christopher Bischoff" }
 }
 ```
+
+`commands/` is itself a shipping payload (a `commands/` file changing bumps the plugin version
+just like `skills/` — see [validation and versioning](validation-and-versioning.md)), so the
+`/sec-overlay:audit` command a user gets on install is versioned identically to the skill it
+drives. To add a second plugin, copy `docs/templates/plugin/` — a filled-in-per-placeholder
+skeleton with the same manifest/README/CHANGELOG/CLAUDE.md/skill shape — to `plugins/<name>/`
+rather than authoring the layout from scratch (root `CLAUDE.md`'s "New plugin" checklist).
 
 - `name` must match the marketplace entry's `name` and the plugin's own directory name.
 - `version` is a plain semver string. It is bumped automatically on shipping-file changes — see

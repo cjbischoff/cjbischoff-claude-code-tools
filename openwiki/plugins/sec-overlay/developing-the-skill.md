@@ -12,19 +12,34 @@ All commands below run from `skills/sec-overlay/helpers/`.
 ## Test and lint commands
 
 ```bash
-uv run pytest -q                                   # full suite (2 env-only failures, see below)
+uv run pytest -q                                   # full suite (1 named env-only failure, see below)
 uv run pytest tests/test_fingerprint.py -q         # single file
 uv run pytest tests/test_x.py::test_name           # single test
 uv run ruff check sec_overlay/ bench/ tests/       # lint (line-length 100)
 uv run ruff format sec_overlay/ bench/ tests/
 uv run ty check                                    # static types
 uv run python -m sec_overlay.preflight             # tool availability
+uv run python -m sec_overlay.phase_docs --check    # fail if a phase-table doc is stale
 ```
 
-The suite is 81 pytest files, 595 tests (helpers/README.md's Test coverage & contracts
-section). Two failures on a clean checkout are environmental, not code defects — see
+The suite is 145 pytest files under `helpers/tests/` (filesystem-verified; `helpers/README.md`'s
+own prose count lags additions and should not be trusted over a direct file count). The one
+named env-only failure on a clean checkout is environmental, not a code defect — see
 [running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run) for exactly
-which tests and why.
+which test and why.
+
+## CI
+
+[`.github/workflows/sec-overlay-tests.yml`](/.github/workflows/sec-overlay-tests.yml) runs on
+every pull request touching `plugins/sec-overlay/skills/sec-overlay/helpers/**`, offline (no
+repo cloning, no network SAST): the full `uv run pytest` suite, a smoke-scan of the
+`fixtures/vulnerable_repo` fixture, and a **detection-regression gate** —
+`python -m bench.run --corpus bench/corpus_seed --grade-mode detection --only-local` — that
+fails the job if a `locked` positive stops being detected. Detection mode only checks whether a
+Tier-1 mechanical receipt located a ground-truth finding; it never checks confirmation, since a
+deterministic-only CI run has no adversarial LLM pass to confirm anything. Third-party Actions
+are avoided per repo policy: `uv` installs via the official script, semgrep via `pip`, and only
+the GitHub-owned, SHA-pinned `actions/checkout` is used.
 
 ## The stdlib-only rule
 
@@ -54,22 +69,26 @@ structure — they are how prompt↔code drift gets caught before it reaches a r
 ## The bench harness (dev-only, not part of an audit)
 
 `helpers/bench/` measures and locks detection quality; it is never invoked during a real scan.
-A labelled corpus (positives to find, negatives to stay silent on; `corpus_seed/` is seeded
-from real findings and is gitignored — see
-[running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run)) is scanned
-via a swappable adapter, judged, and scored for precision/recall by source and class plus an
-FP rate. Its **regression gate**: a `locked` finding that stops being detected fails the run.
+A labelled corpus (positives to find, negatives to stay silent on) is scanned via a swappable
+adapter, judged, and scored for precision/recall by source and class plus an FP rate.
+`bench/corpus_seed/` ships **committed** — public entries only (pinned public-app advisories,
+dep-CVE lockfiles, and synthetic absence/dogfood fixtures under `helpers/fixtures/`) — so the
+CI workflow above and any contributor can run it without seeding private data; never add a
+confirmed vulnerability from private code to the seed. Its **regression gate**: a `locked`
+finding that stops being detected fails the run.
 
 ```bash
 python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --workspaces <dir>
 ```
 
-## The semgrep rules submodule
+## The vendored semgrep rules — not a submodule
 
-`helpers/rules/semgrep/` is a git submodule. Clone this repository with `--recurse-submodules`,
-or run `git submodule update --init --recursive` afterward — see
-[running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run) for the test
-that fails without it.
+`helpers/rules/semgrep/` is a **gitignored shallow clone**, not a git submodule:
+`git clone --depth 1 https://github.com/semgrep/semgrep-rules helpers/rules/semgrep` — see
+[running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run) for the one
+test that fails without it. Do not add a `.gitmodules` entry or otherwise reintroduce a
+submodule instruction: `test_docs_invariants.py::test_no_live_doc_claims_a_git_submodule_that_does_not_exist`
+scans every live doc surface for that stale phrasing and fails if it reappears.
 
 ## The folder-README-tracks-code rule, inside this skill
 
@@ -80,14 +99,14 @@ that has a *tracked* `README.md` — no skill-specific exception. Inside
 
 - [`agents/README.md`](/plugins/sec-overlay/skills/sec-overlay/agents/README.md) — every LLM
   prompt: role, model tier, inputs/outputs, the gate ladder, the `classes/` extensions.
-- [`helpers/README.md`](/plugins/sec-overlay/skills/sec-overlay/helpers/README.md) — the ~70
+- [`helpers/README.md`](/plugins/sec-overlay/skills/sec-overlay/helpers/README.md) — the ~100
   Python modules grouped by job, the CLI-callable list, the finding schema contract.
 - [`references/README.md`](/plugins/sec-overlay/skills/sec-overlay/references/README.md) — the
   rule book: the 12 prompt-constants blocks, schemas, crypto YAMLs.
 - Plus the nested folder READMEs one level deeper:
-  `helpers/sec_overlay/README.md`, `helpers/tests/README.md`, `helpers/bench/README.md`,
-  `helpers/rules/README.md`, `references/asvs/README.md`, `references/codeguard/README.md`,
-  `references/hunting/README.md`.
+  `agents/classes/README.md`, `helpers/sec_overlay/README.md`, `helpers/tests/README.md`,
+  `helpers/bench/README.md`, `helpers/bench/corpus_seed/README.md`, `helpers/rules/README.md`,
+  `references/asvs/README.md`, `references/codeguard/README.md`, `references/hunting/README.md`.
 
 The skill's own [`CLAUDE.md`](/plugins/sec-overlay/skills/sec-overlay/CLAUDE.md) §8 states the
 policy in human terms: these READMEs "over-explain what lives there and how it works, with

@@ -17,62 +17,95 @@ when all its outputs exist **and** `record_stage` ran, never inferred from one f
 
 ## The full phase order
 
+`phases.py`'s `PHASE_TABLE` is the single source of within-run phase order — 28 entries, walked
+by `driver.py` and rendered into `SKILL.md`'s "Running a full audit" section by `phase_docs.py`
+(`python -m sec_overlay.phase_docs --check` fails CI on a stale copy). Five steps run alongside
+the table but are not table entries themselves: preflight, begin-pass, context-ingest, the
+Tier-1 graph build, and the optional tune-config loop.
+
 ```mermaid
 flowchart TD
     P0["0 preflight<br/>tools + CodeQL packs present?"] --> P1["1 begin_pass<br/>pin SHA"]
     P1 --> C1(("C1 context-ingest to context-adversary<br/>repo docs as UNTRUSTED"))
-    C1 --> T1["T1 graph build<br/>Tier-1 substrate, LLM-free"]
-    T1 --> RA(("2-4 recon to architecture to threat-model<br/>each gated by phase-adversary"))
-    RA --> TUNE["0.5 tune-config, optional<br/>ratcheted rule/exclusion loop"]
-    TUNE --> PRE["5 prefilter<br/>semgrep+codeql+sca+secrets, never-silent"]
-    PRE --> INV(("6 investigate<br/>parallel per class, loop-until-dry"))
-    INV --> DED["7 dedupe<br/>refactor-resistant fingerprint"]
-    DED --> CLUS["7.5 cluster<br/>3+ same-class/sink to systemic cluster"]
-    CLUS --> LAD(("8-9 critic to judge to validate, opus refutes"))
-    LAD --> CAL["10 calibrate<br/>risk_score 1-10 + citations"]
-    CAL --> PAT(("11 patch, opus, to validate-fix"))
-    PAT --> VER["12 verify<br/>apply patch to COPY, re-scan"]
-    VER --> GATE["13 findings_gate"]
-    GATE --> RT(("13.5 redteam to redteam-adversary"))
-    RT --> RTR["redteam.py renders redteam-plan.md"]
-    RTR --> REP["14 report<br/>report.sarif + report.md"]
-    REP --> C2["C2 postflight<br/>durable prior_context.json"]
-    C2 --> SS["selfscore<br/>per-run finding-status score"]
+    C1 --> RCEN["route-census<br/>code-derived route inventory, before recon"]
+    RCEN --> REC(("recon"))
+    REC --> RGATE["recall-gate<br/>record recon's census omissions"]
+    RGATE --> T1["T1 graph build<br/>Tier-1 substrate, LLM-free"]
+    T1 --> RA(("architecture to threat_model<br/>each gated by phase-adversary"))
+    RA --> TUNE["tune-config, optional<br/>ratcheted rule/exclusion loop"]
+    TUNE --> PRE["prefilter<br/>semgrep+codeql+sca+secrets, never-silent"]
+    PRE --> INV(("investigate<br/>parallel per class, loop-until-dry"))
+    INV --> GATE1["findings-gate<br/>schema + tool-receipt"]
+    GATE1 --> DED["dedupe<br/>refactor-resistant fingerprint"]
+    DED --> LAD(("critic to judge to validate, opus refutes"))
+    LAD --> TR(("trace, opus<br/>reachability blocker"))
+    TR --> CAL["calibrate<br/>risk_score 1-10 + citations"]
+    CAL --> PAT(("patch to validate-fix, opus"))
+    PAT --> VER["verify<br/>apply patch to COPY, re-scan"]
+    VER --> DN["demote-noise<br/>re-run NOISE_CLASS demotion"]
+    DN --> RT(("redteam to redteam-adversary"))
+    RT --> REP["report<br/>report.sarif + report.md"]
+    REP --> SS["selfscore<br/>per-run finding-status score"]
+    SS --> PRV(("prove, opus, opt-in<br/>the one execution lane"))
+    PRV --> AG["artifact-gate<br/>deterministic self-check"]
+    AG --> AR(("artifact-review, opus"))
+    AR --> AC["artifact-consistency<br/>terminal cross-artifact check"]
+    AC --> C2["postflight<br/>durable prior_context.json — last phase"]
 ```
 *One audit pass, deterministic Python steps as rectangles, agent-driven phases as rounded
-nodes. Grounded in `SKILL.md`'s numbered phase list and the skill `CLAUDE.md` §3 phase-order
-table.*
+nodes. Grounded in `phases.PHASE_TABLE` and `SKILL.md`'s generated phase-table section.*
 
 | # | Phase | Runs | Writes |
 |---|---|---|---|
-| 0 | Preflight | `sec_overlay.preflight` | reports which SAST binaries + CodeQL query packs are installed |
-| 1 | Begin pass | `sec_overlay.state.begin_pass(ws, sha)` | pins the SHA, increments the pass counter |
-| C1 | Context-ingest | `agents/context-ingest.md` (sonnet) → `agents/context-adversary.md` (opus) | `kb/context.json` |
-| T1 | Tier-1 substrate | `sec_overlay.graph build` (no LLM) | `kb/graph.json` v1 — structural index + regex call-edge heuristic + OSV/secrets/crypto facts |
-| 2-4 | Recon → Architecture → Threat model | `agents/recon.md`, `agents/architecture.md`, `agents/threat-model.md` (sonnet); each gated by `agents/phase-adversary.md` (opus) | `kb/scan-profile.json`, `kb/architecture.md` + `kb/entities/`, `kb/THREAT_MODEL.md` |
-| 0.5 | Tune (optional) | `agents/tune-config.md`, ratcheted loop, ≤3 rounds | `kb/tuning/round_k/`, merged `sast_plan`/exclusions |
-| 5 | Prefilter | `sec_overlay.prefilter.run_prefilter` (no LLM) | candidate findings via semgrep+codeql+sca+secrets, run concurrently |
-| 6 | Investigate | `agents/investigate.md` (sonnet, parallel per attack class) | `raw` / `rejected` findings; loops until saturated or capped |
-| 7 | Dedupe | `sec_overlay.dedupe` (no LLM) | merges exact collisions, stamps refactor-resistant fingerprint |
-| 7.5 | Cluster | `sec_overlay.cluster` (no LLM) | groups ≥3 same-class/sink `raw` findings into one systemic cluster |
-| 8-9 | Critic → Judge → Validate | `agents/critic.md` (sonnet) → `agents/judge.md` (cheap, tool-free) → `agents/validate.md` (opus, different family) | `confirmed` / `rejected` |
-| 10 | Calibrate | `sec_overlay.calibrate` (no LLM) | `risk_score` 1-10; also promotes `runtime_dependent` raw findings to `needs-deployment-testing` |
-| 11 | Patch → Validate-fix | `agents/patch.md` (opus) → `agents/validate-fix.md` (opus, architect + pentester personas) | `patch_diff` on a throwaway copy |
-| 12 | Verify | `sec_overlay.verify` (no LLM) | applies the patch to a temp copy, re-scans, sets `fixed`/`static-only`/`not-fixed` |
-| 13 | Gate | `sec_overlay.findings_gate` (no LLM) | schema + tool-receipt validation |
-| 13.5 | Red team | `agents/redteam.md` (sonnet) → `agents/redteam-adversary.md` (opus); `sec_overlay.redteam` (no LLM) | `redteam-plan.md` |
-| 14 | Report | `sec_overlay.report` (no LLM) | `report.sarif` + `report.md` |
-| C2 | Postflight | `sec_overlay.postflight` | durable `kb/prior_context.json` |
-| — | Selfscore | `sec_overlay.selfscore` | per-run finding-status counts persisted to `state.json` `budget.self_score` |
+| 0 | Preflight | `sec_overlay.preflight` (not a table entry) | reports which SAST binaries + CodeQL query packs are installed |
+| 1 | Begin pass | `sec_overlay.state.begin_pass(ws, sha)` (not a table entry) | pins the SHA, increments the pass counter |
+| C1 | Context-ingest | `agents/context-ingest.md` (sonnet) → `agents/context-adversary.md` (opus) (not a table entry) | `kb/context.json` |
+| 1 | route-census | `sec_overlay.route_census` (no LLM) | `kb/route-census.json` — read from source, before recon runs |
+| 2 | recon | `agents/recon.md` (sonnet) → phase gate | `kb/scan-profile.json` |
+| 3 | recall-gate | `sec_overlay.route_control` + `coverage_ledger` (no LLM) | records census routes/catalog classes recon didn't mention; writes `route_summary` back into the profile |
+| T1 | Tier-1 substrate | `sec_overlay.graph build` (no LLM; not a table entry) | `kb/graph.json` v1 — structural index + regex call-edge heuristic + OSV/secrets/crypto facts |
+| 4-6 | architecture → arch-gate → threat_model → tm-gate | `agents/architecture.md`, `agents/threat-model.md` (sonnet); each gated by `sec_overlay.diagram_gate` + `sec_overlay.ste_lint`, then `agents/phase-adversary.md` (opus) | `kb/architecture.md` + `kb/entities/`, `kb/THREAT_MODEL.md`, `kb/gates/{arch,tm}-gate.json` |
+| 0.5 | Tune (optional) | `agents/tune-config.md`, ratcheted loop, ≤3 rounds (not a table entry) | `kb/tuning/round_k/`, merged `sast_plan`/exclusions |
+| 8 | prefilter | `sec_overlay.prefilter.run_prefilter` (no LLM) | candidate findings via semgrep+codeql+sca+secrets, run concurrently |
+| 9 | investigate | `agents/investigate.md` (sonnet, parallel per attack class) | `raw` / `rejected` findings; loops until saturated or capped |
+| 10 | findings-gate | `sec_overlay.findings_gate` (no LLM) | schema + two-tier tool-receipt validation, right after investigate |
+| 11 | dedupe | `sec_overlay.dedupe` (no LLM) | merges exact collisions, stamps refactor-resistant fingerprint |
+| — | cluster (not a table entry, runs here per `SKILL.md`) | `sec_overlay.cluster` (no LLM) | groups ≥3 same-class/sink `raw` findings into one systemic cluster |
+| 12-14 | critic → judge → validate | `agents/critic.md` (sonnet) → `agents/judge.md` (cheap, tool-free) → `agents/validate.md` (opus, different family) | `confirmed` / `rejected` |
+| 15 | trace | `agents/trace.md` (opus) | `reachability` verdict (`{reachable, blocker, chain}`) |
+| 16 | calibrate | `sec_overlay.calibrate` (no LLM) | `risk_score` 1-10; caps `external-boundary` leads at 3 |
+| 17-18 | patch → validate-fix | `agents/patch.md` (opus) → `agents/validate-fix.md` (opus, architect + pentester personas) | `patch_diff` on a throwaway copy; `kb/gates/validate-fix.json` |
+| 19 | verify | `sec_overlay.verify` (no LLM) | applies the patch to a temp copy, re-scans, sets `fixed`/`static-only`/`not-fixed` |
+| 20 | demote-noise | `sec_overlay.partition.demote_noise` (no LLM) | re-applies the NOISE_CLASS→`informational` demotion over anything that reached candidate status later in the run |
+| 21 | redteam | `agents/redteam.md` (sonnet) → `agents/redteam-adversary.md` (opus); `sec_overlay.redteam` (no LLM) | `redteam-plan.md` |
+| 22 | report | `sec_overlay.report` (no LLM) | `report.sarif` + `report.md` |
+| 23 | selfscore | `sec_overlay.selfscore` (no LLM) | per-run finding-status counts persisted to `state.json` `budget.self_score` |
+| 24 | prove | `agents/prove.md` (opus, opt-in) | `kb/prove.json`; only runs when `scan_options.prove_findings` is true |
+| 25 | artifact-gate | `sec_overlay.artifact_gate` (no LLM) | deterministic self-check of the rendered report/findings/red-team plan |
+| 26 | artifact-review | `agents/artifact-review.md` (opus, different family) | `kb/gates/artifact-review.json` — final adversary judgment on whether the report tells the truth |
+| 27 | artifact-consistency | `sec_overlay.artifact_consistency` (no LLM) | terminal cross-artifact reconciliation before AUDIT COMPLETE |
+| 28 | postflight | `sec_overlay.postflight` (no LLM) | durable `kb/prior_context.json` — the true last phase in the table |
+
+**`factcheck` was deleted entirely** (REQ-42): the phase name, its CLI module, its agent
+prompt, and the `fact-checked` verification enum value are all gone — it was implemented but
+never wired into a run, so nothing ever produced that value. See
+[developing the skill](developing-the-skill.md) for why this forced a major version bump.
 
 See [running an audit](running-an-audit.md) for the exact commands and the quick deterministic
-smoke-scan alternative (phases 0/5/14 only, no agents).
+smoke-scan alternative (`prefilter`/`report` only, no agents).
 
 ## The phase-adversary gate
 
-The false-positive ladder (§8-9 above) already battle-tests investigate findings. The
-**earlier** analysis/context phases — recon, architecture, threat-model, and C1 context — each
-end with a reusable phase gate so their output is trusted only after an independent challenge:
+The false-positive ladder (critic → judge → validate above) already battle-tests investigate
+findings. The **earlier** analysis/context phases — recon, architecture, threat-model, and C1
+context — each end with a reusable phase gate so their output is trusted only after an
+independent challenge. `architecture` and `threat_model` additionally pass through a
+deterministic `arch-gate`/`tm-gate` first: `sec_overlay.diagram_gate` enforces the Mermaid
+node/participant/edge-label caps from `references/mermaid-caps.md`, and `sec_overlay.ste_lint`
+enforces the checkable structural subset of ASD-STE100 prose (sentence length, no semicolons,
+paragraph size) on `arc42.md`/`threat-model.md`; either violation halts the pipeline before the
+opus adversary ever runs. Only output that survives *both* the deterministic gate and the
+adversary flows forward:
 
 ```
 phase output -> deterministic pre-check (sec_overlay.phase_gate.run_phase_checks)
@@ -149,10 +182,12 @@ it only produces leads to verify against code.
   MISSING/BYPASSABLE controls become `CTL-####` candidate findings (evidence
   `llm-claimed:doc-claim`, so a doc claim alone cannot confirm them). `agents/context-adversary.md`
   (opus) then pressure-checks that verification before any later phase consumes it.
-- **C2 postflight** runs after report: `sec_overlay.postflight` distills settled results into
-  the durable `kb/prior_context.json` (confirmed findings, rejected-with-rationale so they are
-  not re-litigated, drift-keyed by SHA) for the *next* scan's C1 to read as higher-trust prior
-  context (still drift-checked).
+- **C2 postflight** is the true final phase in `PHASE_TABLE`, dispatched after
+  `artifact-review` (not directly after `report` — `selfscore`, the opt-in `prove` lane, and
+  the three artifact self-checks all run in between): `sec_overlay.postflight` distills settled
+  results into the durable `kb/prior_context.json` (confirmed findings, rejected-with-rationale
+  so they are not re-litigated, drift-keyed by SHA) for the *next* scan's C1 to read as
+  higher-trust prior context (still drift-checked).
 
 ## Cross-repo correlation is a separate capability
 

@@ -52,10 +52,10 @@ flowchart TB
             R1["prompt-constants, attack-classes,<br/>schemas, crypto policy, hunting guides"]
         end
         subgraph AG["agents/ - the JUDGEMENT"]
-            A1["~30 LLM prompts:<br/>producer (sonnet) vs adversary (opus)"]
+            A1["~40 LLM prompts:<br/>producer (sonnet) vs adversary (opus)"]
         end
         subgraph HP["helpers/ - the MACHINE"]
-            H1["~70 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
+            H1["~100 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
         end
     end
     TARGET[("target codebase<br/>read-only")]
@@ -100,10 +100,11 @@ These hold everywhere and are enforced in code where possible, in prompts otherw
    `<target>/.sec-overlay/<slug>/` directory (override the base with `$SEC_OVERLAY_HOME`, or the
    whole workspace with `--workspace`). A seeded `.sec-overlay/.gitignore` keeps output out of
    the reviewed repo's git tree.
-3. **Tool-receipt gate.** A finding reaches `confirmed`/`fixed` only with at least one
-   mechanical receipt (`semgrep` / `codeql` / `ast-grep` / `tree-sitter` / `ripgrep` /
-   `structural-index` / `secrets` / `sca`). LLM reasoning is namespaced `llm-claimed:` and can
-   corroborate but **never** confirm. Enforced in
+3. **Tool-receipt gate.** A finding reaches `confirmed`/`fixed` only with a **Tier-1** mechanical
+   receipt (`semgrep` / `codeql` / `sca` / `secrets`) or the separate `prove` execution receipt —
+   a Tier-2 receipt (`ripgrep` / `structural-index` / `ast-grep` / `tree-sitter` /
+   `dependency-catalog`) locates code but never confirms alone. LLM reasoning is namespaced
+   `llm-claimed:` and can corroborate but **never** confirm. Enforced in
    [`helpers/sec_overlay/findings_gate.py`](helpers.md#the-tool-receipt-gate).
 4. **Signal over noise.** Every load-bearing claim made by a Sonnet "producer" is attacked by
    an Opus "adversary" on a different model family; a false-positive ladder plus a
@@ -116,19 +117,21 @@ Everything a security engineer receives lands in `<target>/.sec-overlay/<slug>/`
 
 | Path | Contents |
 |---|---|
-| `kb/scan-profile.json` | recon output: languages, frameworks, `attack_surface`, `sast_plan`, `subsystems` |
+| `kb/route-census.json` | code-derived route inventory, written before recon runs |
+| `kb/scan-profile.json` | recon output: languages, frameworks, `attack_surface`, `sast_plan`, `subsystems`, `route_summary` |
 | `kb/architecture.md` + `kb/entities/*.md` | components, data flows, trust boundaries |
 | `kb/THREAT_MODEL.md` | attacker profiles + the prioritized hunt list |
 | `kb/context.json` | the repo's own docs distilled, trust-tagged (`untrusted-doc` / `prior-scan`) |
 | `kb/graph.json` | the Tier-1/Tier-2 code graph (reachability substrate) |
-| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase |
+| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase, including `arch-gate`, `tm-gate`, `recall-gate`, `validate-fix`, `artifact-gate`, `artifact-review`, `artifact-consistency` |
 | `kb/coverage-ledger.json` | surface-completeness ledger; blocks `complete` while gaps remain |
 | `kb/discovery-ledger.json` | investigate saturation state (waves, `terminal_reason`) |
-| `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS, patch diff |
+| `kb/prove.json` | opt-in `prove` phase's execution receipts, when `scan_options.prove_findings` is true |
+| `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS v4.0, patch diff |
 | `report.sarif` | SARIF 2.1.0 (confirmed/fixed) |
 | `report.md` | human report, built from `finding-template.md`; links `redteam-plan.md` |
 | `redteam-plan.md` | manual runtime test plan — the engineer's follow-up |
-| `state.json` | campaign state (pass number, pinned SHA, stages) |
+| `state.json` | campaign state (pass number, pinned SHA, stages, self-score) |
 | `MEMORY.md`, `learnings/` | durable per-repo memory across runs |
 
 This layout is the `Workspace` dataclass's contract (`helpers/sec_overlay/workspace.py`,
