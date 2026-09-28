@@ -20,8 +20,9 @@ from the repository root. This is the Claude Code CLI's own manifest validator �
 correctness (valid JSON, required fields present, a marketplace entry existing for each plugin
 directory). The root [`README.md`](/README.md) lists this as the first Development command,
 and the root [`CLAUDE.md`](/CLAUDE.md) Desired outcome states plainly: "Each plugin passes
-`claude plugin validate .` before release." As of this writing the repository's Status section
-records that "plugin and marketplace manifests validate."
+`claude plugin validate .` before release." The root README no longer carries a status section
+recording shipped state — `CHANGELOG.md` (root and per-plugin) and each plugin's `version` are
+the source of truth for what has actually shipped.
 
 CodeRabbit's `**/.claude-plugin/*.json` path instruction (see
 [code review](../governance/code-review.md)) performs a lighter-weight version of the same
@@ -55,11 +56,15 @@ commit as the shipping-file change. `marketplace.json` never needs an edit for t
 not pin plugin versions.
 
 As a concrete example of the rule being applied: the plugin's `plugin.json` currently reads
-`"version": "0.2.0"`. The root README's Status section explains the jump from the prior
-`0.1.1` governance release: "Plugin versions bump automatically on shipping-file changes
-(Conventional-Commits semver); this review-improvements release ships sec-overlay as 0.2.0,
-above the 0.1.1 governance release on `main`" — a `feat`-driven minor bump accumulated across
-that branch's shipping-file changes.
+`"version": "2.8.27"`, reached through many small, mostly-patch bumps recorded one line per
+release in `plugins/sec-overlay/CHANGELOG.md`. The one **major** bump in that history — 1.x to
+2.0.0 — was not a feature addition but a breaking removal: the defect-repair work found the
+`factcheck` phase implemented, documented, and completely unreachable (no phase row ever ran
+it), and deleted its module, its prompt, and its `fact-checked` verification value outright
+rather than finishing an unreachable capability. Because those four surfaces were all reachable
+from outside the plugin (a stage-ledger key, a CLI-callable module, a schema enum value), the
+removal crossed the plugin's public contract and warranted a major bump under this same rule —
+see [`docs/decisions/2026-09-01-sec-overlay-major-version-bump.md`](/docs/decisions/2026-09-01-sec-overlay-major-version-bump.md).
 
 ## Where this rule is (and is not) enforced — important nuance
 

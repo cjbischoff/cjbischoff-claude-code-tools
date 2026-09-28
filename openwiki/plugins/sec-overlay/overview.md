@@ -27,7 +27,7 @@ that govern every phase:
    later phase consumes, is battle-tested by an independent adversary before its output is
    handed forward. Findings use the false-positive ladder described in
    [agents](agents.md#the-pipeline-as-prompts) (critic + adversarial-validate); analysis/context
-   phases use the [phase-adversary gate](pipeline.md#the-phase-adversary-gate).
+   phases use the [phase-adversary and recall-adversary gates](pipeline.md#the-phase-adversary-and-recall-adversary-gates).
 2. **Create accurate context.** Repo docs, prior scans, recon, architecture, and threat model
    are verified against code and battle-tested before they drive anything. Inaccurate context
    is a defect caught early, never propagated (see
@@ -35,12 +35,15 @@ that govern every phase:
 3. **Signal over noise.** Deterministic-first gating, [tool-receipt-only confirmation](helpers.md#the-tool-receipt-gate),
    and a high-confidence bar for the runtime plan keep false positives out of what a human acts on.
 4. **Thoroughly review a codebase.** Coverage is pursued until a phase can defend it to its
-   adversary; gaps are logged, never silently dropped. Two concrete mechanisms back this: the
+   adversary; gaps are logged, never silently dropped. Three concrete mechanisms back this: the
    investigate saturation loop (waves stop only at `K=2` consecutive no-new-fingerprint rounds
-   or a hard `max_waves=5` cap — see [pipeline](pipeline.md#the-full-phase-order)), and
+   or a hard `max_waves=5` cap — see [pipeline](pipeline.md#the-full-phase-order)),
    `partition.py`'s `unrouted_candidate_classes` safety net, which catches any attack class
    recon didn't explicitly plan for and routes it to a general-triage agent rather than
-   dropping it (see [helpers](helpers.md#module-map-grouped-by-job)).
+   dropping it (see [helpers](helpers.md#module-map-grouped-by-job)), and the code-derived
+   `route_census.py` inventory, which the `recall-gate` phase and `recall-adversary.md` compare
+   against recon's own `attack_surface` so an unnamed route or catalog class becomes a logged
+   coverage gap instead of a silent omission.
 
 ## Three folders, three jobs
 
@@ -49,13 +52,13 @@ flowchart TB
     subgraph OVERLAY["skills/sec-overlay/"]
         SKILL["SKILL.md<br/>orchestration playbook"]
         subgraph REF["references/ - the RULE BOOK"]
-            R1["prompt-constants, attack-classes,<br/>schemas, crypto policy, hunting guides"]
+            R1["prompt-constants (16 blocks), attack-classes,<br/>schemas, crypto policy, hunting guides"]
         end
         subgraph AG["agents/ - the JUDGEMENT"]
-            A1["~30 LLM prompts:<br/>producer (sonnet) vs adversary (opus)"]
+            A1["27 LLM prompts:<br/>producer (sonnet) vs adversary (opus)"]
         end
         subgraph HP["helpers/ - the MACHINE"]
-            H1["~70 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
+            H1["~100 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
         end
     end
     TARGET[("target codebase<br/>read-only")]
@@ -102,8 +105,8 @@ These hold everywhere and are enforced in code where possible, in prompts otherw
    the reviewed repo's git tree.
 3. **Tool-receipt gate.** A finding reaches `confirmed`/`fixed` only with at least one
    mechanical receipt (`semgrep` / `codeql` / `ast-grep` / `tree-sitter` / `ripgrep` /
-   `structural-index` / `secrets` / `sca`). LLM reasoning is namespaced `llm-claimed:` and can
-   corroborate but **never** confirm. Enforced in
+   `structural-index` / `secrets` / `sca` / `dependency-catalog`). LLM reasoning is namespaced
+   `llm-claimed:` and can corroborate but **never** confirm. Enforced in
    [`helpers/sec_overlay/findings_gate.py`](helpers.md#the-tool-receipt-gate).
 4. **Signal over noise.** Every load-bearing claim made by a Sonnet "producer" is attacked by
    an Opus "adversary" on a different model family; a false-positive ladder plus a
@@ -117,14 +120,16 @@ Everything a security engineer receives lands in `<target>/.sec-overlay/<slug>/`
 | Path | Contents |
 |---|---|
 | `kb/scan-profile.json` | recon output: languages, frameworks, `attack_surface`, `sast_plan`, `subsystems` |
-| `kb/architecture.md` + `kb/entities/*.md` | components, data flows, trust boundaries |
-| `kb/THREAT_MODEL.md` | attacker profiles + the prioritized hunt list |
+| `kb/route-census.json` | code-derived route inventory (`route_census.py`), independent of recon's own output |
+| `architecture/` (`arc42.md`, `container-diagram.mmd`, …) | C4 diagrams + arc42 building blocks — the canonical structural source (superseded the old flat `kb/architecture.md`) |
+| `threat-model/` (`threat-model.md`, `dfd.mmd`, `attack-sequences/`) | attacker profiles, derived DFD, and the prioritized hunt list (superseded the old flat `kb/THREAT_MODEL.md`) |
 | `kb/context.json` | the repo's own docs distilled, trust-tagged (`untrusted-doc` / `prior-scan`) |
 | `kb/graph.json` | the Tier-1/Tier-2 code graph (reachability substrate) |
-| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase |
+| `kb/gates/<phase>.json` | adversary/deterministic verdict audit trail per gated phase (`arch-gate`, `tm-gate`, `recall-gate`, `validate-fix`, `artifact-gate`, `artifact-review`, `artifact-consistency`, …) |
 | `kb/coverage-ledger.json` | surface-completeness ledger; blocks `complete` while gaps remain |
 | `kb/discovery-ledger.json` | investigate saturation state (waves, `terminal_reason`) |
-| `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS, patch diff |
+| `kb/prove.json` | opt-in proof-by-execution results (`prove` phase; absent unless `scan_options.prove_findings` is set) |
+| `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS v4.0, patch diff |
 | `report.sarif` | SARIF 2.1.0 (confirmed/fixed) |
 | `report.md` | human report, built from `finding-template.md`; links `redteam-plan.md` |
 | `redteam-plan.md` | manual runtime test plan — the engineer's follow-up |
@@ -132,7 +137,7 @@ Everything a security engineer receives lands in `<target>/.sec-overlay/<slug>/`
 | `MEMORY.md`, `learnings/` | durable per-repo memory across runs |
 
 This layout is the `Workspace` dataclass's contract (`helpers/sec_overlay/workspace.py`,
-described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §5.
+described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §4.
 
 ## Related pages
 

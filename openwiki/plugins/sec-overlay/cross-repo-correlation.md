@@ -14,8 +14,8 @@ service repo enforcing them, an infra repo wiring the entitlements — a per-rep
 deterministically, with **no source reads and no LLM** for the joins themselves.
 
 **This is a separate, opt-in, multi-repo capability, not a stage in the single-repo phase
-order.** `SKILL.md`'s numbered phase list (0 through 14, plus C1/C2) contains no "correlate"
-step — correlation runs *after* each member repo already has its own independent
+order.** `phases.py`'s `PHASE_TABLE` (28 entries, see [pipeline](pipeline.md)) contains no
+"correlate" row — correlation runs *after* each member repo already has its own independent
 `.sec-overlay/<slug>/` workspace from the [pipeline](pipeline.md) above. It was designed for a
 real four-repo campaign (`docs/plans/2026-08-07-cross-repo-correlation-design.md` records the
 motivating case: control→enforcement handoffs and shared-dependency CVEs that were, before this
