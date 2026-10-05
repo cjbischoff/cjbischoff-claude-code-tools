@@ -21,10 +21,19 @@ uv run ty check                                    # static types
 uv run python -m sec_overlay.preflight             # tool availability
 ```
 
-The suite is 81 pytest files, 595 tests (helpers/README.md's Test coverage & contracts
-section). Two failures on a clean checkout are environmental, not code defects — see
+The suite is 95 pytest files, 828 tests (helpers/README.md's tree listing). One failure on a
+clean checkout is environmental, not a code defect — see
 [running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run) for exactly
-which tests and why.
+which test and why.
+
+`.github/workflows/sec-overlay-tests.yml` runs this suite plus an offline detection-regression
+gate on every pull request: it smoke-scans the committed `fixtures/vulnerable_repo` into a
+workspace, then asserts the seed corpus's `locked` entries stay detected in `--grade-mode
+detection` (a deterministic scan never reaches `confirmed`, so CI grades whether a Tier-1 receipt
+*located* each ground-truth finding, not the full confirmation gate — see
+[the bench harness](#the-bench-harness-dev-only-not-part-of-an-audit) below). Workflow-file
+changes follow the same SHA-pinning rule as the rest of this repository's Actions — see
+[security automation](../../operations/security-automation.md#sha-pinned-actions).
 
 ## The stdlib-only rule
 
@@ -54,22 +63,31 @@ structure — they are how prompt↔code drift gets caught before it reaches a r
 ## The bench harness (dev-only, not part of an audit)
 
 `helpers/bench/` measures and locks detection quality; it is never invoked during a real scan.
-A labelled corpus (positives to find, negatives to stay silent on; `corpus_seed/` is seeded
-from real findings and is gitignored — see
-[running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run)) is scanned
-via a swappable adapter, judged, and scored for precision/recall by source and class plus an
-FP rate. Its **regression gate**: a `locked` finding that stops being detected fails the run.
+A labelled corpus (positives to find, negatives to stay silent on) is scanned via a swappable
+adapter, judged, and scored for precision/recall by source and class plus an FP rate. Its
+**regression gate**: a `locked` finding that stops being detected fails the run.
+`corpus_seed/*.json` ships **committed** — public entries only (advisories pinned to a commit,
+dep-CVE lockfiles, synthetic fixtures under `helpers/fixtures/`) — so the seed-corpus tests run in
+CI as well as locally; never add a confirmed vulnerability from private code to it.
 
 ```bash
 python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --workspaces <dir>
+# offline detection-regression gate (what .github/workflows/sec-overlay-tests.yml runs):
+python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench \
+  --workspaces <dir> --grade-mode detection --only-local
 ```
 
-## The semgrep rules submodule
+## The vendored semgrep ruleset
 
-`helpers/rules/semgrep/` is a git submodule. Clone this repository with `--recurse-submodules`,
-or run `git submodule update --init --recursive` afterward — see
+`helpers/rules/semgrep/` is a **gitignored, shallow-cloned directory**, not a git submodule —
+this repository has no `.gitmodules` entry. Seed it with
+`git clone --depth 1 https://github.com/semgrep/semgrep-rules helpers/rules/semgrep` (the exact
+command `preflight.py` prints when the directory is missing) — see
 [running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run) for the test
-that fails without it.
+that fails without it. Never write a first-party rule under this directory: `preflight.py`
+recreates it with `git clone --depth 1`, which deletes anything placed there. First-party rules
+instead live in the tracked `helpers/rules/absence/` pack (pairing a `pattern` for a dangerous
+construction with a `pattern-not` for its safe option).
 
 ## The folder-README-tracks-code rule, inside this skill
 
@@ -80,10 +98,10 @@ that has a *tracked* `README.md` — no skill-specific exception. Inside
 
 - [`agents/README.md`](/plugins/sec-overlay/skills/sec-overlay/agents/README.md) — every LLM
   prompt: role, model tier, inputs/outputs, the gate ladder, the `classes/` extensions.
-- [`helpers/README.md`](/plugins/sec-overlay/skills/sec-overlay/helpers/README.md) — the ~70
+- [`helpers/README.md`](/plugins/sec-overlay/skills/sec-overlay/helpers/README.md) — the ~90
   Python modules grouped by job, the CLI-callable list, the finding schema contract.
 - [`references/README.md`](/plugins/sec-overlay/skills/sec-overlay/references/README.md) — the
-  rule book: the 12 prompt-constants blocks, schemas, crypto YAMLs.
+  rule book: the 16 prompt-constants blocks, schemas, crypto YAMLs.
 - Plus the nested folder READMEs one level deeper:
   `helpers/sec_overlay/README.md`, `helpers/tests/README.md`, `helpers/bench/README.md`,
   `helpers/rules/README.md`, `references/asvs/README.md`, `references/codeguard/README.md`,

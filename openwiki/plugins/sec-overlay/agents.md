@@ -51,18 +51,21 @@ Read top to bottom — this is the order the orchestrator spawns them (see
 | C1 context | `context-ingest.md` | sonnet | discovers repo docs/prior scans, verifies claimed controls against code |
 | C1 context | `context-adversary.md` | opus | pressure-checks that verification |
 | Analysis | `recon.md` | sonnet | surveys the repo → `kb/scan-profile.json` |
-| Analysis | `architecture.md` | sonnet | components/data-flows/trust-boundaries → `kb/architecture.md` |
-| Analysis | `threat-model.md` | sonnet | attacker profiles + hunt list → `kb/THREAT_MODEL.md` |
+| Analysis gate | `recall-adversary.md` | opus, fresh context | recon-only extra adversary: reports *omitted* routes/classes rather than only weakening existing claims (see [pipeline](pipeline.md#the-phase-adversary-gate)) |
+| Analysis | `architecture.md` | sonnet | C4 + arc42 tree (`architecture/arc42.md`, `container-diagram.mmd`) |
+| Analysis | `threat-model.md` | sonnet | STRIDE findings + derived DFD (`threat-model/threat-model.md`, `dfd.mmd`) |
 | Analysis (each of the three) | `phase-adversary.md` | opus | re-derives each claim from code; verdicts → `kb/gates/<phase>.json` |
 | Investigate | `investigate.md` + `classes/<cls>.md` | sonnet, parallel per class | walks the [gate ladder](#the-investigate-gate-ladder) → `raw`/`rejected` |
 | FP ladder | `critic.md` | sonnet | production-viability filter (reject debug-only/dead/test-fixture code); demotes on doubt, never hard-rejects |
 | FP ladder | `judge.md` | cheap, no tools | severity-inflation adjudicator; uphold / downgrade / flag |
 | FP ladder | `validate.md` | opus, different family | assumes every finding is wrong and tries to refute it; survival = `confirmed` |
+| Red team | `trace.md` | opus | backward-traces each confirmed sink to an entry point; sets `reachability` + blocker |
 | Patch | `patch.md` | opus | proposes a minimal diff into `patch_diff`, applied only to a throwaway copy |
 | Patch | `validate-fix.md` | opus, two personas | security-architect + penetration-tester independently check the patch; `no_new_vulnerabilities` regression is non-waivable |
-| Red team | `trace.md` | opus | backward-traces each confirmed sink to an entry point; sets `reachability` |
 | Red team | `redteam.md` | sonnet | splits confirmed findings into `static-settled` vs `needs-runtime`; writes `runtime_test` |
 | Red team | `redteam-adversary.md` | opus | strips settleable-from-source or payload-mismatched items |
+| Proof (opt-in) | `prove.md` | opus | only when `scan_options.prove_findings` is true; the one phase that executes target-derived code, entirely out-of-tree |
+| Artifact review | `artifact-review.md` | opus, different family | final claim-vs-evidence adversary over the *rendered* `report.md`/`report.sarif`; verdict → `kb/gates/artifact-review.json` — never deletes a tool-receipt-backed finding |
 | Postflight | `postflight.md` | sonnet | durable security-profile notes to `kb/prior_context.json` |
 
 **`judge` and `validate` must never run concurrently against the same finding file** — the last
@@ -73,11 +76,20 @@ judge, wait for its writes to persist, then dispatch validate), not by code.
 
 | Prompt | Role |
 |---|---|
-| `factcheck.md` | fresh-context re-verification of a finding's citations/scope/severity against source (catches drift) |
 | `variant-hunt.md` | amplifies one confirmed finding into its family: enqueues sibling call sites as new candidates |
 | `bugchain.md` | looks across the confirmed set for chains — individually low findings that compose into a critical |
 | `tune-config.md` | optional ratcheted loop (≤3 rounds): authors targeted semgrep rules for uncovered classes |
 | `correlate-combiner.md` + `cross-repo-adversary.md` | cross-repo: see [Cross-repo correlation](cross-repo-correlation.md) — these gate correlation *verdicts*, not per-repo findings, and carry the same producer/adversary pattern applied to a joined multi-repo artifact rather than a single finding |
+
+The prior `factcheck.md` agent was **deleted** (a breaking, major-version change — see
+`docs/decisions/2026-09-01-sec-overlay-major-version-bump.md`): its fresh-context
+re-verification role is superseded by the phase-adversary gates above plus the new
+`artifact-review` adversary, which checks the final rendered report rather than one finding in
+isolation.
+
+**A separate, lighter prompt family** — `review-file.md`, `review-plan.md`, `review-filter.md` —
+drives the diff-scoped [review mode](review-mode.md) instead of this audit phase order; see that
+page for their roles.
 
 ## The investigate gate ladder
 
@@ -106,11 +118,11 @@ the agent does not re-raise a known false positive.
 
 ## `classes/` — CWE-class extension prompts
 
-Eleven small prompts under
+Thirteen small prompts under
 [`agents/classes/`](/plugins/sec-overlay/skills/sec-overlay/agents/classes/) — `injection`,
-`ssrf`, `authz`, `authn`, `crypto`, `config`, `business-logic`, `prompt-injection`,
-`context-bleed`, `excessive-agency`, `resource` — each appended to `investigate.md` /
-`patch.md` for that class, supplying:
+`ssrf`, `ssti`, `authz`, `authn`, `crypto`, `config`, `business-logic`, `prompt-injection`,
+`context-bleed`, `excessive-agency`, `resource`, `expr-eval-rce` — each appended to
+`investigate.md` / `patch.md` for that class, supplying:
 
 1. **Canonical fix shape** (e.g. injection → parameterized query; crypto → AEAD or slow KDF).
 2. **Discrimination boundary** — an explicit IS/IS-NOT so a finding routes to exactly one class
@@ -163,6 +175,8 @@ repo's [doc-update-guard hook](../../governance/hooks-and-commits.md).
 - [Pipeline](pipeline.md) — where each phase above fits in the full audit sequence.
 - [Helpers](helpers.md) — the deterministic modules that enforce the tool-receipt gate these
   prompts cannot bypass.
-- [References](references.md) — `prompt-constants.md`'s twelve blocks every prompt imports.
+- [References](references.md) — `prompt-constants.md`'s sixteen blocks every prompt imports.
 - [Cross-repo correlation](cross-repo-correlation.md) — `correlate-combiner.md` and
   `cross-repo-adversary.md` in detail.
+- [Review mode](review-mode.md) — the separate `review-file.md`/`review-plan.md`/
+  `review-filter.md` prompt family for diff-scoped pull-request review.

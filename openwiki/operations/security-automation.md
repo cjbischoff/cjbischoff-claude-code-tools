@@ -80,8 +80,12 @@ SHA with the human-readable version in a trailing comment, e.g.:
 uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 ```
 
-This appears in both `dependency-review.yml` and `.github/workflows/openwiki-update.yml` (see
-[OpenWiki refresh](openwiki-refresh.md)). Pinning to a SHA rather than a mutable tag (`@v7`)
+This appears in `dependency-review.yml`, `.github/workflows/openwiki-update.yml` (see
+[OpenWiki refresh](openwiki-refresh.md)), and `.github/workflows/sec-overlay-tests.yml` (which
+pins `actions/checkout` and installs `semgrep`/`uv` via package managers rather than a
+third-party Action, to keep the SHA-pinning surface small — see
+[developing the sec-overlay skill](../plugins/sec-overlay/developing-the-skill.md)). Pinning to
+a SHA rather than a mutable tag (`@v7`)
 means a compromised or force-pushed tag on the upstream Action cannot silently change what runs
 in this repository's CI — the only way to update is a new commit that changes the SHA, which
 Dependabot's `github-actions` stream (above) proposes automatically. CodeRabbit's

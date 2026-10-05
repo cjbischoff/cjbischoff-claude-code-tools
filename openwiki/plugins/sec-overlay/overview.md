@@ -52,10 +52,10 @@ flowchart TB
             R1["prompt-constants, attack-classes,<br/>schemas, crypto policy, hunting guides"]
         end
         subgraph AG["agents/ - the JUDGEMENT"]
-            A1["~30 LLM prompts:<br/>producer (sonnet) vs adversary (opus)"]
+            A1["~40 LLM prompts:<br/>producer (sonnet) vs adversary (opus)"]
         end
         subgraph HP["helpers/ - the MACHINE"]
-            H1["~70 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
+            H1["~95 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
         end
     end
     TARGET[("target codebase<br/>read-only")]
@@ -95,7 +95,11 @@ These hold everywhere and are enforced in code where possible, in prompts otherw
    applied to a *throwaway copy* to verify them (see `verify.py` in [helpers](helpers.md))
    — the repo's own files are never run or edited. See
    [running an audit](running-an-audit.md#the-do-not-execute-the-target-invariant) for how this
-   holds end to end, including the red-team plan.
+   holds end to end, including the red-team plan. The one deliberate exception is the opt-in
+   `prove` phase (`agents/prove.md`), which only runs when `scan_options.prove_findings` is set
+   (absent by default) and builds/runs target-derived code entirely out of tree under
+   `ws.repro`, never touching the target's own working copy — see
+   [pipeline](pipeline.md#the-full-phase-order).
 2. **Writes only its own sidecar.** All output lives in an in-repo, self-ignoring
    `<target>/.sec-overlay/<slug>/` directory (override the base with `$SEC_OVERLAY_HOME`, or the
    whole workspace with `--workspace`). A seeded `.sec-overlay/.gitignore` keeps output out of
@@ -117,8 +121,9 @@ Everything a security engineer receives lands in `<target>/.sec-overlay/<slug>/`
 | Path | Contents |
 |---|---|
 | `kb/scan-profile.json` | recon output: languages, frameworks, `attack_surface`, `sast_plan`, `subsystems` |
-| `kb/architecture.md` + `kb/entities/*.md` | components, data flows, trust boundaries |
-| `kb/THREAT_MODEL.md` | attacker profiles + the prioritized hunt list |
+| `kb/route-census.json` | code-derived route inventory (`route_census.py`), independent of recon's own output |
+| `architecture/arc42.md` + `architecture/container-diagram.mmd` (+ component diagrams) | C4 + arc42 standards-based architecture tree, gated by `arch-gate` |
+| `threat-model/threat-model.md` + `threat-model/dfd.mmd` + `attack-sequences/` | STRIDE findings + a derived data-flow diagram, gated by `tm-gate` |
 | `kb/context.json` | the repo's own docs distilled, trust-tagged (`untrusted-doc` / `prior-scan`) |
 | `kb/graph.json` | the Tier-1/Tier-2 code graph (reachability substrate) |
 | `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase |
@@ -141,5 +146,6 @@ described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §5.
 - [Helpers](helpers.md) — the Python core, module map, and CLI-callable list.
 - [References](references.md) — the rule book: prompt constants, schemas, crypto policy.
 - [Running an audit](running-an-audit.md) — the smoke scan vs. the full agentic audit.
+- [Review mode](review-mode.md) — the diff-scoped pull-request track and its GitHub Action.
 - [Developing the skill](developing-the-skill.md) — tests, linting, and the dev-only bench harness.
 - [Cross-repo correlation](cross-repo-correlation.md) — the optional multi-repo capability.
