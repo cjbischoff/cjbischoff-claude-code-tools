@@ -47,6 +47,16 @@ to this repository's governance:
 - **Requires the `ANTHROPIC_API_KEY` repository secret.** Checked explicitly before anything
   else runs, so a missing secret fails with a clear message instead of a cryptic downstream
   error.
+- **Materializes bounded change evidence before invoking OpenWiki.** `.openwikiignore` leaves
+  shell execute restricted to a handful of commands during a run (`pwd`, `git rev-parse HEAD`,
+  deleting `openwiki/_plan.md`), so the agent cannot run `git log`/`git diff` itself. The
+  "Collect bounded change evidence" step runs `scripts/openwiki-history-digest.sh` first, which
+  reads `openwiki/.last-update.json`'s recorded `gitHead`, then writes `.openwiki-history.md`:
+  the non-merge commit list (newest first, truncated past 400) and the net changed-file list
+  (`git diff --name-status`, excluding `openwiki/` itself) between that baseline and `HEAD`. The
+  update prompt reads this file with `read_file` in place of history it cannot query live;
+  `.gitignore` keeps `.openwiki-history.md` itself out of version control. A local `--update`
+  run must run this script manually first for the same reason.
 - **Never pushes to `main` directly.** The job opens a **pull request** with its changes,
   consistent with the [GitHub ruleset](../governance/hooks-and-commits.md#the-github-ruleset-on-main)
   that requires a PR for every change to `main` — even an automated one.

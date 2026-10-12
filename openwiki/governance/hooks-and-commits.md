@@ -110,10 +110,13 @@ git config core.hooksPath skills/sec-overlay/.githooks
 
 Two details mark it as a legacy artifact rather than a second required gate. First, its
 comments describe scope in terms of "a go/ commit from the parallel workstream" — there is no
-`go/` directory or Go-language workstream anywhere in the current repository; the root
-`README.md`'s Status log records a change that "removed stale Go-rewrite prose... from the
-live docs," consistent with this hook predating a since-completed migration off a parallel
-Go-based layout. Second, running `core.hooksPath` to `skills/sec-overlay/.githooks` would
+`go/` directory or Go-language workstream anywhere in the current repository; `plugins/README.md`
+records a change that "stale Go-rewrite prose [was] removed from the live docs," consistent
+with this hook predating a since-completed migration off a parallel Go-based layout. (The root
+`README.md` no longer carries a status log at all — `CHANGELOG.md` and each plugin's own
+`version`/`CHANGELOG.md` are what record what shipped; see
+[versioning](../marketplace/validation-and-versioning.md).) Second, running `core.hooksPath` to
+`skills/sec-overlay/.githooks` would
 **replace**, not add to, the hooks path prek manages at the repository root — installing it as
 documented would silently disable the `doc-update-guard`'s `main`-branch block and its
 `CHANGELOG.md`/`README.md` requirement for every commit, not just ones touching the skill.

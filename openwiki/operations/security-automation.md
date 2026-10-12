@@ -62,6 +62,19 @@ as `.openwikiignore`'s rationale) and local caches. If you are looking for "the 
 workflow," there isn't one to find — the exclusion list above is the entire repo-tracked
 configuration surface for it.
 
+## sec-overlay's own CI gate
+
+`.github/workflows/sec-overlay-tests.yml` runs on every pull request that touches the plugin:
+the Python test suite (`uv run pytest`, from `plugins/sec-overlay/skills/sec-overlay/helpers/`)
+plus an **offline detection-regression gate** — it smoke-scans the plugin's own
+`fixtures/vulnerable_repo` test fixture into a workspace, then runs the dev-only
+[bench harness](../plugins/sec-overlay/developing-the-skill.md#the-bench-harness-dev-only-not-part-of-an-audit)
+in `--grade-mode detection --only-local` to check that a Tier-1 receipt still locates each
+`locked` ground-truth finding. This is distinct from both the repository's own CodeQL default
+setup above (which excludes the same fixtures) and from CodeRabbit's `detector-coverage-gap`
+check (see [code review](../governance/code-review.md)) — this workflow is sec-overlay testing
+itself, not scanning this repository's own source.
+
 ## Secret scanning
 
 GitHub secret scanning and push protection are native platform features for public

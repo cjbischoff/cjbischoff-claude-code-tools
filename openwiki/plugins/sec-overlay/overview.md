@@ -52,10 +52,10 @@ flowchart TB
             R1["prompt-constants, attack-classes,<br/>schemas, crypto policy, hunting guides"]
         end
         subgraph AG["agents/ - the JUDGEMENT"]
-            A1["~30 LLM prompts:<br/>producer (sonnet) vs adversary (opus)"]
+            A1["~40 LLM prompts (incl. classes/):<br/>producer (sonnet) vs adversary (opus)"]
         end
         subgraph HP["helpers/ - the MACHINE"]
-            H1["~70 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
+            H1["~95 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
         end
     end
     TARGET[("target codebase<br/>read-only")]
@@ -95,7 +95,10 @@ These hold everywhere and are enforced in code where possible, in prompts otherw
    applied to a *throwaway copy* to verify them (see `verify.py` in [helpers](helpers.md))
    — the repo's own files are never run or edited. See
    [running an audit](running-an-audit.md#the-do-not-execute-the-target-invariant) for how this
-   holds end to end, including the red-team plan.
+   holds end to end, including the red-team plan. The one exception is the opt-in `prove` phase
+   (`agents/prove.md`, only when `scan_options.prove_findings` is true): it builds and runs
+   target-derived code, but every build and run happens out of tree under
+   `{{WORKSPACE}}/repro`, never the target's own working copy, and it allows no network egress.
 2. **Writes only its own sidecar.** All output lives in an in-repo, self-ignoring
    `<target>/.sec-overlay/<slug>/` directory (override the base with `$SEC_OVERLAY_HOME`, or the
    whole workspace with `--workspace`). A seeded `.sec-overlay/.gitignore` keeps output out of
@@ -141,5 +144,9 @@ described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §5.
 - [Helpers](helpers.md) — the Python core, module map, and CLI-callable list.
 - [References](references.md) — the rule book: prompt constants, schemas, crypto policy.
 - [Running an audit](running-an-audit.md) — the smoke scan vs. the full agentic audit.
+- [Review mode](review-mode.md) — the separate, lighter diff-scoped review track and its CI Action.
+- [Developing the skill](developing-the-skill.md) — tests, linting, and the dev-only bench harness.
+- [Cross-repo correlation](cross-repo-correlation.md) — the optional multi-repo capability.
+moke scan vs. the full agentic audit.
 - [Developing the skill](developing-the-skill.md) — tests, linting, and the dev-only bench harness.
 - [Cross-repo correlation](cross-repo-correlation.md) — the optional multi-repo capability.

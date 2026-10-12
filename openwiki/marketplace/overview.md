@@ -66,7 +66,7 @@ plugins/sec-overlay/
 {
   "name": "sec-overlay",
   "description": "Agentic security-audit harness: runs SAST, investigates candidates with multi-agent gates, and emits SARIF + Markdown reports.",
-  "version": "0.2.0",
+  "version": "2.8.27",
   "author": { "name": "Christopher Bischoff" }
 }
 ```
@@ -105,6 +105,16 @@ Put together: everything a plugin needs at runtime — its skill definition, age
 Python helpers, and reference data — must live inside `plugins/<name>/`, and every reference
 to those files inside the plugin's own instructions must be relative to the plugin root (or to
 `${CLAUDE_PLUGIN_ROOT}` once installed), never to the surrounding marketplace repository.
+
+## Adding a second plugin
+
+[`docs/templates/plugin/`](/docs/templates/plugin/) is a new-plugin skeleton — a
+`.claude-plugin/plugin.json`, `README.md`, `CHANGELOG.md`, `CLAUDE.md`, and
+`skills/skill-name/SKILL.md`, each with `{{PLACEHOLDER}}` markers — copied to `plugins/<name>/`
+and filled in. The root [`CLAUDE.md`](/CLAUDE.md) "New plugin" checklist is the authoritative
+sequence: copy the template, replace every placeholder, register the plugin in
+`.claude-plugin/marketplace.json`, run `claude plugin validate .`, then write the first
+`CHANGELOG.md` entry at `0.1.0`.
 
 ## Related pages
 

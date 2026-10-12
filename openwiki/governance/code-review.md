@@ -97,8 +97,8 @@ and cache directories are excluded too.
   through interpolation.
 
 Two `finishing_touches.custom` checks specifically watch the security-reference surfaces this
-wiki documents: `codeguard-reference-audit` audits changed files under
-`references/codeguard/` and [`.cursor/rules/`](../operations/cursor-codeguard-rules.md) for a
+wiki documents: `codeguard-reference-audit` audits changed files under `references/codeguard/`
+and the single file under [`.cursor/rules/`](../operations/cursor-codeguard-rules.md) for a
 matching `rule_id`/filename and a named replacement for anything banned; `detector-coverage-gap`
 checks that a new detector or ASVS mapping has a corresponding test under `helpers/tests/`.
 
@@ -115,5 +115,5 @@ essential rules — "matching this repo's own ast-grep usage" inside the sec-ove
 - [Commit governance](hooks-and-commits.md) — the pre-commit hooks these checks mirror.
 - [Validation and versioning](../marketplace/validation-and-versioning.md) — the version-bump
   rule this is the *only* automated check for.
-- [Cursor CodeGuard rules](../operations/cursor-codeguard-rules.md) — the `.cursor/rules/`
-  files the `codeguard-reference-audit` finishing-touch inspects.
+- [Cursor CodeGuard rule](../operations/cursor-codeguard-rules.md) — the `.cursor/rules/` file
+  the `codeguard-reference-audit` finishing-touch inspects.
