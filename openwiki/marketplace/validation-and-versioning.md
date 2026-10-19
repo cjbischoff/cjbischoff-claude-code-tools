@@ -55,11 +55,11 @@ commit as the shipping-file change. `marketplace.json` never needs an edit for t
 not pin plugin versions.
 
 As a concrete example of the rule being applied: the plugin's `plugin.json` currently reads
-`"version": "0.2.0"`. The root README's Status section explains the jump from the prior
-`0.1.1` governance release: "Plugin versions bump automatically on shipping-file changes
-(Conventional-Commits semver); this review-improvements release ships sec-overlay as 0.2.0,
-above the 0.1.1 governance release on `main`" — a `feat`-driven minor bump accumulated across
-that branch's shipping-file changes.
+`"version": "2.8.27"`. Each shipping-file change to `sec-overlay` across its many milestones
+(v5.0 through v5.3 at this writing — see the plugin's own `CHANGELOG.md`) bumped this field by
+one more Conventional-Commits-derived increment, landing at the current value rather than at
+any single named release; `CHANGELOG.md`'s own version headers are the authoritative release
+history, not this page.
 
 ## Where this rule is (and is not) enforced — important nuance
 

@@ -52,10 +52,10 @@ flowchart TB
             R1["prompt-constants, attack-classes,<br/>schemas, crypto policy, hunting guides"]
         end
         subgraph AG["agents/ - the JUDGEMENT"]
-            A1["~30 LLM prompts:<br/>producer (sonnet) vs adversary (opus)"]
+            A1["~40 LLM prompts:<br/>producer (sonnet) vs adversary (opus)"]
         end
         subgraph HP["helpers/ - the MACHINE"]
-            H1["~70 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
+            H1["~95 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
         end
     end
     TARGET[("target codebase<br/>read-only")]
@@ -116,18 +116,20 @@ Everything a security engineer receives lands in `<target>/.sec-overlay/<slug>/`
 
 | Path | Contents |
 |---|---|
+| `kb/route-census.json` | code-derived inventory of registered routes, independent of recon's own output |
 | `kb/scan-profile.json` | recon output: languages, frameworks, `attack_surface`, `sast_plan`, `subsystems` |
-| `kb/architecture.md` + `kb/entities/*.md` | components, data flows, trust boundaries |
-| `kb/THREAT_MODEL.md` | attacker profiles + the prioritized hunt list |
+| `architecture/` | C4 diagrams (context/container/component) + runtime-view sequences + `arc42.md` |
+| `threat-model/` | `dfd.mmd` (derived from the container diagram) + `attack-sequences/` + `threat-model.md` (STRIDE findings, CVSS v4.0, hunt list) |
 | `kb/context.json` | the repo's own docs distilled, trust-tagged (`untrusted-doc` / `prior-scan`) |
 | `kb/graph.json` | the Tier-1/Tier-2 code graph (reachability substrate) |
-| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase |
+| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase, plus `arch-gate.json`/`tm-gate.json` (deterministic diagram/prose gates) |
 | `kb/coverage-ledger.json` | surface-completeness ledger; blocks `complete` while gaps remain |
 | `kb/discovery-ledger.json` | investigate saturation state (waves, `terminal_reason`) |
-| `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS, patch diff |
-| `report.sarif` | SARIF 2.1.0 (confirmed/fixed) |
+| `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS v4.0, patch diff |
+| `report.sarif` | SARIF 2.1.0 (confirmed/fixed, plus suppressed needs-deployment-testing by default) |
 | `report.md` | human report, built from `finding-template.md`; links `redteam-plan.md` |
 | `redteam-plan.md` | manual runtime test plan — the engineer's follow-up |
+| `kb/gates/artifact-gate.json`, `artifact-review.json` | deterministic self-check + opus adversary verdict on the rendered report |
 | `state.json` | campaign state (pass number, pinned SHA, stages) |
 | `MEMORY.md`, `learnings/` | durable per-repo memory across runs |
 

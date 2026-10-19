@@ -32,6 +32,29 @@ entry here — CodeRabbit's `**/.claude-plugin/*.json` path instruction (see
 [code review](../governance/code-review.md)) checks that every plugin directory has a
 marketplace entry.
 
+## Scaffolding a new plugin
+
+The root [`CLAUDE.md`](/CLAUDE.md) gives a "New plugin" checklist: copy
+[`docs/templates/plugin/`](/docs/templates/plugin/) to `plugins/<name>/`, replace every
+`{{PLACEHOLDER}}` marker, register the plugin in `marketplace.json` above, run
+`claude plugin validate .`, and write the template's first `CHANGELOG.md` entry at version
+`0.1.0`. The template ships five skeleton files with no `agents/`, `helpers/`, or `references/`
+stubs — those are added only when a plugin actually needs them:
+
+```
+docs/templates/plugin/
+  .claude-plugin/plugin.json
+  README.md
+  CLAUDE.md
+  CHANGELOG.md
+  skills/{{skill-name}}/SKILL.md
+```
+
+This is the same plugin-root doc trio `sec-overlay` carries (`README.md` user-facing,
+`CHANGELOG.md` Common Changelog, `CLAUDE.md` maintainer manual) — see
+[plugins/README.md](/plugins/README.md)'s own description of the trio and how it differs from a
+skill's optional operational `CLAUDE.md` companion (the kind `SKILL.md` links to).
+
 ## Installing from this marketplace
 
 ```
@@ -51,6 +74,9 @@ entry: "one directory per distributed plugin"). For `sec-overlay`:
 ```
 plugins/sec-overlay/
   .claude-plugin/plugin.json      # plugin manifest
+  README.md / CHANGELOG.md / CLAUDE.md   # plugin-root doc trio (user, releases, maintainer)
+  action.yml                      # composite GitHub Action: review mode as CI
+  commands/audit.md               # the /sec-overlay:audit slash command
   skills/sec-overlay/             # the skill Claude Code discovers and loads
     SKILL.md
     CLAUDE.md
@@ -66,10 +92,16 @@ plugins/sec-overlay/
 {
   "name": "sec-overlay",
   "description": "Agentic security-audit harness: runs SAST, investigates candidates with multi-agent gates, and emits SARIF + Markdown reports.",
-  "version": "0.2.0",
+  "version": "2.8.27",
   "author": { "name": "Christopher Bischoff" }
 }
 ```
+
+`commands/` (slash commands the plugin installs) and `action.yml` (the composite Action that
+runs [review mode](../plugins/sec-overlay/running-an-audit.md#ci-integration--review-mode-as-a-github-action)
+on a pull request) are both install payload under the plugin directory — a change to either is a
+shipping-file change subject to the same [version-bump rule](validation-and-versioning.md) as
+`agents/`/`helpers/`/`references/`.
 
 - `name` must match the marketplace entry's `name` and the plugin's own directory name.
 - `version` is a plain semver string. It is bumped automatically on shipping-file changes — see
