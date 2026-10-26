@@ -57,7 +57,7 @@ review comment:
 
 | Check | FAILs when |
 |---|---|
-| `readme-and-changelog-updated` | a PR changes any tracked file other than `README.md`/`CHANGELOG.md` without modifying both, or `CHANGELOG.md` changes without a new entry under an `## Unreleased` `### Changed`/`### Added`/`### Removed`/`### Fixed` group |
+| `readme-and-changelog-updated` | a PR changes any tracked file other than `README.md`/`CHANGELOG.md` without modifying both, or `CHANGELOG.md` changes without a new entry under an `## Unreleased` `### Changed`/`### Added`/`### Removed`/`### Fixed` group. Its instructions have not been updated for `pre-commit-check.sh`'s newer per-plugin changelog routing (see [commit governance](hooks-and-commits.md)): a commit that only touches `plugins/<name>/` files now correctly satisfies the hook by updating just that plugin's own `CHANGELOG.md`, but this CodeRabbit check still expects the root `README.md`/`CHANGELOG.md` too and may warn on an otherwise-compliant plugin-only PR — treat that specific warning as a known false positive, not a governance violation. |
 | `plugin-version-bump` | a shipping file changed under `plugins/<name>/` and `plugin.json`'s `version` is unchanged, or the increment doesn't match the PR's Conventional Commit type (see [versioning](../marketplace/validation-and-versioning.md) for the only-check-not-hook nuance) |
 | `folder-readme-updated` | a PR changes a file in a directory with a tracked `README.md` without also updating that `README.md` |
 | `no-paths-outside-plugin` | a file under `plugins/<name>/` references a path outside that plugin directory — parent-relative escape, an absolute `/Users`/`/home`/`/tmp` path, or a sibling top-level directory like `scripts/` or `docs/` |

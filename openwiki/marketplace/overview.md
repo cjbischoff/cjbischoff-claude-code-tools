@@ -51,6 +51,11 @@ entry: "one directory per distributed plugin"). For `sec-overlay`:
 ```
 plugins/sec-overlay/
   .claude-plugin/plugin.json      # plugin manifest
+  README.md                       # user-facing: install, prerequisites, quick start
+  CHANGELOG.md                    # sec-overlay Common Changelog
+  CLAUDE.md                       # maintainer manual (never loads for plugin installers)
+  action.yml                      # GitHub composite Action: review mode in CI
+  commands/                       # slash commands, e.g. /sec-overlay:audit
   skills/sec-overlay/             # the skill Claude Code discovers and loads
     SKILL.md
     CLAUDE.md
@@ -66,7 +71,7 @@ plugins/sec-overlay/
 {
   "name": "sec-overlay",
   "description": "Agentic security-audit harness: runs SAST, investigates candidates with multi-agent gates, and emits SARIF + Markdown reports.",
-  "version": "0.2.0",
+  "version": "2.8.27",
   "author": { "name": "Christopher Bischoff" }
 }
 ```
@@ -80,6 +85,14 @@ plugins/sec-overlay/
   directory for skills automatically ("the default `skills/` directory scan handles
   discovery, strict mode stays at its default (`true`)"). There is nothing else to wire up —
   every subdirectory under `skills/` that contains a `SKILL.md` is a discoverable skill.
+
+`commands/` and `action.yml` are plugin-root shipping surfaces, not just skill internals:
+`commands/audit.md` defines the `/sec-overlay:audit` slash command (a routing document over
+`sec_overlay.run.drive`/`advance`, no executable logic of its own), and `action.yml` is a
+composite GitHub Action a consumer repository's own workflow can call directly to run
+`sec_overlay.cli review` in CI — see
+[running an audit](../plugins/sec-overlay/running-an-audit.md) for both. A change under either
+still bumps the plugin version per the shipping-file rule below.
 
 ## `${CLAUDE_PLUGIN_ROOT}` and the plugin-directory boundary
 

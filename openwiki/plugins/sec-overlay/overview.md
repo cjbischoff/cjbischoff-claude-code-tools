@@ -37,7 +37,7 @@ that govern every phase:
 4. **Thoroughly review a codebase.** Coverage is pursued until a phase can defend it to its
    adversary; gaps are logged, never silently dropped. Two concrete mechanisms back this: the
    investigate saturation loop (waves stop only at `K=2` consecutive no-new-fingerprint rounds
-   or a hard `max_waves=5` cap — see [pipeline](pipeline.md#the-full-phase-order)), and
+   or a hard `max_waves=5` cap — see [pipeline](pipeline.md#the-full-phase-order-28-phase_table-entries)), and
    `partition.py`'s `unrouted_candidate_classes` safety net, which catches any attack class
    recon didn't explicitly plan for and routes it to a general-triage agent rather than
    dropping it (see [helpers](helpers.md#module-map-grouped-by-job)).
@@ -55,7 +55,7 @@ flowchart TB
             A1["~30 LLM prompts:<br/>producer (sonnet) vs adversary (opus)"]
         end
         subgraph HP["helpers/ - the MACHINE"]
-            H1["~70 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
+            H1["~100 stdlib-only Python modules:<br/>run SAST, enforce gates, write reports"]
         end
     end
     TARGET[("target codebase<br/>read-only")]
@@ -91,9 +91,12 @@ step. See [pipeline](pipeline.md) for the full phase-by-phase flow, and
 
 These hold everywhere and are enforced in code where possible, in prompts otherwise:
 
-1. **Never executes or modifies the reviewed source.** Static analysis only. Patches are
-   applied to a *throwaway copy* to verify them (see `verify.py` in [helpers](helpers.md))
-   — the repo's own files are never run or edited. See
+1. **Never executes or modifies the reviewed source, with one documented, opt-in exception.**
+   Static analysis only by default. Patches are applied to a *throwaway copy* to verify them
+   (see `verify.py` in [helpers](helpers.md)) — the repo's own files are never run or edited.
+   The one exception is the opt-in `prove` phase, which runs only when
+   `scan_options.prove_findings` is explicitly set (absent by default) and builds/runs
+   target-derived code **out of tree**, never against the target's own working copy. See
    [running an audit](running-an-audit.md#the-do-not-execute-the-target-invariant) for how this
    holds end to end, including the red-team plan.
 2. **Writes only its own sidecar.** All output lives in an in-repo, self-ignoring
@@ -102,8 +105,8 @@ These hold everywhere and are enforced in code where possible, in prompts otherw
    the reviewed repo's git tree.
 3. **Tool-receipt gate.** A finding reaches `confirmed`/`fixed` only with at least one
    mechanical receipt (`semgrep` / `codeql` / `ast-grep` / `tree-sitter` / `ripgrep` /
-   `structural-index` / `secrets` / `sca`). LLM reasoning is namespaced `llm-claimed:` and can
-   corroborate but **never** confirm. Enforced in
+   `structural-index` / `secrets` / `sca` / `dependency-catalog`). LLM reasoning is namespaced
+   `llm-claimed:` and can corroborate but **never** confirm. Enforced in
    [`helpers/sec_overlay/findings_gate.py`](helpers.md#the-tool-receipt-gate).
 4. **Signal over noise.** Every load-bearing claim made by a Sonnet "producer" is attacked by
    an Opus "adversary" on a different model family; a false-positive ladder plus a

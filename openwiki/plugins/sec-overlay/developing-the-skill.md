@@ -12,19 +12,24 @@ All commands below run from `skills/sec-overlay/helpers/`.
 ## Test and lint commands
 
 ```bash
-uv run pytest -q                                   # full suite (2 env-only failures, see below)
+uv run pytest -q                                   # full suite (1 env-only failure, see below)
 uv run pytest tests/test_fingerprint.py -q         # single file
 uv run pytest tests/test_x.py::test_name           # single test
 uv run ruff check sec_overlay/ bench/ tests/       # lint (line-length 100)
 uv run ruff format sec_overlay/ bench/ tests/
 uv run ty check                                    # static types
 uv run python -m sec_overlay.preflight             # tool availability
+uv run python -m sec_overlay.phase_docs --check    # fail if a phase-table doc is stale
+uv run python -m sec_overlay.phase_docs --write    # regenerate every phase-table doc in place
 ```
 
-The suite is 81 pytest files, 595 tests (helpers/README.md's Test coverage & contracts
-section). Two failures on a clean checkout are environmental, not code defects — see
+The `tests/` directory holds 145 pytest files (measured by file count; the plugin's own
+in-repo docs disagree with each other on the exact file/test tally across different sections,
+so treat any specific number as approximate and re-measure against the tree if it matters).
+One failure on a clean checkout is environmental, not a code defect — the bench corpus used to
+add a second one but now ships committed — see
 [running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run) for exactly
-which tests and why.
+which test and why.
 
 ## The stdlib-only rule
 
@@ -54,22 +59,38 @@ structure — they are how prompt↔code drift gets caught before it reaches a r
 ## The bench harness (dev-only, not part of an audit)
 
 `helpers/bench/` measures and locks detection quality; it is never invoked during a real scan.
-A labelled corpus (positives to find, negatives to stay silent on; `corpus_seed/` is seeded
-from real findings and is gitignored — see
-[running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run)) is scanned
-via a swappable adapter, judged, and scored for precision/recall by source and class plus an
-FP rate. Its **regression gate**: a `locked` finding that stops being detected fails the run.
+A labelled corpus (positives to find, negatives to stay silent on) is scanned via a swappable
+adapter, judged, and scored for precision/recall by source and class plus an FP rate. Its
+**regression gate**: a `locked` finding that stops being detected fails the run.
+`corpus_seed/*.json` **ships committed** (public-app advisories pinned to a commit, dep-CVE
+lockfiles, and synthetic fixtures only — never a confirmed vulnerability from private code), so
+the seed-corpus tests now run in CI as well as locally — see
+[running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run). Two newer
+adapters widen what the harness can grade without touching the real audit path:
+`aacr_adapter.py` maps an external AACR review-dataset into corpus entries (tagged
+`source="aacr"`/`"aacr-security"`, excluded from the real-confirmed headline), and
+`ocr_ingest.py` parses `ocr review --format json` output into benchmark-only findings tagged
+`llm-claimed:ocr`.
 
 ```bash
 python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --workspaces <dir>
 ```
 
-## The semgrep rules submodule
+## The vendored semgrep ruleset (not a submodule)
 
-`helpers/rules/semgrep/` is a git submodule. Clone this repository with `--recurse-submodules`,
-or run `git submodule update --init --recursive` afterward — see
+`helpers/rules/semgrep/` is a **gitignored, shallow-cloned directory**, not a git submodule —
+there is no `.gitmodules` file anywhere in this repository's history. Seed it with:
+
+```bash
+git clone --depth 1 https://github.com/semgrep/semgrep-rules helpers/rules/semgrep
+```
+
+`preflight.py` prints this exact command when the directory is missing, and recreates the
+directory this way whenever it runs — never place a first-party rule under
+`helpers/rules/semgrep/`; it is deleted on the next preflight. First-party rules live in the
+tracked sibling `helpers/rules/absence/` instead. See
 [running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run) for the test
-that fails without it.
+that fails without the vendored clone.
 
 ## The folder-README-tracks-code rule, inside this skill
 
@@ -80,10 +101,10 @@ that has a *tracked* `README.md` — no skill-specific exception. Inside
 
 - [`agents/README.md`](/plugins/sec-overlay/skills/sec-overlay/agents/README.md) — every LLM
   prompt: role, model tier, inputs/outputs, the gate ladder, the `classes/` extensions.
-- [`helpers/README.md`](/plugins/sec-overlay/skills/sec-overlay/helpers/README.md) — the ~70
+- [`helpers/README.md`](/plugins/sec-overlay/skills/sec-overlay/helpers/README.md) — the ~100
   Python modules grouped by job, the CLI-callable list, the finding schema contract.
 - [`references/README.md`](/plugins/sec-overlay/skills/sec-overlay/references/README.md) — the
-  rule book: the 12 prompt-constants blocks, schemas, crypto YAMLs.
+  rule book: the 16 prompt-constants blocks, schemas, crypto YAMLs.
 - Plus the nested folder READMEs one level deeper:
   `helpers/sec_overlay/README.md`, `helpers/tests/README.md`, `helpers/bench/README.md`,
   `helpers/rules/README.md`, `references/asvs/README.md`, `references/codeguard/README.md`,

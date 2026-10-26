@@ -119,6 +119,13 @@ red team, findings — each a mix of code-authored diagrams/tables and agent-aut
 plus a multi-run cross-repo `report.sarif` (`correlate/xrepo_sarif.py`: one SARIF run per
 member repo plus one correlation run).
 
+A multi-repo `/sec-overlay:audit <repo> ...` invocation (see
+[running an audit](running-an-audit.md#the-sec-overlay-audit-slash-command-a-driver-backed-shortcut))
+drives each member repo's own audit in turn via `sec_overlay.run.drive`/`advance`, infers each
+repo's role from its `kb/scan-profile.json` (`run.infer_role`), confirms the inferred roles with
+the operator, and only then synthesizes the manifest this CLI consumes — the correlation step
+itself is unchanged by that shortcut.
+
 ## Related pages
 
 - [Pipeline](pipeline.md) — the single-repo audit each member repo runs independently before
@@ -126,3 +133,5 @@ member repo plus one correlation run).
 - [Agents](agents.md) — the producer-vs-adversary pattern this subsystem reuses.
 - [Helpers](helpers.md) — where `correlate/` sits in the module map alongside the single-repo
   core.
+- [Running an audit](running-an-audit.md) — the `/sec-overlay:audit` slash command's multi-repo
+  routing into this workflow.

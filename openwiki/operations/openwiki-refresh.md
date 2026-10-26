@@ -47,6 +47,12 @@ to this repository's governance:
 - **Requires the `ANTHROPIC_API_KEY` repository secret.** Checked explicitly before anything
   else runs, so a missing secret fails with a clear message instead of a cryptic downstream
   error.
+- **Materializes the git history the agent cannot read itself.** `.openwikiignore` restricts the
+  agent's shell to `pwd`/`git rev-parse HEAD`, so it cannot run `git log` or `git diff` to learn
+  what changed since the last documented commit. The `Collect bounded change evidence` step runs
+  [`scripts/openwiki-history-digest.sh`](#the-history-digest-script) first, writing
+  `.openwiki-history.md` — a file the agent *can* read with its normal file tools — before
+  `openwiki code --update` runs.
 - **Never pushes to `main` directly.** The job opens a **pull request** with its changes,
   consistent with the [GitHub ruleset](../governance/hooks-and-commits.md#the-github-ruleset-on-main)
   that requires a PR for every change to `main` — even an automated one.
@@ -68,6 +74,19 @@ to this repository's governance:
 - **Least-privilege by default.** `permissions: {}` at the workflow level; the job itself
   declares only `contents: write` and `pull-requests: write`, the minimum needed to open the
   update PR (see [security automation](security-automation.md#the-default-read-only-workflow-token)).
+
+## The history digest script
+
+`scripts/openwiki-history-digest.sh` writes `.openwiki-history.md` at the repository root: the
+baseline commit the wiki currently documents (read from `openwiki/.last-update.json`'s
+`gitHead`), the current commit, one line per non-merge commit in that range (capped at
+`OPENWIKI_HISTORY_MAX_COMMITS`, default 400), and the net list of changed files across the range
+excluding `openwiki/` itself (capped at `OPENWIKI_HISTORY_MAX_FILES`, default 400) — never
+patches. It requires `jq` and degrades to an explicit "no baseline" message rather than guessing
+when `.last-update.json` is missing or its `gitHead` is unreachable. An update run reads this
+file first, then reads current source for every change it intends to document — a commit
+subject is a claim about intent, the file it touched is the proof. Run it locally before a
+local `--update` (CI runs it automatically as the step above).
 
 ## `openwiki/INSTRUCTIONS.md` and `.openwikiignore`
 
