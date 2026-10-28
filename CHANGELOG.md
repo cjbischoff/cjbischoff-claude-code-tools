@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Added
 
+- Add `.github/workflows/plainspoken-tests.yml`: on pull requests that change `plugins/plainspoken/`, it runs the plugin pytest suite.
 - Add the plainspoken writing plugin to the marketplace.
 - Add the plainspoken plugin spec (`docs/superpowers/specs/2026-10-28-plainspoken-plugin-design.md`) and its nine-commit implementation plan (`docs/superpowers/plans/2026-10-28-plainspoken-plugin.md`).
 - Add `.github/workflows/sec-overlay-tests.yml`: on every pull request it runs the sec-overlay pytest suite and an offline detection-regression gate that smoke-scans the committed fixtures and asserts the two `locked` seed-corpus entries stay detected.

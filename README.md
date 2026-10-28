@@ -82,6 +82,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `.github/dependabot.yml` | Weekly Dependabot updates for Actions and pip |
 | `.github/codeql/codeql-config.yml` | CodeQL path exclusions (test fixtures, caches) |
 | `.github/workflows/sec-overlay-tests.yml` | sec-overlay pytest plus an offline detection-regression gate on pull requests |
+| `.github/workflows/plainspoken-tests.yml` | plainspoken pytest (lint script and eval case schema) on pull requests that change `plugins/plainspoken/` |
 | `.gitignore` | Keeps caches, venvs, local secrets, and the vendored semgrep-rules clone out of git |
 | `.coderabbit.yaml` | CodeRabbit pull request review config: path rules, governance pre-merge checks, tool selection |
 | `.cursor/rules/codeguard-1-hardcoded-credentials.mdc` | Always-on Cursor rule: never commit secrets, API keys, or credentials |
