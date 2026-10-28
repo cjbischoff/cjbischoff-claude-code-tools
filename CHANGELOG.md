@@ -232,6 +232,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 - Drop 21 unused CodeGuard Cursor rules so editor context keeps only the always-on hardcoded-credentials rule.
 - Drop `.github/README.md` so GitHub shows the marketplace README on the repository homepage instead of the `.github/` folder guide.
 
+### Fixed
+
+- Fix the plainspoken spec: work-humanizer is upstream MIT material by Pawel Huryn, not a user-owned skill.
+
 ## 0.2.0 - 2026-08-12
 
 ### Changed
