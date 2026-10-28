@@ -1,5 +1,5 @@
 ---
-description: Tighten a draft into a BLUF email, executive summary, action items, or tight message
+description: Turn a draft into a BLUF email, executive summary, action items, or tight message
 argument-hint: [file path, or paste the draft; add the audience if you know it]
 ---
 Use the `plainspoken` skill in brief mode on: $ARGUMENTS

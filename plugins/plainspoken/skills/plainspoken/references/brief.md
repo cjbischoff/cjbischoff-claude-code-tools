@@ -4,7 +4,7 @@ Transform a draft into concise, professional communication. The input is a draft
 
 The user pastes the draft text. They can add audience context in plain language: "this is going to my VP", "Slack message to my team", "external client update". No flags or syntax are required. Infer the audience from context when it is not stated.
 
-`brief` forces a fixed format with hard limits. If the user asks for "tighter" with no named format, use `rewrite` mode instead.
+`brief` forces a fixed format with hard limits. If the user asks to tighten or cut the fluff with no named format, use `rewrite` mode instead.
 
 ## What to do on every invocation
 

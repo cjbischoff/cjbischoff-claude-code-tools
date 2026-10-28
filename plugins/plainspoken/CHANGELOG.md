@@ -2,9 +2,19 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
-## Unreleased
+## 0.2.0 - 2026-10-28
 
 ### Added
+
+- Add `/plainspoken:deep`: four read-only lens agents (structure, fluff, pattern, flow) run in parallel, the findings are merged and ranked by severity, and one rewrite runs only after the writer approves.
+- Add P0/P1/P2 severity tiers (`references/severity.md`) to review and deep findings. Casual text reports P0 only.
+- Add eleven pattern families, structure and flow checks, tighten tests, and four edge rules (acronyms, emoji, predicate hyphens, curly quotes) to `references/rewrite.md`.
+- Add investor-email, social-post, and casual rows to `references/medium.md`.
+- Add twelve `lint.py` sweep keys, including cluster words per paragraph and density words.
+
+### Changed
+
+- Route "tighten" and "cut the fluff" to `rewrite` instead of `brief`.
 
 - Add failing tests for the twelve new lint sweep keys.
 - Add 8 eval cases for deep mode, severity, casual P0-only review, `tighten` routing, word swaps, false breadth, and unresolved acronyms, plus two hard gates in `evals/JUDGE.md`.

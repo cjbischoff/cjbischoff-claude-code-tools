@@ -32,6 +32,30 @@ Exit code 0 means success. Exit code 2 means the file is missing or unreadable, 
 
 `sweep` lists only checks that found something. A clean draft gives `"sweep": {}`.
 
+### Sweep keys added in 0.2.0
+
+Each key appears only when it has a hit. Word lists are in `../references/tells.md`.
+
+| Key | Reports | Match rule |
+|-----|---------|------------|
+| `cluster_words` | List of `{paragraph, words}`: paragraphs (numbered from 1) with 2 or more distinct cluster words | Word start |
+| `density_words` | List of `{word, share}`: density words with at least 2 hits and a share of 3% or more of all words | Whole word |
+| `wordy_constructions` | Matched entries | Whole phrase |
+| `redundant_pairs` | Matched entries | Whole phrase |
+| `defense_phrases` | Matched entries | Whole phrase |
+| `social_openers` | Matched entries | Whole phrase |
+| `false_breadth` | Matched entries | Whole phrase |
+| `analogy_scaffolding` | Matched entries | Sentence start only |
+| `cutoff_phrases` | Matched entries | Whole phrase |
+| `acknowledgment_loops` | Matched entries | Whole phrase |
+| `reasoning_residue` | Matched entries | Whole phrase |
+| `curly_quotes` | Count of U+201C, U+201D, U+2018, U+2019 outside code | Character |
+| `emoji_lines` | Count of heading or list lines that contain an emoji | Line |
+
+`emoji_lines` always reads the text as written, with or without `--raw`, because Markdown stripping removes the heading and list marks. Predicate hyphens, acronyms, and point of view stay judgment rules in `rewrite.md`, because a regex cannot detect them reliably.
+
+The word lists in these keys adapt anti-slop-editor 1.1.0 (Christopher Bischoff), which draws on blader/humanizer (MIT, Siqi Chen).
+
 ## No score
 
 The script reports no composite score, no verdict, and no risk number, by design. Clarity measured why. A stylometric composite run over texts with classifier verdicts attached came out inverted: the genuinely human control scored "riskiest" in the original exploratory corpus. A single number invites optimizing toward the machine register. Counts locate passages. They do not grade prose.

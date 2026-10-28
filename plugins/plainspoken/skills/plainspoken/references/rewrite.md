@@ -15,14 +15,21 @@ Two things shape everything below:
 2. **Diagnose the largest problem, in this order.** Fix in that order:
    1. **Missing substance.** Identify the real outcome or point. In authored long-form work, find the source material only this writer supplied. If it is absent, ask or label the limitation.
    2. **Wrong register.** The text is not the kind of writing its reader needs.
-   3. **Weak development.** Make paragraphs depend on one another through cause, contrast, sequence, qualification, example, or consequence. Restructure only as much as the request permits.
+   3. **Weak development.** Make paragraphs depend on one another through cause, contrast, sequence, qualification, example, or consequence. Restructure only as much as the request permits. Check the structure and flow list below. Where the fix needs material the source lacks, use `[TK: question]`.
+      - **Orphaned list signals:** "three reasons" followed by two, "the first is" with no list, "both X and Y" where only X appears.
+      - **Duplicate sentence functions:** two sentences in one section doing the same work. Keep the stronger one.
+      - **Summary paragraphs:** a paragraph that recaps without adding.
+      - **Conclusion before setup:** a claim that relies on evidence the piece gives later.
+      - **Section mismatch:** a heading that does not describe its section.
+      - **Assumed, not established:** a term, claim, or context used before it is introduced.
+      - **Unjoined paragraphs:** a paragraph whose first sentence does not follow from the one before.
    4. **Surface patterns.** Remove inflated, repetitive, or formulaic machinery while preserving useful voice and medium conventions.
 
    When the draft is hollow, say so in 2-3 sentences and offer `interview`. If the user still wants a rewrite, deliver it and state what editing could and could not repair.
 3. **List the facts, with their certainty.** Every number, name, date, claim, commitment, caveat, link, quotation, and call to action, plus the qualifier attached to each ("could", "typically", "about", "helped", "the remaining piece"). Include attribution, examples, terminology, citations, constraints, and redactions. This list must survive intact.
 4. **Write it fresh.** Put the draft aside. From your step 3 list, write the piece the way this writer would write it for this reader (see "Sound like a person"): their speaker, their register, plain spoken sentences in normal word order. Do not edit the AI sentences in place; a patched AI draft still reads like one. Reuse the draft's exact words only for names, the reader's own terms, and the wording of commitments and conditions. Fresh wording, same claims: every claim in the draft appears in your version at the same strength, no stronger and no weaker. Preserve meaning and useful voice.
 5. **Keep the claim, drop the formula.** A stock line (a generic moral, a value pitch, a gratitude formula, a vague benefit) still carries something the writer meant to say. Say that thing once, plainly, in the writer's voice: "Those visits helped us get here" becomes "We wouldn't have made it ten years without you coming in." Cut a stock line only when it repeats something already said.
-6. **Cut and fix the tells** (below, and the lists in `tells.md`), strongest first: a colon reveal, a triad, a stock closer, a generic wrap-up line. Delete filler, restatement, and hype. Cutting must not leave it clipped: if the draft was not padded, your version should be about as long as the draft. Voice, concrete detail, connective words, and the warmth a genre needs are not padding. Let sentences breathe: use the small words people use when they talk (so, and, but, just, then), and never squeeze two ideas into one clipped clause.
+6. **Cut and fix the tells** (below, and the lists in `tells.md`), strongest first: a colon reveal, a triad, a stock closer, a generic wrap-up line. Delete filler, restatement, and hype. Run the "Tighten tests" section below; run it first when the request says tighten or cut the fluff. Cutting must not leave it clipped: if the draft was not padded, your version should be about as long as the draft. Voice, concrete detail, connective words, and the warmth a genre needs are not padding. Let sentences breathe: use the small words people use when they talk (so, and, but, just, then), and never squeeze two ideas into one clipped clause.
 7. **Fix rhythm and flow** (section E). Run one self-review pass against the finished text. Fix the weakest material issue once, then stop. Repeated convergence passes flatten the prose.
 
 If the rewrite fails a final check, repair it once. Do not keep iterating until every sentence shares the same polished register.
@@ -43,6 +50,9 @@ If the rewrite fails a final check, repair it once. Do not keep iterating until 
 - **Restating closers.** "The bottom line?", "Key takeaway:", "That's the real win.", "And that's why X is the future.", "What do you think?", "Thoughts?" End on the last concrete thing, or on one line of what the writer concludes.
 - **Aphorisms and stacked parallel lines.** "Less clicking. More building." "Automation executes. Agency decides." Budget: at most one crafted, quotable line per piece, and zero is fine. Experienced writers average zero to one even in long posts. Flatten the rest into plain statements that keep the fact.
 - **Fragment stacks in prose.** "No setup. No config. Just results." Merge into one sentence with a subject and a verb. Lists are exempt.
+- **Analogy scaffolding.** "Imagine...", "Think of it like..." announcing a comparison. Test: delete the frame and ask whether the comparison still explains something the plain statement cannot. Fix: cut the frame; keep the analogy only when it passes the test. Before: "Think of the cache as a notepad by the door. It holds the last ten results." After: "The cache holds the last ten results."
+- **Social-post openers.** "Excited to share", "I recently had the pleasure of". Test: does the first line state the news? Fix: start with the news. Before: "I'm thrilled to announce that we shipped the new export tool." After: "We shipped the new export tool."
+- **Rhetorical-question openers.** A question that the next sentence answers. Test: replace the question and answer with the answer alone; if nothing is lost, the question was staging. Fix: state the answer. Before: "Why does the build fail on Fridays? The nightly job locks the database." After: "The build fails on Fridays because the nightly job locks the database."
 - **Invented metaphor labels.** A clever image that names nothing the reader can use ("a comfort blanket", "the operating system for your team"). Say the plain thing.
 - **Formula carrying the argument.** Balanced threes, repeated short punchlines, fake questions, and topic-sentence/explanation/zinger paragraphs. Run two tests. The *flatten test*: state the claim without the cadence; if nothing specific remains, the formula was doing the missing reasoning's work. The *relation test*: restate the implied connection using `because`, `although`, `when`, `if`, `which`, or `so`; if that requires inventing a relation, the original only suggested one. Keep an earned contrast, concrete three-item list, short sentence, fragment, or memorable line. Change repeated use or unsupported performance, not the device itself.
 
@@ -65,6 +75,10 @@ Six patterns. Test each sentence by deleting it: if the reader can still recover
 - **Marketing register outside marketing**, and stock AI vocabulary. Lists in `tells.md`. One hit is weak; several together are the tell. Do not replace one watched synonym with another; rewrite the claim or leave it alone.
 - **Constructions nobody says out loud.** "The recommended approach is X" becomes "Do X". "Serves as" becomes "is". Nominalizations ("perform an evaluation of") become verbs. Op-ed verbs for sources ("posits", "contends", "asserts") become "says" or "writes". The test: would you say this sentence to a smart friend over coffee? If you'd say something plainer, write that.
 - **Vague authority.** "Experts agree", "studies show", "many companies", "observers note", "industry reports suggest". Name who, if the source does. Otherwise preserve explicit uncertainty, ask for the source, scope it ("in our tests"), or cut the claim. A more confident sentence is not automatically a clearer one.
+- **False breadth.** "Whether you're X or Y" claiming every audience. Test: does the sentence say anything about X or Y that it would not say about anyone? Fix: name the reader the source names, or cut. Before: "Whether you're a student or a manager, this guide helps you plan your week." After: "This guide helps you plan your week."
+- **False ranges.** "From X to Y" where X and Y are not on one scale. Test: is there a scale with X and Y as its ends? Fix: list the items. Before: "The report covers everything from pricing to the history of the company." After: "The report covers pricing and the history of the company."
+- **Notability lists.** Outlet or follower names offered as proof of importance. Test: does the named source support a claim in the passage? Fix: keep a source only for a claim it supports; state what it did. Before: "Her team is a leader in the field, as seen in coverage by Wired, Forbes, and the BBC." After: "Wired, Forbes, and the BBC have covered her team."
+- **Challenges-and-prospects boilerplate.** "Despite these challenges, X continues to thrive." Test: does the source name the challenges and the response? Fix: keep the named problems and responses from the source, or cut. Before: "Despite funding challenges, the program continues to thrive. Funding fell 20% in 2023, and the program kept all three sites open." After: "Funding fell 20% in 2023, and the program kept all three sites open."
 - **Abstract actors.** Decisions do not decide and data does not speak. Name the person, team, system, or documented process when that makes the action clearer. Passive voice remains correct when the actor is unknown, irrelevant, deliberately protected, or less important than the object.
 
 ### D. Hedges in the wrong place
@@ -85,6 +99,7 @@ People state facts flatly and hedge their opinions. AI text does the reverse, or
 - **The shuffle test.** If you could reorder the sentences without losing meaning, the text is a stack of facts, not an argument. Rebuild the spine so each sentence leans on the one before (cause, contrast, example, consequence). Do not sprinkle connectors to fake it.
 - **Structural regularity.** Inspect the piece's dominant shape rather than hunting isolated words: sections with identical length and internal order; paragraphs that can trade places without changing the argument; headings doing all the organizing; every example interpreted for the reader; every paragraph ending on a line built to be quoted; a conclusion that recaps or widens into generic optimism. Fix only the dominant problem. Move or combine material, let one section carry more weight, name the relation at a weak join, or stop at the last concrete consequence. Do not introduce a random tangent, unresolved thread, or sentence-length wobble merely to look irregular.
 - **Filler transitions at the start of a sentence.** Additionally, Furthermore, Moreover, However, Importantly, Ultimately, In conclusion, That said. Cut or restructure. Plain "But", "So", and "And" are fine when they do work.
+- **Point-of-view drift.** Mixed "we", "you", and "I" for one actor. Test: does one actor change pronoun between sentences with no change in who acts? Fix: hold the source's dominant person and say so in `CHANGES:`. A real "we" that includes other people stays. Before: "I tested the patch on staging. We saw no errors. I plan to ship it Friday." After: "I tested the patch on staging and saw no errors. I plan to ship it Friday."
 - **Synonym cycling.** If two words name the same thing (the tool, the report, the feature), use the same word every time. Readers stop to wonder whether "the platform" and "the solution" are two things.
 
 ### F. Punctuation and formatting
@@ -97,6 +112,10 @@ People state facts flatly and hedge their opinions. AI text does the reverse, or
 ### G. Chat residue and surface residue
 
 "Great question!", "Certainly!", "I hope this helps", "Let me know if you'd like...", "Here's a revised version:", "As of my last update". Remove the wrapper, keep the content.
+
+- **Knowledge-cutoff disclaimers.** "As of my last update", "based on available information". Test: is the date or source real? Fix: remove the phrase. Keep the fact with its real source, or `[TK: source and date?]`. Before: "As of my last update, the API limits requests to 100 per minute." After: "The API limits requests to 100 per minute. [TK: source and date for this limit?]"
+- **Acknowledgment loops.** "You're asking about...", "To answer your question...". Test: does the sentence only repeat the question? Fix: remove it. Before: "You're asking about the refund policy. Refunds take 5 days." After: "Refunds take 5 days."
+- **Reasoning-chain residue and leaked notes.** "Step 1:", "Let me think step by step", editor notes, and checklist text left in the deliverable. Test: is it a real step of a procedure the reader follows? A real step stays. Fix: remove the rest. Before: "Let me think step by step. The error is a timeout." After: "The error is a timeout."
 
 Other surface residue to remove usually: meta narration ("Let's dive in", "In this section", "As we will see", "Without further ado"), empty emphasis ("It is important to note", "At its core", "The real question is"), decorative tails ("highlighting...", "underscoring...", "fostering...", "reflecting..."), and generic endings ("In conclusion", "Ultimately", "Looking ahead", "The future belongs to..."). Treat every list as a search aid, not a ban. Keep quoted text, proper names, terms of art, and an ordinary word used accurately.
 
@@ -136,6 +155,24 @@ Did the edit remove warmth, humor, or a memorable line that the surrounding pros
 
 Add only material supported by the source. For a hollow passage, a precise `[TK]` question is a better edit than model-generated color.
 
+## Tighten tests
+
+Run these as part of step 6, and first when the request says tighten or cut the fluff. Each cut keeps every fact and every certainty marker (safeguard 1).
+
+- **Defense test.** A sentence that defends the claim instead of advancing it ("I know that sounds obvious", "That's not a knock on X"). Cut it.
+- **Redundant pairs.** Past history, added bonus, true facts, free gift, each and every, completely and entirely. Say it once.
+- **Plain-form swaps.** The meaning does not change, so the swap is safe: utilize → use, in order to → to, due to the fact that → because, at this point in time → now, in the event that → if, has the ability to → can, on a regular basis → regularly, commence → start, ascertain → find out, serves as → is, boasts → has. Do not swap an evaluative word (robust, pivotal, seamless) for another word. Rewrite the claim from the source or cut it.
+- **Qualifiers.** Cut "very", "really", "quite", "basically", "simply" only where they carry no certainty. A qualifier that carries the writer's certainty stays.
+
+## Edge rules
+
+Each rule yields to the writer's sample (safeguard 5) and to `medium.md`.
+
+- **Acronyms.** Expand on first use, then use the short form. `AI` and `LLM` are exempt unless the reader is new to the topic. An acronym the source never expands and you cannot resolve gets `[TK: expand X?]`. Never guess an expansion.
+- **Emoji decoration.** Remove emojis on headings and bullets, unless the medium is a social post that expects them.
+- **Predicate hyphens.** A compound after the noun it describes ("the process was data-driven") loses the hyphen, unless the writer's sample hyphenates it. A compound before a noun ("a data-driven report") keeps it.
+- **Curly quotes.** Convert to straight quotes in plain text, Markdown, and code-adjacent writing. Keep curly quotes when the writer's sample or the medium (typeset print, a publisher's house style) uses them.
+
 ## Genre notes
 
 - **Slack, DM, reply in a thread:** the answer or the ask goes first. Cut background the reader already has. One to four sentences is often enough.
@@ -151,14 +188,17 @@ Add only material supported by the source. For a hollow passage, a precise `[TK]
 2. **Mechanical sweep.** Search the final text for em dashes (U+2014), en dashes (U+2013), semicolons, and the lists in `tells.md`. Eyes miss them. If you can run code: `python3 ${CLAUDE_PLUGIN_ROOT}/skills/plainspoken/scripts/lint.py <file>`. Every hit is a prompt to read the passage, not a verdict.
 3. **No repeated pattern.** The rewrite does not reproduce the pattern it criticized under different punctuation.
 4. **Medium.** The medium still works: procedures scan, warnings remain visible, emails state the ask, and reference material remains retrievable.
-5. **Crafted lines:** one or none. The strongest original sentence was left alone unless changing it solved a real problem.
-6. **Rhythm:** the band and the openers.
-7. **Read it aloud as the writer.** Anything they would not say gets plainer.
-8. **Length.** Shorter than a padded input; about the same as an input that was not padded. Never cut a fact, the voice, or the warmth the genre needs to get there. The ending stops on the last useful thought.
-9. **Shorter option (run it every time; the writer decides).** Your final text stays as it is. Then cover each paragraph in turn and read the rest: would the reader miss a fact, a commitment, a decision, or the writer's point? A paragraph that fails is a cut candidate. The usual candidates, most common first: an opening that states the point in general terms before the piece shows it (the opening is not protected by being the crafted line: if the examples or the story below make the point better, it is a candidate); lines any similar piece would have (a general moral, a "there's more to do" or "good to pause" close, a second thank-you); a part that says almost the same as another part (keep the stronger one); a second argument or finding that could stand on its own (it can move to a reply, a follow-up, or another piece). Never offer to cut the proof or the stakes: the examples, the numbers, the commitments, or a disclosure that makes the reader trust the piece. Note each candidate with its rough word count and add them up; do the count, do not guess. If the candidates add up to about a quarter of the text or more, offer the shorter option; be bold, a third or half is fine when those parts do not earn their place. Otherwise the answer is "none, it's already tight." Pieces under about 100 words skip this check.
+5. **Point of view held.** One person for one actor throughout, matching the source's dominant person.
+6. **No leaked notes.** No editor note, checklist text, or "Step 1:" residue in the deliverable. In a file, no `[TK]` marker either.
+7. **Acronyms expanded** on first use, or marked `[TK: expand X?]`.
+8. **Crafted lines:** one or none. The strongest original sentence was left alone unless changing it solved a real problem.
+9. **Rhythm:** the band and the openers.
+10. **Read it aloud as the writer.** Anything they would not say gets plainer.
+11. **Length.** Shorter than a padded input; about the same as an input that was not padded. Never cut a fact, the voice, or the warmth the genre needs to get there. The ending stops on the last useful thought.
+12. **Shorter option (run it every time; the writer decides).** Your final text stays as it is. Then cover each paragraph in turn and read the rest: would the reader miss a fact, a commitment, a decision, or the writer's point? A paragraph that fails is a cut candidate. The usual candidates, most common first: an opening that states the point in general terms before the piece shows it (the opening is not protected by being the crafted line: if the examples or the story below make the point better, it is a candidate); lines any similar piece would have (a general moral, a "there's more to do" or "good to pause" close, a second thank-you); a part that says almost the same as another part (keep the stronger one); a second argument or finding that could stand on its own (it can move to a reply, a follow-up, or another piece). Never offer to cut the proof or the stakes: the examples, the numbers, the commitments, or a disclosure that makes the reader trust the piece. Note each candidate with its rough word count and add them up; do the count, do not guess. If the candidates add up to about a quarter of the text or more, offer the shorter option; be bold, a third or half is fine when those parts do not earn their place. Otherwise the answer is "none, it's already tight." Pieces under about 100 words skip this check.
 
 ## What to return
 
 The final text. Then `CHANGES:` with at most 5 bullets on what changed, plus any spot where a real specific would help ("A real customer number would make this line land"), and any `[TK]` questions. For a named file, write only the final prose to the file and put the notes in chat.
 
-Then, for any piece over about 100 words, end with one line that starts "Shorter option:" (final check 9). Either the option, offered and never applied: the cuts, roughly how much shorter the piece gets, and any fact a cut would lose and where it could move. Or "none, it's already tight." If the writer asks, write the shorter version in full.
+Then, for any piece over about 100 words, end with one line that starts "Shorter option:" (final check 12). Either the option, offered and never applied: the cuts, roughly how much shorter the piece gets, and any fact a cut would lose and where it could move. Or "none, it's already tight." If the writer asks, write the shorter version in full.
