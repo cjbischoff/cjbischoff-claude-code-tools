@@ -26,12 +26,15 @@ Use one block per material issue:
 
 ```txt
 Passage:      the shortest quote that locates the issue
+Severity:     P0 / P1 / P2 (membership in severity.md)
 Verdict:      keep / revise / ask-author / cut
 Pattern:      a concise name from rewrite.md or tells.md
 Why:          what the passage does instead of its intended job
 Suggestion:   a supported replacement, a precise author question, or the reason to cut
 Safety check: whether the suggestion preserves facts, attribution, scope, and voice
 ```
+
+List findings P0 first, then P1, then P2. Inside a tier, keep document order. Tier membership is in `severity.md`; do not restate the lists here. For casual text (Slack, a DM, a quick internal note), report P0 findings only and say that P1 and P2 findings were skipped for the register.
 
 Verdicts:
 

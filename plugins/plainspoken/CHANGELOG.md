@@ -2,6 +2,30 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 0.2.1 - 2026-10-28
+
+### Fixed
+
+- Fix `lint.py` speed on input with many sentences: the filler-transition check now uses one compiled pattern instead of one per entry per sentence, which cut an 80,000-character hostile input from 1.01 s to 0.40 s.
+- Fix the `emoji_line_count` doctest, which could not be parsed.
+
+## 0.2.0 - 2026-10-28
+
+### Added
+
+- Add `/plainspoken:deep`: four read-only lens agents (structure, fluff, pattern, flow) run in parallel, the findings are merged and ranked by severity, and one rewrite runs only after the writer approves.
+- Add P0/P1/P2 severity tiers (`references/severity.md`) to review and deep findings. Casual text reports P0 only.
+- Add eleven pattern families, structure and flow checks, tighten tests, and four edge rules (acronyms, emoji, predicate hyphens, curly quotes) to `references/rewrite.md`.
+- Add investor-email, social-post, and casual rows to `references/medium.md`.
+- Add twelve `lint.py` sweep keys, including cluster words per paragraph and density words.
+
+### Changed
+
+- Route "tighten" and "cut the fluff" to `rewrite` instead of `brief`.
+
+- Add failing tests for the twelve new lint sweep keys.
+- Add 8 eval cases for deep mode, severity, casual P0-only review, `tighten` routing, word swaps, false breadth, and unresolved acronyms, plus two hard gates in `evals/JUDGE.md`.
+
 ## 0.1.1 - 2026-10-28
 
 ### Fixed

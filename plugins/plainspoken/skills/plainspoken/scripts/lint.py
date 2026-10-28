@@ -69,7 +69,8 @@ AI_WORDS = _csv(
     "cutting-edge, game-changing, unparalleled, commendable, indelible, poignant, tireless, "
     "unwavering, unyielding, timeless, ever-evolving, showcase, showcasing, leverage, "
     "leveraging, foster, fostering, garner, multifaceted, utilize, utilizing, facilitate, "
-    "cornerstone"
+    "cornerstone, realm, paradigm, embark, nestled, bustling, holistic, impactful, paramount, "
+    "burgeoning, quintessential, overarching, groundbreaking, transformative, watershed"
 )
 
 AI_PHRASES = _csv(
@@ -156,6 +157,64 @@ COPULA_PHRASES = _csv("serves as, stands as, represents, marks a, features a, bo
 
 OPENER_WORDS = _csv("the, it's, that's, this, you, it, these")
 
+# Adapted from anti-slop-editor 1.1.0 (Christopher Bischoff), which draws on
+# blader/humanizer (MIT, Siqi Chen). Lists only, no text copied.
+CLUSTER_WORDS = _csv(
+    "harness, navigate, elevate, unleash, streamline, empower, spearhead, resonate, "
+    "revolutionize, nuanced, crucial, ecosystem, encompass, catalyze, reimagine, galvanize, "
+    "augment, cultivate, juxtapose, poised"
+)
+
+DENSITY_WORDS = _csv(
+    "significant, significantly, innovative, innovation, effective, effectively, dynamic, "
+    "scalable, compelling, unprecedented, exceptional, remarkable, sophisticated, instrumental"
+)
+
+WORDY = _csv(
+    "due to the fact that, in order to, at this point in time, in the event that, has the "
+    "ability to, on a regular basis, commence, ascertain"
+)
+
+REDUNDANT_PAIRS = _csv(
+    "past history, added bonus, true facts, free gift, each and every, completely and entirely"
+)
+
+DEFENSE = _csv(
+    "i know that sounds obvious, that's not a knock on, needless to say, it goes without saying"
+)
+
+SOCIAL_OPENERS = _csv(
+    "i recently had the pleasure of, i'm thrilled to announce, excited to share, humbled to, "
+    "grateful for the opportunity to"
+)
+
+FALSE_BREADTH = _csv(
+    "whether you're, no matter if you, from beginners to experts, regardless of whether"
+)
+
+ANALOGY = _csv("imagine, think of it like, picture this, it's like if, consider a scenario where")
+
+CUTOFF = _csv(
+    "as of my last update, as of my last training, up to my last training, based on available "
+    "information, while specific details are limited"
+)
+
+ACKNOWLEDGMENT = _csv("you're asking about, to answer your question")
+
+REASONING_RESIDUE = _csv("let me think step by step, step 1:")
+
+# Sweep key -> whole-phrase lexicon, for the phrase checks that report matched entries.
+PHRASE_KEYS = {
+    "wordy_constructions": WORDY,
+    "redundant_pairs": REDUNDANT_PAIRS,
+    "defense_phrases": DEFENSE,
+    "social_openers": SOCIAL_OPENERS,
+    "false_breadth": FALSE_BREADTH,
+    "cutoff_phrases": CUTOFF,
+    "acknowledgment_loops": ACKNOWLEDGMENT,
+    "reasoning_residue": REASONING_RESIDUE,
+}
+
 # Name -> entries, for the sync test. One entry per `Entries:` line in tells.md.
 LEXICONS = {
     "ai_words": AI_WORDS,
@@ -173,6 +232,17 @@ LEXICONS = {
     "participial_heads": PARTICIPIAL_HEADS,
     "copula": COPULA_PHRASES,
     "opener_words": OPENER_WORDS,
+    "cluster_words": CLUSTER_WORDS,
+    "density_words": DENSITY_WORDS,
+    "wordy": WORDY,
+    "redundant_pairs": REDUNDANT_PAIRS,
+    "defense": DEFENSE,
+    "social_openers": SOCIAL_OPENERS,
+    "false_breadth": FALSE_BREADTH,
+    "analogy": ANALOGY,
+    "cutoff": CUTOFF,
+    "acknowledgment": ACKNOWLEDGMENT,
+    "reasoning_residue": REASONING_RESIDUE,
 }
 
 HEDGE_WORDS = frozenset(HEDGES)
@@ -224,6 +294,11 @@ DASH_RE = re.compile(r"—|–|(?<=\s)--(?=\s)|(?<=\s)-(?=\s)")
 NUM_RE = re.compile(r"\b\d[\d,.]*\b|\b\d+%")
 PROPER_RE = re.compile(r"\b[A-Z][a-zA-Z0-9]*\b")
 QUOTE_RE = re.compile(r'"[^"]{4,}"|“[^”]{4,}”')
+CURLY_RE = re.compile("[“”‘’]")
+EMOJI_RE = re.compile("[\U0001f300-\U0001faff\u2600-\u26ff\u2705\u2728\u274c\u2b50\u2b55]")
+LIST_OR_HEADING_RE = re.compile(r"\s{0,3}(?:#{1,6}|[-*+]|\d+\.)\s")
+DENSITY_SHARE = 0.03
+DENSITY_MIN_HITS = 2
 
 BODY_MIN_WORDS = 8
 BAND_SHARE = 0.7  # share of sentences within 5 words of the median that counts as uniform
@@ -442,10 +517,18 @@ def starts_with_transition(sentence: str) -> str | None:
         >>> starts_with_transition("However, it works.")
         'however'
     """
-    for entry in TRANSITIONS:
-        if re.match(r"\W*" + re.escape(entry) + r"(?!\w)", sentence, re.I):
-            return entry
-    return None
+    m = _TRANSITION_RE.match(sentence)
+    return m.group(1).lower() if m else None
+
+
+# One compiled alternation, longest entry first, instead of one regex per entry per call:
+# a hostile input can hold tens of thousands of "sentences".
+_TRANSITION_RE = re.compile(
+    r"\W*("
+    + "|".join(re.escape(e) for e in sorted(TRANSITIONS, key=len, reverse=True))
+    + r")(?!\w)",
+    re.I,
+)
 
 
 def count_anchors(text: str, sents: list[str]) -> int:
@@ -475,10 +558,91 @@ def count_anchors(text: str, sents: list[str]) -> int:
     return anchors
 
 
+def sentence_start_hits(sents: list[str], entries: tuple[str, ...]) -> list[str]:
+    """List the entries that open at least one sentence.
+
+    Args:
+        sents: Sentences of one text.
+        entries: Lowercase lexicon entries.
+
+    Returns:
+        The entries found at a sentence start, in lexicon order, without repeats.
+
+    Example:
+        >>> sentence_start_hits(["Imagine a gateway.", "You can imagine it."], ("imagine",))
+        ['imagine']
+    """
+    return [
+        e
+        for e in entries
+        if any(re.match(r"\W*" + re.escape(e) + r"(?!\w)", s, re.I) for s in sents)
+    ]
+
+
+def cluster_hits(paras: list[str]) -> list[dict]:
+    """Find paragraphs that hold two or more distinct cluster words.
+
+    Args:
+        paras: Paragraphs of one text.
+
+    Returns:
+        One ``{"paragraph": n, "words": [...]}`` dict per paragraph (n starts at 1).
+
+    Example:
+        >>> cluster_hits(["We harness it.", "We harness and empower."])
+        [{'paragraph': 2, 'words': ['harness', 'empower']}]
+    """
+    found = [(n, phrase_hits(p, CLUSTER_WORDS, prefix=True)) for n, p in enumerate(paras, 1)]
+    return [{"paragraph": n, "words": w} for n, w in found if len(w) >= 2]
+
+
+def density_hits(words: list[str]) -> list[dict]:
+    """Find density words that are frequent enough to notice.
+
+    A word needs at least ``DENSITY_MIN_HITS`` hits and a share of ``DENSITY_SHARE`` or
+    more of all words. The hit floor stops one use in a very short text from counting.
+
+    Args:
+        words: Lowercase words of one text.
+
+    Returns:
+        One ``{"word": w, "share": s}`` dict per word, in lexicon order.
+
+    Example:
+        >>> density_hits(["significant", "plan", "significant"])
+        [{'word': 'significant', 'share': 0.667}]
+    """
+    total = len(words) or 1
+    out = []
+    for entry in DENSITY_WORDS:
+        n = words.count(entry)
+        if n >= DENSITY_MIN_HITS and n / total >= DENSITY_SHARE:
+            out.append({"word": entry, "share": round(n / total, 3)})
+    return out
+
+
+def emoji_line_count(raw: str) -> int:
+    """Count heading and list lines that contain an emoji.
+
+    Args:
+        raw: Text before Markdown stripping, which would remove the heading and list marks.
+
+    Returns:
+        The number of such lines.
+
+    Example:
+        >>> emoji_line_count("# Hi \\U0001f680\\n- ok\\nprose \\U0001f680")
+        1
+    """
+    return sum(
+        1 for line in raw.splitlines() if LIST_OR_HEADING_RE.match(line) and EMOJI_RE.search(line)
+    )
+
+
 # ---------------------------------------------------------------- sweep
 
 
-def sweep(text: str, label_source: str) -> dict:
+def sweep(text: str, label_source: str, raw_text: str = "") -> dict:
     """Run work-humanizer's mechanical sweep.
 
     Only checks with hits appear in the result, so a clean text gives an empty dict.
@@ -486,7 +650,8 @@ def sweep(text: str, label_source: str) -> dict:
     Args:
         text: Plain prose to check.
         label_source: Text to scan for bold-label starts. It keeps Markdown emphasis
-            marks, which ``text`` may have lost.
+            marks, which ``text`` may have lost. Curly quotes are counted here too.
+        raw_text: The draft before any Markdown stripping, for the emoji line count.
 
     Returns:
         A dict of the checks that found something. Lists hold lexicon entries, ints hold
@@ -519,6 +684,13 @@ def sweep(text: str, label_source: str) -> dict:
     put("attribution_verbs", phrase_hits(text, ATTRIBUTION))
     put("bold_label_starts", len(BOLD_LABEL.findall(label_source)))
     put("exclamation_marks", text.count("!"))
+    put("cluster_words", cluster_hits(paragraphs(text)))
+    put("density_words", density_hits([w.lower() for w in WORD_RE.findall(text)]))
+    for key, entries in PHRASE_KEYS.items():
+        put(key, phrase_hits(text, entries))
+    put("analogy_scaffolding", sentence_start_hits(sents, ANALOGY))
+    put("curly_quotes", len(CURLY_RE.findall(label_source)))
+    put("emoji_lines", emoji_line_count(raw_text))
 
     spoken = [s for s in sents if len(s.split()) >= 2]
     if len(spoken) >= 4:
@@ -621,11 +793,18 @@ def analyze(text: str, raw: bool = False) -> dict:
             "overloaded_sentences": [f"({n}w) {s[:96]}" for n, s in long_sents if n > 40],
             "chatbot_residue": phrase_hits(body, CHATBOT),
         },
-        "sweep": sweep(body, label_source),
+        "sweep": sweep(body, label_source, text),
     }
 
 
 # ---------------------------------------------------------------- report
+
+
+def _fmt(item: object) -> str:
+    """Format one list item for the human report; dicts print as ``k=v`` pairs."""
+    if isinstance(item, dict):
+        return ", ".join(f"{k}={v}" for k, v in item.items())
+    return str(item)
 
 
 def _section(title: str, group: dict) -> list[str]:
@@ -643,7 +822,7 @@ def _section(title: str, group: dict) -> list[str]:
             lines.append(f"  {key}: {items}")
         else:
             lines.append(f"  {key} ({len(items)})")
-            lines += [f"      {item}" for item in items[:8]]
+            lines += [f"      {_fmt(item)}" for item in items[:8]]
             if len(items) > 8:
                 lines.append(f"      ... {len(items) - 8} more")
     if not shown:

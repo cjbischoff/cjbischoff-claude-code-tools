@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 CASES_PATH = Path(__file__).resolve().parent.parent / "evals" / "cases.json"
-MODES = {"interview", "rewrite", "review", "brief", "lint"}
+MODES = {"interview", "rewrite", "review", "brief", "lint", "deep"}
 REQUIRED = ("id", "mode", "prompt", "input", "requirements")
 
 
@@ -25,6 +25,12 @@ def test_every_case_has_required_fields():
     for case in load_cases():
         for key in REQUIRED:
             assert case.get(key), f"{case.get('id', '?')}: missing {key}"
+
+
+def test_followup_is_optional_string():
+    for case in load_cases():
+        if "followup" in case:
+            assert isinstance(case["followup"], str) and case["followup"], case["id"]
 
 
 def test_ids_are_unique():

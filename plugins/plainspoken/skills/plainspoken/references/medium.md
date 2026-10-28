@@ -6,6 +6,9 @@ strips sign-offs and converts passive voice unless the row says to keep them.
 
 | Medium | Optimize for | Preserve | Avoid |
 |---|---|---|---|
+| Investor or fundraising email | The ask, the evidence, and the numbers | Every figure, term, and commitment exactly | Promotional language and generic conclusions. Flag borderline cases too. |
+| Social post | A concrete first line, one point | Hashtags and mentions the writer chose | Social-post openers, engagement-bait closers, emoji on every line |
+| Casual: Slack, DM, quick internal note | Speed and the writer's voice | Shorthand the team uses | Over-editing. `review` and `deep` report P0 only. |
 | Essay, article, newsletter | Development, authorial judgment, examples, readable momentum | Voice, uncertainty, earned digressions | A comprehensive survey when one through-line will do |
 | Documentation, guide | Correct completion, scanning, prerequisites, examples, failure states | Headings, lists, code, warnings, exact terms | Restructuring for novelty or hiding conditions in prose |
 | Reference, API, policy | Retrieval, precision, consistency | Repeated schemas, definitions, tables, normative language | Anti-template edits that make entries inconsistent |

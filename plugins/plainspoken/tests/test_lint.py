@@ -208,3 +208,92 @@ def test_hostile_input_finishes_fast():
         except subprocess.TimeoutExpired:
             raise AssertionError(f"{name}: lint.py did not finish in 1.5 s") from None
         assert result.returncode == 0, name
+
+
+def filler(words: int) -> str:
+    """Build plain filler text with an exact word count and no lexicon hits."""
+    return " ".join(["cats"] * words) + "."
+
+
+def test_cluster_words_per_paragraph(tmp_path):
+    text = "We harness data to empower the team.\n\nWe harness the data once.\n"
+    clusters = lint_json(tmp_path, text)["sweep"]["cluster_words"]
+    assert clusters == [{"paragraph": 1, "words": ["harness", "empower"]}]
+    assert "cluster_words" not in lint_json(tmp_path, "We harness the data once.\n")["sweep"]
+
+
+def test_cluster_words_count_paragraphs_separately(tmp_path):
+    text = "We harness the data.\n\nThe team will empower users.\n"
+    assert "cluster_words" not in lint_json(tmp_path, text)["sweep"]
+    split = "We harness the data.\n\nWe harness data to empower users.\n"
+    assert lint_json(tmp_path, split)["sweep"]["cluster_words"] == [
+        {"paragraph": 2, "words": ["harness", "empower"]}
+    ]
+
+
+def test_density_words_need_two_hits_and_three_percent(tmp_path):
+    two_in_40 = "A significant gain and a significant cost. " + filler(31)
+    found = lint_json(tmp_path, two_in_40)["sweep"]["density_words"]
+    assert [d["word"] for d in found] == ["significant"]
+    assert found[0]["share"] >= 0.03
+    once_in_30 = "A significant gain. " + filler(26)
+    assert "density_words" not in lint_json(tmp_path, once_in_30)["sweep"]
+    two_in_200 = "A significant gain and a significant cost. " + filler(191)
+    assert "density_words" not in lint_json(tmp_path, two_in_200)["sweep"]
+
+
+def test_wordy_and_redundant_and_defense(tmp_path):
+    text = (
+        "We stopped due to the fact that it rained. The past history is clear. "
+        "Needless to say, we left.\n"
+    )
+    sweep = lint_json(tmp_path, text)["sweep"]
+    assert "due to the fact that" in sweep["wordy_constructions"]
+    assert "past history" in sweep["redundant_pairs"]
+    assert "needless to say" in sweep["defense_phrases"]
+
+
+def test_social_breadth_cutoff_ack_reasoning(tmp_path):
+    cases = {
+        "social_openers": "Excited to share our launch.",
+        "false_breadth": "It suits everyone from beginners to experts.",
+        "cutoff_phrases": "As of my last update, the price held.",
+        "acknowledgment_loops": "You're asking about the price.",
+        "reasoning_residue": "Let me think step by step.",
+    }
+    for key, line in cases.items():
+        assert key in lint_json(tmp_path, line + "\n")["sweep"], key
+
+
+def test_analogy_scaffolding_sentence_start_only(tmp_path):
+    start = lint_json(tmp_path, "Imagine a gateway. It routes calls.\n")["sweep"]
+    assert start["analogy_scaffolding"] == ["imagine"]
+    middle = lint_json(tmp_path, "You can imagine it. It routes calls.\n")["sweep"]
+    assert "analogy_scaffolding" not in middle
+
+
+def test_curly_quotes_counted(tmp_path):
+    text = "He said “stop” and it’s done.\n"
+    assert lint_json(tmp_path, text)["sweep"]["curly_quotes"] == 3
+
+
+def test_emoji_lines_headings_and_bullets(tmp_path):
+    text = (
+        "# Launch \U0001f680\n\n- Fast ✅\n- Plain item\n\nA prose line with \U0001f680 inside.\n"
+    )
+    assert lint_json(tmp_path, text)["sweep"]["emoji_lines"] == 2
+
+
+def test_new_keys_quiet_on_plain_text(tmp_path):
+    text = (
+        "I fixed the login bug on Tuesday. The cause was a stale cookie that the old app "
+        "kept after every logout. Users on the new app never saw the error.\n"
+    )
+    sweep = lint_json(tmp_path, text)["sweep"]
+    new = {
+        "cluster_words", "density_words", "wordy_constructions", "redundant_pairs",
+        "defense_phrases", "social_openers", "false_breadth", "analogy_scaffolding",
+        "cutoff_phrases", "acknowledgment_loops", "reasoning_residue", "curly_quotes",
+        "emoji_lines",
+    }  # fmt: skip
+    assert sweep == {} and not new & set(sweep)

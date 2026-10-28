@@ -12,7 +12,7 @@ Matching rules in `lint.py`: entries are case-insensitive. A list marked "word s
 
 Word start. Words from the public AI-tell literature that appeared zero times in a 227-post archive of one professional writer's newsletter (2022-2026), plus clarity's model lexis. A hit is drift, not style.
 
-Entries: delve, bolster, illuminate, elucidate, transcend, intertwine, espouse, exemplify, underpin, underscore, underscoring, tapestry, synergy, beacon, interplay, intricacies, intricate, symphony, kaleidoscope, myriad, plethora, advancements, vibrant, meticulous, cutting-edge, game-changing, unparalleled, commendable, indelible, poignant, tireless, unwavering, unyielding, timeless, ever-evolving, showcase, showcasing, leverage, leveraging, foster, fostering, garner, multifaceted, utilize, utilizing, facilitate, cornerstone
+Entries: delve, bolster, illuminate, elucidate, transcend, intertwine, espouse, exemplify, underpin, underscore, underscoring, tapestry, synergy, beacon, interplay, intricacies, intricate, symphony, kaleidoscope, myriad, plethora, advancements, vibrant, meticulous, cutting-edge, game-changing, unparalleled, commendable, indelible, poignant, tireless, unwavering, unyielding, timeless, ever-evolving, showcase, showcasing, leverage, leveraging, foster, fostering, garner, multifaceted, utilize, utilizing, facilitate, cornerstone, realm, paradigm, embark, nestled, bustling, holistic, impactful, paramount, burgeoning, quintessential, overarching, groundbreaking, transformative, watershed
 
 ## Stock AI phrases
 
@@ -97,6 +97,101 @@ Entries: serves as, stands as, represents, marks a, features a, boasts, offers a
 Used for the opener share. A share of 40% or more flags a monotone start.
 
 Entries: the, it's, that's, this, you, it, these
+
+## Cluster words
+
+Word start. One of these in a paragraph is ordinary. Two or more distinct ones in one paragraph is the tell, and the script reports the paragraph number and the words. Words already in "Stock AI words" are not repeated here, so a word is reported once.
+
+Entries: harness, navigate, elevate, unleash, streamline, empower, spearhead, resonate, revolutionize, nuanced, crucial, ecosystem, encompass, catalyze, reimagine, galvanize, augment, cultivate, juxtapose, poised
+
+## Density words
+
+Whole word. Each of these has plain uses. The script reports a word only when it occurs at least twice and makes up 3% or more of all words in the draft. The floor of 2 hits stops one use in a very short message from counting as 3%.
+
+Entries: significant, significantly, innovative, innovation, effective, effectively, dynamic, scalable, compelling, unprecedented, exceptional, remarkable, sophisticated, instrumental
+
+## Wordy constructions
+
+Whole phrase. A long form that has a short plain form (see the swap table below).
+
+Entries: due to the fact that, in order to, at this point in time, in the event that, has the ability to, on a regular basis, commence, ascertain
+
+## Redundant pairs
+
+Whole phrase. The second word repeats the first. Say it once.
+
+Entries: past history, added bonus, true facts, free gift, each and every, completely and entirely
+
+## Defense phrases
+
+Whole phrase. A sentence that defends the claim instead of advancing it. Cut it.
+
+Entries: i know that sounds obvious, that's not a knock on, needless to say, it goes without saying
+
+## Social-post openers
+
+Whole phrase. Stock openings of a professional social post.
+
+Entries: i recently had the pleasure of, i'm thrilled to announce, excited to share, humbled to, grateful for the opportunity to
+
+## False breadth
+
+Whole phrase. A claim that covers every reader and tells none of them anything.
+
+Entries: whether you're, no matter if you, from beginners to experts, regardless of whether
+
+## Analogy scaffolding
+
+Sentence start only. The same word inside a sentence is fine ("you can imagine it"). The script matches the first words of each sentence.
+
+Entries: imagine, think of it like, picture this, it's like if, consider a scenario where
+
+## Knowledge-cutoff phrases
+
+Whole phrase. Leftover assistant phrasing about what the model knows.
+
+Entries: as of my last update, as of my last training, up to my last training, based on available information, while specific details are limited
+
+## Acknowledgment loops
+
+Whole phrase. Restates the question before answering it.
+
+Entries: you're asking about, to answer your question
+
+## Reasoning-chain residue
+
+Whole phrase. Leftover scaffolding from a step-by-step answer.
+
+Entries: let me think step by step, step 1:
+
+## Plain-form swaps
+
+Safe swaps, because the meaning does not change. No `Entries:` line: the script does not read this table. Evaluative words (robust, pivotal, and similar) are not swapped for another evaluative word. Rewrite the claim from the source, or cut it.
+
+| Instead of | Write |
+|---|---|
+| utilize | use |
+| in order to | to |
+| due to the fact that | because |
+| at this point in time | now |
+| in the event that | if |
+| has the ability to | can |
+| on a regular basis | regularly |
+| commence | start |
+| ascertain | find out |
+| serves as | is |
+| boasts | has |
+
+## Other sweep counts
+
+No `Entries:` line. These counts have no word list.
+
+- Curly quotes: the count of U+201C, U+201D, U+2018, and U+2019 characters. Convert them to straight quotes unless the writer's sample or the medium uses them.
+- Emoji lines: the count of heading or list lines that contain an emoji. The script reads the text as written, before Markdown stripping, because stripping removes the heading and list marks.
+
+## Credit
+
+The lists in "Cluster words" through "Reasoning-chain residue" adapt anti-slop-editor 1.1.0 (Christopher Bischoff), which draws on blader/humanizer (MIT, Siqi Chen). No text or example is copied.
 
 ## Em dash substitutes by context
 

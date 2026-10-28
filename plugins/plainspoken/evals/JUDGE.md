@@ -30,7 +30,10 @@ An output fails the case if it:
 - in brief mode, breaks a fixed-format limit: an executive summary that is not exactly 3
   sentences, a tight message over 75 words, or an action item that is not in the shape
   `[Owner] — [Task] — [Deadline]`. A missing deadline must read `[Deadline: TBD]` and a missing
-  owner must read `[Owner: TBD]`.
+  owner must read `[Owner: TBD]`;
+- in deep mode, rewrites the text before the writer answers the question "Rewrite with these
+  fixes?";
+- in review or deep mode, reports a finding that has no severity (P0, P1, or P2).
 
 Report hard-gate failures separately. A fluent fabrication must not win on an average score.
 

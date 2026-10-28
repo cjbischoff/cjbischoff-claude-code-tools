@@ -1,6 +1,6 @@
 ---
 name: plainspoken
-description: "Draft, rewrite, review, tighten, or lint reader-facing prose so it is specific, useful, and recognizably the writer's own, without inventing facts or performing humanness. Five modes. interview (interview, write, draft, new, co-write): build a piece from the writer's own words. rewrite (rewrite, edit, fix, humanize, polish): remove AI tells and fix substance in an existing draft. review (review, critique, check): critique without rewriting. brief (BLUF, exec summary, action items, tighten, 'email to my VP'): fixed business formats with hard limits. lint (lint, stats): run the mechanical prose diagnostics. Use for emails, Slack messages, meeting notes, reports, essays, articles, newsletters, docs, release notes, launch copy, and other prose that feels generic, hollow, or AI-shaped."
+description: "Draft, rewrite, review, tighten, or lint reader-facing prose so it is specific, useful, and recognizably the writer's own, without inventing facts or performing humanness. Six modes. interview (interview, write, draft, new, co-write): build a piece from the writer's own words. rewrite (rewrite, edit, fix, humanize, polish, tighten, cut the fluff, de-slop, de-AI, 'sounds like ChatGPT', 'sounds robotic'): remove AI tells and fix substance in an existing draft. review (review, critique, check, detect, flag only, audit only, scan, 'what's wrong with this'): critique without rewriting, with P0/P1/P2 severity. brief (BLUF, exec summary, action items, 'email to my VP'): fixed business formats with hard limits. lint (lint, stats): run the mechanical prose diagnostics. deep (command only, /plainspoken:deep): four parallel lens agents report findings, then one rewrite after the writer answers. Use for emails, Slack messages, meeting notes, reports, essays, articles, newsletters, docs, release notes, launch copy, and other prose that feels generic, hollow, or AI-shaped."
 license: MIT
 ---
 
@@ -15,18 +15,20 @@ An explicit mode word or slash command wins. Without one, infer the mode from th
 | Mode | Trigger words | Rules to load |
 |---|---|---|
 | `interview` | interview, write, draft, new, co-write; or a topic only, or a hollow draft | `references/interview.md` |
-| `rewrite` | rewrite, edit, fix, humanize, polish; or a draft supplied with a change wanted | `references/rewrite.md` |
-| `review` | review, critique, check | `references/review.md`, then `references/rewrite.md` as a pattern reference |
-| `brief` | BLUF, exec summary, action items, tighten, "email to my VP"; or meeting notes, or a short message to a named audience | `references/brief.md` |
+| `rewrite` | rewrite, edit, fix, humanize, polish, tighten, cut the fluff, de-slop, de-AI, "sounds like ChatGPT", "sounds robotic"; or a draft supplied with a change wanted | `references/rewrite.md` |
+| `review` | review, critique, check, detect, flag only, audit only, scan, "what's wrong with this" | `references/review.md` and `references/severity.md`, then `references/rewrite.md` as a pattern reference |
+| `brief` | BLUF, exec summary, action items, "email to my VP"; or meeting notes, or a short message to a named audience | `references/brief.md` |
 | `lint` | lint, stats | `scripts/lint.py` |
+| `deep` | the command `/plainspoken:deep` only; no trigger words | `references/deep.md`, `references/severity.md`, `references/review.md`, then `references/rewrite.md` after the writer says yes |
 
 Routing rules:
 
-- `brief` forces a fixed format with hard limits. `rewrite` keeps the writer's structure and fixes substance and texture. A request for "tighter" with no named format goes to `rewrite`.
+- `brief` forces a fixed format with hard limits. `rewrite` keeps the writer's structure and fixes substance and texture. A request to tighten, or for "tighter", with no named format goes to `rewrite`.
 - Ask one question only when the request could mean review or rewrite.
 - In `rewrite`, when the draft is hollow, say so and offer `interview`.
+- `deep` never starts from trigger words. Without the command, a request to detect or audit goes to `review`.
 
-Load only what the mode needs. For essays, articles, newsletters, talks, speeches, narrative, fiction, or other authored long-form prose, also read `references/longform.md`. For academic, legal, medical, safety, reference, procedural, marketing, email, UI, speech, slides, fiction, or narrative, also read `references/medium.md`. Medium and explicit user requirements outrank house preferences. `references/tells.md` holds the word lists. `references/README.md` lists every file.
+Load only what the mode needs. For essays, articles, newsletters, talks, speeches, narrative, fiction, or other authored long-form prose, also read `references/longform.md`. For academic, legal, medical, safety, reference, procedural, marketing, email, UI, speech, slides, fiction, or narrative, also read `references/medium.md`. Medium and explicit user requirements outrank house preferences. `references/tells.md` holds the word lists. `references/severity.md` holds the single P0/P1/P2 list. `references/README.md` lists every file.
 
 ## Shared safeguards
 
@@ -75,12 +77,13 @@ For essays and other authored long-form prose, ask one more question: what can t
 | Part | When |
 |---|---|
 | `FORMAT:` / `AUDIENCE:` header plus "Say so to switch format." | `brief` only, above the text |
-| The deliverable | all modes except `review` and `lint` |
-| `CHANGES:` at most 5 bullets | `rewrite`, `brief` |
+| The deliverable | all modes except `review` and `lint`. In `deep`, only after the writer says yes. |
+| Numbered findings, then the question "Rewrite with these fixes?" | `deep`, before any rewrite |
+| `CHANGES:` at most 5 bullets | `rewrite`, `brief`, `deep` (after the rewrite) |
 | `Provenance:` author material / model contribution / open `[TK]` items | `interview` |
-| `Shorter option:` one line, or "none, it's already tight." | `rewrite` and `interview` for deliverables over about 100 words. Not `brief`, which already has hard length limits. |
+| `Shorter option:` one line, or "none, it's already tight." | `rewrite`, `interview`, and `deep` for deliverables over about 100 words. Not `brief`, which already has hard length limits. |
 
-`review` returns the piece-level diagnosis and findings in `references/review.md`. `lint` returns the script output.
+`review` returns the piece-level diagnosis and findings in `references/review.md`, with a `Severity:` field on each finding. `lint` returns the script output. `deep` returns the merged findings and waits.
 
 The deliverable follows the writer's voice and these rules. A session output style such as STE100 does not apply to it. The footer, questions, and review findings follow the session output style.
 
@@ -89,6 +92,7 @@ The deliverable follows the writer's voice and these rules. A session output sty
 - A file path means edit in place. Write only final prose to the file. Keep code, data, frontmatter, and link targets. Put every note, the footer, and any `[TK]` questions in chat, not in the file.
 - Pasted text: return the deliverable followed by the footer parts for the mode.
 - `review` and `lint` never create or modify a file.
+- `deep` edits a named file only after the writer says yes. Findings stay in chat.
 
 ## Final check
 
@@ -101,4 +105,5 @@ Before delivering, verify:
 - Structure follows the reader's task instead of a default model template.
 - The ending stops on the last useful thought instead of a recap or generic send-off.
 - No edit made the prose colder, less clear, or less recognizably the writer's merely to remove a stylistic tell.
+- Point of view is held, no editor note or checklist text leaked into the deliverable, and acronyms are expanded or marked `[TK]`.
 - The footer parts for the mode are present.
