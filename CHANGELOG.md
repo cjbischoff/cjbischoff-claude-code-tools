@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Added
 
+- Add the plainspoken deep-review spec (`docs/superpowers/specs/2026-10-28-plainspoken-deep-review-design.md`) and its four-commit plan (`docs/superpowers/plans/2026-10-28-plainspoken-deep-review.md`).
 - Add `.github/workflows/plainspoken-tests.yml`: on pull requests that change `plugins/plainspoken/`, it runs the plugin pytest suite.
 - Add the plainspoken writing plugin to the marketplace.
 - Add the plainspoken plugin spec (`docs/superpowers/specs/2026-10-28-plainspoken-plugin-design.md`) and its nine-commit implementation plan (`docs/superpowers/plans/2026-10-28-plainspoken-plugin.md`).
