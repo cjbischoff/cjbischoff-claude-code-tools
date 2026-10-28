@@ -10,3 +10,4 @@ _Initial release._
 
 - Add the plainspoken plugin scaffold: manifest, README, maintainer manual, and the clarity MIT notice.
 - Add `references/tells.md`, the merged AI-tell lexicon from work-humanizer and clarity, and 14 failing tests for the lint script.
+- Add `scripts/lint.py`, a stdlib diagnostic script that merges clarity's prose statistics with the work-humanizer tell sweep and reports no score or verdict.

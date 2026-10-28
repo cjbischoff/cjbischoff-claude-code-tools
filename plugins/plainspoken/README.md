@@ -59,6 +59,10 @@ editor to undo.
 - Promise that text will pass an AI detector.
 - Add fake typos, slang, or stories to sound human.
 
+## Development
+
+Maintainer commands are in [`CLAUDE.md`](CLAUDE.md). `ruff.toml` sets the Python line length to 100.
+
 ## Attribution
 
 plainspoken adapts the MIT-licensed [clarity](https://github.com/addyosmani/clarity) skill by
