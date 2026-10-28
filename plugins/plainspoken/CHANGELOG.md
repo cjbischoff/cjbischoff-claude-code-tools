@@ -7,6 +7,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 ### Added
 
 - Add failing tests for the twelve new lint sweep keys.
+- Add 8 eval cases for deep mode, severity, casual P0-only review, `tighten` routing, word swaps, false breadth, and unresolved acronyms, plus two hard gates in `evals/JUDGE.md`.
 
 ## 0.1.1 - 2026-10-28
 

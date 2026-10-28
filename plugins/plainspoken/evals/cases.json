@@ -294,6 +294,135 @@
         "Do not force a BLUF email, executive summary, action items, or tight message format.",
         "Do not turn 'may take' into a firm duration."
       ]
+    },
+    {
+      "id": "deep_asks_before_rewrite",
+      "mode": "deep",
+      "category": "mode_boundary",
+      "prompt": "Run a deep pass on this announcement.",
+      "input": "Great question! I'm excited to share that our new reporting dashboard is a robust, game-changing tool. Whether you're an analyst or an executive, it delivers real value. Three things stand out: it loads fast, it exports to CSV, and it is easy to use. The first is the speed. Overall, the dashboard is a powerful step forward for the team.",
+      "requirements": [
+        "Show numbered findings in the review block format, P0 first, each with a severity.",
+        "Stop after the findings and ask whether to rewrite, offering the 'yes' and 'yes without N' replies.",
+        "Keep the findings tied to quoted passages from the input."
+      ],
+      "prohibitions": [
+        "Do not output any rewritten version of the announcement before the writer answers.",
+        "Do not invent a metric, a load time, or a customer in a suggested fix."
+      ]
+    },
+    {
+      "id": "deep_honors_dropped_findings",
+      "mode": "deep",
+      "category": "mode_boundary",
+      "prompt": "Run a deep pass on this status note.",
+      "followup": "yes without 2",
+      "input": "Hope this finds you well. As of my last update, the vendor migration is on track. It is a simple, seamless process. Step 1: the data was exported. Step 2: the data was validated. The team did a great job, and I think we should consider maybe continuing as planned. In conclusion, the migration is going well.",
+      "requirements": [
+        "Turn 1: show numbered findings and ask whether to rewrite. Send the followup as the second user turn.",
+        "Turn 2: rewrite the note with the kept findings applied.",
+        "Leave the passage covered by finding 2 as it was in the source, with no edit to that passage.",
+        "End with CHANGES: and a Shorter option: line."
+      ],
+      "prohibitions": [
+        "Do not apply finding 2 in the rewrite.",
+        "Do not add a date, a vendor name, or a status fact the source lacks."
+      ]
+    },
+    {
+      "id": "review_findings_carry_severity",
+      "mode": "review",
+      "category": "severity",
+      "prompt": "Review this update for AI-sounding writing.",
+      "input": "Great question! Here is an overview of the Q3 results. Revenue rose and costs fell, but the picture is nuanced. The team delivered, in order to hit the target, a comprehensive and robust plan. Furthermore, the results were, in many ways, quite encouraging. In summary, Q3 went well.",
+      "requirements": [
+        "Give every finding a Severity of P0, P1, or P2 taken from the severity tiers.",
+        "List findings P0 first, then P1, then P2, with document order inside a tier.",
+        "Rate the chat residue ('Great question!') as P0."
+      ],
+      "prohibitions": [
+        "Do not leave any finding without a severity.",
+        "Do not rewrite the update.",
+        "Do not invent figures for the revenue or cost change."
+      ]
+    },
+    {
+      "id": "review_casual_reports_p0_only",
+      "mode": "review",
+      "category": "severity",
+      "prompt": "Review this Slack message to my team.",
+      "input": "Great question, Sam! Quick update: the deploy is basically done and honestly it went really smoothly. Rollback is ready if we need it. Will ping when the dashboards are green.",
+      "requirements": [
+        "Report one P0 finding, the chat residue 'Great question, Sam!'.",
+        "State that P1 and P2 findings were skipped because the text is casual.",
+        "Respect the casual register and the writer's shorthand."
+      ],
+      "prohibitions": [
+        "Do not report P1 or P2 findings such as qualifiers or filler.",
+        "Do not rewrite the message."
+      ]
+    },
+    {
+      "id": "tighten_routes_to_rewrite",
+      "mode": "rewrite",
+      "category": "mode_routing",
+      "prompt": "Tighten this paragraph.",
+      "input": "In order to improve onboarding, the team has the ability to utilize a checklist on a regular basis. Each and every new hire gets a past history review, and it is very important that the checklist is basically kept up to date. Due to the fact that the checklist changes, owners must re-check it.",
+      "requirements": [
+        "Return a tightened paragraph in the same prose form, with a CHANGES: note.",
+        "Apply plain-form swaps and cut redundant pairs without changing the meaning.",
+        "Keep every condition: owners must re-check the checklist when it changes."
+      ],
+      "prohibitions": [
+        "Do not output a BLUF email, executive summary, action items, or tight message.",
+        "Do not add a fact, date, or owner the source lacks."
+      ]
+    },
+    {
+      "id": "evaluative_word_not_swapped",
+      "mode": "rewrite",
+      "category": "factual_fidelity",
+      "prompt": "Rewrite this sentence from a design doc.",
+      "input": "We chose a robust approach to retries.",
+      "requirements": [
+        "Treat 'robust' as an evaluative claim with no evidence in the source.",
+        "Rewrite with material from the source only, or cut the word, or mark the gap with [TK: what makes the approach robust?]."
+      ],
+      "prohibitions": [
+        "Do not swap 'robust' for a synonym such as 'strong', 'solid', or 'reliable'.",
+        "Do not invent a retry count, a backoff scheme, or a failure rate."
+      ]
+    },
+    {
+      "id": "false_breadth_fix_adds_nothing",
+      "mode": "rewrite",
+      "category": "factual_fidelity",
+      "prompt": "Rewrite this line from a product page.",
+      "input": "Whether you're a small team or a growing enterprise, our scheduling tool helps you stay organized.",
+      "requirements": [
+        "Treat 'Whether you're X or Y' as false breadth.",
+        "Name the reader the source supports, or cut the frame, or mark the gap with [TK].",
+        "Keep the claim about scheduling and organization at the source's strength."
+      ],
+      "prohibitions": [
+        "Do not add an audience, a number, a customer, or a feature the source lacks.",
+        "Do not strengthen 'helps you stay organized'."
+      ]
+    },
+    {
+      "id": "acronym_unresolved_gets_tk",
+      "mode": "rewrite",
+      "category": "factual_fidelity",
+      "prompt": "Clean up this note for a new hire.",
+      "input": "Before the sprint, check that the QZX feed is green. If the QZX feed is red, tell Priya. The API keys rotate on Fridays.",
+      "requirements": [
+        "Mark QZX with [TK: expand QZX?] at first use, because the source never expands it and the term is not resolvable.",
+        "Keep the conditions, the owner Priya, and the Friday rotation."
+      ],
+      "prohibitions": [
+        "Do not guess an expansion of QZX.",
+        "Do not add a step, a deadline, or a tool the source lacks."
+      ]
     }
   ]
 }
