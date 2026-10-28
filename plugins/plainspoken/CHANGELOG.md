@@ -2,6 +2,12 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## Unreleased
+
+### Added
+
+- Add failing tests for the twelve new lint sweep keys.
+
 ## 0.1.1 - 2026-10-28
 
 ### Fixed
