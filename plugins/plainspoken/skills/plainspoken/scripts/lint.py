@@ -222,7 +222,7 @@ SENT_RE = re.compile(r'[^.!?]*[.!?]+["\')\]]?|\S[^.!?]*$', re.S)
 WORD_RE = re.compile(r"[A-Za-z][A-Za-z'-]*")
 DASH_RE = re.compile(r"—|–|(?<=\s)--(?=\s)|(?<=\s)-(?=\s)")
 NUM_RE = re.compile(r"\b\d[\d,.]*\b|\b\d+%")
-PROPER_RE = re.compile(r"\b[A-Z][a-zA-Z0-9]*(?:[A-Z][a-zA-Z0-9]*)*\b")
+PROPER_RE = re.compile(r"\b[A-Z][a-zA-Z0-9]*\b")
 QUOTE_RE = re.compile(r'"[^"]{4,}"|“[^”]{4,}”')
 
 BODY_MIN_WORDS = 8
@@ -243,6 +243,33 @@ COMMON_CAPS = {
 # ---------------------------------------------------------------- markdown
 
 
+def _drop_comments(text: str) -> str:
+    """Remove closed HTML comments in linear time.
+
+    A regex such as ``<!--.*?-->`` rescans to the end of the text from every
+    unclosed ``<!--``, which is quadratic. An unclosed comment stays in the text.
+
+    Args:
+        text: Markdown source.
+
+    Returns:
+        The text without its closed ``<!-- ... -->`` comments.
+
+    Example:
+        >>> _drop_comments("a<!-- x -->b<!-- open")
+        'ab<!-- open'
+    """
+    out, i = [], 0
+    while (j := text.find("<!--", i)) != -1:
+        k = text.find("-->", j + 4)
+        if k == -1:
+            break
+        out.append(text[i:j])
+        i = k + 3
+    out.append(text[i:])
+    return "".join(out)
+
+
 def drop_code(text: str) -> str:
     """Remove the parts of a Markdown file that are not prose and not markup labels.
 
@@ -260,7 +287,7 @@ def drop_code(text: str) -> str:
         'Hi.\\n\\n\\n'
     """
     text = re.sub(r"\A---\n.*?\n---\n", "", text, flags=re.S)
-    text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
+    text = _drop_comments(text)
     text = re.sub(r"^```.*?^```", "", text, flags=re.S | re.M)
     text = re.sub(r"^~~~.*?^~~~", "", text, flags=re.S | re.M)
     return re.sub(r"^(?: {4}|\t).*$", "", text, flags=re.M)
@@ -285,10 +312,10 @@ def strip(text: str) -> str:
         'Title\\n\\nUse  and bold.\\n'
     """
     text = drop_code(text)
-    text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", text)  # images before links
-    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)
-    text = re.sub(r"\[([^\]]*)\]\[[^\]]*\]", r"\1", text)
-    text = re.sub(r"^\s*\[[^\]]+\]:\s+\S+.*$", "", text, flags=re.M)
+    text = re.sub(r"!\[[^\[\]]*\]\([^()]*\)", "", text)  # images before links
+    text = re.sub(r"\[([^\[\]]*)\]\([^()]*\)", r"\1", text)
+    text = re.sub(r"\[([^\[\]]*)\]\[[^\[\]]*\]", r"\1", text)
+    text = re.sub(r"^\s*\[[^\]]+\]:\s+\S.*$", "", text, flags=re.M)
     text = re.sub(r"`+[^`]*`+", "", text)
     text = re.sub(r"https?://\S+", "", text)
     text = re.sub(r"^\s*\|.*$", "", text, flags=re.M)
@@ -301,7 +328,7 @@ def strip(text: str) -> str:
     text = re.sub(r"\*([^*]+)\*", r"\1", text)
     text = re.sub(r"(?<![\w_])_([^_]+)_(?![\w_])", r"\1", text)
     text = re.sub(r"~~([^~]+)~~", r"\1", text)
-    text = re.sub(r"</?[a-zA-Z][^>]*>", "", text)
+    text = re.sub(r"</?[a-zA-Z][^<>]*>", "", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip() + "\n"
 

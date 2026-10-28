@@ -183,3 +183,28 @@ def test_plain_human_text_is_quiet(tmp_path):
         "kept after every logout. Users on the new app never saw the error.\n"
     )
     assert lint_json(tmp_path, text)["sweep"] == {}
+
+
+HOSTILE = {
+    "acronym_chain": " ".join(["ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJ-x"] * 3),
+    "unclosed_comment": "<!--" * 20000,
+    "unclosed_image": "![" * 20000,
+    "unclosed_image_url": "![](" * 20000,
+    "unclosed_link": "[\\" * 20000,
+    "unclosed_tag": "<A" * 20000,
+}
+
+
+def test_hostile_input_finishes_fast():
+    for name, text in HOSTILE.items():
+        try:
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), "-", "--json"],
+                input=text,
+                capture_output=True,
+                text=True,
+                timeout=1.5,
+            )
+        except subprocess.TimeoutExpired:
+            raise AssertionError(f"{name}: lint.py did not finish in 1.5 s") from None
+        assert result.returncode == 0, name

@@ -43,3 +43,7 @@ The lists in `lint.py` mirror `../references/tells.md`. A test (`../../../tests/
 ## Attribution
 
 The measurements and the Markdown stripping come from clarity's `prose_stats.py` and `strip_markdown.py` (MIT, Addy Osmani). The `sweep` group comes from work-humanizer's `check.py`. See `../../../NOTICE.md`.
+
+## Regular expressions
+
+Every pattern runs in linear time on hostile input: no nested quantifiers, and no pattern that rescans to the end of the text from each unclosed `<!--`, `[`, `(`, or `<`. HTML comments are removed with `str.find`, not a regex. `tests/test_lint.py` enforces a time limit.
