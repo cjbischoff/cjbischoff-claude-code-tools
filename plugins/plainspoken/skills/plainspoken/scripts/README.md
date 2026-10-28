@@ -70,4 +70,4 @@ The measurements and the Markdown stripping come from clarity's `prose_stats.py`
 
 ## Regular expressions
 
-Every pattern runs in linear time on hostile input: no nested quantifiers, and no pattern that rescans to the end of the text from each unclosed `<!--`, `[`, `(`, or `<`. HTML comments are removed with `str.find`, not a regex. `tests/test_lint.py` enforces a time limit.
+Every pattern runs in linear time on hostile input: no nested quantifiers, and no pattern that rescans to the end of the text from each unclosed `<!--`, `[`, `(`, or `<`. HTML comments are removed with `str.find`, not a regex. `tests/test_lint.py` enforces a time limit. Per-sentence checks use patterns compiled once at import, not one regex per lexicon entry per sentence.

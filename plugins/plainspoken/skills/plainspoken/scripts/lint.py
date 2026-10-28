@@ -517,10 +517,18 @@ def starts_with_transition(sentence: str) -> str | None:
         >>> starts_with_transition("However, it works.")
         'however'
     """
-    for entry in TRANSITIONS:
-        if re.match(r"\W*" + re.escape(entry) + r"(?!\w)", sentence, re.I):
-            return entry
-    return None
+    m = _TRANSITION_RE.match(sentence)
+    return m.group(1).lower() if m else None
+
+
+# One compiled alternation, longest entry first, instead of one regex per entry per call:
+# a hostile input can hold tens of thousands of "sentences".
+_TRANSITION_RE = re.compile(
+    r"\W*("
+    + "|".join(re.escape(e) for e in sorted(TRANSITIONS, key=len, reverse=True))
+    + r")(?!\w)",
+    re.I,
+)
 
 
 def count_anchors(text: str, sents: list[str]) -> int:
@@ -623,7 +631,7 @@ def emoji_line_count(raw: str) -> int:
         The number of such lines.
 
     Example:
-        >>> emoji_line_count("# Hi \U0001f680\n- ok\nprose \U0001f680")
+        >>> emoji_line_count("# Hi \\U0001f680\\n- ok\\nprose \\U0001f680")
         1
     """
     return sum(

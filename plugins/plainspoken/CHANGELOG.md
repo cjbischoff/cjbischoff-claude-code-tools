@@ -2,6 +2,13 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 0.2.1 - 2026-10-28
+
+### Fixed
+
+- Fix `lint.py` speed on input with many sentences: the filler-transition check now uses one compiled pattern instead of one per entry per sentence, which cut an 80,000-character hostile input from 1.01 s to 0.40 s.
+- Fix the `emoji_line_count` doctest, which could not be parsed.
+
 ## 0.2.0 - 2026-10-28
 
 ### Added
