@@ -1,6 +1,6 @@
 {
   "name": "plainspoken",
   "description": "Draft, rewrite, review, brief, and lint prose so it is specific, useful, and the writer's own, without inventing facts.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": { "name": "Christopher Bischoff" }
 }

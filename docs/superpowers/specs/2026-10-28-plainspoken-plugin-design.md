@@ -11,7 +11,7 @@
 | Source | Location | License | What it contributes |
 |---|---|---|---|
 | `brief-sharp` | `~/.claude/skills/brief-sharp/` | user-owned | Business formats: BLUF email, 3-sentence executive summary, action items, tight message |
-| `work-humanizer` | `~/.claude/skills/work-humanizer/` | user-owned | AI-tell removal, the certainty-preserving fact audit, the tell lists, `check.py` |
+| `work-humanizer` | `~/.claude/skills/work-humanizer/`, upstream `github.com/phuryn/work-humanizer` @ `819ac99` | MIT, Pawel Huryn | AI-tell removal, the certainty-preserving fact audit, the tell lists, `check.py` |
 | `clarity` v0.2.1 | `github.com/addyosmani/clarity` | MIT | Mode router, register and medium routing, review format, perspective interview, `prose_stats.py`, `strip_markdown.py`, eval cases and judge protocol |
 
 The plugin has one goal. It makes prose specific, useful, and recognizably the writer's own. It does not invent facts or perform humanness.

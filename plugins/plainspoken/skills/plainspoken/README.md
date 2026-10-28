@@ -17,4 +17,4 @@ skills/plainspoken/
 
 - Interview, review, medium, and long-form rules, the mode router, and the lint metrics adapt [clarity](https://github.com/addyosmani/clarity) by Addy Osmani (MIT). The license text is in `NOTICE.md` at the plugin root.
 - The business formats in `references/brief.md` come from `brief-sharp` by Christopher Bischoff.
-- The rewrite rules, tell lists, and mechanical sweep come from `work-humanizer` by Christopher Bischoff.
+- The rewrite rules, tell lists, and mechanical sweep adapt [work-humanizer](https://github.com/phuryn/work-humanizer) by Pawel Huryn (MIT). The license text is in `NOTICE.md` at the plugin root.

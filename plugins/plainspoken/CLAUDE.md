@@ -43,5 +43,6 @@ shipping-file commit.
 
 ## Attribution
 
-Material adapted from clarity (MIT, Addy Osmani) is listed in `NOTICE.md`. Keep that table
+Material adapted from clarity (MIT, Addy Osmani) and work-humanizer (MIT, Pawel Huryn) is
+listed in `NOTICE.md`, with each license. Keep both tables
 current when an adapted file is added, renamed, or removed.

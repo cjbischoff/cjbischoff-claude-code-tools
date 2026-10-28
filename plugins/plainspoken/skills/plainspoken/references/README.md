@@ -12,4 +12,4 @@ Rule files the `plainspoken` skill loads one mode at a time. `SKILL.md` holds th
 | `longform.md` | The editing pass for authored long-form prose | Any mode, when the piece is an essay, article, newsletter, talk, speech, or narrative |
 | `tells.md` | The merged lexicon of AI tells: word lists, phrase lists, dash substitutes. It is enforced in sync with `../scripts/lint.py` by a test, so change both together | `rewrite` and `review` (word lists), `lint` (reading hits) |
 
-`interview.md`, `review.md`, `medium.md`, and `longform.md` adapt material from clarity (MIT, Addy Osmani). See `../../../NOTICE.md`.
+`interview.md`, `review.md`, `medium.md`, and `longform.md` adapt material from clarity (MIT, Addy Osmani). `rewrite.md`, `interview.md`, and `tells.md` adapt material from work-humanizer (MIT, Pawel Huryn). See `../../../NOTICE.md`.

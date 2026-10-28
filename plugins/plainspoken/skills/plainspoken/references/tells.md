@@ -4,7 +4,7 @@ One merged lexicon for human readers. Each list below has one `Entries:` line. `
 
 A single hit is weak evidence. Several hits in one passage are the tell. Leave a word alone inside a quotation, a product name, or a passage that discusses the word. An absence is not a pass: these lists drift with language and with model generations.
 
-Sources: the lists from work-humanizer, and the lists from clarity by Addy Osmani (MIT, see `NOTICE.md`): stock lexis, chatbot residue, closers, opener phrases, signposts, hedges, boosters, participial heads, and copula phrases.
+Sources: the lists from work-humanizer by Pawel Huryn (MIT, see `NOTICE.md`), and the lists from clarity by Addy Osmani (MIT, see `NOTICE.md`): stock lexis, chatbot residue, closers, opener phrases, signposts, hedges, boosters, participial heads, and copula phrases.
 
 Matching rules in `lint.py`: entries are case-insensitive. A list marked "word start" matches from the start of a word, so `revolutioniz` covers revolutionize and revolutionizing. Every other list matches whole words and phrases.
 

@@ -65,8 +65,9 @@ Maintainer commands are in [`CLAUDE.md`](CLAUDE.md). `ruff.toml` sets the Python
 
 ## Attribution
 
-plainspoken adapts the MIT-licensed [clarity](https://github.com/addyosmani/clarity) skill by
-Addy Osmani. See [`NOTICE.md`](NOTICE.md) for the license and the list of adapted files.
+plainspoken adapts two MIT-licensed skills: [clarity](https://github.com/addyosmani/clarity) by
+Addy Osmani and [work-humanizer](https://github.com/phuryn/work-humanizer) by Pawel Huryn. See
+[`NOTICE.md`](NOTICE.md) for both licenses and the list of adapted files.
 
 ## More
 
