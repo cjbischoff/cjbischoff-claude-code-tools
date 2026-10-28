@@ -42,7 +42,7 @@ The lists in `lint.py` mirror `../references/tells.md`. A test (`../../../tests/
 
 ## Attribution
 
-The measurements and the Markdown stripping come from clarity's `prose_stats.py` and `strip_markdown.py` (MIT, Addy Osmani). The `sweep` group comes from work-humanizer's `check.py`. See `../../../NOTICE.md`.
+The measurements and the Markdown stripping come from clarity's `prose_stats.py` and `strip_markdown.py` (MIT, Addy Osmani). The `sweep` group comes from work-humanizer's `check.py` (MIT, Pawel Huryn). See `../../../NOTICE.md`.
 
 ## Regular expressions
 

@@ -2,6 +2,12 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 0.1.1 - 2026-10-28
+
+### Fixed
+
+- Fix the work-humanizer attribution: credit Pawel Huryn and include its MIT license in `NOTICE.md`, which 0.1.0 omitted.
+
 ## 0.1.0 - 2026-10-28
 
 _Initial release._

@@ -6,7 +6,7 @@ Merged from two sources, with changes:
 * clarity (MIT, Addy Osmani): the size, cadence, density, high-signal cluster, and
   look-here measurements come from clarity's ``prose_stats.py``. The Markdown
   stripping comes from clarity's ``strip_markdown.py``. See ``NOTICE.md``.
-* work-humanizer ``check.py``: the ``sweep`` group (dashes, semicolons, stock words,
+* work-humanizer (MIT, Pawel Huryn) ``check.py``: the ``sweep`` group (dashes, semicolons, stock words,
   filler transitions, pause-and-point lines, closers, hedges, bold-label starts,
   exclamation marks, the sentence-length band, and the opener share).
 
