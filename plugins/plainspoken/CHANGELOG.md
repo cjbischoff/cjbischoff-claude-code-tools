@@ -12,3 +12,4 @@ _Initial release._
 - Add `references/tells.md`, the merged AI-tell lexicon from work-humanizer and clarity, and 14 failing tests for the lint script.
 - Add `scripts/lint.py`, a stdlib diagnostic script that merges clarity's prose statistics with the work-humanizer tell sweep and reports no score or verdict.
 - Add the `plainspoken` skill: a five-mode router with shared safeguards and a unified footer, plus the interview, rewrite, review, brief, medium, and long-form references.
+- Add the `/plainspoken:interview`, `:rewrite`, `:review`, `:brief`, and `:lint` slash commands.
