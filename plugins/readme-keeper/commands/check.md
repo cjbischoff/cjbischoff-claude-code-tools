@@ -1,6 +1,6 @@
 ---
 description: Check a README against the repo with deterministic rules, read-only
-argument-hint: [path | --all] [--links] [--prose] [--strict] [--install-ci]
+argument-hint: [path | --all] [--exclude GLOB] [--links] [--prose] [--strict] [--install-ci]
 ---
 Use the `readme-keeper` skill in check mode on: $ARGUMENTS
 

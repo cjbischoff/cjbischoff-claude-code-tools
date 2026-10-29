@@ -114,10 +114,10 @@ All off by default.
 ## Run check.py
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/readme-keeper/scripts/check.py" [README ...] [--all] [--root DIR] [--links] [--prose] [--json] [--strict]
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/readme-keeper/scripts/check.py" [README ...] [--all] [--exclude GLOB] [--root DIR] [--links] [--prose] [--json] [--strict]
 ```
 
-No path means `README.md` in `--root`. `--all` walks every tracked `README.md`. `--links` checks external URLs (opt-in, network). Exit 0: no P0 (and no P1 with `--strict`). Exit 1: a P0 or, with `--strict`, a P1. Exit 2: usage error or unreadable file. Python 3.11+, stdlib only.
+No path means `README.md` in `--root`. `--all` walks every tracked `README.md`, except under `fixtures`, `__fixtures__`, `testdata`, `test-data`, and vendored folders. `--exclude GLOB` (repeatable) skips more. A path argument is never excluded. `--links` checks external URLs (opt-in, network). Exit 0: no P0 (and no P1 with `--strict`). Exit 1: a P0 or, with `--strict`, a P1. Exit 2: usage error or unreadable file. Python 3.11+, stdlib only.
 
 ## Load by mode
 

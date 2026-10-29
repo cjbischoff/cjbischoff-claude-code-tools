@@ -41,6 +41,7 @@ Example:
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import functools
 import http.client
 import io
@@ -53,6 +54,7 @@ import tomllib
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -102,6 +104,7 @@ LEXICONS = {"ai_words": AI_WORDS, "marketing": MARKETING, "transitions": TRANSIT
 REGIONS = ("badges", "install", "quickstart", "commands", "env", "structure", "license", "toc")
 SHELL_INFO = frozenset({"", "sh", "bash", "shell", "zsh", "console", "shellsession", "terminal"})
 SKIP_DIRS = frozenset({"node_modules", ".git", ".venv", "venv"})
+FIXTURE_DIRS = frozenset({"fixtures", "__fixtures__", "testdata", "test-data"})
 LOOPBACK = frozenset({"127.0.0.1", "localhost", "::1"})
 USER_AGENT = "readme-keeper-check"
 
@@ -757,10 +760,19 @@ def scan_markers(lines: list[str]) -> list[tuple[int, str]]:
     return sorted(out, key=lambda item: item[0])
 
 
+def _blank(match: re.Match[str]) -> str:
+    """Replace a regex match by spaces of the same length."""
+    return " " * len(match.group())
+
+
 def _check_markers(doc: Doc) -> list[dict]:
     """Report marker faults as P0."""
     evidence = "region ids: " + ", ".join(REGIONS)
-    return [_f("markers", "P0", n, msg, evidence) for n, msg in scan_markers(doc.plain)]
+    # A marker shown inside an inline code span is an example, not a marker.
+    lines = [
+        _CODE.sub(_blank, ln) if "`" in ln and "readme-keeper:" in ln else ln for ln in doc.plain
+    ]
+    return [_f("markers", "P0", n, msg, evidence) for n, msg in scan_markers(lines)]
 
 
 # ---------------------------------------------------------------- commands and package manager
@@ -1332,15 +1344,21 @@ def exit_code(findings: list[dict], strict: bool = False) -> int:
     return 1 if any(f["severity"] in failing for f in findings) else 0
 
 
-def find_readmes(root: Path | str) -> list[Path]:
+def find_readmes(root: Path | str, exclude: Sequence[str] = ()) -> list[Path]:
     """List the README.md files of a repo.
 
     Uses ``git ls-files`` (with the fsmonitor hook off, so the target repo cannot run
-    code). When git is absent, fails, or lists no README, it walks the tree and skips
-    ``node_modules``, ``.git``, ``.venv``, and ``venv``.
+    code). When git is absent, fails, or lists no README, it walks the tree. Both ways
+    skip any README under a directory named ``node_modules``, ``.git``, ``.venv``,
+    ``venv``, ``fixtures``, ``__fixtures__``, ``testdata``, or ``test-data``. The names are
+    matched on the path relative to ``root``, so a root that sits inside a fixture
+    directory still finds its own READMEs. A README that matches an ``exclude`` glob is
+    skipped too.
 
     Args:
         root: Repo root.
+        exclude: ``fnmatch`` globs matched against the repo-relative path with ``/``
+            separators. ``*`` also matches ``/``.
 
     Returns:
         README.md paths in sorted order.
@@ -1350,6 +1368,12 @@ def find_readmes(root: Path | str) -> list[Path]:
         []
     """
     root = Path(root)
+    skip = SKIP_DIRS | FIXTURE_DIRS
+
+    def wanted(rel: str) -> bool:
+        parts = rel.split("/")
+        return not (skip & set(parts[:-1])) and not any(fnmatch.fnmatch(rel, g) for g in exclude)
+
     try:
         listing = subprocess.run(
             ["git", "-c", "core.fsmonitor=false", "-C", str(root), "ls-files", "-z"],
@@ -1358,15 +1382,17 @@ def find_readmes(root: Path | str) -> list[Path]:
             timeout=30,
         ).stdout.decode("utf-8", "replace")
         tracked = sorted(n for n in listing.split("\0") if n.rsplit("/", 1)[-1] == "README.md")
-        found = [root / n for n in tracked if (root / n).is_file()]
+        found = [root / n for n in tracked if wanted(n) and (root / n).is_file()]
     except (OSError, subprocess.SubprocessError):
         found = []
     if found:
         return found
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
+        dirnames[:] = sorted(d for d in dirnames if d not in skip)
         if "README.md" in filenames:
-            found.append(Path(dirpath) / "README.md")
+            rel = os.path.relpath(os.path.join(dirpath, "README.md"), root).replace(os.sep, "/")
+            if wanted(rel):
+                found.append(Path(dirpath) / "README.md")
     return sorted(found)
 
 
@@ -1423,6 +1449,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Check a README against the repo it describes.")
     parser.add_argument("paths", nargs="*", help="README files, relative to --root")
     parser.add_argument("--all", action="store_true", help="check every tracked README.md")
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        metavar="GLOB",
+        help="with --all, skip READMEs whose repo-relative path matches GLOB (repeatable)",
+    )
     parser.add_argument("--root", default=".", help="repo root (default: current directory)")
     parser.add_argument("--links", action="store_true", help="check external URLs (network)")
     parser.add_argument("--prose", action="store_true", help="add prose-tell findings")
@@ -1436,7 +1469,7 @@ def main(argv: list[str] | None = None) -> int:
     root = Path(args.root).resolve()
     targets = [Path(p) if Path(p).is_absolute() else root / p for p in args.paths]
     if args.all:
-        targets += find_readmes(root)
+        targets += find_readmes(root, args.exclude)
     elif not targets:
         targets = [root / "README.md"]
 

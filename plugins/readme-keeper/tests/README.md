@@ -13,7 +13,7 @@ cd plugins/readme-keeper && uv run --with pytest pytest -q
 
 | File | Checks |
 |------|--------|
-| `test_check.py` | `skills/readme-keeper/scripts/check.py` as a real command-line program, against the fixture repos: commands per manager (npm, pnpm, yarn, make, just, uv, poetry, cargo, go) including `cd DIR &&` and dependency groups, package manager vs lockfile, link and image paths (P0) and inline-code paths (P2 after a suffix match), anchors by GitHub slug rules, license vs `LICENSE` or manifest, fact-gated badges, marker pairing, `--links` against a local server, `--prose`, `--all`, `--json`, exit codes, `--strict`, the `tells.md` sync, and a hostile-input time limit |
+| `test_check.py` | `skills/readme-keeper/scripts/check.py` as a real command-line program, against the fixture repos: commands per manager (npm, pnpm, yarn, make, just, uv, poetry, cargo, go) including `cd DIR &&` and dependency groups, package manager vs lockfile, link and image paths (P0) and inline-code paths (P2 after a suffix match), anchors by GitHub slug rules, license vs `LICENSE` or manifest, fact-gated badges, marker pairing, `--links` against a local server, `--prose`, `--all`, `--json`, exit codes, `--strict`, the `tells.md` sync, markers inside code spans, `--all` default excludes for fixture folders and `--exclude`, and a hostile-input time limit |
 | `test_evals.py` | `evals/cases.json`: the file parses, every case has the required keys, ids are unique, each mode is `create`, `update`, `check`, or `review`, every mode has at least one case, and an optional `followup` is a non-empty string |
 
 ## Fixtures

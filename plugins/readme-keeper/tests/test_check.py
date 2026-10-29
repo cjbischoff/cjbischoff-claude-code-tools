@@ -509,6 +509,30 @@ def test_well_formed_markers_pass():
     assert find(rep, "markers") == []
 
 
+def test_marker_inside_inline_code_is_ignored(tmp_path):
+    body = (
+        "# T\n\nWrite `<!-- readme-keeper:start x -->` to open a region and\n"
+        "``<!-- readme-keeper:end install -->`` to close it.\n"
+    )
+    root = make_repo(tmp_path, {"README.md": body})
+    _, rep = report(root)
+    assert find(rep, "markers") == []
+
+
+def test_inline_code_marker_does_not_open_or_close_a_real_region(tmp_path):
+    body = (
+        "<!-- readme-keeper:start install -->\nUse `<!-- readme-keeper:end install -->` to end.\n"
+        "<!-- readme-keeper:end install -->\n\n"
+        "`<!-- readme-keeper:start env -->`\n"
+    )
+    root = make_repo(tmp_path, {"README.md": body})
+    _, rep = report(root)
+    assert find(rep, "markers") == []
+    broken = "<!-- readme-keeper:start install -->\nUse `<!-- readme-keeper:end install -->`.\n"
+    _, rep = report(make_repo(tmp_path / "b", {"README.md": broken}))
+    assert find(rep, "markers", contains="unpaired", severity="P0")
+
+
 def test_marker_inside_code_fence_is_ignored(tmp_path):
     body = "```markdown\n<!-- readme-keeper:start install -->\n```\n"
     root = make_repo(tmp_path, {"README.md": body})
@@ -633,6 +657,60 @@ def test_all_uses_tracked_files_when_git_is_present(tmp_path):
     subprocess.run(["git", "add", "README.md"], cwd=root, check=True)
     _, rep = report(root, "--all")
     assert [f["path"] for f in rep["files"]] == ["README.md"]
+
+
+EXCLUDE_TREE = {
+    "README.md": "# T\n",
+    "docs/README.md": "# D\n",
+    "vendor/README.md": "# V\n",
+    "tests/fixtures/a/README.md": "# F\n",
+    "x/__fixtures__/README.md": "# F\n",
+    "y/testdata/README.md": "# F\n",
+    "z/test-data/README.md": "# F\n",
+}
+
+
+def paths_of(rep: dict) -> set[str]:
+    """Return the report paths of a parsed report."""
+    return {f["path"] for f in rep["files"]}
+
+
+def test_all_skips_fixture_directories_by_default(tmp_path):
+    _, rep = report(make_repo(tmp_path, EXCLUDE_TREE), "--all")
+    assert paths_of(rep) == {"README.md", "docs/README.md", "vendor/README.md"}
+
+
+def test_exclude_glob_is_repeatable_and_applies_to_all(tmp_path):
+    root = make_repo(tmp_path, EXCLUDE_TREE)
+    _, rep = report(root, "--all", "--exclude", "vendor/*")
+    assert paths_of(rep) == {"README.md", "docs/README.md"}
+    _, rep = report(root, "--all", "--exclude", "vendor/*", "--exclude", "docs/*")
+    assert paths_of(rep) == {"README.md"}
+
+
+def test_explicit_path_is_never_excluded(tmp_path):
+    root = make_repo(tmp_path, EXCLUDE_TREE)
+    _, rep = report(root, "--all", "--exclude", "vendor/*", "vendor/README.md")
+    assert "vendor/README.md" in paths_of(rep)
+    _, rep = report(root, "tests/fixtures/a/README.md")
+    assert paths_of(rep) == {"tests/fixtures/a/README.md"}
+
+
+def test_root_inside_a_fixture_directory_still_checks_its_readmes(tmp_path):
+    inner = make_repo(
+        tmp_path / "tests" / "fixtures" / "f", {"README.md": "# F\n", "s/README.md": "#\n"}
+    )
+    _, rep = report(inner, "--all")
+    assert paths_of(rep) == {"README.md", "s/README.md"}
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
+def test_all_excludes_tracked_fixture_readmes_too(tmp_path):
+    root = make_repo(tmp_path, EXCLUDE_TREE)
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    subprocess.run(["git", "add", "."], cwd=root, check=True)
+    _, rep = report(root, "--all", "--exclude", "vendor/*")
+    assert paths_of(rep) == {"README.md", "docs/README.md"}
 
 
 def test_explicit_path_is_relative_to_root():

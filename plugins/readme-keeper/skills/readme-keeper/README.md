@@ -15,7 +15,7 @@ skills/readme-keeper/
 
 ## How it works
 
-- Every fact in a README traces to a file in the repo. `check.py` verifies commands, paths, anchors, license, badges, and markers against the repo.
+- Every fact in a README traces to a file in the repo. `check.py` verifies commands, paths, anchors, license, badges, and markers against the repo. Markers shown inside code are examples, not regions. `--all` skips test-fixture folders by default.
 - `update` regenerates only the regions between `<!-- readme-keeper:start id -->` and `<!-- readme-keeper:end id -->`. Text outside a region is never edited.
 - The skill never runs target code, never commits, and never creates a `LICENSE` file.
 

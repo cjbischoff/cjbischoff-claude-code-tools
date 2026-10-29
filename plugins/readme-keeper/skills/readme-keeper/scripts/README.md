@@ -9,13 +9,14 @@
 ## Usage
 
 ```bash
-python3 check.py [README ...] [--all] [--root DIR] [--links] [--prose] [--json] [--strict]
+python3 check.py [README ...] [--all] [--exclude GLOB] [--root DIR] [--links] [--prose] [--json] [--strict]
 ```
 
 | Argument | Effect |
 |---|---|
 | `README ...` | README files to check. A relative path is relative to `--root`. With no path and no `--all`, the checker reads `README.md` in `--root`. |
-| `--all` | Check every tracked `README.md` (`git ls-files`). When git is absent, fails, or lists no README, the checker walks the tree and skips `node_modules`, `.git`, `.venv`, and `venv`. |
+| `--all` | Check every tracked `README.md` (`git ls-files`). When git is absent, fails, or lists no README, the checker walks the tree. Both ways skip any README under a directory named `node_modules`, `.git`, `.venv`, `venv`, `fixtures`, `__fixtures__`, `testdata`, or `test-data`, at any depth. The names are matched on the path relative to `--root`, so a root inside a fixture directory still finds its own READMEs. |
+| `--exclude GLOB` | With `--all`, also skip READMEs whose repo-relative path matches the `fnmatch` glob (`*` matches `/` too). Repeat the flag for more globs, for example `--exclude 'vendor/*' --exclude 'docs/archive/*'`. A README named as a path argument is never excluded. |
 | `--root DIR` | Repo root. Default: the current directory. Manifests are read from each README's directory up to this root. |
 | `--links` | Check external URLs. HEAD first, then GET after a 405. 10 second timeout, 4 requests at once. Off by default. |
 | `--prose` | Add the prose-tell findings (P2). The word lists are in `../references/tells.md`. |
