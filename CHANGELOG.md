@@ -13,6 +13,7 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Added
 
+- Add the MIT `LICENSE` file that the README names.
 - Add `.github/workflows/readme-keeper-tests.yml`: on pull requests that change `plugins/readme-keeper/`, it runs the plugin pytest suite.
 - Add the readme-keeper plugin to the marketplace.
 - Add the readme-keeper plugin spec (`docs/superpowers/specs/2026-10-28-readme-keeper-plugin-design.md`) and its nine-commit plan (`docs/superpowers/plans/2026-10-28-readme-keeper-plugin.md`).

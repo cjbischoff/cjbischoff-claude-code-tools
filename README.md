@@ -79,6 +79,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `.pre-commit-config.yaml` | prek hook config: doc-update guard + commit message check |
 | `scripts/hooks/` | Hook scripts that enforce commit governance |
 | `scripts/openwiki-history-digest.sh` | Writes the bounded `.openwiki-history.md` change digest an OpenWiki update run reads in place of `git log` |
+| `LICENSE` | MIT license for the repository |
 | `CHANGELOG.md` | Common Changelog for repo-level changes; plugin changes live in `plugins/<name>/CHANGELOG.md` |
 | `SECURITY.md` | How to report vulnerabilities (GitHub private reporting) |
 | `.github/workflows/dependency-review.yml` | GitHub Dependency review on pull requests |
@@ -103,4 +104,4 @@ All changes go through feature branches with Conventional Commits. See [CLAUDE.m
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
