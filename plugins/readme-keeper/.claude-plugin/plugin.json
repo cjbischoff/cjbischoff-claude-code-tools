@@ -1,0 +1,6 @@
+{
+  "name": "readme-keeper",
+  "description": "Write a README from the code, keep it true with marker-based updates, check it offline for drift, and review it, without inventing facts.",
+  "version": "0.1.0",
+  "author": { "name": "Christopher Bischoff" }
+}
