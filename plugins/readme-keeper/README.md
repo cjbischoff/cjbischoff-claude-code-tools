@@ -68,6 +68,10 @@ and does not need the plugin.
 - Commit or push.
 - Edit text outside markers during `update`.
 
+## Development
+
+Maintainer commands are in [`CLAUDE.md`](CLAUDE.md). `ruff.toml` sets the Python line length to 100.
+
 ## Attribution
 
 readme-keeper builds on the author's own `readme` skill and adapts MIT-licensed work from
