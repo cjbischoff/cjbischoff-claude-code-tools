@@ -1067,6 +1067,9 @@ def _check_anchors(doc: Doc) -> list[dict]:
 # ---------------------------------------------------------------- license and badges
 
 
+_BADGE_HOSTS = ("shields.io", "badgen.net")
+
+
 def _license_claims(doc: Doc) -> list[tuple[int, set[str]]]:
     """Find where the README names a license, as (line, families) pairs.
 
@@ -1084,7 +1087,9 @@ def _license_claims(doc: Doc) -> list[tuple[int, set[str]]]:
                 claims.append((n, fams))
     for n, target, image in doc.refs:
         low = target.lower()
-        if image and ("shields.io" in low or "badgen.net" in low) and "licen" in low:
+        host = urllib.parse.urlsplit(low).hostname or ""
+        is_badge_host = any(host == h or host.endswith("." + h) for h in _BADGE_HOSTS)
+        if image and is_badge_host and "licen" in low:
             claims.append((n, families(low.split("licen", 1)[1])))
     return sorted(claims, key=lambda c: c[0])
 

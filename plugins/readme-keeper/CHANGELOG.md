@@ -15,3 +15,4 @@ _Initial release._
 - Add the `/readme-keeper:create`, `:update`, `:check`, and `:review` commands, and a GitHub Actions template that `check --install-ci` copies into a repo with the checker.
 - Add 15 development-only eval cases with a judge protocol and a schema test.
 - Add `--exclude GLOB` to the checker. `--all` skips README files under `fixtures`, `__fixtures__`, `testdata`, and `test-data` folders by default, and markers shown inside code are not treated as regions.
+- Read license badges by their parsed hostname (`shields.io`, `badgen.net`), not by a substring anywhere in the URL.

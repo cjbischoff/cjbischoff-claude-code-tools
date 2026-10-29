@@ -76,3 +76,5 @@ uvx ruff check --line-length 100 . && uvx ruff format --line-length 100 --check 
 ```
 
 `../references/tells.md` and the lexicon constants in `check.py` list the same entries. A test fails when they differ.
+
+A license badge counts as a license claim only when its parsed hostname is `shields.io` or `badgen.net` (or a subdomain), never when that string appears elsewhere in the URL.

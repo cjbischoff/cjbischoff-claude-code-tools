@@ -801,3 +801,14 @@ def test_hostile_input_finishes_fast(tmp_path):
         except subprocess.TimeoutExpired:
             raise AssertionError(f"{name}: check.py did not finish in 1.5 s") from None
         assert result.returncode in (0, 1), (name, result.stderr)
+
+
+def test_license_badge_host_is_parsed(tmp_path):
+    # A license badge counts only when its host is shields.io or badgen.net, not when that
+    # string appears elsewhere in the URL.
+    real = "![license](https://img.shields.io/badge/license-MIT-blue)"
+    lookalike = "![license](https://example.com/img?src=shields.io/license-MIT)"
+    for badge, expected in ((real, 1), (lookalike, 0)):
+        root = make_repo(tmp_path / str(expected), {"README.md": f"# T\n\n{badge}\n"})
+        _, rep = report(root)
+        assert len(find(rep, "license")) == expected, badge
