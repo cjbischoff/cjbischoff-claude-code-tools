@@ -1,19 +1,25 @@
 # cjbischoff-claude-code-tools
 
-Claude Code plugin marketplace — personal plugins for Christopher Bischoff.
+Claude Code plugin marketplace: personal plugins for Christopher Bischoff.
 
 ## Installation
 
-```
+Add the marketplace once, then install the plugins you want:
+
+```text
 /plugin marketplace add cjbischoff/cjbischoff-claude-code-tools
 /plugin install sec-overlay@cjbischoff-claude-code-tools
+/plugin install plainspoken@cjbischoff-claude-code-tools
+/plugin install readme-keeper@cjbischoff-claude-code-tools
 ```
 
 ## Plugins
 
-- **sec-overlay**: agentic security-audit harness (static analysis, tool-receipt gate).
-- **plainspoken**: writing skill with five modes (interview, rewrite, review, brief, lint) that keeps every fact and the writer's voice.
-- **readme-keeper**: writes a README from the code, refreshes marked regions without touching hand-written text, checks commands, paths, license, and badges offline, and reviews it.
+| Plugin | What it does |
+|---|---|
+| [sec-overlay](plugins/sec-overlay/) | Agentic security-audit harness: runs SAST, investigates candidates with multi-agent gates, and emits SARIF + Markdown reports. |
+| [plainspoken](plugins/plainspoken/) | Draft, rewrite, review, deep-review, brief, and lint prose so it is specific, useful, and the writer's own, without inventing facts. |
+| [readme-keeper](plugins/readme-keeper/) | Write a README from the code, keep it true with marker-based updates, check it offline for drift, and review it, without inventing facts. |
 
 ## Development
 
@@ -62,7 +68,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 |------|---------|
 | `.claude-plugin/marketplace.json` | Marketplace manifest; lists all plugins |
 | `.omp/` | omp-native context wrappers at repo-root, plugin, and skill depths. Each `.omp/AGENTS.md` uses `@import` to pull in the corresponding `CLAUDE.md` so omp discovers and respects marketplace, plugin, and skill governance rules at priority 100 (native). |
-| `.planning/` | GSD planning setup: PROJECT.md, ROADMAP.md, STATE.md, MILESTONES.md, synthesized intel from the 50 ingested design docs, the ingest conflict report, and the onboarding summary. Milestone v5.0 Hybrid Diff-Review Architecture shipped 2026-08-22 (7 phases, 30 plans, 32/32 requirements). Its roadmap, requirements, audit, and phase directories are archived under `.planning/milestones/`; `RETROSPECTIVE.md` holds the milestone retrospective. Milestone v5.1 Tech-Debt Cleanup shipped 2026-08-22 (2 phases, 7/7 requirements, PRs #32-#33): all six Phase 06 tech-debt items cleared and the ingest WARNING closed. Its roadmap, requirements, and phase directories are archived under `.planning/milestones/`; `MILESTONES.md` and `RETROSPECTIVE.md` carry the milestone records. Milestone v5.2 sec-overlay Defect Remediation completed 2026-09-05 (7 phases, 22 requirements, 26 defects fixed through all Phases 9-15). Next milestone not yet defined. |
+| `.planning/` | GSD planning setup: `PROJECT.md`, `ROADMAP.md`, `STATE.md`, `MILESTONES.md`, ingested design-doc intel, and `RETROSPECTIVE.md`. Shipped milestones v5.0, v5.1, and v5.2 are archived under `.planning/milestones/`. Milestone v5.3 is in planning (`STATE.md`). |
 | `plugins/sec-overlay/.claude-plugin/plugin.json` | sec-overlay plugin manifest |
 | `plugins/sec-overlay/README.md` | sec-overlay user-facing README: install, prerequisites, quick start |
 | `plugins/sec-overlay/CHANGELOG.md` | sec-overlay Common Changelog |
@@ -71,14 +77,15 @@ Each folder below has its own README.md describing what it holds, its naming con
 | `plugins/sec-overlay/skills/sec-overlay/SKILL.md` | Skill playbook: agentic security-audit harness; links to the skill's `CLAUDE.md` for prerequisites and operating rules |
 | `plugins/sec-overlay/skills/sec-overlay/helpers/` | Python core (`sec_overlay` package) that runs tools and enforces gates |
 | `plugins/sec-overlay/skills/sec-overlay/agents/` | LLM subagent prompts for the investigate/validate/patch phases |
-| `plugins/plainspoken/` | plainspoken writing plugin: one skill (`skills/plainspoken/`), five slash commands, the stdlib `lint.py`, tests, development-only evals, and `NOTICE.md` for the adapted MIT clarity material |
+| `plugins/plainspoken/` | plainspoken writing plugin: one skill (`skills/plainspoken/`), six slash commands, four read-only lens agents (`agents/`), the stdlib `lint.py`, tests, development-only evals, and `NOTICE.md` for the adapted MIT sources (clarity, work-humanizer, humanizer) |
 | `plugins/readme-keeper/` | readme-keeper plugin: one skill (`skills/readme-keeper/`), four slash commands, the stdlib `check.py`, a CI workflow template, fixture-based tests, development-only evals, and `NOTICE.md` for the adapted MIT sources |
-| `docs/` | Design specs and implementation plans (see `docs/README.md`), including the sec-overlay defect-remediation design and its Plan A audit-driver, Plan B shared-vocabulary, Plan C coverage/accuracy, and Plan D report/telemetry/artifact-review implementation plans, and the architecture/threat-model standards design (C4/arc42 + derived DFD/STRIDE, CVSS v4.0, Mermaid caps, STE prose) with its Plans 1–3 (CVSS v4.0 migration, diagram/STE enforcement, phase rebuild), and the sec-overlay invocation design (one `/sec-overlay:audit` command, a `run.py` driver, scan-profile role inference feeding the correlation core) with its nine-task implementation plan, and the sec-overlay recall-gaps design (absence-rule pack, recall adversary, JSON dependency-sink catalog, catalog-gated proof tuples, policy-engine indicators, deterministic route census) with its three implementation plans (Plan 1 dependency-sink catalog and policy-engine indicators, Plan 2 absence detection and catalog-gated proof tuples, Plan 3 route census and recall adversary), and the sec-overlay improvements build spec (29 requirements in six ordered groups, a cite-verification record against plugin HEAD, and the opt-in proof-by-execution lane) with its Plan 1 contract layer (REQ-02, REQ-18, REQ-07, REQ-10, REQ-32 as five red/green commit pairs, the contract lint created in the first pair and extended by each later one, plus the three HEAD conflicts it resolves) and its Plan 2 data integrity (REQ-13, REQ-15, REQ-16, REQ-17, REQ-08 and the moved REQ-09 as six red/green commit pairs, plus the six rulings it takes against plugin HEAD) and its Plan 3 verification and scoring (REQ-21, REQ-22, REQ-06 with REQ-19, REQ-20, REQ-01, REQ-27 as six red/green commit pairs, plus the three tests it deliberately reverses) and its Plan 4 coverage and routing (REQ-04, REQ-11, REQ-25, REQ-24 as four red/green commit pairs, plus the corrected REQ-04 red test and the non-monotonic suite count the group produces) and its Plan 5 render and terminal gate (REQ-03, REQ-05, REQ-31 as three red/green commit pairs, plus the three-bucket next-action mapping and the narrowed REQ-05 scope) and its Plan 6 capability lanes (REQ-33, REQ-34, REQ-12, REQ-14, REQ-30 as five red/green commit pairs, plus the six rulings it takes against plugin HEAD and the opt-in prove lane it lands last), and the sec-overlay defect-repair spec (22 requirements in seven root-cause-ordered groups, a three-table cite-verification record against plugin 1.122.0, and three removals of unreachable capability that make the build a major version bump) with its Plan 1 phase/artifact contract (REQ-42, REQ-40, REQ-43, REQ-41, REQ-44 as five red/green commit pairs, plus the six rulings it takes against plugin 1.122.0 and the frozen-contract digest recomputation the `factcheck` deletion forces) and its Plan 2 dead-lever removal (REQ-45, REQ-46, REQ-47, REQ-48 as four red/green commit pairs, plus the five citation corrections and six rulings it takes against plugin 1.122.0, the redirect of REQ-47 from the live `scanscope.py` to the unreachable `scope.py`, and the four adjacent findings it records without fixing) and its Plan 3 constraint enforcers (REQ-49, REQ-50, REQ-51, REQ-52 as four red/green commit pairs, plus the five citation corrections and ten rulings it takes against plugin 1.122.0, the removal of the three `artifact-review` levers that closing the finding schema invalidates, and the four adjacent findings it records without fixing) and its Plan 4 population reconciliation (REQ-53, REQ-54, REQ-55, REQ-56, REQ-57, REQ-58 as six red/green commit pairs, plus the six citation corrections and twelve rulings it takes against plugin 1.122.0, the two tests it deliberately reverses, the shared triage-title helper that replaces an impossible `f.title` fix against a byte-pinned `models.py`, and the four adjacent findings it records without fixing) and its Plan 5 verify precision and document generation (REQ-59, REQ-60, REQ-61 as five red/green commit pairs, plus the seven citation corrections and fourteen rulings it takes against plugin 1.122.0, the narrowed REQ-59 acceptance criterion that a cross-file fix must stop reporting `not-fixed` rather than verify, the marker-driven `phase_docs.py` generator that collapses the roughly 18 documentation-drift entries into one generator plus one contract test, and the four adjacent findings it records without fixing), and the sec-overlay parked-findings spec (ten requirements, REQ-62 to REQ-71, repairing the eleven findings the five defect-repair plans parked in their git-ignored ledgers: three restated literals replaced by the constants that produce them, a mutating cluster reducer, a duplicated SARIF location, two behaviours an earlier specification mandated, a git-quoted diff path, a wall-clock concurrency test, and a whole-file STE100 rewrite of `sec_overlay/README.md` from a measured 125 lint errors to zero) with its Plan 1 parked code repairs (REQ-62 to REQ-70 as nine independent TDD tasks, one commit each, plus the four tasks whose shape the byte-frozen `models.py` and `evidence.py` force and the one deviation the 100-character ruff limit forces on REQ-62) and its Plan 2 package README STE rewrite (REQ-71 in eight tasks: a measured baseline with six text-anchored part boundaries, an acceptance test committed red, then six rewrite commits that each strictly reduce the test's reported error count until the last one turns it green), and the plainspoken plugin design (one writing skill merging brief-sharp, work-humanizer by Pawel Huryn, and clarity into five modes) with its nine-commit implementation plan, and the plainspoken deep-review design (severity tiers, new patterns, and a four-lens `/plainspoken:deep` mode adapted from anti-slop-editor) with its four-commit plan, and the readme-keeper plugin design (create, marker-based update, offline drift check with advisory inline-code paths, review) with its nine-commit plan |
-| `docs/decisions/` | Project architecture decisions in the Decision / Context / Alternatives / Reasoning / Trade-offs / Supersedes form, one file per decision, listed in `docs/decisions/INDEX.md` (see `docs/decisions/README.md`). Holds the prove-lane execution boundary and the sec-overlay major-version decision that the `factcheck` deletion forces |
+| `docs/` | Design specs (`docs/superpowers/specs/`) and implementation plans (`docs/superpowers/plans/`) for sec-overlay, plainspoken, and readme-keeper. `docs/README.md` lists each one with a summary. |
+| `docs/decisions/` | Architecture decisions, one file each, in the Decision / Context / Alternatives / Reasoning / Trade-offs / Supersedes form. `docs/decisions/INDEX.md` lists them. |
 | `docs/templates/plugin/` | New-plugin skeleton copied to `plugins/<name>/` and filled in per the root `CLAUDE.md` "New plugin" checklist |
 | `.pre-commit-config.yaml` | prek hook config: doc-update guard + commit message check |
 | `scripts/hooks/` | Hook scripts that enforce commit governance |
 | `scripts/openwiki-history-digest.sh` | Writes the bounded `.openwiki-history.md` change digest an OpenWiki update run reads in place of `git log` |
+| `LICENSE` | MIT license for the repository |
 | `CHANGELOG.md` | Common Changelog for repo-level changes; plugin changes live in `plugins/<name>/CHANGELOG.md` |
 | `SECURITY.md` | How to report vulnerabilities (GitHub private reporting) |
 | `.github/workflows/dependency-review.yml` | GitHub Dependency review on pull requests |
@@ -103,4 +110,4 @@ All changes go through feature branches with Conventional Commits. See [CLAUDE.m
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
