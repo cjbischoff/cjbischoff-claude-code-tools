@@ -1,0 +1,34 @@
+# Installed by readme-keeper (/readme-keeper:check --install-ci).
+#
+# Runs the readme-keeper check script on every README in the repository. The script is
+# offline: it reads the repo and makes no network calls. It needs no plugin, only the
+# runner's python3 (3.11 or newer). The script copy is at .github/scripts/readme_check.py.
+# Only GitHub-owned `actions/checkout` (SHA-pinned) is used.
+name: readme check
+
+on:
+  pull_request:
+    paths:
+      - "**/README.md"
+      - ".github/scripts/readme_check.py"
+      - ".github/workflows/readme-check.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: readme-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check READMEs
+        run: python3 .github/scripts/readme_check.py --all
