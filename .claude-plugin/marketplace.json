@@ -16,6 +16,11 @@
       "name": "plainspoken",
       "source": "./plugins/plainspoken",
       "description": "Draft, rewrite, review, brief, and lint prose so it is specific, useful, and the writer's own, without inventing facts."
+    },
+    {
+      "name": "readme-keeper",
+      "source": "./plugins/readme-keeper",
+      "description": "Write a README from the code, keep it true with marker-based updates, check it offline for drift, and review it, without inventing facts."
     }
   ]
 }

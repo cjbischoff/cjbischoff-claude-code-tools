@@ -13,6 +13,9 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Added
 
+- Add `.github/workflows/readme-keeper-tests.yml`: on pull requests that change `plugins/readme-keeper/`, it runs the plugin pytest suite.
+- Add the readme-keeper plugin to the marketplace.
+- Add the readme-keeper plugin spec (`docs/superpowers/specs/2026-10-28-readme-keeper-plugin-design.md`) and its nine-commit plan (`docs/superpowers/plans/2026-10-28-readme-keeper-plugin.md`).
 - Add the plainspoken deep-review spec (`docs/superpowers/specs/2026-10-28-plainspoken-deep-review-design.md`) and its four-commit plan (`docs/superpowers/plans/2026-10-28-plainspoken-deep-review.md`).
 - Add `.github/workflows/plainspoken-tests.yml`: on pull requests that change `plugins/plainspoken/`, it runs the plugin pytest suite.
 - Add the plainspoken writing plugin to the marketplace.
@@ -236,6 +239,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 ### Fixed
 
 - Fix the plainspoken spec: work-humanizer is upstream MIT material by Pawel Huryn, not a user-owned skill.
+
+### Changed
+
+- Change the readme-keeper spec: a missing inline-code path is P2, not P0. A dogfood run found that 164 of 201 inline-code paths in this repo name runtime outputs, other repos' files, or ignored folders.
 
 ## 0.2.0 - 2026-08-12
 

@@ -1,0 +1,41 @@
+# Test gate for the readme-keeper plugin.
+#
+# Runs the plugin's pytest suite (checker, fixture repos, eval case schema) offline. Model evals are
+# manual and do not run here; see plugins/readme-keeper/evals/README.md.
+#
+# Third-party actions are avoided per repo policy: uv installs via the official script.
+# Only GitHub-owned `actions/checkout` (SHA-pinned) is used.
+name: readme-keeper tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "plugins/readme-keeper/**"
+      - ".github/workflows/readme-keeper-tests.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: readme-keeper-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: plugins/readme-keeper
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Run test suite
+        run: uv run --with pytest pytest -q

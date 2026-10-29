@@ -1,0 +1,10 @@
+default:
+  @just --list
+
+build:
+  echo build
+
+test target="all":
+  echo {{target}}
+
+alias t := test
