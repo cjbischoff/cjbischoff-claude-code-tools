@@ -239,6 +239,8 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 ### Fixed
 
+- Fix stale facts in the root README: plainspoken has six modes and six commands, `.planning/` is on milestone v5.3, and the install section now covers every plugin. The plugins list is a table built from `marketplace.json`, and the long inventory rows point to `docs/README.md` and `docs/decisions/INDEX.md` instead of restating them.
+- Sync the plainspoken description in `marketplace.json` with its `plugin.json`.
 - Fix the plainspoken spec: work-humanizer is upstream MIT material by Pawel Huryn, not a user-owned skill.
 
 ### Changed
