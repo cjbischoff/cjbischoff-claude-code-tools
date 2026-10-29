@@ -169,7 +169,8 @@ python3 check.py [README ...] [--all] [--root DIR] [--links] [--prose] [--json] 
 |---|---|---|
 | Commands | A command in a shell code block (`npm run x`, `pnpm x`, `yarn x`, `make x`, `just x`, `uv run x`, `poetry run x`, `cargo run --bin x`, `go run ./x`) must match a script, target, entry point, or path in the repo. Unrecognized commands are skipped, never guessed. | P0 |
 | Package manager | An install command uses the manager the lockfile shows (`package-lock.json` npm, `pnpm-lock.yaml` pnpm, `yarn.lock` yarn, `uv.lock` uv, `poetry.lock` poetry). | P1 |
-| Paths | A relative link or inline-code path that looks like a file path must exist. | P0 |
+| Paths (links) | A Markdown link or image source to a relative file must exist. | P0 |
+| Paths (inline code) | An inline-code path is looked up in the README folder, the repo root, then by suffix against tracked files. Not found anywhere: "unresolved path, check intent". Changed after the dogfood run (2026-10-29): 164 of 201 inline-code paths in this repo named runtime outputs, other repos' files, or ignored folders, not broken links. | P2 |
 | Anchors | An in-page `#anchor` must match a heading slug (GitHub rules). | P1 |
 | External links | `--links` only. A 4xx is P1. A timeout or 5xx is P2 (flaky). | P1/P2 |
 | License | A license name in the README must match the `LICENSE` file or manifest license field. A README license with no license source is P0. | P0 |

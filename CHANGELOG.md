@@ -240,6 +240,10 @@ This file follows the [Common Changelog](https://common-changelog.org) format:
 
 - Fix the plainspoken spec: work-humanizer is upstream MIT material by Pawel Huryn, not a user-owned skill.
 
+### Changed
+
+- Change the readme-keeper spec: a missing inline-code path is P2, not P0. A dogfood run found that 164 of 201 inline-code paths in this repo name runtime outputs, other repos' files, or ignored folders.
+
 ## 0.2.0 - 2026-08-12
 
 ### Changed
