@@ -32,6 +32,12 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - Ship `restamp_derived` helper in `diagram_gate.py` for re-stamping derived diagram SHAs after source edits (D10).
 - Print one-line confirmation with receipt path after `advance()` closes a phase (D6).
 
+## 2.8.28 - 2026-10-29
+
+### Fixed
+
+- Fix the Develop commands in the skill README: the block now starts with `cd helpers`, so `uv run pytest`, `ruff`, and `ty` run where `pyproject.toml` declares them.
+
 ## 2.8.26
 - Rewrite the second part of the `sec_overlay` package README to ASD-STE100. Prose only — no code,
   identifier, path, or fact changed. Part 2 of 6 for REQ-71.
