@@ -9,3 +9,4 @@ _Initial release._
 ### Added
 
 - Add the readme-keeper plugin scaffold: manifest, README, maintainer manual, and license notices.
+- Add failing tests for the README checker against nine fixture repos, and the `tells.md` prose lexicon.

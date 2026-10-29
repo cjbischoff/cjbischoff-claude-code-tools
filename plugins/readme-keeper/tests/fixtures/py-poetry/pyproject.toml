@@ -1,0 +1,11 @@
+[tool.poetry]
+name = "demo-poetry"
+version = "0.1.0"
+description = "Fixture"
+authors = ["Dev <dev@example.com>"]
+
+[tool.poetry.scripts]
+pt = "demo_poetry:main"
+
+[tool.poetry.dependencies]
+python = "^3.11"
