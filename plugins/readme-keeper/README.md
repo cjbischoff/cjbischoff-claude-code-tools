@@ -84,3 +84,4 @@ readme-forge, claudikins, cajias/claude-skills, and plainspoken. See [`NOTICE.md
 | What changed between releases | [`CHANGELOG.md`](CHANGELOG.md) |
 | The skill in depth | [`skills/readme-keeper/SKILL.md`](skills/readme-keeper/SKILL.md) |
 | How to develop and test it | [`CLAUDE.md`](CLAUDE.md) |
+| Every adapted file and its license | [`NOTICE.md`](NOTICE.md) |
