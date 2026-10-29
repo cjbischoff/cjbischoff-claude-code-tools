@@ -2,11 +2,30 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
-## Unreleased
+## 2.8.28 - 2026-10-29
+
+_This release also carries the Phase 16-19 changes (commits `bf96e39`, `ba1af4f`, `8c22779`, `5db7746`, `33d91c8`), which landed without a version bump or changelog entry; 2.8.28 is the first version that shipped them._
 
 ### Added
 
+- Add npm template-injection and code-evaluation entries to the dependency-sink catalog, with a match-any strategy in `SinkEntry`, `validate_catalog`, and `match_manifests` (D-3).
+- Add `validate_dependency_catalog_receipt` to `evidence.py`: version-pinned receipt checks against known catalog ids (D-4).
+- Add a mandatory class floor per language in `coverage_ledger.py`; an uninvestigated floor class forces `completeness: partial` (JS/TS: ssti and injection; Python: ssti; Go: expr-eval-rce) (D-5).
+- Add an OpenAPI-first route strategy to the route census, with framework regex as the fallback (D-6).
+- Add a `DataChannel` model to the correlation manifest (D-7).
+- Add `caller-out-of-scope` to `reachability.BLOCKERS` and `finding.schema.json` (D-8).
+- Add 25 unit and end-to-end tests for the Phase 16-19 changes.
 - Add `.omp/AGENTS.md` at plugin and skill depths: native-priority omp context files that import the existing CLAUDE.md governance via `@import`, ensuring omp always reads plugin and skill rules at priority 100.
+
+### Fixed
+
+- Map CWE-94 and CWE-95 to the injection class, and add eval rule-id substrings to the rule-id class map (D-1).
+- Fix the `security_only` filter with a per-finding drop ledger; update `attack-classes.md` and regenerate `DETECTION_COVERAGE.md` (D-2).
+- Add `ssti` and `injection` to `prove.AUTO_CONFIRMABLE` (D-9).
+- Make the route census try `openapi.json` and `swagger.json` before YAML specs; on an `openapi.yaml` or `openapi.yml`, print a notice that YAML is not parsed without PyYAML and that an `openapi.json` should ship alongside it.
+- Fix the Develop commands in the skill README: the block now starts with `cd helpers`, so `uv run pytest`, `ruff`, and `ty` run where `pyproject.toml` declares them.
+
+## 2.8.27 - 2026-09-05
 
 ### Fixed
 
@@ -31,12 +50,6 @@ This file follows the [Common Changelog](https://common-changelog.org) format.
 - Add absence-protection clause to TOOL_TRUST: negative claims grounded in ast-grep or structural index, never bare piped `rg` (D25).
 - Ship `restamp_derived` helper in `diagram_gate.py` for re-stamping derived diagram SHAs after source edits (D10).
 - Print one-line confirmation with receipt path after `advance()` closes a phase (D6).
-
-## 2.8.28 - 2026-10-29
-
-### Fixed
-
-- Fix the Develop commands in the skill README: the block now starts with `cd helpers`, so `uv run pytest`, `ruff`, and `ty` run where `pyproject.toml` declares them.
 
 ## 2.8.26
 - Rewrite the second part of the `sec_overlay` package README to ASD-STE100. Prose only — no code,
