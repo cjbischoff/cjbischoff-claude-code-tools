@@ -68,7 +68,7 @@ Each folder below has its own README.md describing what it holds, its naming con
 |------|---------|
 | `.claude-plugin/marketplace.json` | Marketplace manifest; lists all plugins |
 | `.omp/` | omp-native context wrappers at repo-root, plugin, and skill depths. Each `.omp/AGENTS.md` uses `@import` to pull in the corresponding `CLAUDE.md` so omp discovers and respects marketplace, plugin, and skill governance rules at priority 100 (native). |
-| `.planning/` | GSD planning setup: `PROJECT.md`, `ROADMAP.md`, `STATE.md`, `MILESTONES.md`, ingested design-doc intel, and `RETROSPECTIVE.md`. Shipped milestones v5.0, v5.1, and v5.2 are archived under `.planning/milestones/`. Milestone v5.3 is in planning (`STATE.md`). |
+| `.planning/` | Archived GSD planning records (`PROJECT.md`, `ROADMAP.md`, `STATE.md`, `MILESTONES.md`, `RETROSPECTIVE.md`, ingested design-doc intel). GSD is no longer used, so these files are not maintained: `STATE.md` shows the last GSD session, not current work. Shipped milestones v5.0 to v5.2 are under `.planning/milestones/`. |
 | `plugins/sec-overlay/.claude-plugin/plugin.json` | sec-overlay plugin manifest |
 | `plugins/sec-overlay/README.md` | sec-overlay user-facing README: install, prerequisites, quick start |
 | `plugins/sec-overlay/CHANGELOG.md` | sec-overlay Common Changelog |
