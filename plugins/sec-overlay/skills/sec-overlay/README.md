@@ -10,7 +10,9 @@ agents to investigate whether each candidate is real, and never let an LLM's opi
 confirm a finding — a mechanical tool receipt is always required.**
 
 This README is the map. It explains *how the whole thing fits together* and hands you off to
-the three folder READMEs and the operational playbook for detail.
+the three folder READMEs and the operational playbook for detail. Claude picks the skill from
+the `SKILL.md` frontmatter description, which names the same outputs; `/sec-overlay:audit`
+starts an audit directly.
 
 | To understand… | Read |
 |----------------|------|

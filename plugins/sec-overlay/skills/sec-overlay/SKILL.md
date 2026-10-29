@@ -1,6 +1,6 @@
 ---
 name: sec-overlay
-description: Self-contained agentic security-audit harness. Runs bundled SAST, normalizes findings, and emits SARIF + Markdown reports. Use for security audits and vulnerability scans of a codebase. This is the deterministic core; multi-agent investigation and remediation phases are added in later increments.
+description: Self-contained agentic security-audit harness. Runs bundled SAST to find candidates, investigates each one with independent agent phases and adversarial gates, confirms a finding only with a mechanical tool receipt, and emits a threat model, per-finding evidence, SARIF, a Markdown report, and a manual runtime-test plan. Use for security audits and vulnerability scans of a codebase; `/sec-overlay:audit` starts one directly.
 ---
 
 # sec-overlay
