@@ -2,6 +2,12 @@
 
 This file follows the [Common Changelog](https://common-changelog.org) format.
 
+## 2.8.29 - 2026-10-29
+
+### Fixed
+
+- Fix the skill description in `SKILL.md`: it called the skill "the deterministic core" and said agent phases "are added in later increments", although the phase table already runs agent phases with adversarial gates.
+
 ## 2.8.28 - 2026-10-29
 
 _This release also carries the Phase 16-19 changes (commits `bf96e39`, `ba1af4f`, `8c22779`, `5db7746`, `33d91c8`), which landed without a version bump or changelog entry; 2.8.28 is the first version that shipped them._
