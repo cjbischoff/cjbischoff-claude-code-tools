@@ -327,6 +327,7 @@ renders them under "Run economics" when any were recorded. Token and USD account
 From `helpers/` (stdlib-only core; dev deps pytest/ruff/ty):
 
 ```bash
+cd helpers
 uv run pytest -q          # full suite green; seed corpus + rules ship committed (CLAUDE.md §1)
 uv run ruff check sec_overlay/ bench/ tests/
 uv run ty check
