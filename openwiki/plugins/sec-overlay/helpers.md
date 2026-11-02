@@ -28,35 +28,40 @@ helpers/
 ├── sec_overlay/         ~70 modules — the pipeline (this page's main subject)
 │   └── correlate/       cross-repo correlation subpackage — see cross-repo-correlation.md
 ├── bench/               dev-only detection benchmark
-├── tests/               81 pytest files, 595 tests
+├── tests/               95 pytest files (828 tests)
 ├── fixtures/            golden JSON + a deliberately vulnerable test repo (excluded from this wiki)
-└── rules/               vendored semgrep rules (git submodule) + smoke.yaml
+└── rules/               vendored semgrep rules (gitignored shallow clone) + smoke.yaml
 ```
 
 ## The pipeline these modules implement
 
 ```mermaid
 flowchart TD
-    PF["preflight.py<br/>tools present?"] --> SS["scanscope.py<br/>pin repo_root + scan_scope"]
-    SS --> GR["graph.py build<br/>Tier-1 substrate, LLM-free"]
-    GR --> CTX["context.py<br/>ingest repo docs"]
-    CTX --> PROFILE["profile.py<br/>ScanProfile from recon"]
-    PROFILE --> PRE["prefilter.py<br/>run semgrep+codeql+sca+secrets concurrently"]
-    PRE --> NORM["normalize.py<br/>dedup, assign F-#### ids"]
-    NORM --> PART["partition.py<br/>group candidates by attack class"]
-    PART --> INV(("investigate agents"))
-    INV --> DED["dedupe.py<br/>refactor-resistant fingerprint"]
+    PF["preflight.py<br/>tools present?"] --> GR["graph.py build<br/>Tier-1 substrate, LLM-free"]
+    GR --> RC["route_census.py<br/>code-derived route inventory"]
+    RC --> REC(("recon agent"))
+    REC --> RG["recall-gate<br/>phase_gate.recall_claims + route_control"]
+    RG --> ARCH(("architecture agent")) --> AG["arch-gate<br/>diagram_gate + ste_lint"]
+    AG --> TM(("threat_model agent")) --> TG["tm-gate<br/>+ artifact_gate.check_duplication"]
+    TG --> PRE["prefilter.py<br/>run semgrep+codeql+sca+secrets concurrently"]
+    PRE --> INV(("investigate agents"))
+    INV --> GATE1["findings_gate.py<br/>schema + tool-receipt gate"]
+    GATE1 --> DED["dedupe.py<br/>refactor-resistant fingerprint"]
     DED --> CLUS["cluster.py<br/>systemic clustering"]
-    CLUS --> GATE1["findings_gate.py<br/>schema + tool-receipt gate"]
-    GATE1 --> LADDER(("critic / judge / validate agents"))
-    LADDER --> CAL["calibrate.py<br/>risk_score 1-10"]
-    CAL --> CIT["citations.py<br/>attach ASVS/CodeGuard"]
-    CIT --> PATCHV(("patch / validate-fix agents"))
+    CLUS --> LADDER(("critic / judge / validate agents"))
+    LADDER --> TRACE(("trace agent<br/>reachability + external-boundary"))
+    TRACE --> CAL["calibrate.py<br/>risk_score 1-10, caps external-boundary"]
+    CAL --> PATCHV(("patch / validate-fix agents"))
     PATCHV --> VER["verify.py<br/>apply patch to COPY, re-scan"]
-    VER --> GATE2["findings_gate.py"]
-    GATE2 --> RT(("redteam agents")) --> RTR["redteam.py<br/>render redteam-plan.md"]
+    VER --> DN["partition.demote_noise<br/>re-applies noise demotion"]
+    DN --> RT(("redteam agents")) --> RTR["redteam.py<br/>render redteam-plan.md"]
     RTR --> REP["report.py<br/>report.sarif + report.md"]
-    REP --> POST["postflight.py<br/>prior_context.json, durable"]
+    REP --> SCORE["selfscore.py"]
+    SCORE --> PROVE(("prove agent, opt-in<br/>executes target code"))
+    PROVE --> AGATE["artifact_gate.py<br/>deterministic report self-check"]
+    AGATE --> AREV(("artifact-review agent, opus<br/>DIFFERENT family"))
+    AREV --> ACONS["artifact_consistency.py<br/>terminal cross-check"]
+    ACONS --> POST["postflight.py<br/>prior_context.json, durable"]
 ```
 *The deterministic spine of the pipeline in [pipeline.md](pipeline.md); the LLM agents plug in
 between the rectangles. Every step here records completion with
@@ -123,14 +128,17 @@ not summarized here):
 |---|---|---|
 | Data model & serialization | `models.py`, `evidence.py`, `schema.py` | the Finding contract, the tool-receipt gate, a stdlib-only JSON-Schema validator |
 | SAST backends & prefilter | `sast.py`, `codeql.py`, `sca.py`, `secrets.py`, `prefilter.py`, `exclusions.py` | run semgrep/CodeQL/osv-scanner/secrets concurrently; merge deterministically; never-silent backend accounting |
-| Attack-class routing | `clsmap.py`, `detection_coverage.py`, `rule_matcher.py`, `asvs.py`/`codeguard.py`, `citations.py`, `custom_checks.py` | CWE→class mapping, ASVS/CodeGuard citation attachment, in-repo custom-check discovery |
+| Attack-class routing | `clsmap.py`, `detection_coverage.py`, `rule_matcher.py`, `asvs.py`/`codeguard.py`, `citations.py`, `custom_checks.py`, `dependency_sinks.py` | CWE→class mapping, ASVS/CodeGuard citation attachment, in-repo custom-check discovery, the dependency-sink catalog (classes whose code holds the sink inside a dependency, e.g. an OPA policy calling `http.send`) |
 | Graph & structural substrate | `graph.py`, `structural_index.py`, `entrypoints.py`, `astgrep.py`, `reachability.py` | the two-tier code graph answering reachability/attacker-control; ripgrep symbol index |
-| FP reduction & finding identity | `normalize.py`, `dedupe.py`, `fingerprint.py`, `cluster.py`, `findings_gate.py`, `partition.py`, `fp_feedback.py`, `factcheck.py`, `phase_gate.py`, `stage_validate.py` | dedup, fingerprinting, systemic clustering, the tool-receipt gate, phase-adversary pre-checks |
-| Scoring & prioritization | `calibrate.py`, `cvss.py`, `scoring.py`, `fix_disposition.py`, `crypto_policy.py`, `selfscore.py` | deterministic `risk_score`, CVSS 3.1 by formula (never LLM arithmetic), the per-run self-score |
+| Route & coverage recall | `route_census.py`, `route_control.py` | derives a route inventory straight from source (never from recon's own output) and compares it against recon/architecture/threat-model, feeding the recall-gate phase and `recall-adversary.md` |
+| FP reduction & finding identity | `normalize.py`, `dedupe.py`, `fingerprint.py`, `cluster.py`, `findings_gate.py`, `partition.py`, `fp_feedback.py`, `phase_gate.py`, `stage_validate.py` | dedup, fingerprinting, systemic clustering, the tool-receipt gate, phase-adversary pre-checks |
+| Scoring & prioritization | `calibrate.py`, `cvss.py`, `scoring.py`, `fix_disposition.py`, `crypto_policy.py`, `selfscore.py` | deterministic `risk_score`, CVSS v4.0 by formula (never LLM arithmetic), the per-run self-score |
 | Reporting | `report.py`, `sarif.py`, `render_util.py` | assemble `report.sarif` + `report.md`; shared rendering helpers for `expected_signal` (object/string/null) |
-| Campaign, state & memory | `campaign.py`, `state.py`, `repo_memory.py`, `workspace.py`, `scanscope.py`, `scope.py`, `kb.py`, `context.py`, `profile.py`, `diffscope.py`, `githist.py`, `postflight.py` | multi-pass supervision, the on-disk workspace layout, per-repo memory sidecar, context ingestion |
-| Coverage & completeness | `coverage.py`, `coverage_ledger.py`, `coverage_guide.py`, `discovery_ledger.py` | per-language SAST coverage accounting, the completeness ledger, saturation state |
+| Campaign, state & memory | `campaign.py`, `state.py`, `repo_memory.py`, `workspace.py`, `scanscope.py`, `kb.py`, `context.py`, `profile.py`, `diffscope.py`, `githist.py`, `postflight.py` | multi-pass supervision, the on-disk workspace layout, per-repo memory sidecar, context ingestion |
+| Terminal artifact ladder | `artifact_gate.py`, `artifact_consistency.py` | the deterministic self-check before `artifact-review.md`, and the terminal cross-reference reconciliation after it — see [pipeline](pipeline.md#the-phase-adversary-gate) |
+| Coverage & completeness | `coverage_ledger.py`, `coverage_guide.py`, `discovery_ledger.py` | the completeness ledger, auto-stop condition for multi-pass campaigns, saturation state |
 | Hunting aids & tuning | `variant.py`, `bugchain.py`, `novelty.py`, `rule_gaps.py`, `tuning.py` | sibling-search seeds, finding chains, upstream-fix checks, adaptive-tuning scoreboard |
+| Proof by execution (opt-in) | `prove.py` | the one module permitted to build and run target-derived code, out-of-tree under `ws.repro`, gated by `scan_options.prove_findings` |
 | Verification, safety & plumbing | `verify.py`, `patch_status.py`, `preflight.py`, `redactor.py`, `envelope.py`, `redteam.py`, `parse.py`, `gates.py`, `cost.py` | apply a patch to a temp copy and re-scan, secret redaction, the untrusted-text envelope, fail-open JSON parsing |
 
 `partition.py` is also the mechanism behind the "thoroughly review a codebase" principle's
@@ -144,12 +152,16 @@ returns anything non-empty, the orchestrator logs the counts and spawns a genera
 class recon missed is never silently dropped from the audit — it is either routed to its own
 agent or explicitly triaged by the safety-net agent, never orphaned.
 
-`scope.py`'s `is_external_package(pkg, ws)` is worth calling out on its own: it reads
-`kb/scan-scope.json`'s `ingested_packages` list to decide whether a sink's package was actually
-scanned, returning `True` (external) only when a manifest exists **and** excludes `pkg` — it
-never invents a boundary when no manifest is present. This backs the `reachability.blocker ==
-"external-boundary"` disposition that caps a finding's calibrated risk and keeps it out of
-`confirmed` (see `agents/trace.md` / `agents/validate.md` in [agents](agents.md)).
+**The external-boundary disposition** — a sink that resolves into a dependency outside the
+ingested package set — is decided entirely inside `calibrate.py` and `reachability.py` now:
+`reachability.BLOCKERS` includes `"external-boundary"` (the one blocker value that may omit
+`reachable: false`, since the sink genuinely isn't reachable from the ingested code), and
+`calibrate._EXTERNAL_CAP`/`_is_external_boundary` cap a matching finding's `risk_score` at 3 and
+demote it off `confirmed` whenever `reachability.blocker == "external-boundary"`. There is no
+longer a separate `scope.py` module or `is_external_package` helper for this — an earlier
+version read a `kb/scan-scope.json` ingested-packages manifest through such a helper, but the
+check now lives directly on the `reachability` verdict `trace.md` and `validate.md` already
+produce (see `agents/trace.md` / `agents/validate.md` in [agents](agents.md)).
 
 `correlate/` (11 modules: `ingest.py`, `edges.py`, `rethreshold.py`, `manifest.py`,
 `artifacts.py`, `mermaid.py`, `xrepo_sarif.py`, `workspace.py`, `cli.py`) is a separate
@@ -158,10 +170,12 @@ cross-repo correlation subpackage with its own promote/demote invariant — see
 
 ## CLI-callable modules
 
-Seventeen modules expose `python -m sec_overlay.<module>` (a `__main__`) — the deterministic
-steps the orchestrator calls between agent phases: `cli` (scan/memory), `preflight`, `graph`,
-`structural_index`, `astgrep`, `dedupe`, `cluster`, `findings_gate`, `calibrate`, `citations`,
-`bugchain`, `rule_gaps`, `verify`, `redteam`, `report`, `redactor`, `postflight`. See
+Most deterministic modules expose `python -m sec_overlay.<module>` (a `__main__`) — the
+deterministic steps the orchestrator calls between agent phases, including `cli` (scan/memory/
+sessions/review), `preflight`, `graph`, `structural_index`, `astgrep`, `dedupe`, `cluster`,
+`findings_gate`, `calibrate`, `citations`, `bugchain`, `rule_gaps`, `verify`, `redteam`,
+`diagram_gate`, `ste_lint`, `report`, `redactor`, `postflight`, `dependency_sinks` (`list`/
+`match --root <dir>`), and `route_census` (`--root <dir>`). See
 [running an audit](running-an-audit.md) for how the orchestrator sequences these across a full
 pass, and `correlate`'s own dedicated CLI in [cross-repo correlation](cross-repo-correlation.md).
 

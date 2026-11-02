@@ -50,19 +50,24 @@ Read top to bottom — this is the order the orchestrator spawns them (see
 |---|---|---|---|
 | C1 context | `context-ingest.md` | sonnet | discovers repo docs/prior scans, verifies claimed controls against code |
 | C1 context | `context-adversary.md` | opus | pressure-checks that verification |
+| — | `sec_overlay.route_census` | deterministic, no LLM | derives a route inventory from source (ripgrep) *before* recon, so recon cannot omit a route from its own output |
 | Analysis | `recon.md` | sonnet | surveys the repo → `kb/scan-profile.json` |
-| Analysis | `architecture.md` | sonnet | components/data-flows/trust-boundaries → `kb/architecture.md` |
-| Analysis | `threat-model.md` | sonnet | attacker profiles + hunt list → `kb/THREAT_MODEL.md` |
+| — | recall-gate | deterministic, no LLM | right after recon: records any census route or dependency-catalog class recon never named |
+| Analysis | `architecture.md` | sonnet | components/data-flows/trust-boundaries → `architecture/arc42.md` + C4 diagrams |
+| Analysis | `threat-model.md` | sonnet | attacker profiles + hunt list → `threat-model/threat-model.md` |
 | Analysis (each of the three) | `phase-adversary.md` | opus | re-derives each claim from code; verdicts → `kb/gates/<phase>.json` |
+| Analysis (recon only) | `recall-adversary.md` | opus | judges what recon **left out**, never what it claimed — reads the route census + dependency-catalog matches + the recall-gate's omission claims; a separate agent from `phase-adversary.md` so a no-matching-claim omission row never corrupts that gate's count-invariant verdicts |
 | Investigate | `investigate.md` + `classes/<cls>.md` | sonnet, parallel per class | walks the [gate ladder](#the-investigate-gate-ladder) → `raw`/`rejected` |
 | FP ladder | `critic.md` | sonnet | production-viability filter (reject debug-only/dead/test-fixture code); demotes on doubt, never hard-rejects |
 | FP ladder | `judge.md` | cheap, no tools | severity-inflation adjudicator; uphold / downgrade / flag |
 | FP ladder | `validate.md` | opus, different family | assumes every finding is wrong and tries to refute it; survival = `confirmed` |
 | Patch | `patch.md` | opus | proposes a minimal diff into `patch_diff`, applied only to a throwaway copy |
 | Patch | `validate-fix.md` | opus, two personas | security-architect + penetration-tester independently check the patch; `no_new_vulnerabilities` regression is non-waivable |
-| Red team | `trace.md` | opus | backward-traces each confirmed sink to an entry point; sets `reachability` |
+| Red team | `trace.md` | opus | backward-traces each confirmed sink to an entry point; sets `reachability` (including the `external-boundary` blocker) |
 | Red team | `redteam.md` | sonnet | splits confirmed findings into `static-settled` vs `needs-runtime`; writes `runtime_test` |
 | Red team | `redteam-adversary.md` | opus | strips settleable-from-source or payload-mismatched items |
+| Prove (opt-in) | `prove.md` | opus | only when `scan_options.prove_findings` is true: the one agent permitted to execute target-derived code, out-of-tree, to promote a finding via a real observed effect — see [pipeline](pipeline.md#the-full-phase-order) |
+| Artifact ladder | `artifact-review.md` | opus, different family | final adversary judgment on the rendered report, after the deterministic `artifact-gate` self-check already passed — see [pipeline](pipeline.md#the-phase-adversary-gate) |
 | Postflight | `postflight.md` | sonnet | durable security-profile notes to `kb/prior_context.json` |
 
 **`judge` and `validate` must never run concurrently against the same finding file** — the last
@@ -73,11 +78,23 @@ judge, wait for its writes to persist, then dispatch validate), not by code.
 
 | Prompt | Role |
 |---|---|
-| `factcheck.md` | fresh-context re-verification of a finding's citations/scope/severity against source (catches drift) |
 | `variant-hunt.md` | amplifies one confirmed finding into its family: enqueues sibling call sites as new candidates |
 | `bugchain.md` | looks across the confirmed set for chains — individually low findings that compose into a critical |
 | `tune-config.md` | optional ratcheted loop (≤3 rounds): authors targeted semgrep rules for uncovered classes |
 | `correlate-combiner.md` + `cross-repo-adversary.md` | cross-repo: see [Cross-repo correlation](cross-repo-correlation.md) — these gate correlation *verdicts*, not per-repo findings, and carry the same producer/adversary pattern applied to a joined multi-repo artifact rather than a single finding |
+
+There is no `factcheck.md` agent — a prior version of the harness had one (and a matching
+`fact-checked` value on `Finding.verification`), but both were deleted together: factcheck
+was unreachable from the main driver, and deleting it dropped the plugin's major version (see
+[helpers — the Finding/CampaignState schema](helpers.md#the-finding--campaignstate-schema-contract)).
+
+### `review` command agents (a separate, diff-scoped entrypoint)
+
+`review-file.md`, `review-plan.md`, and `review-filter.md` back the `sec_overlay.cli review`
+command — a diff-scoped, position-verified review pass over changed files in a pull request,
+distinct from the audit driver's `PHASE_TABLE` above. See
+[helpers — CLI-callable modules](helpers.md#cli-callable-modules) for the command itself; this
+page does not duplicate its per-file dispatch mechanics.
 
 ## The investigate gate ladder
 

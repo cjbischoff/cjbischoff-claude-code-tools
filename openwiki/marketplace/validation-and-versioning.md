@@ -20,8 +20,8 @@ from the repository root. This is the Claude Code CLI's own manifest validator �
 correctness (valid JSON, required fields present, a marketplace entry existing for each plugin
 directory). The root [`README.md`](/README.md) lists this as the first Development command,
 and the root [`CLAUDE.md`](/CLAUDE.md) Desired outcome states plainly: "Each plugin passes
-`claude plugin validate .` before release." As of this writing the repository's Status section
-records that "plugin and marketplace manifests validate."
+`claude plugin validate .` before release." The root `README.md` no longer carries a status
+section of its own — `CHANGELOG.md` and each plugin's `version` record what shipped.
 
 CodeRabbit's `**/.claude-plugin/*.json` path instruction (see
 [code review](../governance/code-review.md)) performs a lighter-weight version of the same
@@ -54,12 +54,14 @@ The edit lands in `plugins/<name>/.claude-plugin/plugin.json`'s `version` field,
 commit as the shipping-file change. `marketplace.json` never needs an edit for this — it does
 not pin plugin versions.
 
-As a concrete example of the rule being applied: the plugin's `plugin.json` currently reads
-`"version": "0.2.0"`. The root README's Status section explains the jump from the prior
-`0.1.1` governance release: "Plugin versions bump automatically on shipping-file changes
-(Conventional-Commits semver); this review-improvements release ships sec-overlay as 0.2.0,
-above the 0.1.1 governance release on `main`" — a `feat`-driven minor bump accumulated across
-that branch's shipping-file changes.
+As a concrete example of the rule being applied: `plugins/sec-overlay/.claude-plugin/plugin.json`
+currently reads `"version": "2.8.29"`. `plugins/sec-overlay/CHANGELOG.md`'s most recent entry
+(`2.8.29`) is a one-line `fix(sec-overlay):` commit correcting a stale `SKILL.md` description —
+a `fix` type, so it bumped the patch digit from the prior `2.8.28`. The newer `plainspoken` and
+`readme-keeper` plugins instead held version `0.1.0` across every commit of their initial
+branch, per each plugin's own `CLAUDE.md` versioning note: "no user had installed the plugin
+before its first merge." The shipping-file bump rule applies to each from its first merge
+onward, the same as it does for sec-overlay.
 
 ## Where this rule is (and is not) enforced — important nuance
 
@@ -82,9 +84,9 @@ pre-merge check, which runs in `warning` mode (`.coderabbit.yaml`):
 Because CodeRabbit's pre-merge checks are advisory (`request_changes_workflow: false` —
 see [code review](../governance/code-review.md)), the GitHub ruleset requiring a pull request
 is the only *required* gate on `main`; a missed version bump surfaces as a CodeRabbit warning
-comment, not a blocked merge. Treat that warning as a real finding — the root `README.md`
-states explicitly that "Pre-merge checks mirror the governance rules above in `warning` mode,
-so a violation shows up in the review as well as in the hooks" for the *other* governance
+comment, not a blocked merge. Treat that warning as a real finding — the root `CLAUDE.md`
+states explicitly that pre-merge checks "restate this repo's governance... Treat a warning as a
+real finding: it means a hook would have caught the same thing" for the *other* governance
 rules, but the version-bump rule specifically has no hook counterpart at all; CodeRabbit is its
 only automated check.
 

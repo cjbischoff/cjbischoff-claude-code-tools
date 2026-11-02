@@ -21,8 +21,8 @@ uv run ty check                                    # static types
 uv run python -m sec_overlay.preflight             # tool availability
 ```
 
-The suite is 81 pytest files, 595 tests (helpers/README.md's Test coverage & contracts
-section). Two failures on a clean checkout are environmental, not code defects — see
+The suite is 95 pytest files (828 tests) (`helpers/README.md`'s own directory-tree note). Two
+failures on a clean checkout are environmental, not code defects — see
 [running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run) for exactly
 which tests and why.
 
@@ -64,12 +64,13 @@ FP rate. Its **regression gate**: a `locked` finding that stops being detected f
 python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --workspaces <dir>
 ```
 
-## The semgrep rules submodule
+## The vendored, gitignored semgrep-rules clone
 
-`helpers/rules/semgrep/` is a git submodule. Clone this repository with `--recurse-submodules`,
-or run `git submodule update --init --recursive` afterward — see
-[running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run) for the test
-that fails without it.
+`helpers/rules/semgrep/` is **not** a git submodule — `tests/test_docs_invariants.py::test_no_live_doc_claims_a_git_submodule_that_does_not_exist`
+pins every live doc surface against claiming otherwise. Vendor it with a shallow clone instead:
+`git clone --depth 1 https://github.com/semgrep/semgrep-rules rules/semgrep` from `helpers/` —
+see [running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run) for the
+test that fails without it.
 
 ## The folder-README-tracks-code rule, inside this skill
 

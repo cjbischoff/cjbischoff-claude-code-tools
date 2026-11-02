@@ -69,6 +69,31 @@ to this repository's governance:
   declares only `contents: write` and `pull-requests: write`, the minimum needed to open the
   update PR (see [security automation](security-automation.md#the-default-read-only-workflow-token)).
 
+## The bounded history digest (`scripts/openwiki-history-digest.sh`)
+
+A `--update` run cannot read git history directly: `.openwikiignore` has active rules, and
+OpenWiki restricts shell execution to `pwd`, `git rev-parse HEAD`, and deleting its own plan
+file while those rules are active. `scripts/openwiki-history-digest.sh` closes that gap by
+running as a separate workflow step, **before** OpenWiki starts, and writing
+`.openwiki-history.md` at the repository root for the agent to read with its normal file tools.
+It needs `jq` and compares `openwiki/.last-update.json`'s recorded `gitHead` against the current
+`HEAD`, then writes:
+
+- one line per non-merge commit in that range, newest first — capped at
+  `OPENWIKI_HISTORY_MAX_COMMITS` commits (default 400);
+- the net list of changed files across the whole range, excluding `openwiki/` itself (which the
+  agent inspects directly) — capped at `OPENWIKI_HISTORY_MAX_FILES` files (default 400).
+
+The digest carries **no patches by design** — it routes the agent's attention to *what* changed
+and names the files to re-read in their current form, rather than asserting what the code now
+does from a diff alone (a patch can go stale the moment a later commit in the same range touches
+the same lines). When either cap truncates the output, the digest says so explicitly, and the
+omitted commits/files must be treated as unknown rather than as unchanged — this repository's
+own [`openwiki/INSTRUCTIONS.md`](/openwiki/INSTRUCTIONS.md) brief states that rule for exactly
+this reason. If `openwiki/.last-update.json` has no prior `gitHead` (a fresh `--init`), or the
+digest file is absent entirely (a local run that skipped this step), the brief instructs falling
+back to inspecting recent history selectively rather than inventing a change list.
+
 ## `openwiki/INSTRUCTIONS.md` and `.openwikiignore`
 
 `openwiki/INSTRUCTIONS.md` is the **user-authored wiki brief** this page's sibling pages were

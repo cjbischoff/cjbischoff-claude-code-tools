@@ -128,12 +128,17 @@ by CodeRabbit's `codeguard-reference-audit` check.
 | File | Read by | Decides |
 |---|---|---|
 | `finding.schema.json` | `findings_gate.py` | every finding's required fields, status/severity enums, the tool-receipt bar for `confirmed`/`fixed`, `runtime_test`'s tolerant `expected_signal` shape, `open_questions`, `cluster_id`/`affected_sites` |
-| `scan-profile.schema.json` | `profile.py` | `kb/scan-profile.json` shape (languages, `attack_surface`, `sast_plan`, `agents_to_spawn`, `scan_options`) |
+| `scan-profile.schema.json` | `profile.py` | `kb/scan-profile.json` shape (languages, `attack_surface`, `sast_plan`, `agents_to_spawn`, `scan_options`, `dependency_sinks`) |
 | `fix-disposition.schema.json` | `fix_disposition.py` | fix-completeness records (FULL/MITIGATION/WORKAROUND) |
 | `coverage-ledger.schema.json` | `coverage_ledger.py` | the surface-completeness ledger (`completeness`, `surfaces`, `deferred`, `open_questions`) |
 | `approved-crypto-algorithms.yaml` | `crypto_policy.py` | approved algos (aes-256-gcm, chacha20-poly1305, sha256+, argon2/bcrypt/scrypt/pbkdf2); denied (md5, sha1, des, rc4, ecb); floors (rsa≥3072, pbkdf2≥600000, ecc≥256) |
 | `approved-key-sources.yaml` | `crypto_policy.py` | approved key sources (kms, vault, env); denied (literal, hardcoded, filesystem) |
 | `asvs/asvs_5.0.0.json` | `asvs.py` | a curated 12-item OWASP ASVS 5.0 seed; `citations.py` attaches ids (advisory) |
+| `dependency-sinks.json` | `dependency_sinks.py` | the catalog of dependencies whose own code holds a sink the target repo can't see in first-party source (e.g. an OPA Rego policy calling `http.send`, CEL's `Program.Eval`) — each entry names its `cls`, `sink`, `manifests` to match, `safe_option`, and `indicators` for a manifest-less (vendored/Bazel) target |
+| `route-frameworks.json` | `route_census.py` | route-registration regex per web framework (name, language, globs, pattern, method/path capture groups) — `route_census.py` is its only consumer |
+| `architecture-standards.md` | the `architecture.md` agent prompt (and `diagram_gate`/`ste_lint` indirectly) | the C4+arc42 documentation standard: which diagrams to produce and when, and that the container diagram is the single source of truth the threat model's DFD derives from, never redraws |
+| `threat-model-standards.md` | the `threat-model.md` agent prompt | the STRIDE/DFD documentation standard the threat-model phase follows |
+| `mermaid-caps.md` | `diagram_gate.py` (mechanically); `tests/test_references_caps.py` keeps the two in sync | the hard per-diagram-kind node/participant/message caps (context 10, container 15, component 10, dfd 12, sequence-participants 6, sequence-messages 15) — exceeding any is a generation failure, not a warning |
 
 `crypto_policy.check(algo, params, key_source)` turns "is this weak crypto?" from an LLM
 opinion into a deterministic lookup:

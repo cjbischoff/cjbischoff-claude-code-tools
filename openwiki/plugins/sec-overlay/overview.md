@@ -91,11 +91,14 @@ step. See [pipeline](pipeline.md) for the full phase-by-phase flow, and
 
 These hold everywhere and are enforced in code where possible, in prompts otherwise:
 
-1. **Never executes or modifies the reviewed source.** Static analysis only. Patches are
-   applied to a *throwaway copy* to verify them (see `verify.py` in [helpers](helpers.md))
-   — the repo's own files are never run or edited. See
-   [running an audit](running-an-audit.md#the-do-not-execute-the-target-invariant) for how this
-   holds end to end, including the red-team plan.
+1. **Never executes or modifies the reviewed source, with one named, bounded exception.**
+   Static analysis only. Patches are applied to a *throwaway copy* to verify them (see
+   `verify.py` in [helpers](helpers.md)) — the repo's own files are never run or edited. The one
+   exception is the opt-in `prove` phase (default off), the single place the harness is
+   permitted to run target-derived code, under three conditions that must all hold before it
+   can promote a finding. See
+   [running an audit](running-an-audit.md#the-prove-exception-to-never-execute-the-target) for
+   the full rule and its containment.
 2. **Writes only its own sidecar.** All output lives in an in-repo, self-ignoring
    `<target>/.sec-overlay/<slug>/` directory (override the base with `$SEC_OVERLAY_HOME`, or the
    whole workspace with `--workspace`). A seeded `.sec-overlay/.gitignore` keeps output out of
@@ -117,13 +120,15 @@ Everything a security engineer receives lands in `<target>/.sec-overlay/<slug>/`
 | Path | Contents |
 |---|---|
 | `kb/scan-profile.json` | recon output: languages, frameworks, `attack_surface`, `sast_plan`, `subsystems` |
-| `kb/architecture.md` + `kb/entities/*.md` | components, data flows, trust boundaries |
-| `kb/THREAT_MODEL.md` | attacker profiles + the prioritized hunt list |
+| `kb/route-census.json` | code-derived route inventory, written before recon, never from recon's own output |
+| `architecture/arc42.md` + `architecture/*.mmd` | the canonical C4 structure: context/container/component diagrams + arc42 sections |
+| `threat-model/threat-model.md` + `threat-model/dfd.mmd` | attacker profiles, the prioritized hunt list, and the DFD derived from `container-diagram.mmd` |
 | `kb/context.json` | the repo's own docs distilled, trust-tagged (`untrusted-doc` / `prior-scan`) |
 | `kb/graph.json` | the Tier-1/Tier-2 code graph (reachability substrate) |
-| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase |
+| `kb/gates/<phase>.json` | adversary verdict audit trail per gated phase (arch-gate, tm-gate, recall-gate, validate-fix, artifact-gate, artifact-consistency, ...) |
 | `kb/coverage-ledger.json` | surface-completeness ledger; blocks `complete` while gaps remain |
 | `kb/discovery-ledger.json` | investigate saturation state (waves, `terminal_reason`) |
+| `kb/prove.json` | the opt-in prove phase's reproduction receipts, when `scan_options.prove_findings` is enabled |
 | `findings/<id>.json` | every finding, all statuses — evidence, reachability, CVSS, patch diff |
 | `report.sarif` | SARIF 2.1.0 (confirmed/fixed) |
 | `report.md` | human report, built from `finding-template.md`; links `redteam-plan.md` |

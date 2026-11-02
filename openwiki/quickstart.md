@@ -9,8 +9,10 @@ tags: [quickstart, navigation, marketplace, sec-overlay]
 
 This repository is a **Claude Code plugin marketplace** — a distribution and governance system,
 not an application server. It has no HTTP API, no database, and no production runtime. It ships
-one plugin, [`sec-overlay`](plugins/sec-overlay/overview.md), an agentic security-audit harness,
-from `plugins/sec-overlay/`. Read this page first; it links to everything else.
+three plugins from `plugins/`: [`sec-overlay`](plugins/sec-overlay/overview.md), an agentic
+security-audit harness; [`plainspoken`](plugins/plainspoken.md), a prose drafting/rewriting/
+review skill; and [`readme-keeper`](plugins/readme-keeper.md), a README-writing and drift-check
+skill. Read this page first; it links to everything else.
 
 ## Map
 
@@ -26,7 +28,7 @@ from `plugins/sec-overlay/`. Read this page first; it links to everything else.
     the prek doc-update-guard, the GitHub ruleset, and a legacy skill-local hook.
   - [Code review](governance/code-review.md) — CodeRabbit's comment-only role and warning-mode
     pre-merge checks.
-- **[plugins/sec-overlay/](plugins/sec-overlay/overview.md)** — the one distributed plugin, in
+- **[plugins/sec-overlay/](plugins/sec-overlay/overview.md)** — the security-audit harness, in
   depth.
   - [Overview](plugins/sec-overlay/overview.md) — the four principles, three-folder
     architecture, and the four cross-cutting invariants.
@@ -39,25 +41,29 @@ from `plugins/sec-overlay/`. Read this page first; it links to everything else.
   - [References](plugins/sec-overlay/references.md) — the rule book: prompt constants, schemas,
     crypto policy.
   - [Running an audit](plugins/sec-overlay/running-an-audit.md) — the smoke scan vs. the full
-    agentic audit, preflight, and env-only test failures.
+    agentic audit, preflight, env-only test failures, and the opt-in prove exception.
   - [Developing the skill](plugins/sec-overlay/developing-the-skill.md) — tests, linting, the
     bench harness.
   - [Cross-repo correlation](plugins/sec-overlay/cross-repo-correlation.md) — the optional
     multi-repo capability.
+- **[plugins/plainspoken](plugins/plainspoken.md)** — the prose-editing plugin: interview,
+  rewrite, review, deep-review, brief, and lint modes, and the deep-review lens agents.
+- **[plugins/readme-keeper](plugins/readme-keeper.md)** — the README plugin: create, update
+  (marker-scoped), offline drift check, and reader-rubric review.
 - **[operations/](operations/security-automation.md)** — repository-level security automation
   and how this repo runs its own tooling.
   - [Security automation](operations/security-automation.md) — dependency review, Dependabot,
     CodeQL default setup, secret scanning, SHA pinning, least-privilege tokens.
-  - [Cursor CodeGuard rules](operations/cursor-codeguard-rules.md) — the `.cursor/rules/`
-    families.
+  - [Cursor CodeGuard rule](operations/cursor-codeguard-rules.md) — the single always-applied
+    `.cursor/rules/` secure-coding rule.
   - [OpenWiki refresh](operations/openwiki-refresh.md) — how this wiki itself gets regenerated.
 
 ## Task-routing table
 
 | I want to... | Read | Source entrypoints / symbols | Focused tests | Minimal validation |
 |---|---|---|---|---|
-| Install this marketplace and the plugin | [Marketplace overview](marketplace/overview.md) | `.claude-plugin/marketplace.json`, `plugins/sec-overlay/.claude-plugin/plugin.json` | — | `claude plugin validate .` |
-| Add a second plugin | [Marketplace overview](marketplace/overview.md), [Validation and versioning](marketplace/validation-and-versioning.md) | new `plugins/<name>/.claude-plugin/plugin.json` + a `marketplace.json` entry | — | `claude plugin validate .` |
+| Install this marketplace and a plugin | [Marketplace overview](marketplace/overview.md) | `.claude-plugin/marketplace.json`, `plugins/<name>/.claude-plugin/plugin.json` | — | `claude plugin validate .` |
+| Add a new plugin | [Marketplace overview](marketplace/overview.md#adding-a-plugin), [Validation and versioning](marketplace/validation-and-versioning.md) | `docs/templates/plugin/` scaffold, new `plugins/<name>/.claude-plugin/plugin.json` + a `marketplace.json` entry | — | `claude plugin validate .` |
 | Bump a plugin's version correctly | [Validation and versioning](marketplace/validation-and-versioning.md) | `plugins/sec-overlay/.claude-plugin/plugin.json`'s `version` field | — | CodeRabbit's `plugin-version-bump` warning on the PR |
 | Make any tracked-file change without breaking a hook | [Hooks and commits](governance/hooks-and-commits.md) | `scripts/hooks/pre-commit-check.sh`, `scripts/hooks/commit-msg-check.sh` | `scripts/hooks/test-pre-commit-check.sh`, `scripts/hooks/test-commit-msg-check.sh` | `bash scripts/hooks/test-pre-commit-check.sh && bash scripts/hooks/test-commit-msg-check.sh` |
 | Understand what CodeRabbit will flag | [Code review](governance/code-review.md) | `.coderabbit.yaml` | — | open the PR, wait for the walkthrough comment (`gh pr view <n> --comments`) |
@@ -68,9 +74,11 @@ from `plugins/sec-overlay/`. Read this page first; it links to everything else.
 | Add a new attack class | [Agents — classes/](plugins/sec-overlay/agents.md#classes--cwe-class-extension-prompts), [References](plugins/sec-overlay/references.md) | `references/attack-classes.md`, `agents/classes/<key>.md`, `helpers/sec_overlay/clsmap.py` | `helpers/tests/test_wiring.py`, `test_clsmap.py` | `uv run pytest tests/test_wiring.py tests/test_clsmap.py -q` |
 | Loosen or tighten crypto policy | [References](plugins/sec-overlay/references.md#machine-checked-policy-and-schemas) | `references/approved-crypto-algorithms.yaml`, `helpers/sec_overlay/crypto_policy.py` | `helpers/tests/test_crypto_policy.py` | `uv run pytest tests/test_crypto_policy.py -q` — requires sign-off per the editing rules |
 | Correlate findings across multiple repos | [Cross-repo correlation](plugins/sec-overlay/cross-repo-correlation.md) | `helpers/sec_overlay/correlate/cli.py` | `helpers/tests/test_correlate_*.py` (8 files) | `python -m sec_overlay.correlate --manifest <m.json> --out <dir>` |
-| Run the full sec-overlay test suite | [Developing the skill](plugins/sec-overlay/developing-the-skill.md) | `helpers/pyproject.toml` | all 81 files under `helpers/tests/` | `uv run pytest -q` from `helpers/` (2 env-only failures expected on a clean checkout) |
-| Add or change a Cursor secure-coding rule | [Cursor CodeGuard rules](operations/cursor-codeguard-rules.md) | `.cursor/rules/codeguard-*.mdc` | — | CodeRabbit's `codeguard-reference-audit` finishing-touch on the PR |
+| Run the full sec-overlay test suite | [Developing the skill](plugins/sec-overlay/developing-the-skill.md) | `helpers/pyproject.toml` | all 95 files under `helpers/tests/` | `uv run pytest -q` from `helpers/` (2 env-only failures expected on a clean checkout) |
+| Add or change a Cursor secure-coding rule | [Cursor CodeGuard rule](operations/cursor-codeguard-rules.md) | `.cursor/rules/codeguard-1-hardcoded-credentials.mdc` | — | CodeRabbit's `codeguard-reference-audit` finishing-touch on the PR |
 | Change a GitHub Actions workflow | [Security automation](operations/security-automation.md) | `.github/workflows/*.yml` | — | `.github/workflows/**` CodeRabbit path instruction (SHA pin + least-privilege `permissions`) |
+| Change plainspoken's lint/mode behavior | [plainspoken](plugins/plainspoken.md) | `plugins/plainspoken/skills/plainspoken/scripts/lint.py`, `SKILL.md`, `references/` | `plugins/plainspoken/tests/test_lint.py` | `cd plugins/plainspoken && uv run --with pytest pytest -q` |
+| Change readme-keeper's checker/templates | [readme-keeper](plugins/readme-keeper.md) | `plugins/readme-keeper/skills/readme-keeper/scripts/check.py`, `templates/readme-check.yml` | `plugins/readme-keeper/tests/test_check.py` | `cd plugins/readme-keeper && uv run --with pytest pytest -q` |
 | Refresh the wiki itself | [OpenWiki refresh](operations/openwiki-refresh.md) | `openwiki/INSTRUCTIONS.md`, `.openwikiignore` | — | `openwiki code --update --print`, or dispatch the `OpenWiki Update` workflow |
 
 ## The sec-overlay pipeline in one sentence
@@ -115,3 +123,8 @@ reader, with the reason and source anchor:
   [hooks and commits](governance/hooks-and-commits.md#the-github-ruleset-on-main)) but is a
   server-side GitHub setting, not a file in this repository; described qualitatively from the
   root README/CLAUDE.md's own statements about it.
+- **`.omp/AGENTS.md` files** (root, plugin, and skill depth) — native-priority context wrappers
+  for the `omp` tool that `@import` the existing `CLAUDE.md` governance files so `omp` reads
+  marketplace/plugin/skill rules at priority 100 regardless of other tool configs. Tool-specific
+  plumbing around already-documented governance files, not a separate contract; not walked in
+  depth here.

@@ -55,30 +55,53 @@ governance. It runs on every `pre-commit` and does four things, in order:
    if the current branch is `main`, the hook exits 1 immediately with a message to branch
    instead. This is the local backstop for the rule; the
    [GitHub ruleset on `main`](#the-github-ruleset-on-main) below is the server-side one.
-2. **Requires `README.md` and `CHANGELOG.md` on any non-doc change.** If the staged file set
-   contains anything other than `README.md`/`CHANGELOG.md`, both of those files must also be
-   staged, or the commit is rejected. This mirrors root `README.md`'s Governance rule: "Every
-   commit that changes tracked files updates `README.md` and `CHANGELOG.md` (Common Changelog
-   format) in the same commit."
-3. **A hard-coded check for the three Directory Guide folders** (`plugins`, `scripts`, `docs`):
-   if a staged file lives under one of these and that folder's own `README.md` is not also
-   staged, the commit is rejected naming the folder. This is a "stricter, redundant-but-harmless
-   special case" per `scripts/README.md` — it duplicates the general rule below for exactly the
-   three folders listed in the root README's Directory Guide table.
+2. **Routes the changelog requirement by scope**, matching the root `CLAUDE.md` rule ("a
+   commit whose changes are all inside `plugins/<name>/` updates that plugin's `CHANGELOG.md`
+   ... a commit touching anything outside `plugins/` updates the root `CHANGELOG.md` and root
+   `README.md`"):
+   - Staged files are split into `nondoc` (everything except a bare `README.md`/`CHANGELOG.md`)
+     and, within that, `repo_level` (anything **not** under `plugins/<name>/`) versus the set of
+     touched plugin names (`plugins/<name>/` prefixes, read via a quoted `while read` loop so a
+     name with whitespace or glob characters cannot split or expand).
+   - If `repo_level` is non-empty, the root `README.md` **and** root `CHANGELOG.md` must both be
+     staged, or the commit is rejected.
+   - For each plugin name touched, that plugin's own `plugins/<name>/CHANGELOG.md` must be
+     staged, or the commit is rejected naming the plugin — **not** the root docs, and not
+     `plugins/README.md` either (a plugin-internal commit never needs the root files). A commit
+     that stages only a plugin's own `CHANGELOG.md` is exempt from this (it already satisfies
+     the rule trivially).
+   - Scope classification runs through a `safe_grep` helper that fails the hook **closed**
+     (exit 1, not a silent pass) if the underlying `grep` call errors (exit status greater than
+     1), rather than treating a real failure as an empty no-match result.
+3. **A hard-coded check for two Directory Guide folders**, `scripts` and `docs` (`plugins` was
+   deliberately dropped from this list): if a staged file lives under one of these and that
+   folder's own `README.md` is not also staged, the commit is rejected naming the folder. Per
+   `scripts/README.md`, this is kept as a "stricter, redundant-but-harmless special case"
+   alongside rule 2 and rule 4 below — `plugins` is excluded here because the per-plugin
+   changelog routing (rule 2) and the generalized per-folder rule (rule 4) already cover it,
+   and a blanket `plugins/README.md` trigger would defeat the point of routing plugin-internal
+   commits to their own changelog instead of the root docs.
 4. **The generalized per-folder rule.** For every staged file, the hook resolves its immediate
    directory and checks whether that directory has a *tracked* `README.md` (via
    `git ls-files --error-unmatch`). If it does, that `README.md` must also be staged, or the
-   commit is rejected naming the specific file and folder. A folder with no tracked `README.md`
-   is simply not gated. This generalized rule is what actually enforces the "docs track code"
+   commit is rejected naming the specific file and folder — except a plugin-root
+   `CHANGELOG.md` itself, which this rule exempts so a changelog-only plugin commit can pass
+   without also staging the plugin's `README.md`. A folder with no tracked `README.md` is
+   simply not gated. This generalized rule is what actually enforces the "docs track code"
    requirement for every nested folder inside the sec-overlay skill — see
    [developing the skill](../plugins/sec-overlay/developing-the-skill.md) for the full list of
-   folder READMEs this reaches.
+   folder READMEs this reaches, and it applies identically inside the plainspoken and
+   readme-keeper plugins (see [plainspoken](../plugins/plainspoken.md) and
+   [readme-keeper](../plugins/readme-keeper.md)).
 
-`scripts/hooks/test-pre-commit-check.sh` proves this behavior with three cases, each run inside
-a disposable temporary git repository (cleaned up via an `EXIT` trap): a change to a folder's
-file without restaging that folder's `README.md` blocks (exit 1); the same change with the
-`README.md` restaged passes (exit 0); and a change inside a folder that has no tracked
-`README.md` is not gated at all (exit 0).
+`scripts/hooks/test-pre-commit-check.sh` proves this behavior, including a case that a change
+to only one plugin's files without that plugin's own `CHANGELOG.md` staged blocks (exit 1) even
+though `plugins/README.md` is tracked and not staged — proving plugin-internal commits are
+exempt from the old blanket `plugins/README.md` trigger — alongside the generalized-rule cases:
+a change to a folder's file without restaging that folder's `README.md` blocks (exit 1); the
+same change with the `README.md` restaged passes (exit 0); and a change inside a folder that
+has no tracked `README.md` is not gated at all (exit 0). Each case runs inside a disposable
+temporary git repository, cleaned up via an `EXIT` trap.
 
 ## Wiring: prek
 

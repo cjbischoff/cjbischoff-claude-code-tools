@@ -1,7 +1,7 @@
 ---
 type: how-to-guide
 title: Running a sec-overlay Audit
-description: The deterministic smoke-scan command versus a full agentic audit, preflight tool checks, environment prerequisites and the two known env-only test failures, and how the harness upholds its never-execute-the-target invariant.
+description: The deterministic smoke-scan command versus a full agentic audit, preflight tool checks, environment prerequisites and the two known env-only test failures, and how the harness upholds its never-execute-the-target rule except for the single bounded, opt-in prove phase.
 tags: [sec-overlay, running-audit, preflight, smoke-scan]
 ---
 
@@ -49,6 +49,27 @@ on a `findings`/`report`/`summary`-like path, the `OUTPUT_WRITE_FALLBACK` prompt
 block instructs writing via a `python3 shutil.copy` from a temp file instead, so a blocked
 write never silently loses a finding.
 
+## The `/sec-overlay:audit` slash command
+
+`commands/audit.md` is a thin routing document over the full agentic audit above — it carries
+no executable logic itself. `/sec-overlay:audit <repo> [<repo> ...]` counts its arguments: one
+repo drives a single-repo audit via `sec_overlay.run.drive()`/`advance()` (resume is
+stage-based — `drive` picks up at the first phase with no recorded stage) and stops; two or
+more repos drive each repo's audit in turn, infer each repo's role from its own
+`kb/scan-profile.json`, confirm the inferred roles with the operator, then run
+[cross-repo correlation](cross-repo-correlation.md)'s `python -m sec_overlay.correlate` and
+write the combined artifacts into the invocation directory's `artifacts/`.
+
+## `action.yml` — the PR review poster
+
+[`action.yml`](/plugins/sec-overlay/action.yml) is a composite GitHub Action, separate from the
+full audit above: it runs `sec_overlay.cli review` (the diff-scoped, position-verified review
+pass — see [helpers — CLI-callable modules](helpers.md#cli-callable-modules)) against a pull
+request's `base..head` diff, then posts the findings as a pull-request review via
+`pr_poster.py` — critical/high findings inline, everything else in the summary body. The
+review's GitHub event is always `COMMENT`, so it never blocks a merge on its own; a consuming
+repo's own branch-protection rules decide whether to require it.
+
 ## Preflight — the first gate
 
 ```bash
@@ -81,8 +102,12 @@ stated identically in `SKILL.md` and the skill's own [`CLAUDE.md`](/plugins/sec-
 
 A clean checkout is missing three things a full audit needs:
 
-1. **The semgrep rules submodule.** `rules/semgrep/` must be checked out:
-   `git submodule update --init --recursive`. Without it, semgrep has no rules and
+1. **The vendored, gitignored semgrep-rules clone.** `helpers/rules/semgrep/` is **not** a git
+   submodule (a dedicated test,
+   `tests/test_docs_invariants.py::test_no_live_doc_claims_a_git_submodule_that_does_not_exist`,
+   guards every live doc against claiming otherwise) — clone it directly:
+   `git clone --depth 1 https://github.com/semgrep/semgrep-rules rules/semgrep` from
+   `helpers/`. Without it, semgrep has no ruleset and
    `test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd` fails.
 2. **External tool binaries.** `uv run python -m sec_overlay.preflight` must show semgrep,
    codeql (+ language packs), ast-grep, osv-scanner present.
@@ -94,10 +119,26 @@ A clean checkout is missing three things a full audit needs:
    to seed it locally.
 
 **The two env-only failures on a clean checkout are environmental, not code defects** — do not
-"fix" them by committing the submodule contents or fabricating seed data:
+"fix" them by committing the vendored clone's contents or fabricating seed data:
 `tests/test_bench.py::test_seed_corpus_is_valid` (gitignored bench corpus) and
-`tests/test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd` (excluded semgrep
-submodule). The skill `CLAUDE.md` §2 states this explicitly.
+`tests/test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd` (the semgrep-rules
+clone absent). The skill `CLAUDE.md` §2 states this explicitly.
+
+## The prove exception to "never execute the target"
+
+Every phase except one only *reads* the target: static analysis, and patches verified against a
+throwaway *copy*. [`prove`](pipeline.md#the-full-phase-order) is the single, bounded exception —
+it executes target-derived code, and only when `scan_options.prove_findings` is explicitly set
+true (absent/false by default, so an ordinary audit never runs it). Per
+`docs/decisions/2026-08-31-prove-lane-execution.md`, three conditions must all hold before a
+proof promotes a finding to `confirmed`: the agent drove a real entrypoint (`scope: entrypoint`,
+not a code slice), the attack class has a wrapper-decidable oracle, and the oracle actually
+observed the effect. Anything weaker records a degradation and leaves the finding where it was
+— `sqli` and `authz` route to a human-run harness instead, because their oracles need a
+provisioned backend. Containment is structural, not advisory: every build and run happens under
+`ws.repro`, outside the target's own working tree, and the oracle is a stdlib loopback HTTP
+collector, so a proof needs no network egress. There is no sandbox on darwin; the decision
+record accepts that trade-off explicitly rather than pretending the exception doesn't exist.
 
 ## The do-not-execute-the-target invariant
 

@@ -88,11 +88,27 @@ Dependabot's `github-actions` stream (above) proposes automatically. CodeRabbit'
 `.github/workflows/**` path instruction (see [code review](../governance/code-review.md)) also
 checks this on every PR that touches a workflow file.
 
+## Per-plugin test workflows
+
+Three path-scoped workflows gate each plugin's own test suite on a pull request that touches it:
+`.github/workflows/sec-overlay-tests.yml`, `plainspoken-tests.yml`, and
+`readme-keeper-tests.yml`. Each runs only when its plugin's directory (or the workflow file
+itself) changed, declares `permissions: contents: read`, and avoids third-party Actions beyond
+the SHA-pinned, GitHub-owned `actions/checkout` — installing `uv` via its official install
+script instead. `sec-overlay-tests.yml` additionally runs an **offline detection-regression
+gate** after the pytest suite: it smoke-scans the committed `fixtures/vulnerable_repo` fixture,
+then grades the bench seed corpus in `detection` mode (Tier-1 tool receipt only — no LLM, so
+the `confirmed`-finding adversarial gate cannot run in CI) and fails the job if a `locked`
+ground-truth finding stops being detected. See
+[sec-overlay — the bench harness](../plugins/sec-overlay/developing-the-skill.md#the-bench-harness-dev-only-not-part-of-an-audit)
+for what the corpus is and why it is gitignored.
+
 ## The default read-only workflow token
 
-Both workflows declare `permissions` explicitly rather than relying on the default:
-`dependency-review.yml` uses `permissions: contents: read` — it only needs to check out code
-and read manifests. `openwiki-update.yml` needs to open a pull request, so it declares the
+Every workflow in this repository declares `permissions` explicitly rather than relying on the
+default: the three test workflows above and `dependency-review.yml` all use `permissions:
+contents: read` — they only need to check out code (and, for the test workflows, read
+manifests/fixtures). `openwiki-update.yml` needs to open a pull request, so it declares the
 narrower elevated grant its job actually needs (`contents: write`, `pull-requests: write`) at
 the job level rather than repository-wide, and otherwise defaults to `permissions: {}` at the
 workflow level. This least-privilege pattern — read-only unless a job specifically needs to

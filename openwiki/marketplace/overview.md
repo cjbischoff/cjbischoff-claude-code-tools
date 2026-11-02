@@ -9,9 +9,12 @@ tags: [marketplace, claude-plugin, manifest, plugin-layout]
 
 This repository is a **Claude Code plugin marketplace**: a distribution point for personal
 Claude Code plugins, not an application with a runtime, HTTP API, or database. The unit that
-Claude Code installs is a **plugin directory** under [`plugins/`](../../plugins/README.md) — for
-this repository, that is a single plugin, `sec-overlay` (see
-[sec-overlay overview](../plugins/sec-overlay/overview.md)).
+Claude Code installs is a **plugin directory** under [`plugins/`](../../plugins/README.md) — this
+repository distributes three: `sec-overlay`, an agentic security-audit harness (see
+[sec-overlay overview](../plugins/sec-overlay/overview.md)); `plainspoken`, a prose
+drafting/rewriting/review skill (see [plainspoken](../plugins/plainspoken.md)); and
+`readme-keeper`, a README-writing and drift-check skill (see
+[readme-keeper](../plugins/readme-keeper.md)).
 
 ## The marketplace manifest
 
@@ -26,22 +29,42 @@ this repository, that is a single plugin, `sec-overlay` (see
   - `source` — a relative path to the plugin directory, e.g. `./plugins/sec-overlay`.
   - `description` — shown alongside the plugin in marketplace listings.
 
-Today the array has exactly one entry, `sec-overlay`, sourced from `./plugins/sec-overlay`.
-Adding a second plugin means adding both a new `plugins/<name>/` directory and a matching
-entry here — CodeRabbit's `**/.claude-plugin/*.json` path instruction (see
+Today the array has three entries — `sec-overlay` (`./plugins/sec-overlay`), `plainspoken`
+(`./plugins/plainspoken`), and `readme-keeper` (`./plugins/readme-keeper`). Adding another
+plugin means adding both a new `plugins/<name>/` directory and a matching entry here —
+CodeRabbit's `**/.claude-plugin/*.json` path instruction (see
 [code review](../governance/code-review.md)) checks that every plugin directory has a
 marketplace entry.
+
+## Adding a plugin
+
+The root [`CLAUDE.md`](/CLAUDE.md) "New plugin" checklist is the five-step process both
+plainspoken and readme-keeper followed:
+
+1. Copy [`docs/templates/plugin/`](/docs/templates/plugin/) to `plugins/<name>/` — a minimal
+   skeleton with a `.claude-plugin/plugin.json`, `CHANGELOG.md`, `CLAUDE.md`, `README.md`, and
+   `skills/skill-name/SKILL.md`, each carrying `{{PLACEHOLDER}}` markers.
+2. Replace every placeholder with the plugin's real values.
+3. Register the plugin in `.claude-plugin/marketplace.json`.
+4. Run `claude plugin validate .`.
+5. Write the first `CHANGELOG.md` entry at version `0.1.0`.
+
+Both new plugins also keep version `0.1.0` across every commit of their initial branch (no
+user had installed them yet); the automatic shipping-file bump rule in
+[validation and versioning](validation-and-versioning.md) applies from the first merge onward.
 
 ## Installing from this marketplace
 
 ```
 /plugin marketplace add cjbischoff/cjbischoff-claude-code-tools
 /plugin install sec-overlay@cjbischoff-claude-code-tools
+/plugin install plainspoken@cjbischoff-claude-code-tools
+/plugin install readme-keeper@cjbischoff-claude-code-tools
 ```
 
 The first command registers this repository as a marketplace source (Claude Code reads
-`.claude-plugin/marketplace.json`); the second installs the named plugin from it. This is the
-literal install path documented in the root [`README.md`](/README.md).
+`.claude-plugin/marketplace.json`); each `install` line installs one named plugin from it. This
+is the literal install path documented in the root [`README.md`](/README.md).
 
 ## Plugin directory layout and the plugin manifest
 
@@ -66,7 +89,7 @@ plugins/sec-overlay/
 {
   "name": "sec-overlay",
   "description": "Agentic security-audit harness: runs SAST, investigates candidates with multi-agent gates, and emits SARIF + Markdown reports.",
-  "version": "0.2.0",
+  "version": "2.8.29",
   "author": { "name": "Christopher Bischoff" }
 }
 ```
@@ -110,6 +133,8 @@ to those files inside the plugin's own instructions must be relative to the plug
 
 - [Validation and versioning](validation-and-versioning.md) — `claude plugin validate .` and
   the automatic semver bump rule.
-- [sec-overlay overview](../plugins/sec-overlay/overview.md) — what the one shipped plugin does.
+- [sec-overlay overview](../plugins/sec-overlay/overview.md) — the security-audit harness.
+- [plainspoken](../plugins/plainspoken.md) — the prose-editing plugin.
+- [readme-keeper](../plugins/readme-keeper.md) — the README plugin.
 - [Commit governance](../governance/hooks-and-commits.md) — the hooks that gate any change to
   this repository, including plugin files.
