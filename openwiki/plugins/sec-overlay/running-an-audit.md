@@ -7,8 +7,10 @@ tags: [sec-overlay, running-audit, preflight, smoke-scan]
 
 # Running a sec-overlay audit
 
-There are two ways to run this harness: a fast deterministic **smoke scan** with no agents at
-all, and the **full agentic audit** described in [pipeline](pipeline.md). Both start from
+There are three ways to run this harness: a fast deterministic **smoke scan** with no agents at
+all, the **full agentic audit** described in [pipeline](pipeline.md), and a diff-scoped
+**review** of just a changed-file set (`sec_overlay.cli review` — see
+[diff-scoped review](diff-review.md), not covered further on this page). All three start from
 `skills/sec-overlay/helpers/` — inside an installed plugin, that is
 `${CLAUDE_PLUGIN_ROOT}/skills/sec-overlay/helpers`.
 
@@ -27,14 +29,16 @@ This runs `sec_overlay.cli.run_scan`: semgrep → `normalize()` → stamp `disco
 finding → write `findings/F-*.json` → emit `report.sarif` + `report.md` + `state.json` →
 `record_stage(ws, "prefilter")`. **It runs only the semgrep backend** — CodeQL, SCA
 (`osv-scanner`), and secrets scanning are not invoked, unlike the full pipeline's
+<!-- openwiki: broken internal link [pipeline.md#the-full-phase-order] heading anchor "the-full-phase-order" does not exist in "pipeline.md". Fix the href or restore the target, then delete this comment. -->
 [prefilter phase](pipeline.md#the-full-phase-order), which runs all four concurrently. It also
 never calls `sec_overlay.state.begin_pass`, so it does not pin a SHA or advance the campaign's
 `pass_number` — a smoke scan is a one-shot prefilter run, not a pass in the multi-pass campaign
 model described in [pipeline](pipeline.md#multi-pass-campaigns). It is the fast path to see
 output — **not** a real audit: no agents run, so there is no investigate gate ladder, no
 adversarial validation, and no `risk_score`. The bundled `rules/smoke.yaml` is a minimal
-ruleset; the semgrep-rules submodule (fuller semgrep coverage) is not part of the plugin — for
-a real audit, point `--config` (and the recon agent's `rulesets`) at your own semgrep ruleset.
+ruleset; the vendored, gitignored semgrep-rules shallow clone (fuller semgrep coverage) is not
+shipped with the plugin — for a real audit, point `--config` (and the recon agent's
+`rulesets`) at your own semgrep ruleset.
 
 ## Full agentic audit
 
@@ -55,11 +59,12 @@ write never silently loses a finding.
 uv run python -m sec_overlay.preflight
 ```
 
-`helpers/sec_overlay/preflight.py`'s `check_tools()` checks for six binaries: `semgrep`,
-`codeql`, `tree-sitter`, `ast-grep`, `osv-scanner`, and `gitleaks`. Three of them —
+`helpers/sec_overlay/preflight.py`'s `check_tools()` checks for seven binaries: `semgrep`, `rg`
+(ripgrep), `codeql`, `tree-sitter`, `ast-grep`, `osv-scanner`, and `gitleaks`. Three of them —
 `tree-sitter`, `osv-scanner`, `gitleaks` (the `_OPTIONAL` set) — are **optional**: a scan
-degrades gracefully and logs them as skipped rather than crashing preflight. The other three —
-`semgrep`, `codeql`, `ast-grep` — are required backends the scan depends on. `preflight`
+degrades gracefully and logs them as skipped rather than crashing preflight. The other four —
+`semgrep`, `rg`, `codeql`, `ast-grep` — are required backends the scan depends on (`rg` backs
+the route census and the call-edge search in `structural_index.py`). `preflight`
 prints the exact install command for anything missing. **It never installs — the operator runs
 the printed commands.**
 
@@ -79,13 +84,16 @@ stated identically in `SKILL.md` and the skill's own [`CLAUDE.md`](/plugins/sec-
 
 ## Environment prerequisites for a full run
 
-A clean checkout is missing three things a full audit needs:
+A clean checkout is missing two things a full audit needs:
 
-1. **The semgrep rules submodule.** `rules/semgrep/` must be checked out:
-   `git submodule update --init --recursive`. Without it, semgrep has no rules and
-   `test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd` fails.
-2. **External tool binaries.** `uv run python -m sec_overlay.preflight` must show semgrep,
-   codeql (+ language packs), ast-grep, osv-scanner present.
+1. **The vendored semgrep rules.** `rules/semgrep/` is a **gitignored shallow clone**, not a git
+   submodule: `preflight.py`'s `_vendor_cmd()` prints and the operator runs
+   `git clone --depth 1 https://github.com/semgrep/semgrep-rules <rules/semgrep path>`. Without
+   it, semgrep has no rules and `test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd`
+   fails. Never hand-place a first-party rule under `rules/semgrep/` — re-vendoring deletes
+   anything placed there; first-party rules belong under the tracked `rules/absence/` pack.
+2. **External tool binaries.** `uv run python -m sec_overlay.preflight` must show semgrep, `rg`,
+   codeql (+ language packs), and ast-grep present (the four required backends).
 3. **The bench corpus is local-only.** `bench/corpus_seed/*.json` is gitignored (it contains
    confirmed vulnerabilities from private code). Its absence fails
    `test_bench.py::test_seed_corpus_is_valid` and
@@ -94,10 +102,10 @@ A clean checkout is missing three things a full audit needs:
    to seed it locally.
 
 **The two env-only failures on a clean checkout are environmental, not code defects** — do not
-"fix" them by committing the submodule contents or fabricating seed data:
+"fix" them by committing the vendored clone's contents or fabricating seed data:
 `tests/test_bench.py::test_seed_corpus_is_valid` (gitignored bench corpus) and
-`tests/test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd` (excluded semgrep
-submodule). The skill `CLAUDE.md` §2 states this explicitly.
+`tests/test_preflight.py::test_report_finds_vendored_rules_regardless_of_cwd` (excluded
+vendored semgrep clone). The skill `CLAUDE.md` §2 states this explicitly.
 
 ## The do-not-execute-the-target invariant
 
@@ -132,3 +140,4 @@ that touches code:
   invoked above.
 - [Developing the skill](developing-the-skill.md) — the test suite, including the two env-only
   failures in more detail.
+- [Diff-scoped review](diff-review.md) — the third, lighter `cli review` track.

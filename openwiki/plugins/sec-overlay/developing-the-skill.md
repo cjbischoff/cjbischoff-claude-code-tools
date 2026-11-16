@@ -21,8 +21,10 @@ uv run ty check                                    # static types
 uv run python -m sec_overlay.preflight             # tool availability
 ```
 
-The suite is 81 pytest files, 595 tests (helpers/README.md's Test coverage & contracts
-section). Two failures on a clean checkout are environmental, not code defects — see
+The suite is 142 pytest files, 1830 tests (`helpers/tests/README.md`, the authoritative count —
+prefer it over any older count elsewhere, including `helpers/README.md`'s own module-tree
+comment, which has drifted). Two failures on a clean checkout are environmental, not code
+defects — see
 [running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run) for exactly
 which tests and why.
 
@@ -47,6 +49,7 @@ against silent drift rather than testing one module's behavior:
 | `test_finding_schema.py` | `models.py`'s `Finding` record staying consistent with `references/finding.schema.json` |
 | `test_wiring.py` | silent-backend regressions, `clsmap` routing gaps, dead links between `attack-classes.md` and its `hunting/` companions, and that `classes/*.md` prompts carry the proof tuple + anti-collapse rule |
 | `test_docs_invariants.py` | documentation contracts — `prompt-constants.md` block presence, `finding-template.md` section structure, agent-prompt rules (determinism, tool-receipt trust, evidence chains) |
+| `test_phase_docs.py` | phase-table drift (REQ-61) — `SKILL.md`, the skill root `README.md`, `agents/README.md`, and `helpers/README.md` each embed a `<!-- BEGIN GENERATED: phase-table -->` block rendered from `sec_overlay.phases.PHASE_TABLE` by `phase_docs.regenerate`; a renamed/reordered phase that isn't re-rendered into all four fails this test, not a hand-maintained list drifting silently |
 
 Keep all four green when touching a schema, a class-routing table, or an agent prompt's
 structure — they are how prompt↔code drift gets caught before it reaches a real audit.
@@ -64,12 +67,15 @@ FP rate. Its **regression gate**: a `locked` finding that stops being detected f
 python -m bench.run --corpus bench/corpus_seed --run-dir /tmp/bench --workspaces <dir>
 ```
 
-## The semgrep rules submodule
+## The vendored semgrep rules clone
 
-`helpers/rules/semgrep/` is a git submodule. Clone this repository with `--recurse-submodules`,
-or run `git submodule update --init --recursive` afterward — see
+`helpers/rules/semgrep/` is a **gitignored shallow clone**, not a git submodule. Run
+`uv run python -m sec_overlay.preflight` and execute the printed `git clone --depth 1
+https://github.com/semgrep/semgrep-rules <path>` command to vendor it — see
 [running an audit](running-an-audit.md#environment-prerequisites-for-a-full-run) for the test
-that fails without it.
+that fails without it. Re-vendoring recreates the directory from scratch, so never hand-place a
+first-party rule there; first-party rules belong under the tracked `helpers/rules/absence/`
+pack instead.
 
 ## The folder-README-tracks-code rule, inside this skill
 

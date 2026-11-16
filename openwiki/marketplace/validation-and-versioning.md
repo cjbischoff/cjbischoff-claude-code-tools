@@ -54,12 +54,15 @@ The edit lands in `plugins/<name>/.claude-plugin/plugin.json`'s `version` field,
 commit as the shipping-file change. `marketplace.json` never needs an edit for this — it does
 not pin plugin versions.
 
-As a concrete example of the rule being applied: the plugin's `plugin.json` currently reads
-`"version": "0.2.0"`. The root README's Status section explains the jump from the prior
-`0.1.1` governance release: "Plugin versions bump automatically on shipping-file changes
-(Conventional-Commits semver); this review-improvements release ships sec-overlay as 0.2.0,
-above the 0.1.1 governance release on `main`" — a `feat`-driven minor bump accumulated across
-that branch's shipping-file changes.
+As a concrete example of the rule being applied: `plugins/sec-overlay/.claude-plugin/plugin.json`
+currently reads `"version": "2.8.29"`, `plugins/plainspoken/.claude-plugin/plugin.json` reads
+`"0.2.1"`, and `plugins/readme-keeper/.claude-plugin/plugin.json` reads `"0.1.0"` — each plugin
+versions independently, climbing by whatever mix of `feat`/`fix`/other-type commits touched its
+own shipping files since that plugin's first release. A brand-new plugin is a special case: the
+`plainspoken`/`readme-keeper` implementation plans both record that `version` stays pinned at
+`0.1.0` across every commit of the plugin's initial branch, because no user has installed it
+before the first merge — the semver-bump rule only has meaning once a version has actually
+shipped to someone.
 
 ## Where this rule is (and is not) enforced — important nuance
 

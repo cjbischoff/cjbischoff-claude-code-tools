@@ -54,30 +54,52 @@ Read top to bottom — this is the order the orchestrator spawns them (see
 | Analysis | `architecture.md` | sonnet | components/data-flows/trust-boundaries → `kb/architecture.md` |
 | Analysis | `threat-model.md` | sonnet | attacker profiles + hunt list → `kb/THREAT_MODEL.md` |
 | Analysis (each of the three) | `phase-adversary.md` | opus | re-derives each claim from code; verdicts → `kb/gates/<phase>.json` |
+| Analysis (recon only) | `recall-adversary.md` | opus, fresh context | judges what recon **left out**, never what it claimed — rows have no matching claim by construction, so the count-invariant verdict table above stays intact for the other three phases |
 | Investigate | `investigate.md` + `classes/<cls>.md` | sonnet, parallel per class | walks the [gate ladder](#the-investigate-gate-ladder) → `raw`/`rejected` |
 | FP ladder | `critic.md` | sonnet | production-viability filter (reject debug-only/dead/test-fixture code); demotes on doubt, never hard-rejects |
 | FP ladder | `judge.md` | cheap, no tools | severity-inflation adjudicator; uphold / downgrade / flag |
 | FP ladder | `validate.md` | opus, different family | assumes every finding is wrong and tries to refute it; survival = `confirmed` |
+| Reachability | `trace.md` | opus | backward-traces each confirmed sink to an entry point; sets `reachability` (`{reachable, blocker, chain}`), the primary static-settled-vs-needs-runtime discriminator |
 | Patch | `patch.md` | opus | proposes a minimal diff into `patch_diff`, applied only to a throwaway copy |
 | Patch | `validate-fix.md` | opus, two personas | security-architect + penetration-tester independently check the patch; `no_new_vulnerabilities` regression is non-waivable |
-| Red team | `trace.md` | opus | backward-traces each confirmed sink to an entry point; sets `reachability` |
 | Red team | `redteam.md` | sonnet | splits confirmed findings into `static-settled` vs `needs-runtime`; writes `runtime_test` |
 | Red team | `redteam-adversary.md` | opus | strips settleable-from-source or payload-mismatched items |
+| Proof (opt-in) | `prove.md` | opus | the one phase that executes target-derived code, and only when `scan_options.prove_findings` is set; builds/runs out-of-tree under `ws.repro` so the reviewed working tree stays untouched |
+| Artifact review | `artifact-review.md` | opus, different family | the final adversary over the *rendered* `report.md`/`report.sarif`/`redteam-plan.md`: claim-to-evidence match, impact honesty, red-team coverage — may demote severity or add an `open_questions` entry, never delete a tool-receipt-backed finding |
 | Postflight | `postflight.md` | sonnet | durable security-profile notes to `kb/prior_context.json` |
 
 **`judge` and `validate` must never run concurrently against the same finding file** — the last
 writer silently drops the other's field. This is enforced by orchestration order (dispatch
 judge, wait for its writes to persist, then dispatch validate), not by code.
 
+See [pipeline](pipeline.md#the-full-phase-order-phase_table-28-phases) for exactly where each of
+these sits among the deterministic steps (`route-census`, `arch-gate`/`tm-gate`,
+`findings-gate`, `calibrate`, `verify`, `demote-noise`, `artifact-gate`,
+`artifact-consistency`).
+
 ### Optional extension agents
 
 | Prompt | Role |
 |---|---|
-| `factcheck.md` | fresh-context re-verification of a finding's citations/scope/severity against source (catches drift) |
 | `variant-hunt.md` | amplifies one confirmed finding into its family: enqueues sibling call sites as new candidates |
 | `bugchain.md` | looks across the confirmed set for chains — individually low findings that compose into a critical |
 | `tune-config.md` | optional ratcheted loop (≤3 rounds): authors targeted semgrep rules for uncovered classes |
 | `correlate-combiner.md` + `cross-repo-adversary.md` | cross-repo: see [Cross-repo correlation](cross-repo-correlation.md) — these gate correlation *verdicts*, not per-repo findings, and carry the same producer/adversary pattern applied to a joined multi-repo artifact rather than a single finding |
+
+> **`factcheck.md` no longer exists.** REQ-42 deleted the `factcheck` phase, the
+> `sec_overlay.factcheck` module, and this prompt: its only input (`kb/verdicts.json`) had no
+> producing phase, so every run recorded `factcheck: done` after doing nothing, and the
+> `fact-checked` verification value it alone wrote is gone from `VERIFICATION_VALUES` too.
+
+### A separate, lighter track: diff-scoped review
+
+`review-file.md`, `review-plan.md`, and `review-filter.md` are **not** part of the audit pipeline
+above — they drive `sec_overlay.cli review`'s own prepare/dispatch/consume loop over one changed
+file at a time. `review-file` (sonnet) is the producer; `review-filter` (sonnet) is a
+retract-only fact-checker, not a classic opus adversary, because the safety guarantee there is a
+mechanical code-level veto (`PROTECTED_SUBJECT_CLASSES`) rather than a second model's opinion.
+See [diff-scoped review](diff-review.md) for the full loop, profiles, and downstream surfaces
+(`sessions`, `pr_poster.py`, `action.yml`).
 
 ## The investigate gate ladder
 
@@ -161,6 +183,8 @@ repo's [doc-update-guard hook](../../governance/hooks-and-commits.md).
 ## Related pages
 
 - [Pipeline](pipeline.md) — where each phase above fits in the full audit sequence.
+- [Diff-scoped review](diff-review.md) — the separate `review-file`/`review-plan`/`review-filter`
+  track and its own loop.
 - [Helpers](helpers.md) — the deterministic modules that enforce the tool-receipt gate these
   prompts cannot bypass.
 - [References](references.md) — `prompt-constants.md`'s twelve blocks every prompt imports.

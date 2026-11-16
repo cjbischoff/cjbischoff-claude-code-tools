@@ -7,10 +7,13 @@ tags: [sec-overlay, security-audit, architecture, invariants]
 
 # sec-overlay overview
 
-`sec-overlay` is the one plugin this marketplace distributes: a self-contained,
-**agentic security-audit harness**. Point it at a codebase and it finds *actually-exploitable*
-vulnerabilities, then hands a security engineer artifacts they can act on: a threat model,
-per-finding evidence, a SARIF file, a Markdown report, and a manual runtime-test plan. It calls
+`sec-overlay` is one of three plugins this marketplace distributes (alongside
+[plainspoken](../plainspoken/overview.md) and [readme-keeper](../readme-keeper/overview.md)): a
+self-contained, **agentic security-audit harness**. Point it at a codebase and it finds
+*actually-exploitable* vulnerabilities, then hands a security engineer artifacts they can act
+on: a threat model, per-finding evidence, a SARIF file, a Markdown report, and a manual
+runtime-test plan. It also ships a second, lighter CLI track — a diff-scoped PR-style
+[review mode](diff-review.md) — alongside the full audit described on this page. It calls
 binary tools directly (no other Claude Code skills or plugins) and **never executes the
 scanned code**.
 
@@ -37,6 +40,7 @@ that govern every phase:
 4. **Thoroughly review a codebase.** Coverage is pursued until a phase can defend it to its
    adversary; gaps are logged, never silently dropped. Two concrete mechanisms back this: the
    investigate saturation loop (waves stop only at `K=2` consecutive no-new-fingerprint rounds
+<!-- openwiki: broken internal link [pipeline.md#the-full-phase-order] heading anchor "the-full-phase-order" does not exist in "pipeline.md". Fix the href or restore the target, then delete this comment. -->
    or a hard `max_waves=5` cap — see [pipeline](pipeline.md#the-full-phase-order)), and
    `partition.py`'s `unrouted_candidate_classes` safety net, which catches any attack class
    recon didn't explicitly plan for and routes it to a general-triage agent rather than
@@ -142,4 +146,5 @@ described in [helpers](helpers.md)) and the skill `CLAUDE.md`'s §5.
 - [References](references.md) — the rule book: prompt constants, schemas, crypto policy.
 - [Running an audit](running-an-audit.md) — the smoke scan vs. the full agentic audit.
 - [Developing the skill](developing-the-skill.md) — tests, linting, and the dev-only bench harness.
+- [Diff-scoped review](diff-review.md) — the second, lighter `cli review` track.
 - [Cross-repo correlation](cross-repo-correlation.md) — the optional multi-repo capability.

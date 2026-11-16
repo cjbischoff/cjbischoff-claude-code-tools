@@ -25,13 +25,20 @@ Two facts are true of every module here:
 ```
 helpers/
 ├── pyproject.toml       stdlib-only; dev deps pytest/ruff/ty; line-length 100
-├── sec_overlay/         ~70 modules — the pipeline (this page's main subject)
+├── sec_overlay/         ~80 modules — the pipeline (this page's main subject)
 │   └── correlate/       cross-repo correlation subpackage — see cross-repo-correlation.md
 ├── bench/               dev-only detection benchmark
-├── tests/               81 pytest files, 595 tests
+├── tests/               142 pytest files, 1830 tests
 ├── fixtures/            golden JSON + a deliberately vulnerable test repo (excluded from this wiki)
-└── rules/               vendored semgrep rules (git submodule) + smoke.yaml
+└── rules/
+    ├── semgrep/         vendored, gitignored shallow clone (`git clone --depth 1`), NOT a submodule
+    ├── absence/         tracked, first-party absence-of-mitigation pack
+    └── smoke.yaml       bundled minimal ruleset for the deterministic smoke scan
 ```
+
+`preflight.py`'s `_vendor_cmd()` recreates `rules/semgrep/` with a fresh shallow clone — never
+hand-place a first-party rule there, since preflight deletes the directory's contents on every
+re-vendor. First-party rules belong under `rules/absence/` instead.
 
 ## The pipeline these modules implement
 
@@ -71,8 +78,13 @@ This is the mechanism behind the harness's core safety contract: **a finding rea
 
 ```python
 _MECHANICAL = {"semgrep", "codeql", "ast-grep", "tree-sitter", "ripgrep",
-               "structural-index", "secrets", "sca"}
+               "structural-index", "secrets", "sca", "dependency-catalog"}
 ```
+
+(`dependency-catalog` was added alongside `references/dependency-sinks.json` — see
+[references](references.md#machine-checked-policy-and-schemas) — so a manifest-declared
+dependency sink counts as a mechanical ground even when the sink itself holds no first-party
+pattern.)
 
 `is_tool_receipt(source)` returns `False` for anything `llm`-prefixed and `True` only when the
 source's colon-delimited prefix (e.g. `codeql` in `codeql:dataflow`) is in `_MECHANICAL`.
@@ -88,7 +100,9 @@ f.evidence_sources)`; if none qualify, it emits an error naming the finding id a
 (non-qualifying) sources. It also forbids a `raw`/`confirmed` finding from carrying a
 `duplicate_of` (that combination must be `status=duplicate` instead). The CLI
 (`python -m sec_overlay.findings_gate --workspace <WS>`) exits 1 if any error exists — this is
-what phases 13 and 13.5 in the [pipeline](pipeline.md) call after every ladder pass.
+what the `findings-gate` phase in the [pipeline](pipeline.md) calls after `investigate`, with a
+repeated structural-validity re-run later in the walkthrough (end of the FP ladder, end of patch
+verification) rather than a second numbered `PHASE_TABLE` entry.
 
 For SAST-unsupported languages, a `ripgrep:` receipt proving the sink literally exists is a
 valid mechanical ground — the gate does not require semgrep/codeql specifically, only *some*
@@ -125,7 +139,7 @@ not summarized here):
 | SAST backends & prefilter | `sast.py`, `codeql.py`, `sca.py`, `secrets.py`, `prefilter.py`, `exclusions.py` | run semgrep/CodeQL/osv-scanner/secrets concurrently; merge deterministically; never-silent backend accounting |
 | Attack-class routing | `clsmap.py`, `detection_coverage.py`, `rule_matcher.py`, `asvs.py`/`codeguard.py`, `citations.py`, `custom_checks.py` | CWE→class mapping, ASVS/CodeGuard citation attachment, in-repo custom-check discovery |
 | Graph & structural substrate | `graph.py`, `structural_index.py`, `entrypoints.py`, `astgrep.py`, `reachability.py` | the two-tier code graph answering reachability/attacker-control; ripgrep symbol index |
-| FP reduction & finding identity | `normalize.py`, `dedupe.py`, `fingerprint.py`, `cluster.py`, `findings_gate.py`, `partition.py`, `fp_feedback.py`, `factcheck.py`, `phase_gate.py`, `stage_validate.py` | dedup, fingerprinting, systemic clustering, the tool-receipt gate, phase-adversary pre-checks |
+| FP reduction & finding identity | `normalize.py`, `dedupe.py`, `fingerprint.py`, `cluster.py`, `findings_gate.py`, `partition.py`, `fp_feedback.py`, `phase_gate.py`, `stage_validate.py` | dedup, fingerprinting, systemic clustering, the tool-receipt gate, phase-adversary pre-checks (REQ-42 deleted the `factcheck` module along with the phase it alone served) |
 | Scoring & prioritization | `calibrate.py`, `cvss.py`, `scoring.py`, `fix_disposition.py`, `crypto_policy.py`, `selfscore.py` | deterministic `risk_score`, CVSS 3.1 by formula (never LLM arithmetic), the per-run self-score |
 | Reporting | `report.py`, `sarif.py`, `render_util.py` | assemble `report.sarif` + `report.md`; shared rendering helpers for `expected_signal` (object/string/null) |
 | Campaign, state & memory | `campaign.py`, `state.py`, `repo_memory.py`, `workspace.py`, `scanscope.py`, `scope.py`, `kb.py`, `context.py`, `profile.py`, `diffscope.py`, `githist.py`, `postflight.py` | multi-pass supervision, the on-disk workspace layout, per-repo memory sidecar, context ingestion |
@@ -156,14 +170,26 @@ never invents a boundary when no manifest is present. This backs the `reachabili
 cross-repo correlation subpackage with its own promote/demote invariant — see
 [cross-repo correlation](cross-repo-correlation.md) rather than the single-repo groups above.
 
+**Diff-scoped review** (`sec_overlay.cli review`, not part of the `PHASE_TABLE` audit above) has
+its own module cluster: `file_select.py`, `positioning.py`, `bundle.py`, `review_findings.py`,
+`review_coverage.py`, `review_budget.py`, `review_agent.py`, `review_comments.py`,
+`review_result.py`, `reflection.py`, `background.py`, `pr_poster.py`, `sessions.py`,
+`rule_glob.py`. See [diff-scoped review](diff-review.md) for what each one does.
+
 ## CLI-callable modules
 
-Seventeen modules expose `python -m sec_overlay.<module>` (a `__main__`) — the deterministic
-steps the orchestrator calls between agent phases: `cli` (scan/memory), `preflight`, `graph`,
-`structural_index`, `astgrep`, `dedupe`, `cluster`, `findings_gate`, `calibrate`, `citations`,
-`bugchain`, `rule_gaps`, `verify`, `redteam`, `report`, `redactor`, `postflight`. See
-[running an audit](running-an-audit.md) for how the orchestrator sequences these across a full
-pass, and `correlate`'s own dedicated CLI in [cross-repo correlation](cross-repo-correlation.md).
+About 26 modules expose `python -m sec_overlay.<module>` (a `__main__`) — the deterministic
+steps the orchestrator calls between agent phases, including `preflight`, `graph`,
+`structural_index`, `astgrep`, `route_census`, `dedupe`, `cluster`, `findings_gate`,
+`diagram_gate`, `calibrate`, `citations`, `bugchain`, `rule_gaps`, `dependency_sinks`, `verify`,
+`redteam`, `report`, `redactor`, `selfscore`, `artifact_gate`, `artifact_consistency`,
+`postflight`, `ste_lint`, `phase_docs`, `pr_poster`. `cli.py` itself is the single biggest
+entrypoint, with subcommands `scan` (deterministic prefilter → SARIF/MD), `memory`, `audit`
+(the deterministic audit driver), `sessions list|show`, `rules check <path> --root <path>`, and
+`review` (the diff-scoped track — see [diff-scoped review](diff-review.md)). See
+[running an audit](running-an-audit.md) for how the orchestrator sequences the audit-mode calls
+across a full pass, and `correlate`'s own dedicated CLI in
+[cross-repo correlation](cross-repo-correlation.md).
 
 ## Related pages
 
@@ -172,4 +198,5 @@ pass, and `correlate`'s own dedicated CLI in [cross-repo correlation](cross-repo
 - [References](references.md) — the schema/policy files these modules read.
 - [Running an audit](running-an-audit.md) — exact commands, preflight checks, environment prerequisites.
 - [Developing the skill](developing-the-skill.md) — tests, linting, the bench harness, and the stdlib-only rule.
+- [Diff-scoped review](diff-review.md) — the separate `review`-mode module cluster.
 - [Cross-repo correlation](cross-repo-correlation.md) — the `correlate/` subpackage in detail.

@@ -88,11 +88,33 @@ Dependabot's `github-actions` stream (above) proposes automatically. CodeRabbit'
 `.github/workflows/**` path instruction (see [code review](../governance/code-review.md)) also
 checks this on every PR that touches a workflow file.
 
+## Per-plugin test workflows
+
+Three workflows gate pull requests by path, one per plugin, each only firing when that
+plugin's own files (or the workflow file itself) change:
+
+- **`.github/workflows/sec-overlay-tests.yml`** — the full `pytest` suite plus an offline
+  **detection-regression gate**: it smoke-scans the local `vulnerable_repo` fixture, then grades
+  the seed corpus in detection mode (did a Tier-1 mechanical receipt locate a ground-truth
+  finding?). A `locked` positive that stops being detected fails the job. Deterministic-only CI
+  never reaches `confirmed` (that needs the adversarial LLM pass), so the job only exercises the
+  detection layer, not the full [pipeline](../plugins/sec-overlay/pipeline.md).
+- **`.github/workflows/plainspoken-tests.yml`** and
+  **`.github/workflows/readme-keeper-tests.yml`** — each runs that plugin's pytest suite (lint
+  script / checker behavior plus eval-case schema validation) when `plugins/plainspoken/**` or
+  `plugins/readme-keeper/**` changes, respectively.
+
+All three share the same hardening pattern as [SHA-pinned Actions](#sha-pinned-actions) above:
+only GitHub-owned `actions/checkout` (pinned to a commit SHA), `permissions: contents: read`,
+and a `concurrency` group keyed to the PR ref so a new push cancels an in-flight run of the same
+workflow rather than racing it.
+
 ## The default read-only workflow token
 
-Both workflows declare `permissions` explicitly rather than relying on the default:
-`dependency-review.yml` uses `permissions: contents: read` — it only needs to check out code
-and read manifests. `openwiki-update.yml` needs to open a pull request, so it declares the
+Every workflow in this repository declares `permissions` explicitly rather than relying on the
+default. The three test workflows above and `dependency-review.yml` all use
+`permissions: contents: read` — they only need to check out code and read manifests.
+`openwiki-update.yml` is the one exception that needs to open a pull request, so it declares the
 narrower elevated grant its job actually needs (`contents: write`, `pull-requests: write`) at
 the job level rather than repository-wide, and otherwise defaults to `permissions: {}` at the
 workflow level. This least-privilege pattern — read-only unless a job specifically needs to
